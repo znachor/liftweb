@@ -46,7 +46,8 @@ object Helpers extends TimeHelpers with BindHelpers {
   *
   * @return a valid query string
   */
-  def paramsToUrlParams(params: List[(String, String)]): String = params.map{case (n,v) => urlEncode(n)+"="+urlEncode(v)}.mkString("&")
+  def paramsToUrlParams(params: List[(String, String)]): String =
+    params.map{case (n,v) => urlEncode(n)+"="+urlEncode(v)}.mkString("&")
   
   
   /**
@@ -57,11 +58,12 @@ object Helpers extends TimeHelpers with BindHelpers {
   *
   * @return the url with the parameters appended
   */
-  def appendParams(url: String, params: Seq[(String, String)]): String = params.toList match {
-    case Nil => url
-    case xs if url.indexOf("?") == -1 => url + "?" + paramsToUrlParams(xs)
-    case xs => url + "&" + paramsToUrlParams(xs)
-  }
+  def appendParams(url: String, params: Seq[(String, String)]): String =
+    params.toList match {
+      case Nil => url
+      case xs if url.contains("?") => url + "&" + paramsToUrlParams(xs)
+      case xs => url + "?" + paramsToUrlParams(xs)
+    }
   
   val validSuffixes = {
     val ret = new HashSet[String];
