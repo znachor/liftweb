@@ -13,7 +13,7 @@ package net.liftweb.util
  * limitations under the License.
  */
 import java.net.{URLDecoder, URLEncoder}
-import scala.collection.mutable.{HashSet, ListBuffer}
+import scala.collection.mutable.{Set, ListBuffer}
 import scala.xml.{NodeSeq, Elem, Node, Text, Group, UnprefixedAttribute, Null, Unparsed, MetaData, PrefixedAttribute}
 import scala.collection.{Map}
 import scala.collection.mutable.HashMap
@@ -32,12 +32,11 @@ import javax.crypto.spec._
  * </ul>
  */
 object Helpers extends TimeHelpers with BindHelpers {
-    
   /**
    * URL decode the string.  A pass-through to Java's URL decode with UTF-8
    */
-  def urlDecode(in : String) = {URLDecoder.decode(in, "UTF-8")}
-  def urlEncode(in : String) = {URLEncoder.encode(in, "UTF-8")}
+  def urlDecode(in : String) = URLDecoder.decode(in, "UTF-8")
+  def urlEncode(in : String) = URLEncoder.encode(in, "UTF-8")
   
   /**
   * Take a list of name/value parse and turn them into a URL query string
@@ -46,9 +45,8 @@ object Helpers extends TimeHelpers with BindHelpers {
   *
   * @return a valid query string
   */
-  def paramsToUrlParams(params: List[(String, String)]): String =
+  def paramsToUrlParams(params: Collection[(String, String)]): String =
     params.map{case (n,v) => urlEncode(n)+"="+urlEncode(v)}.mkString("&")
-  
   
   /**
   * Append parameters to a URL
@@ -58,19 +56,16 @@ object Helpers extends TimeHelpers with BindHelpers {
   *
   * @return the url with the parameters appended
   */
-  def appendParams(url: String, params: Seq[(String, String)]): String =
-    params.toList match {
-      case Nil => url
-      case xs if url.contains("?") => url + "&" + paramsToUrlParams(xs)
-      case xs => url + "?" + paramsToUrlParams(xs)
-    }
+  def appendParams(url: String, params: Collection[(String, String)]): String =
+    if (params.isEmpty)
+      url
+    else if (url contains "?")
+      url + "&" + paramsToUrlParams(params)
+    else
+      url + "?" + paramsToUrlParams(params)
   
-  val validSuffixes = {
-    val ret = new HashSet[String];
-    ret += ("png", "js", "css", "jpg", "ico", "gif", "tiff", "jpeg")
-    ret
-  }
-  
+  val validSuffixes =
+    Set("png", "js", "css", "jpg", "ico", "gif", "tiff", "jpeg")
   
   def goodPath_?(path : String): Boolean = {
     if (path == null || path.length == 0 || !path.startsWith("/") || path.indexOf("/.") != -1) false
@@ -128,15 +123,12 @@ object Helpers extends TimeHelpers with BindHelpers {
   
   def noHtmlTag(in: NodeSeq): Boolean = (in \\ "html").length != 1
   
-  def toHashMap[A,B](in : Map[A,B]) : HashMap[A,B] = {
-    val ret = new HashMap[A,B];
-    in.keys.foreach {
-      k =>
-      ret += k -> in(k)
-    }
-    
-    ret
-  }
+  /**
+   * Converts any collection.Map to a collection.mutable.HashMap
+   */
+  def toHashMap[A,B](in : Map[A,B]) : HashMap[A,B] =
+    // This return type should really be mutable.Map to avoid cast
+    (HashMap.empty ++ in).asInstanceOf[HashMap[A, B]]
   
   /**
   * Returns a Full can with the first element x of the list in
