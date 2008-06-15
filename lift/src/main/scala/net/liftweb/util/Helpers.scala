@@ -139,10 +139,7 @@ object Helpers extends TimeHelpers with BindHelpers {
   * @param f   a function that can be applied to elements of in
   */
   def first_? [B](in: List[B])(f: => B => Boolean): Can[B] =
-  in match {
-    case Nil => Empty
-    case x :: xs => if (f(x)) Full(x) else first_? (xs)(f)
-  }
+    Can(in.projection.filter(f).firstOption)
   
   /**
   * Returns the first application of f to an element of in that
@@ -153,17 +150,10 @@ object Helpers extends TimeHelpers with BindHelpers {
   * 
   * @param in  a list of elements to which f can be applied
   * @param f   a function that can be applied to elements of in
-  */  
+  */
   def first[B,C](in : List[B])(f : B => Can[C]): Can[C] = {
-    in match {
-      case Nil => Empty
-      case x :: xs => {
-        f(x) match {
-          case s @ Full(_) =>  s
-          case _ => first(xs)(f)
-        }
-      }
-    }
+    val fi: B => Iterable[C] = (f andThen Can.can2Iterable[C])
+    Can(in.projection.flatMap(fi).firstOption)
   }
   
   /**
@@ -176,10 +166,11 @@ object Helpers extends TimeHelpers with BindHelpers {
   *
   * @return the first matching node sequence
   */
-  def chooseTemplate(prefix: String, tag: String, xhtml: NodeSeq): NodeSeq = (xhtml \\ tag).toList.filter(_.prefix == prefix) match {
-    case Nil => Nil
-    case x :: xs => x.child
-  }
+  def chooseTemplate(prefix: String, tag: String, xhtml: NodeSeq): NodeSeq =
+    (xhtml \\ tag).toList.filter(_.prefix == prefix) match {
+      case Nil => Nil
+      case x :: xs => x.child
+    }
   
   /**
   * Insure all the appropriate fields are in the header
