@@ -57,4 +57,17 @@ object HelpersSpec extends Specification {
         (queryUrl + "&foo=bar&fooz=baz")      
     }
   }
+  
+  "validSuffixes" should {
+    "contain all its suffixes" in {
+      validSuffixes mustContain "png"
+      validSuffixes mustContain "js"
+      validSuffixes mustContain "css"
+      validSuffixes mustContain "jpg"
+      validSuffixes mustContain "ico"
+      validSuffixes mustContain "gif"
+      validSuffixes mustContain "tiff"
+      validSuffixes mustContain "jpeg"
+    }
+  }
 }
