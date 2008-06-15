@@ -70,4 +70,48 @@ object HelpersSpec extends Specification {
       validSuffixes mustContain "jpeg"
     }
   }
+  
+  "first_?" should {
+    val l = List("a", "b", "c", "d", "e")
+    
+    "return the first element if f is always true" in {
+      first_?(l)(x => true) mustEqual Full("a")
+    }
+    
+    "return empty if f is always false" in {
+      first_?(l)(x => false) mustEqual Empty
+    }
+    
+    "not invoke unnecessary side-effects" in {
+      val f = (x: String) =>
+        if (x == "a")
+          true
+        else
+          throw new Exception("Unnecessary side-effect")
+      
+      first_?(l)(f) mustEqual Full("a")
+    }
+  }
+  
+  "first" should {
+    val l = List("a", "b", "c", "d", "e")
+    
+    "return the first element if f is always full" in {
+      first(l)(x => Full(x.toUpperCase)) mustEqual Full("A")
+    }
+    
+    "return empty if f is always empty" in {
+      first(l)(x => Empty) mustEqual Empty
+    }
+    
+    "not invoke unnecessary side-effects" in {
+      val f = (x: String) =>
+        if (x == "a")
+          Full(x.toUpperCase)
+        else
+          throw new Exception("Unnecessary side-effect")
+        
+      first(l)(f) mustEqual Full("A")
+    }
+  }
 }
