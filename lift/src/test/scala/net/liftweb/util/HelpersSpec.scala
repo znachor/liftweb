@@ -28,10 +28,6 @@ object HelpersSpec extends Specification {
         ("foo", "bar"), ("fooz", "baz"), ("fooy", "bay"), ("foox", "bax")
       )) mustEqual "foo=bar&fooz=baz&fooy=bay&foox=bax"
     }
-    
-    "handle collections" in {
-      paramsToUrlParams(Map("foo" -> "bar")) mustEqual "foo=bar"
-    }
   }
 
   "appendParams" should {
