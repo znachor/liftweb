@@ -188,6 +188,8 @@ object Helpers extends TimeHelpers with BindHelpers {
     }
   }
   
+  // TODO: This is an aberration of nature that needs to be destroyed
+  @deprecated
   class ListMapish(val theList: List[(String, String)]) {
     def ciGet(swhat: String): Can[String] = {
       val what = swhat.toLowerCase
@@ -205,7 +207,10 @@ object Helpers extends TimeHelpers with BindHelpers {
   
   /**
   * Convert an enum to a List[T]
+  *
+  * TODO: Use scalax.data.IteratorHelp.fromJava instead
   */
+  @deprecated
   def enumToList[T](enum: java.util.Enumeration[T]) : List[T] = {
     if (enum.hasMoreElements) {
       val next = enum.nextElement
@@ -220,15 +225,19 @@ object Helpers extends TimeHelpers with BindHelpers {
   
   /**
   * Convert an enum to a List[String]
+  *
+  * TODO: Use scalax.data.IteratorHelp.fromJava instead
   */
+  @deprecated
   def enumToStringList[C](enum: java.util.Enumeration[C]) : List[String] =
   if (enum.hasMoreElements) enum.nextElement.toString :: enumToStringList(enum) else Nil
   
-  
-  def head[T](l : List[T], deft: => T) = l match {
-    case Nil => deft
-    case x :: xs => x
-  }
+  /**
+   * TODO: Use l.firstOption.getOrElse instead
+   */
+  @deprecated
+  def head[T](l : List[T], deft: => T): T =
+    l.firstOption.getOrElse(deft)
   
   /**
   * If the incoming Elem has an 'id', return it, otherwise
@@ -239,45 +248,94 @@ object Helpers extends TimeHelpers with BindHelpers {
   * @return the new element and the id
   */
   def findOrAddId(in: Elem): (Elem, String) = (in \ "@id").toList match {
-    case Nil => val id = "R"+randomString(12)
-    (in % ("id" -> id), id)
-    case x :: xs => (in, x.text)
-  } 
+    case Nil =>
+      val id = "R"+randomString(12)
+      (in % ("id" -> id), id)
+    case x :: xs =>
+      (in, x.text)
+  }
   
-  
-  
+  // TODO: Put all this Random stuff in scalax?
   private val random = new java.security.SecureRandom
   
-  def randomLong(mod: Long): Long = Math.abs(random.nextLong) % mod
-  def randomInt(mod: Int): Int = Math.abs(random.nextInt) % mod
+  /**
+   * Returns a random Long in the range [0, upper)
+   */
+  def randomLong(upper: Long): Long = Math.abs(random.nextLong) % upper
+
+  /**
+   * Returns a random Int in the range [0, upper)
+   */
+  def randomInt(upper: Int): Int = Math.abs(random.nextInt) % upper
   
-  def shouldShow(percent: Int): Boolean = Math.abs(random.nextInt) % 100 < percent
-  def shouldShow(percent: Double): Boolean = random.nextDouble <= percent
+  /**
+   * Returns a random Double in the range [0.0, 1.0)
+   */
+  def randomDouble: Double = random.nextDouble
   
-  def makeBlowfishKey: Array[Byte] = KeyGenerator.getInstance("blowfish").generateKey.getEncoded
-  def blowfishKeyFromBytes(key: Array[Byte]): SecretKey = new SecretKeySpec(key, "blowfish")
+  /**
+   * Returns a random Double in the range [0.0, upper)
+   */
+  def randomDouble(upper: Double): Double = randomDouble * Math.abs(upper)
   
-  def blowfishDecrypt(enc: Array[Byte], key: Array[Byte]): Array[Byte] = blowfishDecrypt(enc, blowfishKeyFromBytes(key))
-  def blowfishDecrypt(enc: Array[Byte], key: SecretKey): Array[Byte] = readWholeStream(decryptStream(new ByteArrayInputStream(enc), key))
+  /**
+   * Returns a random Boolean that is true a certain percentage of the time
+   *
+   * @param percent should be between [0, 100]
+   */
+  def randomBoolean(percent: Int): Boolean = randomInt(100) < percent
   
-  def blowfishEncrypt(plain: String, key: Array[Byte]): String = blowfishEncrypt(plain, blowfishKeyFromBytes(key))
-  def blowfishEncrypt(plain: String, key: SecretKey): String = base64Encode(blowfishEncrypt(plain.getBytes("UTF-8"), key))
+  /**
+   * Returns a random Boolean that is true a certain percentage of the time
+   *
+   * @param percent should be between [0.0, 1.0]
+   */
+  def randomBoolean(percent: Double): Boolean = randomDouble <= percent
   
-  def blowfishDecrypt(enc: String, key: Array[Byte]): String = blowfishDecrypt(enc, blowfishKeyFromBytes(key))
-  def blowfishDecrypt(enc: String, key: SecretKey): String = new String(blowfishDecrypt(base64Decode(enc), key), "UTF-8")
+  /**
+   * Returns a random Boolean that is true half of the time
+   */
+  def randomBoolean: Boolean = randomBoolean(0.5)
   
-  def blowfishEncrypt(plain: Array[Byte], key: Array[Byte]): Array[Byte] = blowfishEncrypt(plain, blowfishKeyFromBytes(key))
-  def blowfishEncrypt(plain: Array[Byte], key: SecretKey): Array[Byte] = readWholeStream(encryptStream(new ByteArrayInputStream(plain), key))
+  def shouldShow(percent: Int): Boolean = randomBoolean(percent)
+  def shouldShow(percent: Double): Boolean = randomBoolean(percent)
+  
+  def makeBlowfishKey: Array[Byte] =
+    KeyGenerator.getInstance("blowfish").generateKey.getEncoded
+  def blowfishKeyFromBytes(key: Array[Byte]): SecretKey =
+    new SecretKeySpec(key, "blowfish")
+  
+  def blowfishDecrypt(enc: Array[Byte], key: Array[Byte]): Array[Byte] =
+    blowfishDecrypt(enc, blowfishKeyFromBytes(key))
+  def blowfishDecrypt(enc: Array[Byte], key: SecretKey): Array[Byte] =
+    readWholeStream(decryptStream(new ByteArrayInputStream(enc), key))
+  
+  def blowfishEncrypt(plain: String, key: Array[Byte]): String =
+    blowfishEncrypt(plain, blowfishKeyFromBytes(key))
+  def blowfishEncrypt(plain: String, key: SecretKey): String =
+    base64Encode(blowfishEncrypt(plain.getBytes("UTF-8"), key))
+  
+  def blowfishDecrypt(enc: String, key: Array[Byte]): String =
+    blowfishDecrypt(enc, blowfishKeyFromBytes(key))
+  def blowfishDecrypt(enc: String, key: SecretKey): String =
+    new String(blowfishDecrypt(base64Decode(enc), key), "UTF-8")
+  
+  def blowfishEncrypt(plain: Array[Byte], key: Array[Byte]): Array[Byte] =
+    blowfishEncrypt(plain, blowfishKeyFromBytes(key))
+  def blowfishEncrypt(plain: Array[Byte], key: SecretKey): Array[Byte] =
+    readWholeStream(encryptStream(new ByteArrayInputStream(plain), key))
   
   
-  def decryptStream(in: InputStream, key: Array[Byte]): InputStream = decryptStream(in, blowfishKeyFromBytes(key))
+  def decryptStream(in: InputStream, key: Array[Byte]): InputStream =
+    decryptStream(in, blowfishKeyFromBytes(key))
   def decryptStream(in: InputStream, key: SecretKey): InputStream = {
     val cipher = Cipher.getInstance("blowfish")
     cipher.init(Cipher.DECRYPT_MODE, key)
     new CipherInputStream(in, cipher)
   }
   
-  def encryptStream(in: InputStream, key: Array[Byte]): InputStream= encryptStream(in, blowfishKeyFromBytes(key))
+  def encryptStream(in: InputStream, key: Array[Byte]): InputStream =
+    encryptStream(in, blowfishKeyFromBytes(key))
   def encryptStream(in: InputStream, key: SecretKey): InputStream = {
     val cipher = Cipher.getInstance("blowfish")
     cipher.init(Cipher.ENCRYPT_MODE, key)
@@ -302,11 +360,15 @@ object Helpers extends TimeHelpers with BindHelpers {
   /**
   * Remove all the characters from a string exception a-z, A-Z, 0-9, and '_'
   */ 
-  def clean(in : String) =  if (in == null) "" else in.replaceAll("[^a-zA-Z0-9_]", "")
+  def clean(in : String): String = in match {
+    case null => ""
+    case _    => in.replaceAll("[^a-zA-Z0-9_]", "")
+  }
   
-  /**
-  * Convert a 
-  */
+  // TODO:
+  // What to do with all these to* functions? Scalax is more strict in what
+  // it parses and doesn't parse, so simply replacing with the Scalax
+  // equivalents is a no-go.
   def toBoolean(in: Any): boolean = {
     in match {
       case null => false
@@ -415,37 +477,32 @@ object Helpers extends TimeHelpers with BindHelpers {
     }
   }
   
+  def base64encode(in: Array[Byte]): Array[Byte] =
+    (new Base64) encode in
   
-  def md5(in: Array[Byte]): Array[Byte] = (MessageDigest.getInstance("MD5")).digest(in)
+  def md5(in: Array[Byte]): Array[Byte] =
+    MessageDigest.getInstance("MD5").digest(in)
   
-  def md5(in: String): String = new String((new Base64) encode md5(in.getBytes("UTF-8")))
+  def md5(in: String): String =
+    new String(base64encode(md5(in.getBytes("UTF-8"))))
   
-  def hash(in: String) : String = {
-    new String((new Base64) encode (MessageDigest.getInstance("SHA")).digest(in.getBytes("UTF-8")))
-  }
+  def hash(in: String): String =
+    new String(base64encode(hash(in.getBytes("UTF-8"))))
   
-  def hash(in : Array[Byte]) : Array[byte] = {
-    (MessageDigest.getInstance("SHA")).digest(in)
-  }
+  def hash(in : Array[Byte]) : Array[byte] =
+    MessageDigest.getInstance("SHA").digest(in)
   
-  def hash256(in : Array[Byte]) : Array[byte] = {
-    (MessageDigest.getInstance("SHA-256")).digest(in)
-  }
+  def hash256(in : Array[Byte]) : Array[byte] =
+    MessageDigest.getInstance("SHA-256").digest(in)
   
-  def hexDigest(in: Array[Byte]): String = {
-    val binHash = (MessageDigest.getInstance("SHA")).digest(in)
-    hexEncode(binHash)
-  }
+  def hexDigest(in: Array[Byte]): String =
+    hexEncode(hash(in))
   
+  def hash256(in : String): String =
+    new String(base64encode(hash256(in.getBytes("UTF-8"))))
   
-  def hash256(in : String): String = {
-    new String((new Base64) encode (MessageDigest.getInstance("SHA-256")).digest(in.getBytes("UTF-8")))
-  }
-  
-  def hexDigest256(in: Array[Byte]): String = {
-    val binHash = (MessageDigest.getInstance("SHA-256")).digest(in)
-    hexEncode(binHash)
-  }
+  def hexDigest256(in: Array[Byte]): String =
+    hexEncode(hash256(in))
   
   def hexEncode(in: Array[Byte]): String = {
     val sb = new StringBuilder
@@ -554,48 +611,14 @@ object Helpers extends TimeHelpers with BindHelpers {
     capify(tmp, 0, 250, false, false, sb)
     sb.toString
   }  
-  
-  /*
-  private val defaultFinder = getClass.getResource _
-  private var _finder = defaultFinder
-  
-  def setResourceFinder(in: (String) => java.net.URL):unit = synchronized {
-  _finder = in
-  }
-  
-  def resourceFinder = synchronized {_finder}
-  
-  def getResource(name: String): Can[java.net.URL] = resourceFinder(name) match {case null => defaultFinder(name) match {case null => Empty; case s => Full(s)} ; case s => Full(s)} 
-  def getResourceAsStream(name: String): Can[java.io.InputStream] = getResource(name).map(_.openStream)
-  def loadResource(name: String): Can[Array[Byte]] = getResourceAsStream(name).map{
-  stream =>
-  val buffer = new Array[byte](2048)
-  val out = new ByteArrayOutputStream
-  def reader {
-  val len = stream.read(buffer)
-  if (len < 0) return
-  else if (len > 0) out.write(buffer, 0, len)
-  reader
-  }
-  reader
-  stream.close
-  out.toByteArray
-  }
-  def loadResourceAsXml(name: String): Can[NodeSeq] = loadResourceAsString(name).flatMap(s =>PCDataXmlParser(s))
-  def loadResourceAsString(name: String): Can[String] = loadResource(name).map(s => new String(s, "UTF-8"))
-  */
-  
-  /*
-  def script(theScript: String): NodeSeq = (<script>
-  // {Unparsed("""<![CDATA[
-  """+theScript+"""
-  // ]]>
-  """)}</script>)
-  */
-  
+    
   /**
   * Optional cons that implements the expression: expr ?> value ::: List
+  *
+  * TODO: Another aberration of nature that must be destroyed. This syntax is
+  *   hideous and illegible.
   */
+  @deprecated
   class OptiCons(expr: Boolean) {
     def ?>[T](f: => T): List[T] = if (expr) List(f) else Nil
   }
@@ -701,7 +724,11 @@ class SuperList[T](val what: List[T]) {
 }
 
 class SuperString(val what: String) {
-  def roboSplit(spl: String): List[String] = what match {case null => Nil case s => s.split(spl).toList.map(_.trim).filter(_.length > 0)}
+  def roboSplit(spl: String): List[String] = what match {
+    case null => Nil
+    case s => s.split(spl).toList.map(_.trim).filter(_.length > 0)
+  }
+
   def splitAt(chr: String): List[(String, String)] = what.indexOf(chr) match {
     case -1 => Nil
     case n => List((what.substring(0, n).trim, what.substring(n + chr.length).trim))
