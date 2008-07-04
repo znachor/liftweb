@@ -20,7 +20,6 @@ import net.liftweb.util.Can._
 import org.specs.runner._
 import org.specs.Sugar._
 
-class CanSpecTest extends Runner(CanSpec) with JUnit with Console
 object CanSpec extends Specification {
   "A Can" can {
     "be created from a Option. It is Empty if the option is None" in {
@@ -225,4 +224,27 @@ object CanSpec extends Specification {
       Failure("error", Empty, Nil) ?~! "error2" must_== Failure("error2", Empty, Failure("error", Empty, Nil):::Nil)
     }
   }
+  "A boolean Can" can {
+    val id = (b: Boolean) => b
+    "be created from a boolean condition. It is a Full(true) can if the condition is true" in {
+      true.map(id) must_== Full(true)
+    }
+    "be created from a boolean condition. It is an Empty can if the condition is false" in {
+      false.map(id) must_== Empty
+    }
+    "use the ?~ method to create a Failure from a false boolean condition" in {
+      false ?~("condition not satisfied") must_== Failure("condition not satisfied", Empty, Nil)
+    }
+    "use the ?~ method to stay as a Full(true) if the condition is true" in {
+      true ?~("condition not satisfied") must_== Full(true)
+    }
+    "use the ?~! method to chain condition tests and collect failure messages" in {
+      true ?~ "cond1 ko" ?~!(false, "cond2 ko") must_== Failure("cond2 ko", Empty, Nil)
+    }
+    "use the ?~! method to chain condition tests and collect failure messages" in {
+      true ?~ "cond1 ko" ?~!(false, "cond2 ko") ?~!
+     (true, "cond3 ko") ?~!(false, "cond4 ko") must beLike { case f: Failure => f.messages must_== List("cond2 ko", "cond4 ko") }
+    }
+  }
 }
+class CanSpecTest extends JUnit4(CanSpec)
