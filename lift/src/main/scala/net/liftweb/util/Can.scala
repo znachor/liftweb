@@ -46,7 +46,14 @@ object Can {
   if (pf.isDefinedAt(value)) Full(pf(value)) else Empty
   
   
-  /**
+  /**    val id = (b: Boolean) => b
+    "be created from a boolean condition. It is a Full(true) can if the condition is true" in {
+      true.map(id) must_== Full(true)
+    }
+    "be created from a boolean condition. It is an Empty can if the condition is false" in {
+      false.map(id) must_== Empty
+    }
+
   * This method is used to transform any AnyRef to a Can.
   * @returns a Can object from an object. Full(in) if the object is not null and Empty otherwise.
   */
@@ -59,20 +66,38 @@ object Can {
   implicit def can2Iterable[T](in: Can[T]): Iterable[T] = in.toList
 
   /**
-  * This implicit def allows to use "lift" a boolean value into a Can with the following mapping:
-  * false is Empty and true is Full(true).<p/>
-  * 
-  * Empty may become a Failure if we enhance it with an error message using the ?~(msg: String) method
-  * Full(true) may also be transformed to a Failure if we use the ?~!(b: Boolean, msg: String) method and if the 
-  * boolean condition is false.
-  * <p/>
-  * Usage: <pre>condition1 ~?("failure message1") ~?!(condition2, "failure message2") ~?!(condition3, "failure message3")</pre>
-  * 
-  * There is actually something ackward with this approach because the boolean value inside the Full can is never actually used
-  * 
-  * @returns Empty if in is false, Full(true) if in is true
-  */
-  implicit def boolean2Can(in: Boolean): Can[Boolean] = if (in) Full(true) else Empty
+   * A class that helps with the %? code
+   */
+  class TM(in: Boolean) {
+    def %? (msg: => String): Can[Boolean] = if (in) Full(true)
+    else Failure(msg, Empty, Nil)
+  }
+
+  /**
+   * Convert a Boolean to a TM if the %? method is being invoked on the Boolean
+   */
+  implicit def bToTM(in: Boolean): TM = new TM(in)
+
+  /**
+   * A class that helps with the >? code
+   */
+  class CM(in: Can[Boolean]) {
+    def >? (other: Can[Boolean]) = (in, other) match {
+      case (Full(a), Full(b)) => Full(a | b)
+      case (f2: Failure, Failure(msg, ecpt, chain)) => Failure(msg, ecpt, chain ::: List(f2))
+      case (f: Failure, _) => f
+      case (_, f: Failure) => f
+      case (Full(a), _) => Full(a)
+      case (_, Full(b)) => Full(b)
+      case _ => Empty
+    }
+  }
+
+  /**
+   * Converts a Can[Boolean] into a CM if we've got a >? operator
+   */
+  implicit def cToCM(in: Can[Boolean]): CM = new CM(in)
+
 
   /**
   * This implicit def allows to use Options as Cans
@@ -190,13 +215,6 @@ sealed abstract class Can[+A] extends Product {
   def ?~(msg: String): Can[A] = this
 
   /**
-   * @param b a boolean condition
-   * @param msg the failure message
-   * @returns if the condition is true, returns a Failure with the message if the Can is an Empty Can or appends a new message to the current Failure
-   */
-   def ?~(b: Boolean, msg: String): Can[A] = if (b) this else ?~(msg)
-
-  /**
   * Alias for ?~
   */
   def failMsg(msg: String): Can[A] = ?~(msg)
@@ -207,16 +225,6 @@ sealed abstract class Can[+A] extends Product {
   */
   def ?~!(msg: String): Can[A] = ?~(msg)
 
-  /**
-   * If the boolean condition is true, the Can stay as it is. Otherwise, this method either the current Can is a Failure
-   * and gets a new failure message appened or a new Failure is created with the message
-   *
-   * @param b a boolean condition
-   * @param msg the failure message
-   * @returns a Failure with the message if the Can is an Empty Can. Chain the messages if it is already a Failure
-   */
-  def ?~!(b: Boolean, msg: String): Can[A] = if (b) this else Failure(msg, Empty, Nil)
-  
   /**
   * Alias for ?~!
   */
@@ -362,15 +370,6 @@ case class Failure(msg: String, exception: Can[Throwable], chain: List[Failure])
   override def ?~(msg: String) = this
   
   override def ?~!(msg: String) = Failure(msg, Empty, this :: chain)
-  /**
-   * If the boolean condition is true, the Can stay as it is. Otherwise, this method either the current Can is a Failure
-   * and gets a new failure message appened or a new Failure is created with the message
-   *
-   * @param b a boolean condition
-   * @param msg the failure message
-   * @returns a Failure with the message if the Can is an Empty Can. Chain the messages if it is already a Failure
-   */
-  override def ?~!(b: Boolean, msg: String): Can[A] = if (b) this else ?~!(msg)
 
   override def map[B](f: A => B): Can[B] = this
   
