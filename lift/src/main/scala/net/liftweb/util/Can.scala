@@ -98,7 +98,6 @@ object Can {
    */
   implicit def cToCM(in: Can[Boolean]): CM = new CM(in)
 
-
   /**
   * This implicit def allows to use Options as Cans
   * @returns a Can object from an Option. Full(in) if the Option is Some(in) and Empty otherwise

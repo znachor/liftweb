@@ -228,12 +228,15 @@ object CanSpec extends Specification {
     "use the %? method to create a Failure from a false boolean condition" in {
       false %? "condition not satisfied" must_== Failure("condition not satisfied", Empty, Nil)
     }
+
     "use the %? method to stay as a Full(true) if the condition is true" in {
       true %? "condition not satisfied" must_== Full(true)
     }
+
     "use the >? method to chain condition tests and collect failure messages" in {
       true %? "cond1 ko" >? false %? "cond2 ko" must_== Failure("cond2 ko", Empty, Nil)
     }
+
     "use the >? method to chain condition tests and collect failure messages" in {
       true %? "cond1 ko" >? false %? "cond2 ko" >?
      true %? "cond3 ko" >? false %? "cond4 ko" must beLike { case f: Failure =>
