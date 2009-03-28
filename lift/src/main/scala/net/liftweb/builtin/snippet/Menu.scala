@@ -235,18 +235,22 @@ class Menu extends DispatchSnippet {
 	   request <- S.request.toList;
 	   loc <- request.location.toList)
       yield {
-	  if (loc.name != name) {
-	    Group(SiteMap.buildLink(name, text))
-          } else if (S.attr("donthide").isDefined) {
-	    // Use the provided text if it's non-empty, otherwise, default to Loc's LinkText
-	    if (text.length > 0) {
-	      Group(text)
+    	if (loc.name != name) {
+    	  val itemLink = SiteMap.buildLink(name, text) match {
+    	  	case e : Elem => e % S.prefixedAttrsToMetaData("a")
+            case x => x
+    	  }  
+          Group(itemLink)
+	    } else if (S.attr("donthide").isDefined) {
+	      // Use the provided text if it's non-empty, otherwise, default to Loc's LinkText
+	      if (text.length > 0) {
+	        Group(text)
+	      } else {
+	        Group(loc.linkText openOr Text(loc.name))
+	      }
 	    } else {
-	      Group(loc.linkText openOr Text(loc.name))
+	      Text("")
 	    }
-	  } else {
-	    Text("")
-	  }
-	}
+      }
 
 }
