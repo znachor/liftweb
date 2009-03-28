@@ -17,9 +17,11 @@ import _root_.scala.xml._
 import _root_.net.liftweb.util._
 import _root_.net.liftweb.mapper.{Safe}
 import _root_.net.liftweb.http.{S}
+import _root_.net.liftweb.http.js._
 import _root_.java.util.regex._
 import Helpers._
 import S._
+import JE._
 
 object PasswordField {
   val blankPw = "*******"
@@ -81,6 +83,9 @@ class PasswordField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Fiel
   override def validators = validatePassword _ :: Nil
 
   def defaultValue = ""
+
+  def asJs = Str(value)
+
 }
 
 import java.sql.{ResultSet, Types}

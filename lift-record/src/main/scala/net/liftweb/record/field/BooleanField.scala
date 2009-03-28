@@ -16,8 +16,10 @@ package net.liftweb.record.field
 import _root_.scala.xml._
 import _root_.net.liftweb.util._
 import _root_.net.liftweb.http.{S, FieldError, SHtml}
+import _root_.net.liftweb.http.js._
 import Helpers._
 import S._
+import JE._
 
 class BooleanField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[Boolean, OwnerType] {
   def owner = rec
@@ -77,6 +79,8 @@ class BooleanField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field
 
 
   def defaultValue = false
+
+  def asJs: JsExp = value
 
 }
 
