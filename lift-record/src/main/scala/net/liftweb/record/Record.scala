@@ -71,6 +71,15 @@ trait Record[MyType <: Record[MyType]] {
   def asJSON: JsExp = meta.asJSON(this)
 
   /**
+   * Populate this record's fields with the values from the JSON construct
+   *
+   * @param json - The stringified JSON object
+   */
+  def fromJSON(json: String): Box[MyType] = {
+    meta.fromJSON(this, json)
+  }
+
+  /**
    * Present the model as a form and execute the function on submission of the form
    *
    * @param button - If it's Full, put a submit button on the form with the value of the parameter

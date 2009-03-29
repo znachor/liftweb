@@ -144,6 +144,17 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] {
   }
 
   /**
+   * Creates a mew record from a JSON construct
+   */
+  def createRecord(json: String): Box[BaseRecord] = {
+    val rec: BaseRecord = rootClass.newInstance.asInstanceOf[BaseRecord]
+    rec.runSafe {
+      introspect(rec, rec.getClass.getMethods) {case (v, mf) =>}
+    }
+    rec.fromJSON(json)
+  }
+
+  /**
    * Creates a new record setting the value of the fields from the original object but
    * apply the new value for the specific field
    *
@@ -209,6 +220,23 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] {
   def asJSON(inst: BaseRecord): JsObj = {
     JsObj((for (holder <- fieldList;
                 field <- inst.fieldByName(holder.name)) yield (field.name, field.asJs)):_*)
+  }
+
+  /**
+   * Populate the inst's fields with the values from the JSON construct
+   *
+   * @param inst - the record that will be populated
+   * @param json - The stringified JSON object
+   * @return Box[BaseRecord]
+   */
+  def fromJSON(inst: BaseRecord, json: String): Box[BaseRecord] = {
+    JSONParser.parse(json) match {
+        case Full(nvp : Map[_, _]) =>
+          for ((k, v) <- nvp;
+               field <- inst.fieldByName(k.toString)) yield field.setFromAny(v)
+          Full(inst)
+        case _ => Empty
+      }
   }
 
   private[record] def foreachCallback(inst: BaseRecord, f: LifecycleCallbacks => Any) {

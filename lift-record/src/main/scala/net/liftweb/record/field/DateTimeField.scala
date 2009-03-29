@@ -78,7 +78,7 @@ class DateTimeField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Fiel
 
   def defaultValue = Calendar.getInstance
 
-  def asJs = JsRaw("new Date(" + value.getTimeInMillis + ")")
+  def asJs = Str(toInternetDate(value.getTime))
 
 }
 
