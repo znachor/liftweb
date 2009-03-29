@@ -21,6 +21,7 @@ import net.liftweb.http.js.{JsExp, JE, JsObj}
 import net.liftweb.http.{FieldError, SHtml}
 import java.lang.reflect.Method
 import field._
+import Box._
 import JE._
 import Helpers._
 
