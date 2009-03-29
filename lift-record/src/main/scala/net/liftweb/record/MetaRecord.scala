@@ -145,6 +145,8 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] {
 
   /**
    * Creates a mew record from a JSON construct
+   *
+   * @param json - the stringified JSON stucture
    */
   def createRecord(json: String): Box[BaseRecord] = {
     val rec: BaseRecord = rootClass.newInstance.asInstanceOf[BaseRecord]
