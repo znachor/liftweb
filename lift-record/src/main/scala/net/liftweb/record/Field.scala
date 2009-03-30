@@ -15,6 +15,7 @@ package net.liftweb.record
 
 import net.liftweb.util._
 import net.liftweb.http.{S, FieldIdentifier, FieldError}
+import net.liftweb.http.js.{JsExp}
 import scala.xml._
 
 
@@ -78,6 +79,11 @@ trait OwnedField[OwnerType <: Record[OwnerType]] extends FieldIdentifier {
   def toForm: NodeSeq
 
   def asXHtml: NodeSeq
+
+  /**
+   * Returns the field's value as a valid JavaScript expression
+   */
+  def asJs: JsExp
 
   /**
    * Are we in "safe" mode (i.e., the value of the field can be read or written without any security checks.)

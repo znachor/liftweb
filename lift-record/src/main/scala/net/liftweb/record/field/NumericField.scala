@@ -14,15 +14,16 @@
 package net.liftweb.record.field
 
 import net.liftweb.http.{S, FieldError}
+import net.liftweb.http.js._
 import net.liftweb.util._
 import scala.xml._
 import S._
 import Helpers._
+import JE._
 
 trait NumericField[MyType, OwnerType <: Record[OwnerType]] extends Field[MyType, OwnerType] {
 
-  private def elem =
-  S.fmapFunc{s: List[String] => {
+  private def elem = S.fmapFunc{s: List[String] => {
       this.setFromAny(s) match {
         case Empty => valueCouldNotBeSet = true
         case _ =>
@@ -51,4 +52,7 @@ trait NumericField[MyType, OwnerType <: Record[OwnerType]] extends Field[MyType,
   }
 
   override def noValueErrorMessage = S.??("number.required")
+
+  def asJs = JsRaw(String.valueOf(value))
+
 }

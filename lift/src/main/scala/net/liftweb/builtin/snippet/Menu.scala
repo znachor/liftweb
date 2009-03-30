@@ -166,7 +166,15 @@ class Menu extends DispatchSnippet {
    * </pre>
    *
    * <p>You can also specify your own template within the Menu.group snippet tag, as long as
-   * you provide a &lt;menu:bind /&gt; element where the snippet can place the menus.</p>
+   * you provide a &lt;menu:bind /&gt; element where the snippet can place each menu item:</p>
+   *
+   * <pre>
+   * &lt;ul&gt;
+   * &lt;lift:Menu.group group="test" &gt;
+   *   &lt;li&gt;&lt;menu:bind /&gt;&lt;/li&gt;
+   * &lt;/lift:Menu.group&gt;
+   * </pre>
+   *  
    */
   def group(template: NodeSeq): NodeSeq = {
     val toBind = if ((template \ "bind").filter(_.prefix == "menu").isEmpty)
@@ -202,21 +210,47 @@ class Menu extends DispatchSnippet {
    * &lt;lift:Menu.item name="b" /&gt;
    * </pre>
    *
-   * <p>The menu item is rendered as an anchor tag (&lta /&gt;), and you can customize
+   * <p>The menu item is rendered as an anchor tag (&lta /&gt;). The text for the link
+   * defaults to the named Menu's Loc.linkText, but you can specify your own link text
+   * by providing contents to the tag:</p>
+   *
+   * <pre>
+   * &lt;lift:Menu.item name="b"&gt;This is a link&lt;/lift:Menu.item&gt;
+   * </pre>
+   *
+   * <p>Additionally you can customize
    * the tag using attributes prefixed with "a":</p>
    *
    * <pre>
    * &lt;lift:Menu.item name="b" a:style="color: red;" /&gt;
    * </pre>
+   *
+   * <p>Normally, the Menu item is not shown on pages that match its Menu's Loc. You can
+   * set the "donthide" attribute on the tag to force it to show text only (same text as normal,
+   * but not in an anchor tag)</p>
    * 
    */
-  def item(text: NodeSeq): NodeSeq =
-  for (name <- S.attr("name").toList;
-       request <- S.request.toList;
-       loc <- request.location.toList if loc.name != name;
-       item <- SiteMap.buildLink(name, text))
-  yield item match {
-    case e: Elem => e % S.prefixedAttrsToMetaData("a")
-    case x => x
-  }
+  def item(text: NodeSeq): NodeSeq = 
+      for (name <- S.attr("name").toList;
+	   request <- S.request.toList;
+	   loc <- request.location.toList)
+      yield {
+    	if (loc.name != name) {
+    	  val itemLink = SiteMap.buildLink(name, text) match {
+    	  	case e : Elem => e % S.prefixedAttrsToMetaData("a")
+            case x => x
+    	  }  
+          Group(itemLink)
+	    } else if (S.attr("donthide").isDefined) {
+	      // Use the provided text if it's non-empty, otherwise, default to Loc's LinkText
+	      if (text.length > 0) {
+	        Group(text)
+	      } else {
+	        Group(loc.linkText openOr Text(loc.name))
+	      }
+	    } else {
+	      Text("")
+	    }
+      }
+
 }

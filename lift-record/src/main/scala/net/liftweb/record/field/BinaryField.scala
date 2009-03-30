@@ -16,8 +16,10 @@ package net.liftweb.record.field
 import _root_.scala.xml._
 import _root_.net.liftweb.util._
 import _root_.net.liftweb.http.{S, FieldError}
+import _root_.net.liftweb.http.js._
 import Helpers._
 import S._
+import JE._
 
 
 class BinaryField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[Array[Byte], OwnerType] {
@@ -51,6 +53,8 @@ class BinaryField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[
   def asXHtml: NodeSeq = NodeSeq.Empty
 
   def defaultValue = Array(0)
+
+  def asJs = Str(hexEncode(value))
 
 }
 

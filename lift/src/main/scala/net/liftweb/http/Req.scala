@@ -323,9 +323,9 @@ class Req(val path: ParsePath,
   def remoteAddr: String = request.getRemoteAddr()
 
   /**
-  * Parse the if-modified-since header and return the milliseconds since epoch
-  * of the parsed date.
-  */
+   * Parse the if-modified-since header and return the milliseconds since epoch
+   * of the parsed date.
+   */
   lazy val ifModifiedSince: Box[java.util.Date] =
     for {req <- Box !! request
     ims <- Box !! req.getHeader("if-modified-since")
