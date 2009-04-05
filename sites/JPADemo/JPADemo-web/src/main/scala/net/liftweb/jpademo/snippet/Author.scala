@@ -27,6 +27,8 @@ import Model._
 
 import javax.persistence.{EntityExistsException,PersistenceException}
 
+import org.hibernate.validator.ClassValidator
+
 class AuthorOps {
   def list (xhtml : NodeSeq) : NodeSeq = {
     val authors = Model.createNamedQuery[Author]("findAllAuthors").getResultList()
@@ -44,17 +46,22 @@ class AuthorOps {
   object authorVar extends RequestVar(new Author())
   def author = authorVar.is
 
+  // For validation
+  val authorValidator = new ClassValidator(classOf[Author])
+
   def add (xhtml : NodeSeq) : NodeSeq = {
     def doAdd () = {
-      if (author.name.length == 0) {
-	error("emptyAuthor", "The author's name cannot be blank")
-      } else {
-	try {
-	  Model.mergeAndFlush(author)
-	  redirectTo("list.html")
-	} catch {
-	  case ee : EntityExistsException => error("That author already exists.")
-	  case pe : PersistenceException => error("Error adding author"); Log.error("Author add failed", pe)
+      authorValidator.getInvalidValues(author) match {
+	case Array() =>
+	  try {
+	    Model.mergeAndFlush(author)
+	    redirectTo("list.html")
+	  } catch {
+	    case ee : EntityExistsException => error("That author already exists.")
+	    case pe : PersistenceException => error("Error adding author"); Log.error("Author add failed", pe)
+	  }
+	case errors => {
+	  errors.foreach(err => S.error(err.toString))
 	}
       }
     }

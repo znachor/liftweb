@@ -15,8 +15,10 @@
  */
 package net.liftweb.jpademo.model
 
+import scala.reflect.BeanProperty
 import javax.persistence._
 
+import org.hibernate.validator._
 /**
   An author is someone who writes books.
 */
@@ -26,8 +28,13 @@ class Author {
   @GeneratedValue(){val strategy = GenerationType.AUTO}
   var id : Long = _
 
-  @Column{val unique = true, val nullable = false}
   var name : String = ""
+
+  @Column{val unique = true, val nullable = false}
+  @NotNull
+  @Length{val min = 3, val max = 100}
+  def getName() = name
+  def setName(nm : String) { name = nm }
 
   @OneToMany(){val mappedBy = "author", val targetEntity = classOf[Book]}
   var books : java.util.Set[Book] = new java.util.HashSet[Book]()
