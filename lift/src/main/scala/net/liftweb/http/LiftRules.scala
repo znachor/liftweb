@@ -804,7 +804,7 @@ object LiftRules {
     when.is
   }
 
-lazy val liftVersion = "0.11-SNAPSHOT"
+  lazy val liftVersion = "0.11-SNAPSHOT"
 
   /**
    * Hods the last update time of the Comet request. Based on this server mayreturn HTTP 304 status
