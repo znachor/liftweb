@@ -721,7 +721,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
               case Full(inst) => {
                   val ar: Array[AnyRef] = List(Group(kids)).toArray
                   ((invokeMethod(inst.getClass, inst, method, ar)) or invokeMethod(inst.getClass, inst, method)) match {
-                    case Full(md: NodeSeq) => md
+                    case CheckNodeSeq(md) => md
                     case it => LiftRules.snippetFailedFunc.toList.foreach(_(LiftRules.SnippetFailure(page, snippetName,
                                                                                                      LiftRules.SnippetFailures.MethodNotFound))); kids
                   }
