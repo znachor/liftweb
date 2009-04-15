@@ -256,6 +256,16 @@ object LiftRules {
    * DispatchSnippet instance
    */
   val snippetDispatch = RulesSeq[SnippetDispatchPF]
+  private def setupSnippetDispatch() {
+  import net.liftweb.builtin.snippet._
+
+  snippetDispatch.append(
+    Map("CSS" -> CSS, "Msgs" -> Msgs, "Msg" -> Msg,
+    "Menu" -> Menu, "css" -> CSS, "msgs" -> Msgs, "msg" -> Msg,
+    "menu" -> Menu))
+  }
+  setupSnippetDispatch()
+
 
   /**
    * Change this variable to set view dispatching
