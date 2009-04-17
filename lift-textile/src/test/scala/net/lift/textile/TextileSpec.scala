@@ -34,6 +34,10 @@ object TextileSpec extends Specification {
       toHtml("**Hello World**") must ==/(<p><b>Hello World</b></p>)
     }
 
+    "Make other things bold" in {
+      toHtml("Dude this is **Hello World** kind of stuff") must ==/(<p>Dude this is <b>Hello World</b> kind of stuff</p>)
+    }
+
     "I am <em>very</em> serious" in {
       toHtml("I am <em>very</em> serious") must ==/(<p>I am <em>very</em> serious</p>)
     }
@@ -47,7 +51,33 @@ object TextileSpec extends Specification {
     }
 
     "\"Observe!\"" in {
-      toHtml("\"Observe!\"") must ==/(<p>&#8220;Observe!&#8221;</p>)
+      val ret = toHtml("\"Observe!\"")
+
+      ret must ==/(<p>&#8220;Observe!&#8221;</p>)
+    }
+
+    "A simple example." in {
+      toHtml("A simple example.") must ==/(<p>A simple example.</p>)
+    }
+
+    "Multi-line with - signs" in {
+   val res = toHtml(   
+"""
+A simple example.
+A hi-tech example.
+A hi-tech lo-tech example.
+A -deleted- example.
+A -deleted hi-tech- example.
+A regular example.
+""")
+      println(res)
+      
+      res must ==/(<p>A simple example.<br />
+A hi-tech example. <br />
+A hi-tech lo-tech example. <br />
+A <del>deleted</del> example.<br />
+A <del>deleted hi-tech</del> example. <br />
+A regular example.</p>)
     }
 
     "a link http://yahoo.com inside" in {
@@ -93,7 +123,7 @@ object TextileSpec extends Specification {
 * Dude
 * Dog
 """)
-
+println(it)
       it must ==/(
 <ul><li> *Hello moo</li>
 <li> Dude</li>
