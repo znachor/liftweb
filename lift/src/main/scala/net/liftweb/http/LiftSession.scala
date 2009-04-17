@@ -105,8 +105,7 @@ case class SessionToServletBridge(uniqueId: String) extends HttpSessionBindingLi
    * When the session is unbound the the HTTP session, stop us
    */
   def valueUnbound(event: HttpSessionBindingEvent) {
-    SessionMaster ! RemoveSession(uniqueId)
-
+    SessionMaster.sendMsg(RemoveSession(uniqueId))
   }
 
 }
@@ -166,49 +165,68 @@ object SessionMaster extends Actor {
     doPing()
     link(ActorWatcher)
     loop {
-      react {
-        case RemoveSession(sessionId) =>
-          val ses = synchronized(sessions)
-          ses.get(sessionId).foreach{s =>
-            try {
-              s.doShutDown
-              try {
-                s.httpSession.removeAttribute(LiftMagicID)
-              } catch {
-                case e => // ignore... sometimes you can't do this and it's okay
-              }
-            } catch {
-              case e => Log.error("Failure in remove session", e)
+      react(reaction)
+    }
+  }
 
-            } finally {
-              synchronized{ sessions = sessions - sessionId }
-            }
+  private val reaction: PartialFunction[Any, Unit] = {
+    case RemoveSession(sessionId) =>
+      val ses = synchronized(sessions)
+      ses.get(sessionId).foreach{s =>
+        try {
+          s.doShutDown
+          try {
+            s.httpSession.removeAttribute(LiftMagicID)
+          } catch {
+            case e => // ignore... sometimes you can't do this and it's okay
           }
+        } catch {
+          case e => Log.error("Failure in remove session", e)
 
-        case CheckAndPurge =>
-          val now = millis
-          val ses = synchronized{sessions}
-          for ((id, session) <- ses.elements) {
-            if (now - session.lastServiceTime > session.inactivityLength) {
-              Log.info(" Session "+id+" expired")
-              this ! RemoveSession(id)
-            } else {
-              session.cleanupUnseenFuncs()
-            }
-          }
-          sessionWatchers.foreach(_ ! SessionWatcherInfo(ses))
-          doPing()
+        } finally {
+          synchronized{ sessions = sessions - sessionId }
+        }
+      }
+
+    case CheckAndPurge =>
+      val now = millis
+      val ses = synchronized{sessions}
+      for ((id, session) <- ses.elements) {
+        if (now - session.lastServiceTime > session.inactivityLength) {
+          Log.info(" Session "+id+" expired")
+          this.sendMsg(RemoveSession(id))
+        } else {
+          session.cleanupUnseenFuncs()
+        }
+      }
+      if (!Props.inGAE) {
+      sessionWatchers.foreach(_ ! SessionWatcherInfo(ses))
+      doPing()
+      }
+  }
+
+  // Don't start the actor is we're running in the Google App Engine
+  if (!Props.inGAE) {
+    this.start
+  }
+
+  private[http] def sendMsg(in: Any): Unit =
+  if (!Props.inGAE) this ! in
+  else {
+    this.synchronized{
+      tryo {
+        if (reaction.isDefinedAt(in)) reaction.apply(in)
       }
     }
   }
 
-  this.start
-
   private def doPing() {
-    try {
-      ActorPing schedule(this, CheckAndPurge, 10 seconds)
-    } catch {
-      case e => Log.error("Couldn't start SessionMaster ping", e)
+    if (!Props.inGAE) {
+      try {
+        ActorPing schedule(this, CheckAndPurge, 10 seconds)
+      } catch {
+        case e => Log.error("Couldn't start SessionMaster ping", e)
+      }
     }
   }
 
@@ -406,11 +424,12 @@ class LiftSession(val contextPath: String, val uniqueId: String,
       onSessionEnd.foreach(_(this))
 
       LiftSession.onAboutToShutdownSession.foreach(_(this))
-      SessionMaster ! RemoveSession(this.uniqueId)
+      SessionMaster.sendMsg(RemoveSession(this.uniqueId))
+
 
       // Log.debug("Shutting down session")
       running_? = false
-      asyncComponents.foreach{case (_, comp) => comp ! ShutDown}
+      asyncComponents.foreach{case (_, comp) => tryo(comp ! ShutDown)}
       cleanUpSession()
       LiftSession.onShutdownSession.foreach(_(this))
     }
@@ -727,8 +746,8 @@ class LiftSession(val contextPath: String, val uniqueId: String,
                   }
                 }
               case Failure(_, Full(exception), _) => Log.warn("Snippet instantiation error", exception)
-                  LiftRules.snippetFailedFunc.toList.foreach(_(LiftRules.SnippetFailure(page, snippetName,
-                                                                                        LiftRules.SnippetFailures.InstantiationException))); kids
+                LiftRules.snippetFailedFunc.toList.foreach(_(LiftRules.SnippetFailure(page, snippetName,
+                                                                                      LiftRules.SnippetFailures.InstantiationException))); kids
 
               case _ => LiftRules.snippetFailedFunc.toList.foreach(_(LiftRules.SnippetFailure(page, snippetName,
                                                                                               LiftRules.SnippetFailures.ClassNotFound))); kids
@@ -788,6 +807,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     case ("surround", elm, _, _, page) => processSurroundElement(page, elm)
     case ("embed", _, metaData, kids, page) => findAndEmbed(Box(metaData.get("what")), kids)
     case ("ignore", _, _, _, _) => NodeSeq.Empty
+    case ("comet", _, metaData, kids, _) if Props.inGAE => Text("Comet Disabled in Google App Engine")
     case ("comet", _, metaData, kids, _) => executeComet(Box(metaData.get("type").map(_.text.trim)), Box(metaData.get("name").map(_.text.trim)), kids, metaData)
     case ("children", _, _, kids, _) => kids
     case ("a", elm, metaData, kids, _) => Elem(null, "a", addAjaxHREF(metaData), elm.scope, kids :_*)
@@ -1098,8 +1118,8 @@ object TemplateFinder {
         val toTry = for (s <- suffixes; p <- locales) yield pls + p + (if (s.length > 0) "." + s else "")
 
         first(toTry)(v => (LiftRules.templateCache openOr NoCache).findTemplate(v) {
-          LiftRules.finder(v).flatMap(PCDataXmlParser(_))
-        }) or lookForClasses(places)
+            LiftRules.finder(v).flatMap(PCDataXmlParser(_))
+          }) or lookForClasses(places)
     }
   }
 

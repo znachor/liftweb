@@ -45,7 +45,10 @@ class Boot {
 
     LiftRules.localeCalculator = r => definedLocale.openOr(LiftRules.defaultLocaleCalculator(r))
 
+    if (!Props.inGAE) {
+      // No DB stuff in GAE
     Schemifier.schemify(true, Log.infoF _, User, WikiEntry, Person)
+    }
 
     LiftRules.dispatch.prepend(NamedPF("Web Services Example") {
         // if the url is "showcities" then return the showCities function
@@ -141,16 +144,16 @@ object MenuInfo {
   import Loc._
 
   def menu: List[Menu] =  Menu(Loc("home", List("index"), "Home")) ::
-  Menu(Loc("xml fun", List("xml_fun"), "XML Fun")) ::
-  Menu(Loc("chat", List("chat"), "Comet Chat")) ::
-  Menu(Loc("database", List("database"), "Database")) ::
+  Menu(Loc("xml fun", List("xml_fun"), "XML Fun", Unless(() => Props.inGAE, "Disabled for GAE"))) ::
+  Menu(Loc("chat", List("chat"), "Comet Chat", Unless(() => Props.inGAE, "Disabled for GAE"))) ::
+  Menu(Loc("database", List("database"), "Database", Unless(() => Props.inGAE, "Disabled for GAE"))) ::
   Menu(Loc("ajax", List("ajax"), "AJAX Samples")) ::
   Menu(Loc("ajax form", List("ajax-form"), "AJAX Form")) ::
   Menu(Loc("json", List("json"), "JSON Messaging")) ::
-  Menu(Loc("template", List("template"), "Templates")) ::
-  Menu(Loc("ws", List("ws"), "Web Services")) ::
+  Menu(Loc("template", List("template"), "Templates", Unless(() => Props.inGAE, "Disabled for GAE"))) ::
+  Menu(Loc("ws", List("ws"), "Web Services", Unless(() => Props.inGAE, "Disabled for GAE"))) ::
   Menu(Loc("simple", Link(List("simple"), true, "/simple/index"),
-           "Simple Forms")) ::
+           "Simple Forms", Unless(() => Props.inGAE, "Disabled for GAE"))) ::
   Menu(Loc("lang", List("lang"), "Localization")) ::
   Menu(Loc("menu_top", List("menu", "index"), "Menus"),
        Menu(Loc("menu_one", List("menu", "one"), "First Submenu")),
