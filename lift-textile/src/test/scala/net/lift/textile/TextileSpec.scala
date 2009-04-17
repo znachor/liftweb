@@ -61,8 +61,8 @@ object TextileSpec extends Specification {
     }
 
     "Multi-line with - signs" in {
-   val res = toHtml(   
-"""
+      val res = toHtml(
+        """
 A simple example.
 A hi-tech example.
 A hi-tech lo-tech example.
@@ -70,66 +70,77 @@ A -deleted- example.
 A -deleted hi-tech- example.
 A regular example.
 """)
-      println(res)
       
       res must ==/(<p>A simple example.<br />
-A hi-tech example. <br />
-A hi-tech lo-tech example. <br />
-A <del>deleted</del> example.<br />
-A <del>deleted hi-tech</del> example. <br />
-A regular example.</p>)
+          A hi-tech example. <br />
+          A hi-tech lo-tech example. <br />
+          A <del>deleted</del> example.<br />
+          A <del>deleted hi-tech</del> example. <br />
+          A regular example.</p>)
     }
 
     "a link http://yahoo.com inside" in {
       toHtml("a link http://yahoo.com inside") must ==/(<p>a link <a href="http://yahoo.com">http://yahoo.com</a> inside</p>)
     }
 
+    "h3" in {
+      toHtml("h3. Dogs eat dogfood") must ==/(<h3>Dogs eat dogfood</h3>)
+    }
+
+    "h3 with whitespace" in {
+      toHtml("   h3. Dogs eat dogfood") must ==/(<h3>Dogs eat dogfood</h3>)
+    }
+
+    "Single line delete " in {
+      toHtml("This contains -deleted stuff-") must ==/(<p>This contains <del>deleted stuff</del></p>)
+    }
+
     "3 bullets" in {
       val it = toHtml(
-"""
+        """
 * Hello
 * Dude
 * Dog
 """)
 
       it must ==/(
-<ul><li> Hello</li>
-<li> Dude</li>
-<li> Dog</li>
-</ul>
-)
+        <ul><li> Hello</li>
+        <li> Dude</li>
+        <li> Dog</li>
+        </ul>
+      )
     }
 
     "3 bullets strong" in {
       val it = toHtml(
-"""
+        """
 * *Hello* moo
 * Dude
 * Dog
 """)
 
       it must ==/(
-<ul><li> <strong>Hello</strong> moo</li>
-<li> Dude</li>
-<li> Dog</li>
-</ul>
-)
+        <ul><li> <strong>Hello</strong> moo</li>
+        <li> Dude</li>
+        <li> Dog</li>
+        </ul>
+      )
     }
 
     "3 bullets not strong" in {
       val it = toHtml(
-"""
+        """
 * *Hello moo
 * Dude
 * Dog
 """)
-println(it)
+
       it must ==/(
-<ul><li> *Hello moo</li>
-<li> Dude</li>
-<li> Dog</li>
-</ul>
-)
+        <ul><li> *Hello moo</li>
+        <li> Dude</li>
+        <li> Dog</li>
+        </ul>
+      )
     }
 
     "a link http://yahoo.com not inside" in {
@@ -137,7 +148,7 @@ println(it)
     }
 
   }
-"""VF-DE:
+  """VF-DE:
         IFC.ksh: 04/10/08 03:26:52: * * * * * * * * * * * * * * * start of IFC.ksh * * * * * * * * * * * * * * *
         IFC.ksh: 04/10/08 15:34:30: * * * * * * * * * * * * * * * end of IFC.ksh * * * * * * * * * * * * * * *
 VF-ES:
@@ -188,7 +199,7 @@ UK:
         IFC.ksh: 04/11/08 03:38:41: * * * * * * * * * * * * * * * start of IFC.ksh * * * * * * * * * * * * * * *
         IFC.ksh: 04/11/08 05:26:49: * * * * * * * * * * * * * * * end of IFC.ksh * * * * * * * * * * * * * * *"""
 
-"""Hello:
+  """Hello:
 * THis is a * on a line
 * This is a *strong* line
 * This is a **Bold** line
