@@ -863,6 +863,8 @@ object LiftRules {
                             Nil, 200))
   }
 
+  var templateCache: Box[TemplateCache] = Empty
+
   private def testFor304(req: Req, lastModified: Long): Box[LiftResponse] = {
     val mod = req.request.getHeader("if-modified-since")
     if (mod != null && ((lastModified / 1000L) * 1000L) <= parseInternetDate(mod).getTime)
