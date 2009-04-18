@@ -131,7 +131,7 @@ object Props {
   /**
    * The resource path segment corresponding to the system hostname.
    */
-  lazy val hostName: String = if (inGAE) "GAE" else InetAddress.getLocalHost.getHostName + "."
+  lazy val hostName: String = (if (inGAE) "GAE" else InetAddress.getLocalHost.getHostName) + "."
 
   /**
    * The list of paths to search for property file resources.
