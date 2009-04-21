@@ -53,13 +53,6 @@ trait Record[MyType <: Record[MyType]] {
   }
 
   /**
-   * If the instance calculates any additional
-   * fields for JSON object, put the calculated fields
-   * here
-   */
-  def suplementalJs(ob: Box[KeyObfuscator]): List[(String, JsExp)] = Nil
-
-  /**
    * Validates this Record by calling validators for each field
    *
    * @return a List of FieldError. If this list is empty you can assume that record was validated successfully
@@ -71,12 +64,19 @@ trait Record[MyType <: Record[MyType]] {
   }
 
   /**
-   * Retuns the JavaScript expression for this Record
+   * Retuns the JSON representation of this record
    *
-   * @return a JsExp
+   * @return a JsObjss
    */
-  def asJs: JsExp = {
-    meta.asJs(this)
+  def asJSON: JsExp = meta.asJSON(this)
+
+  /**
+   * Populate this record's fields with the values from the JSON construct
+   *
+   * @param json - The stringified JSON object
+   */
+  def fromJSON(json: String): Box[MyType] = {
+    meta.fromJSON(this, json)
   }
 
   /**

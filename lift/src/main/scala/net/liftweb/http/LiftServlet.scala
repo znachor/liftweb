@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2008 WorldWide Conferencing, LLC
+ * Copyright 2007-2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -493,10 +493,16 @@ class LiftServlet extends HttpServlet {
             var len = 0
             val ba = new Array[Byte](8192)
             val os = response.getOutputStream
-            len = stream.read(ba)
+            stream match {
+              case jio: java.io.InputStream => len = jio.read(ba)
+              case stream => len = stream.read(ba)
+              }
             while (len >= 0) {
               if (len > 0) os.write(ba, 0, len)
-              len = stream.read(ba)
+              stream match {
+              case jio: java.io.InputStream => len = jio.read(ba)
+              case stream => len = stream.read(ba)
+              }
             }
             response.getOutputStream.flush()
           } finally {

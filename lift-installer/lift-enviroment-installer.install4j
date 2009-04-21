@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <install4j version="4.1.5" transformSequenceNumber="2">
   <directoryPresets config="./src/javarebel-1.2.2/Install.html" />
-  <application name="Lift Framework" distributionSourceDir="" applicationId="5718-3659-1334-6595" mediaDir="./target" mediaFilePattern="${compiler:sys.shortName}_${compiler:sys.platform}_${compiler:sys.version}" compression="6" lzmaCompression="false" pack200Compression="true" excludeSignedFromPacking="true" keepModificationTimes="false" shortName="liftweb" publisher="The Lift Open Source Comunity" publisherWeb="http://www.liftweb.net/" version="0.11" allPathsRelative="true" backupOnSave="false" autoSave="true" convertDotsToUnderscores="true" macSignature="????" installerName="" javaMinVersion="1.5" javaMaxVersion="" allowBetaVM="true" jdkMode="runtimeJre" jdkName="">
+  <application name="Lift Framework" distributionSourceDir="" applicationId="5718-3659-1334-6595" mediaDir="./target" mediaFilePattern="${compiler:sys.shortName}_${compiler:sys.platform}_${compiler:sys.version}" compression="6" lzmaCompression="false" pack200Compression="true" excludeSignedFromPacking="true" keepModificationTimes="false" shortName="liftweb" publisher="The Lift Open Source Comunity" publisherWeb="http://www.liftweb.net/" version="1.0" allPathsRelative="true" backupOnSave="false" autoSave="true" convertDotsToUnderscores="true" macSignature="????" installerName="" javaMinVersion="1.5" javaMaxVersion="" allowBetaVM="true" jdkMode="runtimeJre" jdkName="">
     <languages skipLanguageSelection="false">
       <principalLanguage id="en" customLocalizationFile="" />
       <additionalLanguages />
@@ -323,7 +323,7 @@ screen.next();</preActivation>
                     </object>
                   </java>
                 </serializedBean>
-                <condition />
+                <condition>Util.isWindows() == true</condition>
               </action>
               <action name="" id="270" beanClass="com.install4j.runtime.beans.actions.misc.ModifyEnvironmentVariableAction" enabled="true" commentSet="false" comment="" rollbackBarrier="false" multiExec="false" failureStrategy="1" errorMessage="">
                 <serializedBean>
@@ -344,12 +344,17 @@ screen.next();</preActivation>
                 <condition>import com.install4j.api.windows.WinEnvVars;
 import com.install4j.api.Util;
 
-if(WinEnvVars.getenv("M2_HOME") == null){
-  return true;
+if(Util.isWindows() == true){
+  if(WinEnvVars.getenv("M2_HOME") == null){
+    return true;
+  } else {
+    Util.showWarningMessage("You already have M2_HOME set, dont forget to manually change this variable.");
+    return false;
+  }  
 } else {
-  Util.showWarningMessage("You already have M2_HOME set, dont forget to manually change this variable.");
   return false;
-}</condition>
+}
+</condition>
               </action>
               <action name="" id="271" beanClass="com.install4j.runtime.beans.actions.misc.ModifyEnvironmentVariableAction" enabled="true" commentSet="false" comment="" rollbackBarrier="false" multiExec="false" failureStrategy="1" errorMessage="">
                 <serializedBean>
@@ -370,10 +375,14 @@ if(WinEnvVars.getenv("M2_HOME") == null){
                 <condition>import com.install4j.api.windows.WinEnvVars;
 import com.install4j.api.Util;
 
-if(WinEnvVars.getenv("M2") == null){
-  return true;
+if(Util.isWindows() == true){
+  if(WinEnvVars.getenv("M2") == null){
+    return true;
+  } else {
+    Util.showWarningMessage("You already have M2 set, dont forget to manually change this variable.");
+    return false;
+  }
 } else {
-  Util.showWarningMessage("You already have M2 set, dont forget to manually change this variable.");
   return false;
 }</condition>
               </action>
@@ -396,10 +405,14 @@ if(WinEnvVars.getenv("M2") == null){
                 <condition>import com.install4j.api.windows.WinEnvVars;
 import com.install4j.api.Util;
 
-if(WinEnvVars.getenv("MAVEN_OPTS") == null){
-  return true;
+if(Util.isWindows() == true){
+  if(WinEnvVars.getenv("MAVEN_OPTS") == null){
+    return true;
+  } else {
+    Util.showWarningMessage("You already have MAVEN_OPTS set, dont forget to manually change this variable.");
+    return false;
+  }
 } else {
-  Util.showWarningMessage("You already have MAVEN_OPTS set, dont forget to manually change this variable.");
   return false;
 }</condition>
               </action>
@@ -419,12 +432,15 @@ if(WinEnvVars.getenv("MAVEN_OPTS") == null){
                 <condition>import com.install4j.api.windows.WinEnvVars;
 import com.install4j.api.Util;
 
-if(WinEnvVars.getenv("JAVA_HOME") == null){
-  return true;
+if(Util.isWindows() == true){
+  if(WinEnvVars.getenv("JAVA_HOME") == null){
+    return true;
+  } else {
+    Util.showWarningMessage("You already have JAVA_HOME set, dont forget to manually change this variable.");
+    return false; 
+  }
 } else {
-  Util.showWarningMessage("You already have JAVA_HOME set, dont forget to manually change this variable.");
   return false;
-  
 }</condition>
               </action>
             </actions>

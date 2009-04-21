@@ -16,8 +16,10 @@ package net.liftweb.record.field
 import scala.xml._
 import net.liftweb.util._
 import net.liftweb.http.{S, SHtml, FieldError}
+import net.liftweb.http.js._
 import S._
 import Helpers._
+import JE._
 
 
 class EnumField[OwnerType <: Record[OwnerType], ENUM <: Enumeration](rec: OwnerType, enum: ENUM) extends Field[ENUM#Value, OwnerType] {
@@ -84,6 +86,8 @@ class EnumField[OwnerType <: Record[OwnerType], ENUM <: Enumeration](rec: OwnerT
   }
 
  def defaultValue: ENUM#Value = enum.elements.next
+
+ def asJs = Str(toString)
 
 }
 

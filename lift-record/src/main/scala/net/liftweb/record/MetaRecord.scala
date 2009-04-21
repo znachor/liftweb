@@ -17,11 +17,13 @@ import net.liftweb._
 import util._
 import scala.collection.mutable.{ListBuffer}
 import scala.xml._
-import net.liftweb.http.js.{JsExp, JE}
+import net.liftweb.http.js.{JsExp, JE, JsObj}
 import net.liftweb.http.{FieldError, SHtml}
-// import net.liftweb.mapper.{Safe, KeyObfuscator}
 import java.lang.reflect.Method
 import field._
+import Box._
+import JE._
+import Helpers._
 
 /**
  * Holds meta information and operations on a record
@@ -143,6 +145,19 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] {
   }
 
   /**
+   * Creates a mew record from a JSON construct
+   *
+   * @param json - the stringified JSON stucture
+   */
+  def createRecord(json: String): Box[BaseRecord] = {
+    val rec: BaseRecord = rootClass.newInstance.asInstanceOf[BaseRecord]
+    rec.runSafe {
+      introspect(rec, rec.getClass.getMethods) {case (v, mf) =>}
+    }
+    rec.fromJSON(json)
+  }
+
+  /**
    * Creates a new record setting the value of the fields from the original object but
    * apply the new value for the specific field
    *
@@ -199,17 +214,37 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] {
     }
   }
 
-  private[record] def foreachCallback(inst: BaseRecord, f: LifecycleCallbacks => Any) {
-    lifecycleCallbacks.foreach(m => f(m._2.invoke(inst, null).asInstanceOf[LifecycleCallbacks]))
+  /**
+   * Returns the JSON representation of <i>inst</i> record
+   *
+   * @param inst: BaseRecord
+   * @return JsObj
+   */
+  def asJSON(inst: BaseRecord): JsObj = {
+    JsObj((for (holder <- fieldList;
+                field <- inst.fieldByName(holder.name)) yield (field.name, field.asJs)):_*)
   }
 
   /**
-   * Retuns the JavaScript expression for inst Record
+   * Populate the inst's fields with the values from the JSON construct
    *
-   * @param inst - the designated Record
-   * @return a JsExp
+   * @param inst - the record that will be populated
+   * @param json - The stringified JSON object
+   * @return Box[BaseRecord]
    */
-  def asJs(inst: BaseRecord): JsExp = JE.JsObj(("$lift_class", JE.Str("temp"))) // TODO - implement this
+  def fromJSON(inst: BaseRecord, json: String): Box[BaseRecord] = {
+    JSONParser.parse(json) match {
+        case Full(nvp : Map[_, _]) =>
+          for ((k, v) <- nvp;
+               field <- inst.fieldByName(k.toString)) yield field.setFromAny(v)
+          Full(inst)
+        case _ => Empty
+      }
+  }
+
+  private[record] def foreachCallback(inst: BaseRecord, f: LifecycleCallbacks => Any) {
+    lifecycleCallbacks.foreach(m => f(m._2.invoke(inst, null).asInstanceOf[LifecycleCallbacks]))
+  }
 
   /**
    * Returns the XHTML representation of inst Record. If formTemplate is set,
@@ -220,25 +255,33 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] {
    */
   def toForm(inst: BaseRecord): NodeSeq = {
     formTemplate match {
-      case Full(template) => _toForm(inst, template)
-      case Empty => fieldList.flatMap(holder => fieldByName(holder.name, inst).
+      case Full(template) => toForm(inst, template)
+      case _ => fieldList.flatMap(holder => fieldByName(holder.name, inst).
                                       map(_.toForm).openOr(NodeSeq.Empty) ++ Text("\n"))
     }
   }
 
-  private def _toForm(inst: BaseRecord, template: NodeSeq): NodeSeq = {
+  /**
+   * Returns the XHTML representation of inst Record. You must provide the Node template
+   * to represent this record in the proprietary layout.
+   *
+   * @param inst - the record to be rendered
+   * @param template - The markup template forthe form. See also the formTemplate variable
+   * @return the XHTML content as a NodeSeq
+   */
+  def toForm(inst: BaseRecord, template: NodeSeq): NodeSeq = {
     template match {
-      case e @ <lift:field_label>{_*}</lift:field_label> => e.attribute("name") match{
+      case e @ <lift:field_label>{_*}</lift:field_label> => e.attribute("name") match {
           case Some(name) => fieldByName(name.toString, inst).map(_.label).openOr(NodeSeq.Empty)
           case _ => NodeSeq.Empty
         }
 
-      case e @ <lift:field>{_*}</lift:field> => e.attribute("name") match{
+      case e @ <lift:field>{_*}</lift:field> => e.attribute("name") match {
           case Some(name) => fieldByName(name.toString, inst).map(_.asXHtml).openOr(NodeSeq.Empty)
           case _ => NodeSeq.Empty
         }
 
-      case e @ <lift:field_msg>{_*}</lift:field_msg> => e.attribute("name") match{
+      case e @ <lift:field_msg>{_*}</lift:field_msg> => e.attribute("name") match {
           case Some(name) => fieldByName(name.toString, inst).map(_.uniqueFieldId match {
                 case Full(id) => <lift:msg id={id}/>
                 case _ => NodeSeq.Empty
@@ -247,18 +290,16 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] {
         }
 
       case Elem(namespace, label, attrs, scp, ns @ _*) =>
-        Elem(namespace, label, attrs, scp, _toForm(inst, ns.flatMap(n => _toForm(inst, n))):_* )
+        Elem(namespace, label, attrs, scp, toForm(inst, ns.flatMap(n => toForm(inst, n))):_* )
 
       case s : Seq[_] => s.flatMap(e => e match {
             case Elem(namespace, label, attrs, scp, ns @ _*) =>
-              Elem(namespace, label, attrs, scp, _toForm(inst, ns.flatMap(n => _toForm(inst, n))):_* )
+              Elem(namespace, label, attrs, scp, toForm(inst, ns.flatMap(n => toForm(inst, n))):_* )
             case x => x
           })
 
     }
   }
-
-
 
   private def ??(meth: Method, inst: BaseRecord) = meth.invoke(inst, null).asInstanceOf[OwnedField[BaseRecord]]
 
@@ -269,8 +310,7 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] {
    *
    * @return Box[The Field] (Empty if the field is not found)
    */
-  def fieldByName(fieldName: String, inst: BaseRecord):
-  Box[OwnedField[BaseRecord]] = {
+  def fieldByName(fieldName: String, inst: BaseRecord): Box[OwnedField[BaseRecord]] = {
     Box(fieldList.find(f => f.name == fieldName)).
     map(holder => ??(holder.method, inst).asInstanceOf[OwnedField[BaseRecord]])
   }

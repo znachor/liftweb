@@ -256,6 +256,16 @@ object LiftRules {
    * DispatchSnippet instance
    */
   val snippetDispatch = RulesSeq[SnippetDispatchPF]
+  private def setupSnippetDispatch() {
+  import net.liftweb.builtin.snippet._
+
+  snippetDispatch.append(
+    Map("CSS" -> CSS, "Msgs" -> Msgs, "Msg" -> Msg,
+    "Menu" -> Menu, "css" -> CSS, "msgs" -> Msgs, "msg" -> Msg,
+    "menu" -> Menu))
+  }
+  setupSnippetDispatch()
+
 
   /**
    * Change this variable to set view dispatching
@@ -804,7 +814,7 @@ object LiftRules {
     when.is
   }
 
-lazy val liftVersion = "0.11-SNAPSHOT"
+  lazy val liftVersion = "0.11-SNAPSHOT"
 
   /**
    * Hods the last update time of the Comet request. Based on this server mayreturn HTTP 304 status
@@ -852,6 +862,8 @@ lazy val liftVersion = "0.11-SNAPSHOT"
                             "Expires" -> toInternetDate(modTime + 10.minutes)),
                             Nil, 200))
   }
+
+  var templateCache: Box[TemplateCache] = Empty
 
   private def testFor304(req: Req, lastModified: Long): Box[LiftResponse] = {
     val mod = req.request.getHeader("if-modified-since")

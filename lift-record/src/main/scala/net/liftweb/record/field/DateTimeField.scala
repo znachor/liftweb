@@ -16,10 +16,11 @@ package net.liftweb.record.field
 import _root_.scala.xml._
 import _root_.net.liftweb.util._
 import _root_.net.liftweb.http.{S, FieldError}
+import _root_.net.liftweb.http.js._
 import _root_.java.util.Calendar
 import Helpers._
 import S._
-
+import JE._
 
 class DateTimeField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[Calendar, OwnerType] {
   def owner = rec
@@ -53,7 +54,7 @@ class DateTimeField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Fiel
   private def elem =
   S.fmapFunc(SFuncHolder(this.setFromAny(_))){funcName =>
     <input type="text"
-      name={funcName} lift:gc={funcName}
+      name={funcName}
       value={value match {case null => "" case s: Calendar => toInternetDate(s.getTime)}}
       tabindex={tabIndex toString}/>
   }
@@ -76,6 +77,8 @@ class DateTimeField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Fiel
   }
 
   def defaultValue = Calendar.getInstance
+
+  def asJs = Str(toInternetDate(value.getTime))
 
 }
 

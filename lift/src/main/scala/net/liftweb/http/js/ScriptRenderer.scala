@@ -166,7 +166,13 @@ function lift_blurIfReturn(e) {
 }
 
 function addPageName(url) {
-  return url.replace('""" + LiftRules.ajaxPath + """', '""" + LiftRules.ajaxPath + """/'+lift_page);
+  return """ + {
+   if (LiftRules.enableLiftGC) {
+      "url.replace('" + LiftRules.ajaxPath + "', '" + LiftRules.ajaxPath + "/'+lift_page);"
+   } else {
+      "url;"
+   }
+  } + """
 }
 
 function lift_actualAjaxCall(data, onSuccess, onFailure) {

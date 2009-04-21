@@ -16,8 +16,10 @@ package net.liftweb.record.field
 import _root_.scala.xml._
 import _root_.net.liftweb.util._
 import _root_.net.liftweb.http.{S, FieldError, SHtml}
+import _root_.net.liftweb.http.js._
 import Helpers._
 import S._
+import JE._
 
 class BooleanField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[Boolean, OwnerType] {
   def owner = rec
@@ -52,11 +54,7 @@ class BooleanField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field
     }
   }
 
-  private def elem =  /*<input type="checkbox"
-                       name={S.mapFunc(SFuncHolder(this.setFromAny(_)))}
-                       value={value.toString}
-                       tabindex={tabIndex toString}/>;
-                       */ SHtml.checkbox(value, this.set _, "tabIndex" -> tabIndex.toString)
+  private def elem = SHtml.checkbox(value, this.set _, "tabIndex" -> tabIndex.toString)
 
   def toForm = {
     //var el = elem
@@ -81,6 +79,8 @@ class BooleanField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field
 
 
   def defaultValue = false
+
+  def asJs: JsExp = value
 
 }
 
