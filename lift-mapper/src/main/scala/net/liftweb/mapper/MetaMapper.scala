@@ -973,7 +973,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
 
   def toForm(toMap: A): NodeSeq =
   mappedFieldList.map(e => ??(e.method, toMap)).
-  filter(_.dbDisplay_?).flatMap (
+  filter(f => f.dbDisplay_? && f.dbIncludeInForm_?).flatMap (
     field =>
     field.toForm.toList.
     flatMap(form => formatFormLine(Text(field.displayName), form))
@@ -983,7 +983,8 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
    * Get the fields (in order) for displaying a form
    */
   def formFields(toMap: A): List[MappedField[_, A]] =
-  mappedFieldList.map(e => ??(e.method, toMap)).filter(_.dbDisplay_?)
+  mappedFieldList.map(e => ??(e.method, toMap)).filter(f => f.dbDisplay_? &&
+                                                       f.dbIncludeInForm_?)
 
 
   /**

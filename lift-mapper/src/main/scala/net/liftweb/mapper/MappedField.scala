@@ -374,6 +374,8 @@ trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends Typed
 
   def dbDisplay_? = true
 
+  def dbIncludeInForm_? = dbDisplay_?
+
   /**
    * pascal-style assignment for syntactic sugar
    */
