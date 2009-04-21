@@ -1120,8 +1120,8 @@ object TemplateFinder {
         val toTry = for (s <- suffixes; p <- locales) yield pls + p + (if (s.length > 0) "." + s else "")
 
         first(toTry)(v => (LiftRules.templateCache openOr NoCache).findTemplate(v) {
-            LiftRules.finder(v).flatMap(PCDataXmlParser(_))
-          }) or lookForClasses(places)
+          LiftRules.finder(v).flatMap(PCDataXmlParser(_))
+        }) or lookForClasses(places)
     }
   }
 

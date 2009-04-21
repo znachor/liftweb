@@ -493,7 +493,7 @@ class LiftServlet extends HttpServlet {
             var len = 0
             val ba = new Array[Byte](8192)
             val os = response.getOutputStream
-           stream match {
+            stream match {
               case jio: java.io.InputStream => len = jio.read(ba)
               case stream => len = stream.read(ba)
               }
