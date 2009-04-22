@@ -53,13 +53,15 @@ case class Menu(loc: Loc[_], kids: Menu*) extends HasKids {
 
   override def buildUpperLines(pathAt: HasKids, actual: Menu, populate: List[MenuItem]): List[MenuItem]
   = {
-    val kids: List[MenuItem] = _parent.toList.flatMap(_.kids.toList.flatMap(m => m.loc.buildItem(if (m == this) populate else Nil, m == actual, m == pathAt)))
+    val kids: List[MenuItem] = 
+    _parent.toList.flatMap(_.kids.toList.flatMap(m => m.loc.buildItem(if (m == this) populate else Nil, m == actual, m == pathAt)))
+
     _parent.toList.flatMap(p => p.buildUpperLines(p, actual, kids))
   }
   // def buildChildLine: List[MenuItem] = kids.toList.flatMap(m => m.loc.buildItem(Nil, false, false))
 
   def makeMenuItem(path: List[Loc[_]]): Box[MenuItem] =
-  loc.buildItem(kids.flatMap(_.makeMenuItem(path)).toList, _lastInPath(path), _inPath(path))
+  loc.buildItem(loc.buildKidMenuItems(kids), _lastInPath(path), _inPath(path))
 
   private def _inPath(in: List[Loc[_]]): Boolean = in match {
     case Nil => false

@@ -41,7 +41,17 @@ trait Loc[ParamType] {
 
   def defaultParams: Box[ParamType]
 
+  def additionalKidParams: List[ParamType] = Nil
+
   def rewrite: LocRewrite = Empty
+
+  def placeHolder_? : Boolean = _placeHolder_?
+
+  private lazy val _placeHolder_? = params.contains(Loc.PlaceHolder)
+
+  def hideIfNoKids_? = placeHolder_? || _hideIfNoKids_?
+
+  private lazy val _hideIfNoKids_? = params.contains(Loc.HideIfNoKids)
 
   def createDefaultLink: Option[NodeSeq] = (foundParam.is or defaultParams).flatMap(p => link.createLink(p)).toOption
 
@@ -56,7 +66,7 @@ trait Loc[ParamType] {
         case rw: NamedPartialFunction[_, _] =>
           // ugly code to avoid type erasure warning
           rw.asInstanceOf[NamedPartialFunction[RewriteRequest, RewriteResponse]].functionName
-          case _ => "Unnamed"
+        case _ => "Unnamed"
       }
       def isDefinedAt(in: RewriteRequest) = rw.isDefinedAt(in)
 
@@ -203,30 +213,48 @@ trait Loc[ParamType] {
 
   def breadCrumbs: List[Loc[_]] = _menu.breadCrumbs ::: List(this)
 
+  def buildKidMenuItems(kids: Seq[Menu]): List[MenuItem] =
+  kids.toList.flatMap(_.loc.buildItem(Nil, false, false)) ::: supplimentalKidMenuItems
+
+  def supplimentalKidMenuItems: List[MenuItem] =
+  for {p <- additionalKidParams
+       l <- link.createLink(p)} yield
+  MenuItem(text.text(p), l, Nil, false, false,  params.flatMap {
+      case v: Loc.LocInfo[_] =>
+        // ugly code to avoid type erasure warning
+        v.asInstanceOf[Loc.LocInfo[(T forSome {type T})]].apply()
+      case _ =>  Nil
+    })
+
+
   def buildMenu: CompleteMenu = {
-    val theKids = _menu.kids.toList.flatMap(_.loc.buildItem(Nil, false, false))
+    val theKids = buildKidMenuItems(_menu.kids) // _menu.kids.toList.flatMap(_.loc.buildItem(Nil, false, false))
 
     CompleteMenu(_menu.buildUpperLines(_menu, _menu, theKids))
   }
 
   private[sitemap] def buildItem(kids: List[MenuItem], current: Boolean, path: Boolean): Box[MenuItem] =
-  (hidden, testAccess) match {
+  (calcHidden(kids), testAccess) match {
     case (false, Left(true)) =>
-      defaultParams.flatMap(p =>
-        link.createLink(p).map(t =>
-          MenuItem(text.text(p),t, kids, current, path,
-                   params.flatMap {
-              case v: Loc.LocInfo[_] =>
-                // ugly code to avoid type erasure warning
-                v.asInstanceOf[Loc.LocInfo[(T forSome {type T})]]()
-              case _ =>  Empty
-            }
-          )))
+      for {p <- defaultParams
+           t <- link.createLink(p)}
+      yield  new MenuItem(text.text(p),t, kids, current, path,
+                          params.flatMap {
+          case v: Loc.LocInfo[_] =>
+            // ugly code to avoid type erasure warning
+            v.asInstanceOf[Loc.LocInfo[(T forSome {type T})]].apply()
+          case _ =>  Nil
+        }, placeHolder_?)
 
     case _ => Empty
   }
 
-  private lazy val hidden = params.contains(Loc.Hidden)
+  protected def calcHidden(kids: List[MenuItem]) =
+  hidden || (hideIfNoKids_? && kids.isEmpty)
+
+  def hidden = _hidden
+
+  private lazy val _hidden = params.contains(Loc.Hidden)
 
   private lazy val groupSet: Set[String] =
   Set(params.flatMap{case s: Loc.LocGroup => s.group case _ => Nil} :_*)
@@ -283,14 +311,14 @@ object Loc {
 
   def checkProtected(link: Link[_], params: List[LocParam]) {
     params.map(lp => {
-      lp match {
-        case Loc.HttpAuthProtected(role) => LiftRules.httpAuthProtectedResource.append (
-          new LiftRules.HttpAuthProtectedResourcePF() {
-			def isDefinedAt(in: ParsePath) = in.partPath == link.uriList
-			def apply(in: ParsePath): Box[Role] = role()
-          })
-       case _ => lp
-      }})
+        lp match {
+          case Loc.HttpAuthProtected(role) => LiftRules.httpAuthProtectedResource.append (
+              new LiftRules.HttpAuthProtectedResourcePF() {
+                def isDefinedAt(in: ParsePath) = in.partPath == link.uriList
+                def apply(in: ParsePath): Box[Role] = role()
+              })
+          case _ => lp
+        }})
   }
 
   trait LocParam
@@ -361,6 +389,17 @@ object Loc {
    * a Loc
    */
   trait LocSnippets extends PartialFunction[String, NodeSeq => NodeSeq] with LocParam
+
+  /**
+   * If the Loc has no children, hide the Loc itself
+   */
+  object HideIfNoKids extends LocParam
+
+  /**
+   * The Loc does not represent a menu itself, but is the parent menu for
+   * children (implies HideIfNoKids)
+   */
+  object PlaceHolder extends LocParam
 
   /**
    * A subclass of LocSnippets with a built in dispatch method (no need to
@@ -467,6 +506,16 @@ case class MenuItem(text: NodeSeq, uri: NodeSeq,  kids: Seq[MenuItem],
                     path: Boolean,
                     info: List[Loc.LocInfoVal[(T forSome {type T})]])
 {
+  private var _placeholder = false
+  def placeholder_? = _placeholder
+  def this(text: NodeSeq, uri: NodeSeq,  kids: Seq[MenuItem],
+           current: Boolean,
+           path: Boolean,
+           info: List[Loc.LocInfoVal[(T forSome {type T})]],
+           ph: Boolean) = {
+    this(text, uri, kids, current, path, info)
+    _placeholder = ph
+  }
   def breadCrumbs: Seq[MenuItem] = if (!path) Nil
   else this :: kids.toList.flatMap(_.breadCrumbs)
 }

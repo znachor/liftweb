@@ -97,6 +97,11 @@ object Menu extends DispatchSnippet {
 
         def buildANavItem(i: MenuItem) = {
           i match {
+             case m @ MenuItem(text, uri, kids, _, _, _) if m.placeholder_?  =>
+              Elem(null, innerTag, Null, TopScope,
+                   <xml:group><span>{text}</span>{buildUlLine(kids)}</xml:group>) %
+              S.prefixedAttrsToMetaData("li_item", liMap)
+
             case MenuItem(text, uri, kids, true, _, _) if expandAll =>
               Elem(null, innerTag, Null, TopScope,
                    <xml:group><a href={uri}>{text}</a>{buildUlLine(kids)}</xml:group>) %
@@ -149,6 +154,7 @@ object Menu extends DispatchSnippet {
               "uri" -> uri.toString,
               "children" -> buildItems(kids),
               "current" -> current,
+              "placeholder" -> in.placeholder_?,
               "path" -> path)
     }
 
