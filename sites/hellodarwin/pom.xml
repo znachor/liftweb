@@ -126,7 +126,6 @@
   </reporting>
 
   <!-- fake deploy to avoid failure when request deploy -->
-  <!--
   <distributionManagement>
     <repository>
       <id>dummy</id>
@@ -145,5 +144,4 @@
       <url>file://${java.io.tmpdir}/site</url>
     </site>
   </distributionManagement>
-  -->
 </project>
