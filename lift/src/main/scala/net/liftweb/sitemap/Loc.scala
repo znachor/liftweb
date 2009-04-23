@@ -236,7 +236,7 @@ trait Loc[ParamType] {
   private[sitemap] def buildItem(kids: List[MenuItem], current: Boolean, path: Boolean): Box[MenuItem] =
   (calcHidden(kids), testAccess) match {
     case (false, Left(true)) =>
-      for {p <- defaultParams
+      for {p <- (foundParam.is or defaultParams)
            t <- link.createLink(p)}
       yield  new MenuItem(text.text(p),t, kids, current, path,
                           params.flatMap {
