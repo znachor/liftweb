@@ -651,25 +651,13 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     findAnyTemplate(splits)
   }
 
-  private def findTemplate(name: String): Box[NodeSeq] = {
+  private[liftweb] def findTemplate(name: String): Box[NodeSeq] = {
     val splits = (if (name.startsWith("/")) name else "/"+name).split("/").toList.drop(1) match {
       case Nil => List("index")
       case s => s
     }
 
     findAnyTemplate("templates-hidden" :: splits) or findAnyTemplate(splits)
-  }
-
-  private def findAndEmbed(templateName: Box[Seq[Node]], kids: NodeSeq): NodeSeq = {
-    templateName match {
-      case Full(tn) => {
-          findTemplate(tn.text) match {
-            case Full(s) => processSurroundAndInclude(tn.text, s)
-            case _ => Comment("FIX"+"ME Unable to find template named "+tn.text) ++ kids
-          }
-        }
-      case _ => Comment("FIX"+"ME No named specified for embedding") ++ kids
-    }
   }
 
   private def findSnippetClass(name: String): Box[Class[AnyRef]] = {
@@ -742,7 +730,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
               case Full(inst: DispatchSnippet) =>
                 if (inst.dispatch.isDefinedAt(method)) inst.dispatch(method)(kids)
                 else {LiftRules.snippetFailedFunc.toList.foreach(_(LiftRules.SnippetFailure(page, snippetName,
-                                                                                            LiftRules.SnippetFailures.StatefulDispatchNotMatched))); kids}
+                                                                                            LiftRules.SnippetFailures.DispatchSnippetNotMatched))); kids}
 
               case Full(inst) => {
                   val ar: Array[AnyRef] = List(Group(kids)).toArray
@@ -811,16 +799,6 @@ class LiftSession(val contextPath: String, val uniqueId: String,
                                  liftTagProcessing)
         case _ => processSnippet(page, Empty , elm.attributes, elm.child)
       }
-    case ("surround", elm, _, _, page) => processSurroundElement(page, elm)
-    case ("embed", _, metaData, kids, page) => findAndEmbed(Box(metaData.get("what")), kids)
-    case ("ignore", _, _, _, _) => NodeSeq.Empty
-    case ("comet", _, metaData, kids, _) if Props.inGAE => Text("Comet Disabled in Google App Engine")
-    case ("comet", _, metaData, kids, _) => executeComet(Box(metaData.get("type").map(_.text.trim)), Box(metaData.get("name").map(_.text.trim)), kids, metaData)
-    case ("children", _, _, kids, _) => kids
-    case ("a", elm, metaData, kids, _) => Elem(null, "a", addAjaxHREF(metaData), elm.scope, kids :_*)
-    case ("form", elm, metaData, kids, _) => Elem(null, "form", addAjaxForm(metaData), elm.scope, kids : _*)
-    case ("loc", elm, metaData, kids, _) => metaData.get("locid") match {case Some(id) => S.loc(id.text, kids) case _ => S.loc(kids.text, kids)}
-    case ("with-param", _, _, _, _) => NodeSeq.Empty
     case (snippetInfo, elm, metaData, kids, page) => processSnippet(page, Full(snippetInfo) , metaData, kids)
   }
 
@@ -843,28 +821,6 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     }
   }
 
-  private def executeComet(theType: Box[String], name: Box[String], kids: NodeSeq, attr: MetaData): NodeSeq = {
-    try {
-      findComet(theType, name, kids, Map.empty ++
-                attr.flatMap{
-          case u: UnprefixedAttribute => List((u.key, u.value.text))
-          case u: PrefixedAttribute => List((u.pre+":"+u.key, u.value.text))
-          case _ => Nil}.toList).
-      map(c =>
-        (c !? (26600, AskRender)) match {
-          case Some(AnswerRender(response, _, when, _)) if c.hasOuter =>
-            <span id={c.uniqueId+"_outer"}>{c.buildSpan(when, response.inSpan)}{response.outSpan}</span>
-
-          case Some(AnswerRender(response, _, when, _)) =>
-            c.buildSpan(when, response.inSpan)
-
-          case _ => <span id={c.uniqueId} lift:when="0">{Comment("FIX"+"ME comet type "+theType+" name "+name+" timeout") ++ kids}</span>
-        }) openOr Comment("FIX"+"ME - comet type: "+theType+" name: "+name+" Not Found ") ++ kids
-    } catch {
-      case e => Log.error("Failed to find a comet actor", e); kids
-    }
-  }
-
   /**
    * Finds all Comet actors by type
    */
@@ -872,7 +828,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     asyncComponents.elements.filter{case ((Full(name), _), _) => name == theType case _ => false}.toList.map{case (_, value) => value}
   }
 
-  private def findComet(theType: Box[String], name: Box[String], defaultXml: NodeSeq, attributes: Map[String, String]): Box[CometActor] = synchronized {
+  private[liftweb] def findComet(theType: Box[String], name: Box[String], defaultXml: NodeSeq, attributes: Map[String, String]): Box[CometActor] = synchronized {
     val what = (theType -> name)
     Box(asyncComponents.get(what)).or( {
         theType.flatMap{
@@ -940,48 +896,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     }
   }
 
-  private def addAjaxHREF(attr: MetaData): MetaData = {
-    val ajax: JsExp = SHtml.makeAjaxCall(JE.Str(attr("key")+"=true"))
-
-    new UnprefixedAttribute("onclick", Text(ajax.toJsCmd),
-                            new UnprefixedAttribute("href", Text("javascript://"), attr.filter(a => a.key != "onclick" && a.key != "href")))
-  }
-
-  private def addAjaxForm(attr: MetaData): MetaData = {
-    val id = Helpers.nextFuncName
-    val pre = attr.filter(_.key == "onsubmit").toList match {
-      case Nil => ""
-      case x :: xs => x.value.text +";"
-    }
-
-    val ajax: String = SHtml.makeAjaxCall(LiftRules.jsArtifacts.serialize(id)).toJsCmd + ";" + pre + "return false;"
-
-
-    new UnprefixedAttribute("id", Text(id),
-                            new UnprefixedAttribute("action", Text("javascript://"),
-                                                    new UnprefixedAttribute("onsubmit", Text(ajax),
-                                                                            attr.filter(a => a.key != "id" && a.key != "onsubmit" && a.key != "action"))))
-  }
-
-  private def processSurroundElement(page: String, in: Elem): NodeSeq = {
-    val attr = in.attributes
-    val kids = in.child
-
-    val paramElements: Seq[Node] =
-    findElems(kids)(e => e.label == "with-param" && e.prefix == "lift")
-
-    val params: Seq[(String, NodeSeq)] =
-    for {e <- paramElements
-         name <- e.attributes.get("name")
-    } yield (name.text, processSurroundAndInclude(page, e.child))
-
-    val mainParam = (attr.get("at").map(_.text).getOrElse("main"),
-                     processSurroundAndInclude(page, kids))
-    val paramsMap = collection.immutable.Map(params: _*) + mainParam
-    findAndMerge(attr.get("with"), paramsMap)
-  }
-
-  private def findAndMerge(templateName: Box[Seq[Node]], atWhat: Map[String, NodeSeq]): NodeSeq = {
+  private[liftweb] def findAndMerge(templateName: Box[Seq[Node]], atWhat: Map[String, NodeSeq]): NodeSeq = {
     val name = templateName.map(s => if (s.text.startsWith("/")) s.text else "/"+ s.text).openOr("/templates-hidden/default")
 
     findTemplate(name).map(s => bind(atWhat, s)).openOr(atWhat.values.flatMap(_.elements).toList)

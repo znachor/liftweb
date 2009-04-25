@@ -29,7 +29,7 @@ object CSS extends DispatchSnippet {
 
   def blueprint: NodeSeq = {
     <xml:group>
-      <link rel="stylesheet" href={"/" + LiftRules.resourceServerPath + 
+      <link rel="stylesheet" href={"/" + LiftRules.resourceServerPath +
                                    "/blueprint/screen.css"} type="text/css"
         media="screen, projection"/>
       <link rel="stylesheet" href={"/" + LiftRules.resourceServerPath +

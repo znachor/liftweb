@@ -579,6 +579,25 @@ object S extends HasParams {
   }
 
   /**
+   * Converts the S.attrs to a Map[String, String]
+   */
+  def attrsFlattenToMap: Map[String, String] = Map.empty ++ attrs.flatMap {
+    case (Left(key), value) => List((key, value))
+    case (Right((prefix, key)), value)=> List((prefix+":"+key, value))
+    case _ => Nil
+  }
+
+  def attrsToMetaData: MetaData = attrsToMetaData(ignore => true)
+
+  def attrsToMetaData(predicate: String => Boolean): MetaData = {
+    attrs.foldLeft[MetaData](Null) {
+      case (md, (Left(name), value)) if (predicate(name))=> new UnprefixedAttribute(name, value, md)
+      case (md, (Right((prefix, name)), value)) if (predicate(name)) => new PrefixedAttribute(prefix, name, value, md)
+      case _ => Null
+    }
+  }
+
+  /**
    * Similar with prefixedAttrsToMetaData(prefix: String, start: Map[String, String])
    * but there is no 'start' Map
    */

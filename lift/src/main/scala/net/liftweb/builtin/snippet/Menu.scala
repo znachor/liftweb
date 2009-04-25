@@ -109,17 +109,17 @@ object Menu extends DispatchSnippet {
               //(<li><a href={uri}>{text}</a>{buildUlLine(kids)}</li>) % S.prefixedAttrsToMetaData("li_item", liMap)
 
             case MenuItem(text, uri, kids, true, _, _) =>
-              Elem(null, innerTag, Null, TopScope, 
+              Elem(null, innerTag, Null, TopScope,
                    <xml:group><span>{text}</span>{buildUlLine(kids)}</xml:group>) %
               S.prefixedAttrsToMetaData("li_item", liMap)
 
             case MenuItem(text, uri, kids,  _, true, _) =>
-              Elem(null, innerTag, Null, TopScope, 
+              Elem(null, innerTag, Null, TopScope,
                    <xml:group><a href={uri}>{text}</a>{buildUlLine(kids)}</xml:group>) %
               S.prefixedAttrsToMetaData("li_path", liMap)
 
             case MenuItem(text, uri, kids, _, _, _) =>
-              Elem(null, innerTag, Null, TopScope, 
+              Elem(null, innerTag, Null, TopScope,
                    <xml:group><a href={uri}>{text}</a>{buildUlLine(kids)}</xml:group>) % li
           }
         }
@@ -161,7 +161,7 @@ object Menu extends DispatchSnippet {
     def buildItems(in: Seq[MenuItem]): JsExp =
     JsArray(in.map(buildItem) :_*)
 
-    Script(JsCrVar(S.attr("var") openOr "lift_menu", 
+    Script(JsCrVar(S.attr("var") openOr "lift_menu",
                    JsObj("menu" -> buildItems(toRender))))
   }
 

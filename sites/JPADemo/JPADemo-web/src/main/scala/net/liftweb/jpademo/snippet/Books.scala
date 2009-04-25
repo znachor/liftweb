@@ -71,7 +71,7 @@ class BookOps {
 
   // The add snippet method
   def add (xhtml : NodeSeq) : NodeSeq = {
-    def doAdd () = 
+    def doAdd () =
       if (is_valid_Book_?(book)) {
 	try {
 	  Model.mergeAndFlush(book)

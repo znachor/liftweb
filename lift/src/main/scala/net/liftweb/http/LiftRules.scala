@@ -485,7 +485,7 @@ object LiftRules {
   def buildPackage(end: String) = synchronized (otherPackages.map(_+"."+end))
 
   /**
-   * TellsLift where to find Snippets,Views, Comet Actors and Lift ORM Model object
+   * Tells Lift where to find Snippets,Views, Comet Actors and Lift ORM Model object
    */
   def addToPackages(what: String) {synchronized {otherPackages = what :: otherPackages}}
 
@@ -640,6 +640,7 @@ object LiftRules {
     val MethodNotFound = Value(4, "Method Not Found")
     val NoNameSpecified = Value(5, "No Snippet Name Specified")
     val InstantiationException = Value(6, "Exception During Snippet Instantiation")
+    val DispatchSnippetNotMatched = Value(7, "Dispatch Snippet: Dispatch Not Matched")
   }
 
   /**

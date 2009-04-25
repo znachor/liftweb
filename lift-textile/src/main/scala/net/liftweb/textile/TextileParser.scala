@@ -893,11 +893,11 @@ object TextileParser {
   case class Emph(first: List[Textile], elems : List[Textile],
                   attrs : List[Attribute], last: List[Textile]) extends
   ATextile(elems, attrs) {
-    override def toHtml : NodeSeq = 
+    override def toHtml : NodeSeq =
     flattenAndDropLastEOL(first) :::
     XmlElem(null, "em", fromStyle(attrs), TopScope, flattenAndDropLastEOL(elems) : _*) ::
     flattenAndDropLastEOL(last)
-    
+
   }
   case class Strong(first: List[Textile], elems : List[Textile],
                     attrs : List[Attribute], last:List[Textile]) extends ATextile(elems, attrs) {
@@ -968,11 +968,11 @@ object TextileParser {
 
   case class Cite(first: List[Textile], elems : List[Textile],
                   attrs : List[Attribute], last:List[Textile]) extends ATextile(elems, attrs){
-    override def toHtml : NodeSeq = 
+    override def toHtml : NodeSeq =
     flattenAndDropLastEOL(first) :::
     XmlElem(null, "cite", fromStyle(attrs), TopScope, flattenAndDropLastEOL(elems) : _*) ::
     flattenAndDropLastEOL(last)
-      
+
   }
   /*
    case class Code(elems : List[Textile], attrs : List[Attribute]) extends ATextile(elems, attrs) {

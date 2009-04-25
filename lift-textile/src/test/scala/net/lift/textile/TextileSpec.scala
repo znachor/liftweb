@@ -70,7 +70,7 @@ A -deleted- example.
 A -deleted hi-tech- example.
 A regular example.
 """)
-      
+
       res must ==/(<p>A simple example.<br />
           A hi-tech example. <br />
           A hi-tech lo-tech example. <br />

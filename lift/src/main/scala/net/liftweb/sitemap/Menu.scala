@@ -53,7 +53,7 @@ case class Menu(loc: Loc[_], kids: Menu*) extends HasKids {
 
   override def buildUpperLines(pathAt: HasKids, actual: Menu, populate: List[MenuItem]): List[MenuItem]
   = {
-    val kids: List[MenuItem] = 
+    val kids: List[MenuItem] =
     _parent.toList.flatMap(_.kids.toList.flatMap(m => m.loc.buildItem(if (m == this) populate else Nil, m == actual, m == pathAt)))
 
     _parent.toList.flatMap(p => p.buildUpperLines(p, actual, kids))

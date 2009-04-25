@@ -10,7 +10,7 @@ trait TemplateCache {
    * it will be provided by templateProvicer.
    */
   def findTemplate(name: String)(templateProvicer : => Box[NodeSeq]): Box[NodeSeq];
-  
+
   /**
    * Removes a template from the cache
    */
@@ -35,7 +35,7 @@ object NoCache extends TemplateCache {
  */
 object InMemoryCache {
   SoftReferenceCache.initialize
-  LiftRules.unloadHooks.prepend {() => 
+  LiftRules.unloadHooks.prepend {() =>
     SoftReferenceCache.shutDown
   }
   def apply(templatesCount: Int) = new InMemoryCache(templatesCount)

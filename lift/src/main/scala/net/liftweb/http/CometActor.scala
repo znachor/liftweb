@@ -210,7 +210,7 @@ trait CometActor extends Actor with BindHelpers {
   private var jsonHandlerChain: PartialFunction[Any, JsCmd] = Map.empty
   private val notices = new ListBuffer[(NoticeType.Value, NodeSeq, Box[String])]
   private var lastListenTime = millis
-  
+
   private var _theSession: LiftSession = _
   def theSession = _theSession
 

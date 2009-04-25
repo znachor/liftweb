@@ -18,7 +18,7 @@ import _root_.scala.actors.Actor._
  * It can also be used as a factory for obtaining new instances of SoftReferenceCache class
  */
 object SoftReferenceCache {
-  
+
   @volatile
   private var terminated = false;
 
@@ -28,13 +28,13 @@ object SoftReferenceCache {
    * Create a new SoftReferenceCache instance
    */
   def apply[K, V](size: Int) = new SoftReferenceCache[K,V](size)
-  
+
   /**
-   * Initialize the orphan keys monitor 
+   * Initialize the orphan keys monitor
    */
   def initialize = {
-    // A daemon thread is more approapriate here then an Actor as 
-    // we'll do blocking reads from the reference queue 
+    // A daemon thread is more approapriate here then an Actor as
+    // we'll do blocking reads from the reference queue
     val thread = new Thread(new Runnable(){
                               def run(){
                                 processQueue
@@ -43,14 +43,14 @@ object SoftReferenceCache {
     thread.setDaemon(true)
     thread.start
   }
-  
+
   /**
    * ShutDown the monitoring
    */
   def shutDown = {
     terminated = true;
   }
-  
+
   private def processQueue {
     while (!terminated) {
       tryo {
@@ -82,7 +82,7 @@ class SoftReferenceCache[K, V](cacheSize: Int) {
 
   val readLock = rwl.readLock
   val writeLock = rwl.writeLock
-  
+
   private def lock[T](l: Lock)(block: => T): T = {
     l lock;
     try {
@@ -91,27 +91,27 @@ class SoftReferenceCache[K, V](cacheSize: Int) {
       l unlock
     }
   }
-  
+
   /**
-   * Returns the cached value mapped with this key or Empty if not found 
-   * 
+   * Returns the cached value mapped with this key or Empty if not found
+   *
    * @param key
    * @return Box[V]
    */
   def apply(key: K): Box[V] = lock(readLock) {
     Box.!!(cache.get(key)) match {
       case Full(value) =>
-         Box.!!(value.get) or { 
+         Box.!!(value.get) or {
             remove(key);
             Empty
          }
       case _ => Empty
     }
   }
-  
+
   /**
    * Puts a new keyed entry in cache
-   * @param tuple: (K, V)* 
+   * @param tuple: (K, V)*
    * @return this
    */
   def += (tuple: (K, V)*) = {
@@ -121,11 +121,11 @@ class SoftReferenceCache[K, V](cacheSize: Int) {
       }
     }
     this
-  }  
-  
+  }
+
   /**
    * Removes the cache entry mapped with this key
-   * 
+   *
    * @returns the value removed
    */
   def remove(key: Any): Box[V] = {
@@ -135,17 +135,17 @@ class SoftReferenceCache[K, V](cacheSize: Int) {
       } yield realValue
     }
   }
-  
+
 
   def keys = cache.keySet
 
 }
 
-class SoftValue[K, V](k: K, 
-                      v: V, 
+class SoftValue[K, V](k: K,
+                      v: V,
                       lruCache: SoftReferenceCache[K, V],
                       queue: ReferenceQueue[Any]) extends SoftReference[V](v, queue) {
     def key: K = k
-    def cache: SoftReferenceCache[K, V] = lruCache 
+    def cache: SoftReferenceCache[K, V] = lruCache
 }
 
