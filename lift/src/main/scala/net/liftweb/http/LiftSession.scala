@@ -192,6 +192,7 @@ object SessionMaster extends Actor {
       val now = millis
       val ses = synchronized{sessions}
       for ((id, session) <- ses.elements) {
+        session.doCometActorCleanup()
         if (now - session.lastServiceTime > session.inactivityLength) {
           Log.info(" Session "+id+" expired")
           this.sendMsg(RemoveSession(id))
@@ -200,8 +201,8 @@ object SessionMaster extends Actor {
         }
       }
       if (!Props.inGAE) {
-      sessionWatchers.foreach(_ ! SessionWatcherInfo(ses))
-      doPing()
+        sessionWatchers.foreach(_ ! SessionWatcherInfo(ses))
+        doPing()
       }
   }
 
@@ -382,6 +383,10 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     }
   }
 
+  private[http] def doCometActorCleanup(): Unit = synchronized {
+    this.asyncComponents.values.foreach(_ ! ShutdownIfPastLifespan)
+  }
+
   /**
    * Adds a cleanup function that will be executed when session is terminated
    */
@@ -394,7 +399,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
       if (running_?) this.shutDown()
     } finally {
       if (!Props.inGAE)
-        Actor.clearSelf
+      Actor.clearSelf
     }
   }
 
@@ -1120,8 +1125,8 @@ object TemplateFinder {
         val toTry = for (s <- suffixes; p <- locales) yield pls + p + (if (s.length > 0) "." + s else "")
 
         first(toTry)(v => (LiftRules.templateCache openOr NoCache).findTemplate(v) {
-          LiftRules.finder(v).flatMap(PCDataXmlParser(_))
-        }) or lookForClasses(places)
+            LiftRules.finder(v).flatMap(PCDataXmlParser(_))
+          }) or lookForClasses(places)
     }
   }
 
