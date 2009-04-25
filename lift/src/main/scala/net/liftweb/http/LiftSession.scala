@@ -554,7 +554,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     MsgNoticeMeta(new HashMap)
   }
 
-  private def handleRedirect(re: ResponseShortcutException, request: Req): LiftResponse = {
+  private[http] def handleRedirect(re: ResponseShortcutException, request: Req): LiftResponse = {
     if (re.doNotices) notices = S.getNotices
 
     re.response

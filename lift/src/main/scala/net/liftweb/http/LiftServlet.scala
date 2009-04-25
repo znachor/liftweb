@@ -205,16 +205,27 @@ class LiftServlet extends HttpServlet {
         LiftSession.onBeginServicing.foreach(_(liftSession, requestState))
         val ret: (Boolean, Box[LiftResponse]) =
         try {
-          pf(toMatch)() match {
-            case Full(v) =>
-              (true, Full(LiftRules.convertResponse( (liftSession.checkRedirect(v), Nil,
-                                                      S.responseCookies, requestState) )))
+          try {
+            liftSession.runParams(requestState)
+            pf(toMatch)() match {
+              case Full(v) =>
+                (true, Full(LiftRules.convertResponse( (liftSession.checkRedirect(v), Nil,
+                                                        S.responseCookies, requestState) )))
 
-            case Empty =>
-              (true, LiftRules.notFoundOrIgnore(requestState, Full(liftSession)))
+              case Empty =>
+                (true, LiftRules.notFoundOrIgnore(requestState, Full(liftSession)))
 
-            case f: Failure =>
-              (true, Full(liftSession.checkRedirect(requestState.createNotFound(f))))
+              case f: Failure =>
+                (true, Full(liftSession.checkRedirect(requestState.createNotFound(f))))
+            }
+          } catch {
+            case ite: _root_.java.lang.reflect.InvocationTargetException if (ite.getCause.isInstanceOf[ResponseShortcutException]) =>
+              (true, Full(liftSession.handleRedirect(ite.getCause.asInstanceOf[ResponseShortcutException], requestState)))
+
+            case rd: _root_.net.liftweb.http.ResponseShortcutException => (true, Full(liftSession.handleRedirect(rd, requestState)))
+
+            case e => (true, NamedPF.applyBox((Props.mode, requestState, e), LiftRules.exceptionHandler.toList))
+
           }
         } finally {
           liftSession.notices = S.getNotices
@@ -358,7 +369,7 @@ class LiftServlet extends HttpServlet {
   }
 
   private def handleComet(requestState: Req, sessionActor: LiftSession): Box[LiftResponse] = {
-   val actors: List[(CometActor, Long)] =
+    val actors: List[(CometActor, Long)] =
     requestState.params.toList.flatMap{case (name, when) =>
         sessionActor.getAsyncComponent(name).toList.map(c => (c, toLong(when)))}
 
@@ -450,10 +461,10 @@ class LiftServlet extends HttpServlet {
   def sendResponse(resp: BasicResponse, response: HttpServletResponse, request: Box[Req]) {
     def fixHeaders(headers : List[(String, String)]) = headers map ((v) => v match {
         case ("Location", uri) => (v._1, (
-          (for(u <- request;
-               updated <- Full(u.contextPath + uri) if (uri.startsWith("/"));
-               f <- URLRewriter.rewriteFunc map (_(updated))) yield f) openOr uri
-        ))
+              (for(u <- request;
+                   updated <- Full(u.contextPath + uri) if (uri.startsWith("/"));
+                   f <- URLRewriter.rewriteFunc map (_(updated))) yield f) openOr uri
+            ))
         case _ => v
       })
 
@@ -496,12 +507,12 @@ class LiftServlet extends HttpServlet {
             stream match {
               case jio: java.io.InputStream => len = jio.read(ba)
               case stream => len = stream.read(ba)
-              }
+            }
             while (len >= 0) {
               if (len > 0) os.write(ba, 0, len)
               stream match {
-              case jio: java.io.InputStream => len = jio.read(ba)
-              case stream => len = stream.read(ba)
+                case jio: java.io.InputStream => len = jio.read(ba)
+                case stream => len = stream.read(ba)
               }
             }
             response.getOutputStream.flush()
