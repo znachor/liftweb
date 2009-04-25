@@ -18,10 +18,10 @@ package net.liftweb.builtin.snippet
 import scala.xml._
 import net.liftweb.http._
 
-class Ignore extends DispatchSnippet {
+object Ignore extends DispatchSnippet {
 
   def dispatch : DispatchIt = {
-    case "render" => render _
+    case _ => render _
   }
 
   def render(kids: NodeSeq) : NodeSeq = NodeSeq.Empty

@@ -41,6 +41,8 @@ class Boot {
 
     LiftRules.early.append(makeUtf8)
 
+    LiftRules.loggedInTest = Full(() => User.loggedIn_?)
+
     S.addAround(DB.buildLoanWrapper)
   }
 

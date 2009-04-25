@@ -19,16 +19,16 @@ package net.liftweb.builtin.snippet
 import scala.xml._
 import net.liftweb.http._
 
-object Loc extends DispatchSnippet {
+object TestCond extends DispatchSnippet {
   def dispatch : DispatchIt = {
-    case _ => render _
+    case "loggedin" => loggedIn _
+    case "loggedout" => loggedOut _
   }
 
-  def render(kids: NodeSeq) : NodeSeq =
-    S.attr.~("locid").map(_.text) match {
-      case Some(id) => S.loc(id, kids)
-      case _ => S.loc(kids.text, kids)
-    }
+  def loggedIn(xhtml: NodeSeq): NodeSeq =
+  if (S.loggedIn_?) xhtml else NodeSeq.Empty
 
+  def loggedOut(xhtml: NodeSeq): NodeSeq =
+  if (S.loggedIn_?) NodeSeq.Empty else xhtml
 }
 

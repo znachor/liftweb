@@ -21,10 +21,10 @@ import net.liftweb.util._
 import Helpers._
 import Box._
 
-class Comet extends DispatchSnippet {
+object Comet extends DispatchSnippet {
 
   def dispatch : DispatchIt = {
-    case "render" => render _
+    case _ => render _
   }
 
   def render(kids: NodeSeq) : NodeSeq = {

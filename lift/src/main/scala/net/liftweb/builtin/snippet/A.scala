@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2009 WorldWide Conferencing, LLC
+ * Copyright 2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,10 @@ import scala.xml._
 import net.liftweb.http._
 import net.liftweb.http.js._
 
-class A extends DispatchSnippet {
+object A extends DispatchSnippet {
 
   def dispatch : DispatchIt = {
-    case "render" => render _
+    case _ => render _
   }
 
   def render(kids: NodeSeq) : NodeSeq = Elem(null, "a", addAjaxHREF(), TopScope, kids :_*)

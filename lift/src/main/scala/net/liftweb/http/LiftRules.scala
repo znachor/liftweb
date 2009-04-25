@@ -257,12 +257,17 @@ object LiftRules {
    */
   val snippetDispatch = RulesSeq[SnippetDispatchPF]
   private def setupSnippetDispatch() {
-  import net.liftweb.builtin.snippet._
+    import net.liftweb.builtin.snippet._
 
-  snippetDispatch.append(
-    Map("CSS" -> CSS, "Msgs" -> Msgs, "Msg" -> Msg,
-    "Menu" -> Menu, "css" -> CSS, "msgs" -> Msgs, "msg" -> Msg,
-    "menu" -> Menu))
+    snippetDispatch.append(
+      Map("CSS" -> CSS, "Msgs" -> Msgs, "Msg" -> Msg,
+          "Menu" -> Menu, "css" -> CSS, "msgs" -> Msgs, "msg" -> Msg,
+          "menu" -> Menu,
+          "a" -> A, "children" -> Children,
+          "comet" -> Comet, "form" -> Form, "ignore" -> Ignore, "loc" -> Loc,
+          "surround" -> Surround,
+          "test_cond" -> TestCond,
+          "embed" -> Embed))
   }
   setupSnippetDispatch()
 
@@ -304,7 +309,7 @@ object LiftRules {
    */
   var calcIEMode: () => Boolean =
   () => (for (r <- S.request) yield r.isIE6 || r.isIE7 ||
-  r.isIE8) openOr true
+         r.isIE8) openOr true
 
   /**
    * The JavaScript to execute at the end of an
@@ -440,8 +445,8 @@ object LiftRules {
    * Computes the Comet path by adding additional tokens on top of cometPath
    */
   var calcCometPath: String => JsExp = prefix => Str(prefix + "/" + cometPath + "/") +
-    JsRaw("Math.floor(Math.random() * 100000000000)") +
-    Str(S.session.map(s => "/"+s.uniqueId) openOr "")
+  JsRaw("Math.floor(Math.random() * 100000000000)") +
+  Str(S.session.map(s => "/"+s.uniqueId) openOr "")
 
   /**
    * The default way of calculating the context path
@@ -580,7 +585,7 @@ object LiftRules {
   convertResponse((XhtmlResponse(Group(session.fixHtml(ns)),
                                  ResponseInfo.docType(session),
                                  headers, cookies, 200,
-			       S.ieMode), headers, cookies, session))
+                                 S.ieMode), headers, cookies, session))
 
   var defaultHeaders: PartialFunction[(NodeSeq, Req), List[(String, String)]] = {
     case _ => List("Expires" -> Helpers.nowAsInternetDate,
@@ -671,8 +676,8 @@ object LiftRules {
    *
    */
   val uriNotFound = RulesSeq[URINotFoundPF].prepend(NamedPF("default") {
-    case (r, _) => Req.defaultCreateNotFound(r)
-  })
+      case (r, _) => Req.defaultCreateNotFound(r)
+    })
 
   /**
    * A utility method to convert an exception to a string of stack traces
@@ -788,6 +793,11 @@ object LiftRules {
   var liftGCPollingInterval: Long = 75 seconds
 
   /**
+   * Put a test for being logged in into this function
+   */
+  var loggedInTest: Box[() => Boolean] = Empty
+
+  /**
    * The polling interval for background Ajax requests to keep functions to not be garbage collected.
    * This will be applied if the Ajax request will fail. Default value is set to 15 seconds.
    */
@@ -846,7 +856,7 @@ object LiftRules {
     testFor304(requestState, modTime) or
     Full(JavaScriptResponse(renderCometScript(liftSession),
                             List("Last-Modified" -> toInternetDate(modTime),
-                            "Expires" -> toInternetDate(modTime + 10.minutes)),
+                                 "Expires" -> toInternetDate(modTime + 10.minutes)),
                             Nil, 200))
   }
 
@@ -860,7 +870,7 @@ object LiftRules {
     testFor304(requestState, modTime) or
     Full(JavaScriptResponse(renderAjaxScript(liftSession),
                             List("Last-Modified" -> toInternetDate(modTime),
-                            "Expires" -> toInternetDate(modTime + 10.minutes)),
+                                 "Expires" -> toInternetDate(modTime + 10.minutes)),
                             Nil, 200))
   }
 

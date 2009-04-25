@@ -20,30 +20,34 @@ import net.liftweb.http._
 import net.liftweb.util._
 import Helpers._
 
-class Surround extends DispatchSnippet {
+object Surround extends DispatchSnippet {
 
   def dispatch : DispatchIt = {
-    case "render" => render _
+    case _ => render _
   }
 
-  def render(kids: NodeSeq) : NodeSeq = {
-
-    (for {ctx <- S.session
-          req <- S.request} yield {
-
+  def render(kids: NodeSeq) : NodeSeq = 
+  (for {ctx <- S.session ?~ ("FIX"+"ME: Invalid session")
+        req <- S.request ?~ ("FIX"+"ME: Invalid request")
+    } yield {
       val page = req.uri + " -> " + req.path
 
-      val paramElements: Seq[Node] =  findElems(kids)(e => e.label == "with-param" && e.prefix == "lift")
+      val paramElements: Seq[Node] = findElems(kids)(e => e.label == "with-param" && e.prefix == "lift")
 
-      val params: Seq[(String, NodeSeq)] = for {e <- paramElements
-                                                name <- e.attributes.get("name")
-                                               } yield (name.text, ctx.processSurroundAndInclude(page, e.child))
+      val params: Seq[(String, NodeSeq)] =
+      for {e <- paramElements
+           name <- e.attributes.get("name")
+      }
+      yield (name.text, ctx.processSurroundAndInclude(page, e.child))
 
-      val mainParam = (S.attr.~("at").map(_.text).getOrElse("main"), ctx.processSurroundAndInclude(page, kids))
+      val mainParam = (S.attr.~("at").map(_.text).
+                       getOrElse("main"), ctx.processSurroundAndInclude(page, kids))
       val paramsMap = collection.immutable.Map(params: _*) + mainParam
       ctx.findAndMerge(S.attr.~("with"), paramsMap)
 
-    }) openOr Comment("FIXME: session or request are invalid")
-
+    }) match {
+    case Full(x) => x
+    case Empty => Comment("FIX"+ "ME: session or request are invalid")
+    case Failure(msg, _, _) => Comment(msg)
   }
 }

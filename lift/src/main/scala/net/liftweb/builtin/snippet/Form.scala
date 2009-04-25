@@ -20,10 +20,10 @@ import net.liftweb.http._
 import net.liftweb.util._
 import Helpers._
 
-class Form extends DispatchSnippet {
+object Form extends DispatchSnippet {
 
   def dispatch : DispatchIt = {
-    case "render" => render _
+    case _ => render _
   }
 
   def render(kids: NodeSeq) : NodeSeq = Elem(null, "form", addAjaxForm, TopScope, kids : _*)
