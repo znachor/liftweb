@@ -14,7 +14,7 @@
   </modules>
 
   <properties>
-    <scala.version>2.7.3</scala.version>
+    <scala.version>2.7.4</scala.version>
   </properties>
 
   <!-- Set up repo for ScalaJPA -->
