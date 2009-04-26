@@ -799,6 +799,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
                                  liftTagProcessing)
         case _ => processSnippet(page, Empty , elm.attributes, elm.child)
       }
+    case ("with-param", _, _, _, _) => NodeSeq.Empty
     case (snippetInfo, elm, metaData, kids, page) => processSnippet(page, Full(snippetInfo) , metaData, kids)
   }
 
