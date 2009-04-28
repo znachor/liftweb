@@ -403,8 +403,13 @@ object LiftRules {
     else {
       val cont = getContinuation.invoke(contSupport, req, LiftRules)
       val ret = getObject.invoke(cont)
-      setObject.invoke(cont, null)
-      Some(ret)
+      try {
+        setObject.invoke(cont, null)
+        Some(ret)
+      }
+      catch {
+        case e: Exception => None
+      }
     }
   }
 
