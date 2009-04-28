@@ -43,6 +43,8 @@ trait Loc[ParamType] {
 
   def additionalKidParams: List[ParamType] = Nil
 
+  def forceParam: Box[ParamType] = Empty
+
   def rewrite: LocRewrite = Empty
 
   def placeHolder_? : Boolean = _placeHolder_?
@@ -170,11 +172,11 @@ trait Loc[ParamType] {
   /**
    * The title of the location
    */
-  def title: NodeSeq = ((foundParam.is or defaultParams).map(p => title(p)) or linkText) openOr Text(name)
+  def title: NodeSeq = ((forceParam or foundParam.is or defaultParams).map(p => title(p)) or linkText) openOr Text(name)
 
   def title(in: ParamType): NodeSeq = findTitle(params).map(_.title(in)) openOr linkText(in)
 
-  def linkText: Box[NodeSeq] = (foundParam.is or defaultParams).map(p => linkText(p))
+  def linkText: Box[NodeSeq] = (forceParam or foundParam.is or defaultParams).map(p => linkText(p))
 
   def linkText(in: ParamType): NodeSeq = text.text(in)
 
@@ -236,7 +238,7 @@ trait Loc[ParamType] {
   private[sitemap] def buildItem(kids: List[MenuItem], current: Boolean, path: Boolean): Box[MenuItem] =
   (calcHidden(kids), testAccess) match {
     case (false, Left(true)) =>
-      for {p <- (foundParam.is or defaultParams)
+      for {p <- (forceParam or foundParam.is or defaultParams)
            t <- link.createLink(p)}
       yield  new MenuItem(text.text(p),t, kids, current, path,
                           params.flatMap {
