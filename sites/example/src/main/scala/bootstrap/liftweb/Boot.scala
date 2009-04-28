@@ -47,20 +47,12 @@ class Boot {
 
     if (!Props.inGAE) {
       // No DB stuff in GAE
-    Schemifier.schemify(true, Log.infoF _, User, WikiEntry, Person)
+      Schemifier.schemify(true, Log.infoF _, User, WikiEntry, Person)
     }
 
-    LiftRules.dispatch.prepend(NamedPF("Web Services Example") {
-        // if the url is "showcities" then return the showCities function
-        case Req("showcities":: _, "", _) => XmlServer.showCities
+    WebServices.init()
 
-          // if the url is "showstates" "curry" the showStates function with the optional second parameter
-        case Req("showstates":: xs, "", _) =>
-          XmlServer.showStates(if (xs.isEmpty) "default" else xs.head)
-
-          // if it's a web service, pass it to the web services invoker
-        case Req("webservices" :: c :: _, "", _) => invokeWebService(c)
-      })
+    XmlServer.init()
 
     LiftRules.dispatch.prepend(NamedPF("Login Validation") {
         case Req("login" :: page , "", _)
@@ -81,20 +73,8 @@ class Boot {
      */
     LiftRules.ajaxEnd =
     Full(() => LiftRules.jsArtifacts.hide("ajax-loader").cmd)
-
-    val wikibind_rewriter: LiftRules.RewritePF = NamedPF("WikiBind") {
-      case RewriteRequest(path @ ParsePath("wikibind" :: page :: _, _, _,_),
-                          _, _)
-        =>
-        RewriteResponse(ParsePath("wikibind" :: Nil, "", true, false),
-                        Map("wiki_page" -> page ::
-                            path.wholePath.drop(2).zipWithIndex.
-                            map(p => ("param"+(p._2 + 1)) -> p._1) :_*))
-    }
-
+   
     LiftRules.early.append(makeUtf8)
-
-    LiftRules.rewrite.prepend(wikibind_rewriter)
 
     LiftSession.onBeginServicing = RequestLogger.beginServicing _ ::
     LiftSession.onBeginServicing
@@ -111,15 +91,6 @@ class Boot {
     LiftSession.onBeginServicing = BrowserLogger.haveSeenYou _ :: LiftSession.onBeginServicing
 
   }
-
-  private def invokeWebService(methodName: String)():
-  Box[LiftResponse] =
-  for (req <- S.request;
-       invoker <- createInvoker(methodName, new WebServices(req));
-       ret <- invoker() match {
-      case Full(ret: LiftResponse) => Full(ret)
-      case _ => Empty
-    }) yield ret
 
   private def makeUtf8(req: HttpServletRequest): Unit = {req.setCharacterEncoding("UTF-8")}
 }
@@ -167,7 +138,6 @@ object MenuInfo {
        Menu(Loc("menu_four", List("menu", "four"), "Forth Submenu"))
   ) ::
   Menu(Loc("file_upload", List("file_upload"), "File Upload")) ::
-  // Menu(Loc("wiki", Link(List("wiki"), true, "/wiki/HomePage"), "Wiki")) ::
   Menu(WikiStuff) ::
   Menu(Loc("guess", List("guess"), "Number Guessing")) ::
   Menu(Loc("count", List("count"), "Counting")) ::
@@ -177,30 +147,6 @@ object MenuInfo {
   Menu(Loc("lift", ExtLink("http://liftweb.net"),
            <xml:group><i>Lift</i> project home</xml:group>)) ::
   Nil
-}
-
-object XmlServer {
-  def showStates(which: String)(): Box[XmlResponse] = Full(XmlResponse(
-      <states renderedAt={timeNow.toString}>{
-          which match {
-            case "red" => <state name="Ohio"/><state name="Texas"/><state name="Colorado"/>
-
-            case "blue" => <state name="New York"/><state name="Pennsylvania"/><state name="Vermont"/>
-
-            case _ => <state name="California"/><state name="Rhode Island"/><state name="Maine"/>
-          } }
-      </states>))
-
-  def showCities(): Box[XmlResponse] =
-  Full(XmlResponse(
-      <cities>
-        <city name="Boston"/>
-        <city name="New York"/>
-        <city name="San Francisco"/>
-        <city name="Dallas"/>
-        <city name="Chicago"/>
-      </cities>))
-
 }
 
 /**

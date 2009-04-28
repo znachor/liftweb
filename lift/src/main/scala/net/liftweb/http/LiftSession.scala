@@ -675,6 +675,21 @@ class LiftSession(val contextPath: String, val uniqueId: String,
           }))).openOr(rest)
   }
 
+  /**
+   * Finds a template named name and then runs it throught the Lift processing engine
+   */
+  def findAndProcessTemplate(name: List[String]): Box[Elem] = {
+    def findElem(in: NodeSeq): Box[Elem] =
+    in.toList.flatMap {
+      case e: Elem => Some(e)
+      case _ => None
+    } firstOption
+
+    for {
+      template <- findAnyTemplate(name) ?~ ("Template "+name+" not found")
+      res <- findElem(processSurroundAndInclude(name.mkString("/", "/", ""), template))
+    } yield res
+  }
 
   private def processAttributes(in: MetaData) : MetaData = {
     in match {

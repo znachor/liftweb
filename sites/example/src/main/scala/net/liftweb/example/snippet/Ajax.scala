@@ -20,89 +20,49 @@ import S._
 import SHtml._
 import js._
 import js.jquery._
-import _root_.net.liftweb.http.jquery._
+import http.jquery._
 import JqJsCmds._
 import JsCmds._
-import _root_.net.liftweb.util._
+import util._
 import Helpers._
-import _root_.scala.xml. _
+import _root_.scala.xml.{Text, NodeSeq}
 
 class Ajax {
 
-  def sample = {
+  def sample(xhtml: NodeSeq): NodeSeq = {
+    // local state for the counter
     var cnt = 0
 
-    <span>
-    {
-      a(() => {cnt = cnt + 1; SetHtml("cnt_id", Text( cnt.toString))},
-          <span>Click me to increase the count
-     (currently <span id='cnt_id'>0</span>)</span>)
-      // a link that does AJAX to increment a counter server-side
-      // and displays the result on the client
-    } <br />
+    // get the id of some elements to update
+    val spanName: String = S.attr("id_name") openOr "cnt_id"
+    val msgName: String = S.attr("id_msgs") openOr "messages"
 
-    <div id="messages"></div>
-    {
-      val opts = (1 to 50).toList.map(i => (i.toString, i.toString))
-      // build the options
-      ajaxSelect(opts, Full(1.toString),
-     v => DisplayMessage("messages",
-             Text("You selected "+v) ++
-             <span>&nbsp;From the select box</span>,
-             5 seconds, 1 second))
-    } <br />
-    {
-      ajaxText("", v => DisplayMessage("messages",
-               Text("You entered some text: "+v),
-               4 seconds, 1 second))
-    } <br />
-    {
-      swappable(<span>Click to edit: <span id='the_text'></span></span>,
-    ajaxText("",
-       v => DisplayMessage("messages",
-               Text("You entered some text: "+v),
-               4 seconds, 1 second)
-       & SetHtml("the_text", Text(v))))
-    } <br />
+    // build up an ajax <a> tag to increment the counter
+    def doClicker(text: NodeSeq) =
+    a(() => {cnt = cnt + 1; SetHtml(spanName, Text( cnt.toString))}, text)
 
-    <textarea id="the_area" cols="50" rows="10"></textarea>
-    <br />
+    // create an ajax select box
+    def doSelect(msg: NodeSeq) =
+    ajaxSelect((1 to 50).toList.map(i => (i.toString, i.toString)),
+               Full(1.toString),
+               v => DisplayMessage(msgName,
+                                   bind("sel", msg, "number" -> Text(v)),
+                                   5 seconds, 1 second))
 
-    {
-      val (name, je) =
-	ajaxCall(JE.JsRaw("document.getElementById('the_area').value"),
-		 text => DisplayMessage("messages",
-					<pre>{text}</pre>,
-					4 seconds, 200))
+    // build up an ajax text box
+    def doText(msg: NodeSeq) =
+    ajaxText("", v => DisplayMessage(msgName,
+                                     bind("text", msg, "value" -> Text(v)),
+                                     4 seconds, 1 second))
 
-      <a href="javascript://" onclick={je.toJsCmd}>Enter text above and click me</a>
-    }
-    <br/>
-    <br/>
 
-    <div id="some_stuff"></div>
-    {
-      a(<span>Click here and the stuff above will get a message</span>){
-        DisplayMessage("some_stuff",
-            <lift:embed what="/templates-hidden/ajax"/>,
-            5 seconds, 1 second)
-      }
-    }
 
-    <br/>
-    <br/>
-
-    {
-      ajaxForm(hidden(() => JsCmds.Alert("Test Passed")) ++ submit("Test Ajax Form", () => ()))
-    } <br />
-
-    An example of autocomplete with a server round trip to
-    calculate the autocomplete list
-      {
-        JqSHtml.autocomplete("", buildQuery _, _ => ())
-      }
-      <br />
-    </span>
+    // bind the view to the functionality
+    bind("ajax", xhtml,
+         "clicker" -> doClicker _,
+         "select" -> doSelect _,
+         "text" -> doText _,
+         "auto" -> JqSHtml.autocomplete("", buildQuery _, _ => ()))
   }
 
   private def buildQuery(current: String, limit: Int): Seq[String] = {

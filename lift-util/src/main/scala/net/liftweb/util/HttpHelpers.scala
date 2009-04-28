@@ -235,6 +235,25 @@ trait HttpHelpers { self: ListHelpers with StringHelpers  =>
       case r => Box.asA[T](r)(m)
     }
   }
+
+  def findKids(in: NodeSeq, prefix: String, label: String): NodeSeq =
+  in.filter(n => n.label == label && n.prefix == prefix).flatMap(_.child)
+
+  def deepFindKids(in: NodeSeq, prefix: String, label: String): NodeSeq = {
+    val ret: ListBuffer[Node] = new ListBuffer
+
+    def doIt(in: NodeSeq) {
+      in.foreach {
+        case e: Elem if e.prefix == prefix && e.label == label =>
+          e.child.foreach(ret.+)
+        case g: Group => doIt(g.nodes)
+        case n => doIt(n.child)
+      }
+    }
+
+    doIt(in)
+    ret.toList
+  }
 }
 
 /**

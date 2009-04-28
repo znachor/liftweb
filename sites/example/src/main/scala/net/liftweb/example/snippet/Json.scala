@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2008 WorldWide Conferencing, LLC
+ * Copyright 2007-2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,22 +37,11 @@ class Json {
       })
   }
 
-  def sample = {
-    <span>
-      {Script(json.jsCmd)}
-      <textarea id="json_question" rows="8" cols="50"></textarea>
-      <br />
-      <select id="json_select">
-        <option value="show">Show</option>
-        <option value="textile">Show in Textile</option>
-        <option value="count">Count Characters</option>
-        <option value="error">Show an error</option>
-      </select>
-      <br />
-      <button onclick={json.call(ElemById("json_select")~>Value,
-                                 ElemById("json_question")~>Value).toJsCmd
-        }>Click Me</button>
-      <div id="json_result"></div>
-    </span>
-  }
+  def sample(in: NodeSeq): NodeSeq =
+  bind("json", in,
+       "script" -> Script(json.jsCmd),
+       AttrBindParam("onclick",
+                     Text(json.call(ElemById("json_select")~>Value,
+                                    ElemById("json_question")~>Value).toJsCmd),
+                     "onclick"))
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2008 WorldWide Conferencing, LLC
+ * Copyright 2007-2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,7 @@ import _root_.net.liftweb.mapper._
 /**
  * The singleton that has methods for accessing the database
  */
-object WikiEntry extends MetaWikiEntry
-trait MetaWikiEntry extends WikiEntry with LongKeyedMetaMapper[WikiEntry]
+object WikiEntry extends WikiEntry with LongKeyedMetaMapper[WikiEntry]
 
 /**
  * An O-R mapped wiki entry

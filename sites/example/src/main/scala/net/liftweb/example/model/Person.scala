@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2008 WorldWide Conferencing, LLC
+ * Copyright 2007-2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,20 +15,14 @@
  */
 package net.liftweb.example.model
 
-import _root_.net.liftweb.mapper._
-import _root_.net.liftweb.util._
-import DB._
-import _root_.java.sql.Connection
+import _root_.net.liftweb._
+import mapper._
+import util._
 
-object Person extends Person with KeyedMetaMapper[Long,Person] {
+object Person extends Person with LongKeyedMetaMapper[Person]
 
-}
-
-class Person extends KeyedMapper[Long,Person] {
+class Person extends LongKeyedMapper[Person] with IdPK {
  def getSingleton = Person
- def primaryKeyField = personId
-
- object personId extends MappedLongIndex(this)
 
  object firstName extends MappedString(this, 100)
  object lastName  extends MappedString(this, 100)

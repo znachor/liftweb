@@ -16,69 +16,75 @@
 package net.liftweb.example.comet
 
 import _root_.scala.actors._
-import _root_.scala.actors.Actor._
-import _root_.net.liftweb.http._
-import _root_.net.liftweb.util.Helpers._
-import _root_.scala.collection.immutable.TreeMap
+import Actor._
+import _root_.net.liftweb._
+import http._
+import util._
+import Helpers._
 import _root_.scala.xml._
 import S._
 import SHtml._
-import _root_.net.liftweb.util._
-import _root_.net.liftweb.http.js._
-import _root_.net.liftweb.http.js.jquery._
+import js._
 import JsCmds._
 import JE._
-import JqJsCmds._
+import net.liftweb.http.js.jquery.JqJsCmds._
 
-
-class Chat extends CometActor {
+class Chat extends CometActor with CometListener {
   private var userName = ""
-  private var currentData: List[ChatLine] = Nil
-  override def defaultPrefix = Full("chat")
-
+  private var chats: List[ChatLine] = Nil
   private lazy val infoId = uniqueId + "_info"
+  private lazy val infoIn = uniqueId + "_in"
+  private lazy val inputArea = findKids(defaultXml, "chat", "input")
+  private lazy val bodyArea = findKids(defaultXml, "chat", "body")
+  private lazy val singleLine = deepFindKids(bodyArea, "chat", "list")
 
-  private lazy val server = {
-    val ret = ChatServer
-    ret ! ChatServerAdd(this)
-    ret
-  }
-
+  // handle an update to the chat lists
+  // by diffing the lists and then sending a partial update
+  // to the browser
   override def lowPriority = {
     case ChatServerUpdate(value) =>
-      (value -- currentData) match {
-        case Nil =>
-        case diff => partialUpdate(diff.reverse.foldLeft(Noop)((a,b) => a &
-                                                               AppendHtml(infoId, line(b))))
-      }
-
-      currentData = value
+      val update = (value -- chats).reverse.map(b => AppendHtml(infoId, line(b)))
+      partialUpdate(update)
+      chats = value
   }
 
-  override lazy val fixedRender: Box[NodeSeq] = {
-    val n = Helpers.nextFuncName
+  // render the input area by binding the
+  // appropriate dynamically generated code to the
+  // view supplied by the template
+  override lazy val fixedRender: Box[NodeSeq] = 
+  ajaxForm(After(100, SetValueAndFocus(infoIn, "")),
+           bind("chat", inputArea, 
+                "input" -> text("", sendMessage _, "id" -> infoIn)))
 
-    ajaxForm(After(100, SetValueAndFocus(n, "")),
-             (text("", sendMessage _) %
-              ("id" -> n)) ++ <input type="submit" value="Chat"/> )
-  }
+  // send a message to the chat server
+  private def sendMessage(msg: String) = ChatServer ! ChatServerMsg(userName, msg.trim)
 
-  def line(cl: ChatLine) = (<li>{hourFormat(cl.when)} {cl.user}: {cl.msg}</li>)
+  // display a line
+  private def line(c: ChatLine) = bind("list", singleLine,
+                                       "when" -> hourFormat(c.when),
+                                       "who" -> c.user,
+                                       "msg" -> c.msg)
 
-  override def render = (<span>Hello "{userName}"
-      <ul id={infoId}>{currentData.reverse.flatMap(line)}</ul>
-                         </span>)
+  // display a list of chats
+  private def displayList(in: NodeSeq): NodeSeq = chats.reverse.flatMap(line)
 
+  // render the whole list of chats
+  override def render = 
+  bind("chat", bodyArea,
+       "name" -> userName,
+       AttrBindParam("id", Text(infoId), "id"),
+       "list" -> displayList _)
+
+  // setup the component
   override def localSetup {
     askForName
     super.localSetup
   }
 
-  override def localShutdown() {
-    ChatServer ! ChatServerRemove(this)
-    super.localShutdown()
-  }
+  // register as a listener
+  def registerWith = ChatServer
 
+  // ask for the user's name
   private def askForName {
     if (userName.length == 0) {
       ask(new AskName, "what's your username") {
@@ -86,12 +92,11 @@ class Chat extends CometActor {
           userName = s.trim
           reRender(true)
 
-        case s =>
+        case _ =>
           askForName
           reRender(false)
       }
     }
   }
 
-  def sendMessage(msg: String) = server ! ChatServerMsg(userName, msg.trim)
 }

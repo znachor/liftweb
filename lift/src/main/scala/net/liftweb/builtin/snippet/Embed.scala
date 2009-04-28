@@ -27,14 +27,16 @@ object Embed extends DispatchSnippet {
     case _ => render _
   }
 
-  def render(kids: NodeSeq) : NodeSeq = {
-    (for (ctx <- S.session) yield {
-      S.attr ~ ("what") map (what => ctx.findTemplate(what.text) match {
-            case Full(s) => ctx.processSurroundAndInclude(what.text, s)
-            case _ => Comment("FIXME: Unable to find template named "+what) ++ kids
-          }) openOr Comment("FIXME: No named specified for embedding") ++ kids
-
-    }) openOr Comment("FIXME: session is invalid")
+  def render(kids: NodeSeq) : NodeSeq = 
+  (for {
+      ctx <- S.session ?~ ("FIX"+"ME: session is invalid")
+      what <- S.attr ~ ("what") ?~ ("FIX" + "ME The 'what' attribute not defined")
+      template <- ctx.findTemplate(what.text) ?~ ("FIX"+"ME the "+what+" template not found")
+    } yield template) match {
+    case Full(t) => t
+    case Failure(msg, _, _) => Comment(msg)
+    case _ => Comment("FIXME: session is invalid")
   }
+  
 
 }

@@ -15,9 +15,8 @@
  */
 package net.liftweb.example.model
 
-import _root_.net.liftweb.mapper._
-import DB._
-import _root_.java.sql.Connection
+import _root_.net.liftweb._
+import mapper._
 
 /**
  * The singleton that has methods for accessing the database
@@ -26,15 +25,16 @@ object User extends User with KeyedMetaMapper[Long, User] {
   override def dbTableName = "users" // define the DB table name
 
   // define the order fields will appear in forms and output
-  override def fieldOrder = id :: firstName :: lastName :: email ::
-  password :: textArea :: Nil
+  override lazy val fieldOrder = List(id, firstName, lastName, 
+				      email, password, textArea)
 }
 
 /**
- * An O-R mapped "User" class that includes first name, last name, password and we add a "Personal Essay" to it
+ * An O-R mapped "User" class that includes first name, last name,
+ * password and we add a "Personal Essay" to it
  */
 class User extends ProtoUser[User] {
-  def getSingleton = User // what's the "meta" server
+  def getSingleton = User
 
   // define an additional field for a personal essay
   object textArea extends MappedTextarea(this, 2048) {

@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions
  * and limitations under the License.
  */
+
+/*
 package net.liftweb.example.snippet
 
 import _root_.net.liftweb.example.model._
@@ -111,3 +113,4 @@ class Wiki extends MetaWikiEntry {
     }</form>
   }
 }
+*/

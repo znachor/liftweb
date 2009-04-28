@@ -150,8 +150,12 @@ case class MethodNotAllowedResponse() extends LiftResponse with HeaderStuff {
  * This Resource does not allow this method. Use this when the resource can't
  * understand the method no matter the circumstances.
  */
-case class NotAcceptableResponse() extends LiftResponse with HeaderStuff {
-  def toResponse = InMemoryResponse(Array(), headers, cookies, 406)
+case class NotAcceptableResponse(msg: String) extends LiftResponse with HeaderStuff {
+  def toResponse = InMemoryResponse(msg.getBytes("UTF-8"), headers, cookies, 406)
+}
+
+object NotAcceptableResponse {
+  def apply() = new NotAcceptableResponse("")
 }
 
 /**

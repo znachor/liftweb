@@ -78,7 +78,19 @@
       
       <div class="widget">
 	<center><b>Group Chat</b></center><br />
-	<lift:comet type="Chat">Chat Text</lift:comet>
+	<lift:comet type="Chat">
+	  <chat:body>
+	    Hello <chat:name/>
+	      <ul chat:id="na">
+		<chat:list>
+		  <li><list:when/> <list:who/>: <list:msg/></li>
+		</chat:list>
+	      </ul>
+	  </chat:body>
+	  <chat:input>
+	    <chat:input/> <input type="submit" value="Chat" />
+	  </chat:input>
+	</lift:comet>
       </div>
       <hr class="space" />
       

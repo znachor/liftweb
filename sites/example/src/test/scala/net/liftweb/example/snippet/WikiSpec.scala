@@ -7,6 +7,7 @@ import net.liftweb.http.{ S, Req, LiftSession }
 import net.liftweb.util.{ Full, Empty }
 import org.mockito.Matchers._
 
+/*
 class WikiSpecTest extends Specification with MockEntries with JUnit {
   "In the following spec, 'pageName' refers to the value of the S parameter 'wiki_page'" +
   "The 'main' function" should { createMocks.before
@@ -51,8 +52,9 @@ class WikiSpecTest extends Specification with MockEntries with JUnit {
       }
     }
   }
-}
+}*/
 
+/*
 import net.liftweb.mapper._
 import net.liftweb.example.model._
 import net.liftweb.example.snippet._
@@ -119,4 +121,4 @@ trait MockRequest extends Mockito {
   def setParameter(name: String, value: String) {
     request.param(name) returns Some(value)
   }
-}
+}*/
