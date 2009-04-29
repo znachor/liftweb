@@ -135,6 +135,19 @@ object LiftRules {
     case _ => "text/html"
   }
 
+  lazy val liftVersion: String = {
+    val cn = """\.""".r.replaceAllIn(LiftRules.getClass.getName, "/")
+    val ret: Box[String] =
+    for {
+      url <- Box !! LiftRules.getClass.getResource("/"+cn+".class")
+      val newUrl = new java.net.URL(url.toExternalForm.split("!")(0)+"!"+"/META-INF/MANIFEST.MF")
+      str <- tryo(new String(readWholeStream(newUrl.openConnection.getInputStream), "UTF-8"))
+      ma <- """lift_version: (.*)""".r.findFirstMatchIn(str)
+    } yield ma.group(1)
+
+    ret openOr "Unknown Lift Version (maybe 1.1-SNAPSHOT)"
+  }
+
   /**
    * Hooks to be run when LiftServlet.destroy is called.
    */
@@ -824,8 +837,6 @@ object LiftRules {
     object when extends SessionVar[Long](millis)
     when.is
   }
-
-  lazy val liftVersion = "0.11-SNAPSHOT"
 
   /**
    * Hods the last update time of the Comet request. Based on this server mayreturn HTTP 304 status
