@@ -24,9 +24,8 @@ import Helpers._
 
 import _root_.scala.xml._
 
-trait CRUDify[KeyType, CrudType <: KeyedMapper[KeyType, CrudType]]
-extends KeyedMetaMapper[KeyType, CrudType] {
-  self: CrudType =>
+trait CRUDify[KeyType, CrudType <: KeyedMapper[KeyType, CrudType]] {
+  self: CrudType with KeyedMetaMapper[KeyType, CrudType] =>
 
   lazy val Prefix = calcPrefix
   lazy val ListItems = calcListItems
@@ -526,7 +525,6 @@ extends KeyedMetaMapper[KeyType, CrudType] {
 
 
 
-trait LongCRUDify[CrudType <: KeyedMapper[Long, CrudType]] extends
-CRUDify[Long, CrudType] {
-  self: CrudType =>
+trait LongCRUDify[CrudType <: KeyedMapper[Long, CrudType]] extends CRUDify[Long, CrudType] {
+  self: CrudType with KeyedMetaMapper[Long, CrudType] =>
 }
