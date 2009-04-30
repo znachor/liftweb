@@ -54,8 +54,8 @@ object JSONParser extends SafeSeqParser with ImplicitConversions {
 
   lazy val pairId: Parser[String] = rep1(elem("pairChar", pairChar)) ^^ {case s => s.mkString}
 
-  lazy val string: Parser[String] = ('\'' ~> rep(not('\'') ~> achar) <~ '\'' ^^ {case xs => xs.mkString("")}) |
-  ('"' ~> rep(not('"') ~> achar) <~ '"' ^^ {case xs => xs.mkString("")})
+  lazy val string: Parser[String] = ('\'' ~> rep(not('\'') ~> bchar) <~ '\'' ^^ {case xs => xs.mkString}) |
+  ('"' ~> rep(not('"') ~> achar) <~ '"' ^^ {case xs => xs.mkString})
 
   lazy val achar = ('\\' ~> ('"' ^^ {case _ => '"'} |
                              '\\' ^^ {case _ => '\\'} |
@@ -64,7 +64,18 @@ object JSONParser extends SafeSeqParser with ImplicitConversions {
                              'n' ^^ {case _ => '\n'} |
                              'r' ^^ {case _ => '\r'} |
                              't' ^^ {case _ => '\t'} |
-                             'u' ~> repN(4, hexDigit) ^^ {case dg => Integer.parseInt(dg.mkString(""), 16).toChar})) | (elem("any char", c => c != '"' && c >= ' '))
+                             'u' ~> repN(4, hexDigit) ^^ {case dg => Integer.parseInt(dg.mkString, 16).toChar})) |
+  (elem("any char", c => c != '"' && c >= ' '))
+
+  lazy val bchar = ('\\' ~> ('"' ^^ {case _ => '"'} |
+                             '\\' ^^ {case _ => '\\'} |
+                             '/' ^^ {case _ => '/'} |
+                             'b' ^^ {case _ => '\b'} |
+                             'n' ^^ {case _ => '\n'} |
+                             'r' ^^ {case _ => '\r'} |
+                             't' ^^ {case _ => '\t'} |
+                             'u' ~> repN(4, hexDigit) ^^ {case dg => Integer.parseInt(dg.mkString, 16).toChar})) |
+  (elem("any char", c => c != '\'' && c >= ' '))
 
   lazy val number: Parser[Double] =  intFracExp | intFrac | intExp |  (anInt ^^ {case n => n.toDouble})
 

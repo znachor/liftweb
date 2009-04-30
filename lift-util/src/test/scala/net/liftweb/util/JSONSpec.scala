@@ -27,6 +27,41 @@ object JSONSpec extends Specification {
       }) must be_== ("test", "", "no-reply@innovationgames.com")
     }
 
+    "multiple double quotes must parse" in {
+      val longJson =
+      """{'name': 'two " double " quotes', 'canvas': {'backgroundImage': '/images/tree4.jpg', 'layers': [{'id': 'LYR5485429073', 'name': 'l1', 'regions': [{'id': 'RGN4297201744', 'name': 'New Region', 'geoData': {'x': [545, 477, 149, 149, 149]
+
+, 'y': [90, 484, 137, 136, 136]
+
+, 'z': 0}}]
+
+}]
+
+}, 'publicGame': false, 'is_started': false, 'is_stopped': false, 'description': 'desc', 'items': [{'id': 'ITEM691196221323', 'name': 'leaf', 'itemNum': 1, 'desc': '', 'where': {'geoData': {'x': 276, 'y': 86}, 'residesIn': []
+
+}, 'type': {'name': 'Leaf', 'id': 'LeafType', 'imageFile': '/images/leaf.gif'}, 'comments': []
+
+, 'readOnly': 'false', 'locked': 'false', 'relationships': []
+
+}]
+
+, 'items_remaining': [{'item_type_id': 'LeafType', 'count': 3}, {'item_type_id': 'GreenAppleType', 'count': 6}, {'item_type_id': 'RedSquareType', 'count': 8}]
+
+, 'players': []
+
+, 'player_presence': []
+
+, 'chats': []
+
+, 'actions': []
+
+}"""
+
+
+      val parsed = JSONParser.parse(longJson)
+      parsed.isDefined must be(true)
+    }
+
     "Parse long arrays" in {
 
       val longArray = "[" + (1 to 100000).map(i => '"'+i.toString+'"').mkString(", ") + "]"
