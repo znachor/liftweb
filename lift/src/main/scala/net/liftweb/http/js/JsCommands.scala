@@ -424,10 +424,15 @@ object JsCmds {
     def apply(script: JsCmd): NodeSeq = <script type="text/javascript">{
         Unparsed("""
 // <![CDATA[
-"""+  script.toJsCmd+ """
+"""+  fixEndScriptTag(script.toJsCmd)+ """
 // ]]>
 """)
       }</script>
+
+  private def fixEndScriptTag(in: String): String =
+  if (S.ieMode) {
+    """\<\/script\>""".r.replaceAllIn(in, """<\\/script>""")
+  } else in
   }
 
   def JsHideId(what: String): JsCmd = LiftRules.jsArtifacts.hide(what).cmd
