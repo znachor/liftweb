@@ -122,6 +122,7 @@ object MenuInfo {
        Menu(Loc("longtime", List("longtime"), "Updater", Unless(() => Props.inGAE, "Disabled for GAE"))),
        Menu(Loc("ajax", List("ajax"), "AJAX Samples")),
        Menu(Loc("ajax form", List("ajax-form"), "AJAX Form")),
+       Menu(Loc("js confirm", List("rhodeisland"), "Modal Dialog")),
        Menu(Loc("json", List("json"), "JSON Messaging"))) ::
   Menu(Loc("Persistence", List("persistence"), "Persistence", Unless(() => Props.inGAE, "Disabled for GAE")),
        Menu(Loc("xml fun", List("xml_fun"), "XML Fun", Unless(() => Props.inGAE, "Disabled for GAE"))),

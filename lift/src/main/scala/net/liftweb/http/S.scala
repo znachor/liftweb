@@ -607,6 +607,15 @@ object S extends HasParams {
   def prefixedAttrsToMetaData(prefix: String): MetaData = prefixedAttrsToMetaData(prefix, Map.empty)
 
   /**
+   * Find and process a template
+   */
+  def runTemplate(path: List[String]): Box[NodeSeq] =
+  for {
+    t <- TemplateFinder.findAnyTemplate(path) ?~ ("Couldn't find template "+path)
+    sess <- session ?~ "No current session"
+  } yield sess.processSurroundAndInclude(path.mkString("/", "/", ""), t)
+
+  /**
    * Used to get an attribute by its name
    */
   object attr extends AttrHelper[Box] {

@@ -27,6 +27,8 @@ import JsCmds._
 import util._
 import Helpers._
 
+case class BuildStatus(progress: Int, url: Box[String])
+
 // a singleton that builds a "thing"
 object ThingBuilder extends Actor {
   def boot() {
@@ -41,12 +43,11 @@ object ThingBuilder extends Actor {
       case a: Actor =>
         this ! (a, 1)
 
-      case (a: Actor, 10) =>
-        a ! <b>Your thing is <a href="/getit">done</a></b>
-        a ! RedirectTo("/getit")
+      case (a: Actor, x: Int) if x >= 10 =>
+        a ! BuildStatus(100, Full("/getit"))
 
       case (a: Actor, i: Int) =>
-        a ! ("Working on making your thing... "+i)
+        a ! BuildStatus(i * 10, Empty)
         ActorPing.schedule(this, (a, i + 1), 2 seconds)
 
       case _ =>
@@ -56,31 +57,40 @@ object ThingBuilder extends Actor {
   this.start
 }
 
+// A CometActor that keeps the user updated
 class LongTime extends CometActor {
-  private var url: Box[NodeSeq] = Empty
-  private var msg = "Working"
+  private var url: Box[String] = Empty
+  private var progress: Int = 0
 
+  // a CometActor that has not been displayed for
+  // 2 minutes is destroyed
   override def lifespan: Box[TimeSpan] = Full(2 minutes)
 
+  // get messages from the ThingBuilder
   override def highPriority = {
-    case n: NodeSeq => url = n
+    case BuildStatus(p, Empty) =>
+      this.progress = p
       reRender(false)
 
-    case js: JsCmd =>
-      partialUpdate(js)
-
-    case s: String =>
-      msg = s
+    case BuildStatus(_, Full(u)) =>
+      url = Full(u)
+      progress = 100
       reRender(false)
+      partialUpdate(RedirectTo(u))
   }
 
+  // start the job
   override def localSetup() {
     ThingBuilder ! this
     super.localSetup()
   }
 
-  def render = {
-    val ns = url openOr Text(msg)
-    ns
-  }
+  // display the progress or a link to the result
+  def render =
+  url match {
+    case Full(where) =>
+      <span>Your job is complete.  <a href={where}>Click Me</a></span>
+    case _ =>
+      <span>We're working on your job... it's {progress}% complete</span>
+  }  
 }
