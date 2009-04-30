@@ -173,6 +173,7 @@ object Req {
     val updated = if (hv.startsWith("/")) contextPath + hv else hv
 
     Text(if (fixURL && rewrite.isDefined &&
+             !updated.startsWith("mailto:") &&
              !updated.startsWith("javascript:") &&
              !updated.startsWith("http://") &&
              !updated.startsWith("https://"))
