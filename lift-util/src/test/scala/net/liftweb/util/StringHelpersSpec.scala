@@ -152,16 +152,16 @@ object StringHelpersSpec extends Specification with StringHelpers {
   }
   "The SuperString class encJs method" should {
     "encode a string replacing backslash with its unicode value" in {
-      "\\hello".encJs must_== "\"\\u005chello\""
+      "\\hello".encJs must_== "'\\u005chello'"
     }
     "encode a string replacing the quote character with its unicode value" in {
-      "h'ello".encJs must_== "\"h\\u0027ello\""
+      "h'ello".encJs must_== "'h\\u0027ello'"
     }
     "encode a string adding a quote before and a quote after the string" in {
-      "hello".encJs must_== "\"hello\""
+      "hello".encJs must_== "'hello'"
     }
     "encode a string replacing non-ASCII characters by their unicode value" in {
-      "ni\u00f1a".encJs must_== "\"ni\\u00f1a\""
+      "ni\u00f1a".encJs must_== "'ni\\u00f1a'"
     }
     "return the string \"null\" if the input string is null" in {
       (null: String).encJs must_== "null"

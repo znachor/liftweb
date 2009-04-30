@@ -22,7 +22,7 @@ import sitemap._
 import Helpers._
 
 import example._
-import comet.WebServices
+import comet._
 import model._
 import lib._
 import snippet.{definedLocale, Template}
@@ -84,6 +84,8 @@ class Boot {
 
     LiftRules.setSiteMap(SiteMap(MenuInfo.menu :_*))
 
+    ThingBuilder.boot()
+
     // Dump information about session every 10 minutes
     SessionMaster.sessionWatchers = SessionInfoDumper :: SessionMaster.sessionWatchers
 
@@ -115,16 +117,19 @@ object MenuInfo {
   import Loc._
 
   def menu: List[Menu] =  Menu(Loc("home", List("index"), "Home")) ::
-  Menu(Loc("xml fun", List("xml_fun"), "XML Fun", Unless(() => Props.inGAE, "Disabled for GAE"))) ::
-  Menu(Loc("chat", List("chat"), "Comet Chat", Unless(() => Props.inGAE, "Disabled for GAE"))) ::
-  Menu(Loc("database", List("database"), "Database", Unless(() => Props.inGAE, "Disabled for GAE"))) ::
-  Menu(Loc("ajax", List("ajax"), "AJAX Samples")) ::
-  Menu(Loc("ajax form", List("ajax-form"), "AJAX Form")) ::
-  Menu(Loc("json", List("json"), "JSON Messaging")) ::
-  Menu(Loc("template", List("template"), "Templates", Unless(() => Props.inGAE, "Disabled for GAE"))) ::
+  Menu(Loc("Interactive", List("interactive"), "Interactive Stuff"),
+       Menu(Loc("chat", List("chat"), "Comet Chat", Unless(() => Props.inGAE, "Disabled for GAE"))),
+       Menu(Loc("longtime", List("longtime"), "Updater", Unless(() => Props.inGAE, "Disabled for GAE"))),
+       Menu(Loc("ajax", List("ajax"), "AJAX Samples")),
+       Menu(Loc("ajax form", List("ajax-form"), "AJAX Form")),
+       Menu(Loc("json", List("json"), "JSON Messaging"))) ::
+  Menu(Loc("Persistence", List("persistence"), "Persistence", Unless(() => Props.inGAE, "Disabled for GAE")),
+       Menu(Loc("xml fun", List("xml_fun"), "XML Fun", Unless(() => Props.inGAE, "Disabled for GAE"))),
+       Menu(Loc("database", List("database"), "Database", Unless(() => Props.inGAE, "Disabled for GAE"))),
+       Menu(Loc("simple", Link(List("simple"), true, "/simple/index"),
+                "Simple Forms", Unless(() => Props.inGAE, "Disabled for GAE"))),
+       Menu(Loc("template", List("template"), "Templates", Unless(() => Props.inGAE, "Disabled for GAE")))) ::
   Menu(Loc("ws", List("ws"), "Web Services", Unless(() => Props.inGAE, "Disabled for GAE"))) ::
-  Menu(Loc("simple", Link(List("simple"), true, "/simple/index"),
-           "Simple Forms", Unless(() => Props.inGAE, "Disabled for GAE"))) ::
   Menu(Loc("lang", List("lang"), "Localization")) ::
   Menu(Loc("menu_top", List("menu", "index"), "Menus"),
        Menu(Loc("menu_one", List("menu", "one"), "First Submenu")),
@@ -137,13 +142,14 @@ object MenuInfo {
        Menu(Loc("menu_three", List("menu", "three"), "Third Submenu")),
        Menu(Loc("menu_four", List("menu", "four"), "Forth Submenu"))
   ) ::
-  Menu(Loc("file_upload", List("file_upload"), "File Upload")) ::
   Menu(WikiStuff) ::
-  Menu(Loc("guess", List("guess"), "Number Guessing")) ::
-  Menu(Loc("count", List("count"), "Counting")) ::
-  Menu(Loc("login", Link(List("login"), true, "/login/index"),
-           <xml:group>Requiring Login <strike>SiteMap</strike></xml:group>)) ::
-  Menu(Loc("arc", List("arc"), "Arc Challenge #1")) ::
+  Menu(Loc("Misc", List("misc"), "Misc code"),
+       Menu(Loc("guess", List("guess"), "Number Guessing")),
+       Menu(Loc("arc", List("arc"), "Arc Challenge #1")) ,
+       Menu(Loc("file_upload", List("file_upload"), "File Upload")),
+       Menu(Loc("login", Link(List("login"), true, "/login/index"),
+                <xml:group>Requiring Login <strike>SiteMap</strike></xml:group>)),
+       Menu(Loc("count", List("count"), "Counting"))) ::
   Menu(Loc("lift", ExtLink("http://liftweb.net"),
            <xml:group><i>Lift</i> project home</xml:group>)) ::
   Nil
