@@ -15,7 +15,7 @@
  */
 package ${package}.snippet
 
-import scala.xml.{NodeSeq,Text}
+import _root_.scala.xml.{NodeSeq,Text}
 
 import _root_.net.liftweb._
 import http._
@@ -23,7 +23,7 @@ import S._
 import util._
 import Helpers._
 
-import javax.persistence.{EntityExistsException,PersistenceException}
+import _root_.javax.persistence.{EntityExistsException,PersistenceException}
 
 import ${package}.model._
 import Model._

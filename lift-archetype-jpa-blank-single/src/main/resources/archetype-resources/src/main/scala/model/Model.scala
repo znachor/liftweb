@@ -15,7 +15,8 @@
  */
 package ${package}.model
 
-import org.scala_libs.jpa._
+import _root_.org.scala_libs.jpa.LocalEMF
+import _root_.net.liftweb.jpa.RequestVarEM
 
 /* This object is left as a placeholder. Please modify to match your
  * configuration: */
