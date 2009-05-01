@@ -300,6 +300,8 @@ class LiftSession(val contextPath: String, val uniqueId: String,
 
   private case class RunnerHolder(name: String, func: S.AFuncHolder, owner: Box[String])
 
+object ieMode extends SessionVar[Boolean](LiftRules.calcIEMode())
+
   /**
    * Executes the user's functions based on the query parameters
    */
@@ -451,6 +453,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
        template <- loc.template) yield template
 
   private[http] def processRequest(request: Req): Box[LiftResponse] = {
+    ieMode.is // make sure this is primed
     S.oldNotices(notices)
     LiftSession.onBeginServicing.foreach(f => tryo(f(this, request)))
     val ret = try {

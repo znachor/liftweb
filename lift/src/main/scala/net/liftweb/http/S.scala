@@ -178,7 +178,7 @@ object S extends HasParams {
   /**
    * Should the output be rendered in IE6&7 compatible mode?
    */
-  def ieMode: Boolean = LiftRules.calcIEMode()
+  def ieMode: Boolean = session.map(_.ieMode.is) openOr false // LiftRules.calcIEMode()
 
   def highLevelSessionDispatcher: List[LiftRules.DispatchPF] = highLevelSessionDispatchList.map(_.dispatch)
   /**

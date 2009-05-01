@@ -429,10 +429,9 @@ object JsCmds {
 """)
       }</script>
 
-  private def fixEndScriptTag(in: String): String =
-  if (S.ieMode) {
-    """\<\/script\>""".r.replaceAllIn(in, """<\\/script>""")
-  } else in
+    private def fixEndScriptTag(in: String): String =
+    if (S.ieMode)  """\<\/script\>""".r.replaceAllIn(in, """<\\/script>""")
+    else in
   }
 
   def JsHideId(what: String): JsCmd = LiftRules.jsArtifacts.hide(what).cmd
