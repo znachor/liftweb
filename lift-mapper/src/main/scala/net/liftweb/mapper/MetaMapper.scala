@@ -619,6 +619,13 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
                 colVal.targetSQLType(col._1) match {
                   case Types.VARCHAR => st.setString(colNum, colVal.jdbcFriendly(col._1).asInstanceOf[String])
 
+		  case Types.BINARY if st.getClass.getName.startsWith("org.apache.derby") => {
+		    // Derby gets upset if we try to send a byte array to a BLOB, so we need to proxy a BLOB here
+		    val data = colVal.jdbcFriendly(col._1).asInstanceOf[Array[Byte]]
+		    val input = new java.io.ByteArrayInputStream(data)
+		    st.setBlob(colNum, input, data.length)
+		  }
+
                   case _ => st.setObject(colNum, colVal.jdbcFriendly(col._1), colVal.targetSQLType(col._1))
                 }
 

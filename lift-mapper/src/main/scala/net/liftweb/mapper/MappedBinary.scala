@@ -16,7 +16,7 @@ package net.liftweb.mapper
  * and limitations under the License.
  */
 
-import _root_.java.sql.{ResultSet, Types}
+import _root_.java.sql.{Blob, ResultSet, Types}
 import _root_.java.lang.reflect.Method
 import _root_.java.util.Date
 import _root_.net.liftweb.util._
@@ -72,6 +72,7 @@ class MappedBinary[T<:Mapper[T]](val fieldOwner: T) extends MappedField[Array[By
     val toSet = v match {
       case null => null
       case ba: Array[Byte] => ba
+      case blob : Blob => blob.getBytes(1, blob.length.toInt)
       case other => other.toString.getBytes("UTF-8")
     }
     f.data() = toSet

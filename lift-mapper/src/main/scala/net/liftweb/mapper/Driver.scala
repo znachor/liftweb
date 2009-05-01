@@ -68,7 +68,7 @@ abstract class DriverType(val name : String) {
 }
 
 object DerbyDriver extends DriverType("Apache Derby") {
-  def binaryColumnType = "LONG VARCHAR FOR BIT DATA"
+  def binaryColumnType = "BLOB"
   def booleanColumnType = "SMALLINT"
   def clobColumnType = "LONG VARCHAR"
   def dateTimeColumnType = "TIMESTAMP"
