@@ -145,7 +145,7 @@ object LiftRules {
       ma <- """lift_version: (.*)""".r.findFirstMatchIn(str)
     } yield ma.group(1)
 
-    ret openOr "Unknown Lift Version (maybe 1.1-SNAPSHOT)"
+    ret openOr "Unknown Lift Version (maybe 1.1-M1)"
   }
 
   /**

@@ -15,7 +15,7 @@
     </action>
     see http://maven.apache.org/plugins/maven-changes-plugin/usage.html for full guide
   -->
-    <release version="1.1-SNAPSHOT" date="" description="">
+    <release version="1.1-M1" date="2009-05-01" description="Lift 1.1 Milestone 1">
       <action dev="Marius Danciu" type="add">Fixed Bug #34 - lift processing directives should be implemented as snippets</action>
       <action dev="Marius Danciu" type="add">Added support for templates caching</action>
     </release>
