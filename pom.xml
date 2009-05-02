@@ -393,7 +393,7 @@ Lift is a scala web framework.
       <distributionManagement>
         <repository>
           <id>scala-tools.org</id>
-          <url>http://nexus.scala-tools.org/nexus/content/repositories/releases</url>
+          <url>http://nexus.scala-tools.org/content/repositories/releases</url>
         </repository>
         <site>
           <id>scala-tools.org</id>
