@@ -32,7 +32,16 @@ object Surround extends DispatchSnippet {
     } yield {
       val page = req.uri + " -> " + req.path
 
-      val paramElements: Seq[Node] = findElems(kids)(e => e.label == "with-param" && e.prefix == "lift")
+      val paramElements: Seq[Node] = findElems(kids)(e => {
+       val oldSyntax = e.label == "with-param" && e.prefix == "lift"
+       val newSyntax = e.label == "with-param" && e.prefix == "lift-tag"
+
+       if (oldSyntax) {
+         Log.warn("DEPRECATE WARNING: <lift:with-param> is deprecated. Please use <lift-tag:with-param> instead !")
+       }
+
+       oldSyntax || newSyntax
+      })
 
       val params: Seq[(String, NodeSeq)] =
       for {e <- paramElements

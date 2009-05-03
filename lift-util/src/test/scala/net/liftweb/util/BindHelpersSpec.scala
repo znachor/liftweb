@@ -38,19 +38,19 @@ object BindHelpersSpec extends Specification with BindHelpers {
     }
   }
   "the bind(Map, NodeSeq) function" should {
-    "replace the content of a lift:bind node with the content of a map where the key is the value of the attribute 'name'" in {
+    "replace the content of a lift-tag:bind node with the content of a map where the key is the value of the attribute 'name'" in {
       val map = Map("hello" -> <h1></h1>, "world" -> <b></b>)
       val liftbind = <body>
-        <lift:bind name="hello">changethis</lift:bind>
+        <lift-tag:bind name="hello">changethis</lift-tag:bind>
      </body>
       bind(map, liftbind) must ==/(<body><h1></h1></body>)
     }
   }
   "the bindlist function" should {
-    "replace the content of a lift:bind node with the content of a map where the key is the value of the attribute 'name'" in {
+    "replace the content of a lift-tag:bind node with the content of a map where the key is the value of the attribute 'name'" in {
       val maps = List(Map("hello" -> <h1></h1>, "world" -> <b></b>))
       val liftbind = <body>
-        <lift:bind name="hello">changethis</lift:bind>
+        <lift-tag:bind name="hello">changethis</lift-tag:bind>
      </body>
       bindlist(maps, liftbind).get must ==/(<body><h1></h1></body>)
     }

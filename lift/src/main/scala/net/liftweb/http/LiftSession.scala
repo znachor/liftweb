@@ -300,7 +300,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
 
   private case class RunnerHolder(name: String, func: S.AFuncHolder, owner: Box[String])
 
-object ieMode extends SessionVar[Boolean](LiftRules.calcIEMode())
+  object ieMode extends SessionVar[Boolean](LiftRules.calcIEMode())
 
   /**
    * Executes the user's functions based on the query parameters

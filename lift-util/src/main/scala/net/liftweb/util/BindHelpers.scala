@@ -456,9 +456,21 @@ trait BindHelpers {
    * @return the NodeSeq that results from the specified transforms
    */
   def bind(vals: Map[String, NodeSeq], xml: NodeSeq): NodeSeq = {
+
+    val isBind = (node: Elem) => {
+      val oldSyntax = node.prefix == "lift" && node.label == "bind"
+      val newSyntax = node.prefix == "lift-tag" && node.label == "bind"
+
+      if (oldSyntax) {
+        Log.warn("DEPRECATE WARNING: <lift:bind> has been deprecated. Please use <lift-tag:bind> instead !")
+      }
+
+      oldSyntax || newSyntax 
+    }
+
     xml.flatMap {
       node => node match {
-        case s : Elem if (node.prefix == "lift" && node.label == "bind") => {
+        case s : Elem if (isBind(s)) => {
             node.attributes.get("name") match {
               case None => bind(vals, node.child)
               case Some(ns) => {

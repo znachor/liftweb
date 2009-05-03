@@ -37,6 +37,5 @@ object Embed extends DispatchSnippet {
     case Failure(msg, _, _) => Comment(msg)
     case _ => Comment("FIXME: session is invalid")
   }
-  
 
 }
