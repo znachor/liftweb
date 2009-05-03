@@ -25,6 +25,10 @@ import JsCmds._
 import _root_.scala.xml._
 
 object SHtml {
+
+  private def deferCall(data: JsExp, jsFunc: Call): Call = 
+    Call(jsFunc.function, (jsFunc.params ++ List(AnonFunc(makeAjaxCall(data)))):_*)
+
   /**
    * Create an Ajax button. When it's pressed, the function is executed
    *
@@ -43,23 +47,70 @@ object SHtml {
    * Create an Ajax button. When it's pressed, the function is executed
    *
    * @param text -- the name/text of the button
+   * @param jsFunc -- the user function that will be executed. This function will receive as last parameter
+   *                  the function that will actually do the ajax call. Hence the user function can decide when
+   * 				  to make the ajax request.
+   * @param func -- the function to execute when the button is pushed.  Return Noop if nothing changes on the browser.
+   *
+   * @return a button to put on your pagejsFunc.params ++ List(AnonFunc(makeAjaxCall(Str(name+"=true"))))
+   */
+  def ajaxButton(text: NodeSeq, jsFunc: Call, func: () => JsCmd, attrs: (String, String)*): Elem = {
+    attrs.foldLeft(fmapFunc(func)(name =>
+      <button onclick={deferCall(Str(name+"=true"), jsFunc).toJsCmd + "; return false;"}>{text}</button>))(_ % _)
+  }
+
+  /**
+   * Create an Ajax button. When it's pressed, the function is executed
+   *
+   * @param text -- the name/text of the button
+   * @param jsFunc -- the user function that will be executed. This function will receive as last parameter
+   *                  the function that will actually do the ajax call. Hence the user function can decide when
+   * 				  to make the ajax request.
    * @param func -- the function to execute when the button is pushed.  Return Noop if nothing changes on the browser.
    *
    * @return a button to put on your page
    */
   def ajaxButton(text: String, func: () => JsCmd, attrs: (String, String)*): Elem =
-  ajaxButton(Text(text), func, attrs :_*)
+    ajaxButton(Text(text), func, attrs :_*)
 
   /**
-   * create an anchor tag around a body which will do an AJAX call and invoke the function
+   * Create an Ajax button. When it's pressed, the function is executed
+   *
+   * @param text -- the name/text of the button
+   * @param func -- the function to execute when the button is pushed.  Return Noop if nothing changes on the browser.
+   *
+   * @return a button to put on your page
+   */
+  def ajaxButton(text: String, jsFunc: Call, func: () => JsCmd, attrs: (String, String)*): Elem =
+    ajaxButton(Text(text), jsFunc, func, attrs :_*)
+
+
+  /**
+   * Create an anchor tag around a body which will do an AJAX call and invoke the function
    *
    * @param func - the function to invoke when the link is clicked
    * @param body - the NodeSeq to wrap in the anchor tag
+   * @param attrs - the anchor node attributes
    */
   def a(func: () => JsCmd, body: NodeSeq, attrs: (String, String)*): Elem = {
     val key = Helpers.nextFuncName
     addFunctionMap(key, (a: List[String]) => func())
     attrs.foldLeft(<lift:a key={key}>{body}</lift:a>)(_ % _)
+  }
+
+  /**
+   * Create an anchor tag around a body which will do an AJAX call and invoke the function
+   *
+   * @param jsFunc -- the user function that will be executed. This function will receive as last parameter
+   *                  the function that will actually do the ajax call. Hence the user function can decide when
+   * 				  to make the ajax request.
+   * @param func - the function to invoke when the link is clicked
+   * @param body - the NodeSeq to wrap in the anchor tag
+   * @param attrs - the anchor node attributes
+   */
+  def a(jsFunc: Call, func: () => JsCmd, body: NodeSeq, attrs: (String, String)*): Elem = {
+    attrs.foldLeft(fmapFunc(func)(name =>
+      <a href="javascript://" onclick={deferCall(Str(name+"=true"), jsFunc).toJsCmd + "; return false;"}>{body}</a>))(_ % _)
   }
 
   def makeAjaxCall(in: JsExp): JsExp = new JsExp {
@@ -70,20 +121,31 @@ object SHtml {
    * Create an anchor with a body and the function to be executed when the anchor is clicked
    */
   def a(body: NodeSeq, attrs: (String, String)*)(func: => JsCmd): Elem =
-  a(() => func, body, attrs :_*)
+    a(() => func, body, attrs :_*)
+
+  /**
+   * Create an anchor with a body and the function to be executed when the anchor is clicked
+   * @param jsFunc -- the user function that will be executed. This function will receive as last parameter
+   *                  the function that will actually do the ajax call. Hence the user function can decide when
+   * 				  to make the ajax request.
+   * @param body - the NodeSeq to wrap in the anchor tag
+   * @param attrs - the anchor node attributes
+   */
+  def a(jsFunc: Call, body: NodeSeq, attrs: (String, String)*)(func: => JsCmd): Elem =
+    a(jsFunc, () => func, body, attrs :_*)
 
   /**
    * Create an anchor that will run a JavaScript command when clicked
    */
   def a(body: NodeSeq, cmd: JsCmd, attrs: (String, String)*): Elem =
-  attrs.foldLeft(<a href="javascript://"
+    attrs.foldLeft(<a href="javascript://"
       onclick={cmd.toJsCmd + "; return false;"}>{body}</a>)(_ % _)
 
   /**
    * Create a span that will run a JavaScript command when clicked
    */
   def span(body: NodeSeq, cmd: JsCmd, attrs: (String, String)*): Elem =
-  attrs.foldLeft(<span onclick={cmd.toJsCmd}>{body}</span>)(_ % _)
+    attrs.foldLeft(<span onclick={cmd.toJsCmd}>{body}</span>)(_ % _)
 
   /**
    * Build a JavaScript function that will perform an AJAX call based on a value calculated in JavaScript
@@ -94,8 +156,7 @@ object SHtml {
    */
   def ajaxCall(jsCalcValue: JsExp, func: String => JsCmd): (String, JsExp) = ajaxCall_*(jsCalcValue, SFuncHolder(func))
 
-  def fajaxCall[T](jsCalcValue: JsExp, func: String => JsCmd)(f: (String, JsExp) => T): T =
-  {
+  def fajaxCall[T](jsCalcValue: JsExp, func: String => JsCmd)(f: (String, JsExp) => T): T = {
     val (name, js) = ajaxCall(jsCalcValue, func)
     f(name, js)
   }
@@ -108,8 +169,8 @@ object SHtml {
    * @return the JavaScript that makes the call
    */
   private def ajaxCall_*(jsCalcValue: JsExp, func: AFuncHolder): (String, JsExp) =
-  fmapFunc(func)(name =>
-    (name, makeAjaxCall(JsRaw("'"+name+"=' + "+jsCalcValue.toJsCmd))))
+    fmapFunc(func)(name =>
+      (name, makeAjaxCall(JsRaw("'"+name+"=' + "+jsCalcValue.toJsCmd))))
 
 
   def toggleKids(head: Elem, visible: Boolean, func: () => Any, kids: Elem): NodeSeq = {
@@ -152,47 +213,73 @@ object SHtml {
    * @return a text field
    */
   def jsonText(value: String, cmd: String, json: JsonCall, attrs: (String, String)*): Elem =
-  jsonText(value, exp => json(cmd, exp), attrs :_*)
+    jsonText(value, exp => json(cmd, exp), attrs :_*)
 
-  def ajaxText(value: String, func: String => JsCmd): Elem = ajaxText_*(value, SFuncHolder(func))
+  def ajaxText(value: String, func: String => JsCmd): Elem = ajaxText_*(value, Empty, SFuncHolder(func))
 
-  private def ajaxText_*(value: String, func: AFuncHolder, attrs: (String, String)*): Elem = {
+  def ajaxText(value: String, jsFunc: Call, func: String => JsCmd): Elem = ajaxText_*(value, Full(jsFunc), SFuncHolder(func))
+
+  private def ajaxText_*(value: String, jsFunc: Box[Call], func: AFuncHolder, attrs: (String, String)*): Elem = {
+    val raw = (funcName: String, value:String) => JsRaw("'" +funcName + "=' + encodeURIComponent(" + value + ".value)")
+    val key = Helpers.nextFuncName
+
     fmapFunc(func){
       funcName =>
       (attrs.foldLeft(<input type="text" value={value}/>)(_ % _)) %
       ("onkeypress" -> """lift_blurIfReturn(event)""") %
-      ("onblur" -> makeAjaxCall(JsRaw("'" +funcName + "=' + encodeURIComponent(this.value)")))
+      ("onblur" -> (jsFunc match {
+        case Full(f) => JsCrVar(key, JsRaw("this")) & deferCall(raw(funcName, key), f)
+        case _ => makeAjaxCall(raw(funcName, "this"))
+        })
+      )
     }
   }
 
   def ajaxCheckbox(value: Boolean, func: Boolean => JsCmd, attrs: (String, String)*): Elem =
-  ajaxCheckbox_*(value, LFuncHolder(in =>  func(in.exists(toBoolean(_)))), attrs :_*)
+    ajaxCheckbox_*(value, Empty, LFuncHolder(in =>  func(in.exists(toBoolean(_)))), attrs :_*)
 
-  private def ajaxCheckbox_*(value: Boolean, func: AFuncHolder, attrs: (String, String)*): Elem = {
+  def ajaxCheckbox(value: Boolean, jsFunc: Call, func: Boolean => JsCmd, attrs: (String, String)*): Elem =
+    ajaxCheckbox_*(value, Full(jsFunc), LFuncHolder(in =>  func(in.exists(toBoolean(_)))), attrs :_*)
+
+  private def ajaxCheckbox_*(value: Boolean, jsFunc: Box[Call], func: AFuncHolder, attrs: (String, String)*): Elem = {
+    val raw = (funcName: String, value:String) => JsRaw("'" +funcName + "=' + " + value + ".checked")
+    val key = Helpers.nextFuncName
+
     fmapFunc(func) {
       funcName =>
       (attrs.foldLeft(<input type="checkbox"/>)(_ % _)) %
       checked(value) %
-      ("onclick" -> makeAjaxCall(JsRaw("'" + funcName+"='+this.checked")))
+      ("onclick" -> (jsFunc match {
+        case Full(f) => JsCrVar(key, JsRaw("this")) & deferCall(raw(funcName, key), f)
+        case _ => makeAjaxCall(raw(funcName, "this"))
+        }))
     }
   }
 
   def ajaxSelect(opts: Seq[(String, String)], deflt: Box[String],
                  func: String => JsCmd, attrs: (String, String)*): Elem =
-  ajaxSelect_*(opts, deflt, SFuncHolder(func), attrs :_*)
+    ajaxSelect_*(opts, deflt, Empty, SFuncHolder(func), attrs :_*)
 
-  private def ajaxSelect_*(opts: Seq[(String, String)],deflt: Box[String],
-                           func: AFuncHolder, attrs: (String, String)*): Elem = {
+  def ajaxSelect(opts: Seq[(String, String)], deflt: Box[String],
+                 jsFunc: Call, func: String => JsCmd, attrs: (String, String)*): Elem =
+    ajaxSelect_*(opts, deflt, Full(jsFunc), SFuncHolder(func), attrs :_*)
+  
+  private def ajaxSelect_*(opts: Seq[(String, String)], deflt: Box[String],
+                           jsFunc: Box[Call], func: AFuncHolder, attrs: (String, String)*): Elem = {
+    val raw = (funcName: String, value:String) => JsRaw("'" +funcName + "=' + this.options[" + value+ ".selectedIndex].value")
+    val key = Helpers.nextFuncName
+
     val vals = opts.map(_._1)
     val testFunc = LFuncHolder(in => in.filter(v => vals.contains(v)) match {case Nil => false case xs => func(xs)}, func.owner)
     fmapFunc(testFunc) {
       funcName =>
-
-
       (attrs.foldLeft(<select>{
               opts.flatMap{case (value, text) => (<option value={value}>{text}</option>) % selected(deflt.exists(_ == value))}
             }</select>)(_ % _)) %
-      ("onchange" -> makeAjaxCall(JsRaw("'" + funcName+"='+this.options[this.selectedIndex].value")))
+      ("onchange" -> (jsFunc match {
+        case Full(f) => JsCrVar(key, JsRaw("this")) & deferCall(raw(funcName, key), f)
+        case _ => makeAjaxCall(raw(funcName, "this"))
+        }))
     }
   }
 
