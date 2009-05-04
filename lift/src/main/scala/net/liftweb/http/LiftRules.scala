@@ -505,7 +505,16 @@ object LiftRules {
   /**
    * Tells Lift where to find Snippets,Views, Comet Actors and Lift ORM Model object
    */
-  def addToPackages(what: String) {synchronized {otherPackages = what :: otherPackages}}
+  def addToPackages(what: String) {
+    synchronized {otherPackages = what :: otherPackages}
+  }
+
+  /**
+   * Tells Lift where to find Snippets,Views, Comet Actors and Lift ORM Model object
+   */
+  def addToPackages(what: Package) {
+    synchronized {otherPackages = what.getName :: otherPackages}
+  }
 
   private val defaultFinder = getClass.getResource _
   private def resourceFinder(name: String): _root_.java.net.URL = _context.getResource(name)
