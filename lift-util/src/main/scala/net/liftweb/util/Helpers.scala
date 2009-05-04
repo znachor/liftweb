@@ -2,7 +2,7 @@ package net.liftweb.util
 import _root_.scala.xml._
 
 /*
- * Copyright 2006-2008 WorldWide Conferencing, LLC
+ * Copyright 2006-2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,9 +27,12 @@ import _root_.scala.xml._
  */
 
 object Helpers extends TimeHelpers with StringHelpers with ListHelpers
-                                   with SecurityHelpers with BindHelpers with HttpHelpers
-                                   with IoHelpers with BasicTypesHelpers
-                                   with ClassHelpers with ControlHelpers
+with SecurityHelpers with BindHelpers with HttpHelpers
+with IoHelpers with BasicTypesHelpers
+with ClassHelpers with ControlHelpers
+{
+
+}
 
 /**
  * Used for type-safe pattern matching of an Any and returns a Seq[Node]
@@ -39,9 +42,9 @@ object SafeNodeSeq {
   // I opened the scala ticket https://lampsvn.epfl.ch/trac/scala/ticket/1059#comment:1
   def unapply(any: Any) : Option[Seq[Node]] = any match {
     case s: Seq[_] =>  Some(s flatMap ( _ match {
-                         case n: Node => n
-                         case _ => NodeSeq.Empty
-                       }))
+            case n: Node => n
+            case _ => NodeSeq.Empty
+          }))
     case _ => None
   }
 }

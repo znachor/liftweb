@@ -46,7 +46,7 @@ trait ClassHelpers { self: ControlHelpers =>
    * @return a Box, either containing the found class or an Empty can.
    */
   def findClass[C <: AnyRef](name: String, where: List[String], modifiers: List[Function1[String, String]], targetType: Class[C]): Box[Class[C]] =
-    (for (
+  (for (
       place <- where.projection;
       mod <- modifiers.projection;
       val fullName = place + "." + mod(name);
@@ -67,7 +67,7 @@ trait ClassHelpers { self: ControlHelpers =>
    * @return a Box, either containing the found class or an Empty can.
    */
   def findType[C <: AnyRef](name: String, where: List[String], modifiers: List[String => String])(implicit m: Manifest[C]): Box[Class[C]] =
-    findClass(name, where, modifiers, m.erasure.asInstanceOf[Class[C]])
+  findClass(name, where, modifiers, m.erasure.asInstanceOf[Class[C]])
 
   /**
    * General method to in find a class according to its name, a list of possible packages and a
@@ -81,7 +81,7 @@ trait ClassHelpers { self: ControlHelpers =>
    * @return a Box, either containing the found class or an Empty can.
    */
   def findClass(name: String, where: List[String], modifiers: List[String => String]): Box[Class[AnyRef]] =
-    findType[AnyRef](name, where, modifiers)
+  findType[AnyRef](name, where, modifiers)
 
   /**
    * Find a class given its name and a list of packages, turning underscored names to
@@ -94,7 +94,7 @@ trait ClassHelpers { self: ControlHelpers =>
    * @return a Box, either containing the found class or an Empty can.
    */
   def findClass[C <: AnyRef](name: String, where: List[String], targetType: Class[C]): Box[Class[C]] =
-    findClass(name, where, nameModifiers, targetType)
+  findClass(name, where, nameModifiers, targetType)
 
   /**
    * Find a class given its type, its name and a list of packages, turning underscored names to
@@ -107,7 +107,7 @@ trait ClassHelpers { self: ControlHelpers =>
    * @return a Box, either containing the found class or an Empty can.
    */
   def findType[C <: AnyRef](name: String, where: List[String])(implicit m: Manifest[C]): Box[Class[C]] =
-    findType[C](name, where, nameModifiers)
+  findType[C](name, where, nameModifiers)
 
   /**
    * Find a class given its name and a list of packages, turning underscored names to CamelCase if
@@ -119,7 +119,7 @@ trait ClassHelpers { self: ControlHelpers =>
    * @return a Box, either containing the found class or an Empty can.
    */
   def findClass(name: String, where: List[String]): Box[Class[AnyRef]] =
-    findClass(name, where, nameModifiers)
+  findClass(name, where, nameModifiers)
 
   /**
    * Find a class given its type, a list of possible names and corresponding packages, turning
@@ -131,7 +131,7 @@ trait ClassHelpers { self: ControlHelpers =>
    * @return a Box, either containing the found class or an Empty can.
    */
   def findType[C <: AnyRef](where: List[(String, List[String])])(implicit m: Manifest[C]): Box[Class[C]] =
-    (for (
+  (for (
       (name, packages) <- where.projection;
       klass <- findType[C](name, packages)
     ) yield klass).firstOption
@@ -145,7 +145,7 @@ trait ClassHelpers { self: ControlHelpers =>
    * @return a Box, either containing the found class or an Empty can.
    */
   def findClass(where: List[(String, List[String])]): Box[Class[AnyRef]] =
-    findType[AnyRef](where)
+  findType[AnyRef](where)
 
   /**
    * Turns a string of format "foo_bar" into camel case "FooBar"
@@ -164,9 +164,9 @@ trait ClassHelpers { self: ControlHelpers =>
       case Nil => Nil
     }
     if (name == null)
-      ""
+    ""
     else
-      List.toString(loop('_' :: name.toList))
+    List.toString(loop('_' :: name.toList))
   }
 
   /**
@@ -180,9 +180,9 @@ trait ClassHelpers { self: ControlHelpers =>
   def camelCaseMethod(name: String): String = {
     val tmp: String = camelCase(name)
     if (tmp.length == 0)
-      ""
+    ""
     else
-      tmp.substring(0,1).toLowerCase + tmp.substring(1)
+    tmp.substring(0,1).toLowerCase + tmp.substring(1)
   }
 
   /**
@@ -197,9 +197,9 @@ trait ClassHelpers { self: ControlHelpers =>
       case Nil => Nil
     }
     if (name.isEmpty)
-      ""
+    ""
     else
-      List.toString(Character.toLowerCase(name.charAt(0)) :: loop(name.substring(1).toList))
+    List.toString(Character.toLowerCase(name.charAt(0)) :: loop(name.substring(1).toList))
   }
 
   /**
@@ -218,8 +218,8 @@ trait ClassHelpers { self: ControlHelpers =>
    * @return true if clz is assignable from any of the matching classes
    */
   def containsClass[C](clz: Class[C], toMatch: List[Class[_]]): Boolean =
-    if (toMatch eq null) false
-    else toMatch.exists(_.isAssignableFrom(clz))
+  if (toMatch eq null) false
+  else toMatch.exists(_.isAssignableFrom(clz))
 
   /**
    * Check that the method 'name' is callable for class 'clz'
@@ -251,9 +251,9 @@ trait ClassHelpers { self: ControlHelpers =>
       clz.getMethod(meth).invoke(clz.newInstance)
     } catch {
       case c : InvocationTargetException => {
-        def findRoot(e : Throwable) { if (e.getCause == null || e.getCause == e) throw e else findRoot(e.getCause) }
-        findRoot(c)
-      }
+          def findRoot(e : Throwable) { if (e.getCause == null || e.getCause == e) throw e else findRoot(e.getCause) }
+          findRoot(c)
+        }
     }
   }
 
@@ -320,7 +320,7 @@ trait ClassHelpers { self: ControlHelpers =>
    * @return a Box containing the value returned by the method
    */
   private def _invokeMethod[C](clz: Class[C], inst: AnyRef, meth: String, params: Array[AnyRef], ptypes: Box[Array[Class[_]]]): Box[Any] = {
-     // try to find a method matching the given parameters
+    // try to find a method matching the given parameters
     def possibleMethods: List[Method] = {
       /*
        * try to find a method with the same name and the same number of arguments. Doesn't check the types.
@@ -328,39 +328,55 @@ trait ClassHelpers { self: ControlHelpers =>
        * add some extra $ for ex.
        */
       def alternateMethods: List[Method] = clz.getDeclaredMethods.toList.filter( m => m.getName.equals(meth) &&
-                                            isPublic(m.getModifiers) &&
-                                            m.getParameterTypes.length == params.length)
+                                                                                isPublic(m.getModifiers) &&
+                                                                                m.getParameterTypes.length == params.length)
+      methCacheLock.read {
+        def key = (clz.getName, meth, params.length)
+        if (Props.productionMode && methodCache.contains(key)) {
+          methodCache(key)
+        } else {
 
-      try {
-        val classes: Array[Class[_]] = ptypes openOr params.map(_.getClass)
-        List(clz.getMethod(meth, classes : _*))
-      } catch {
-        case e: NullPointerException => Nil
-        case e: NoSuchMethodException => alternateMethods
-      }
-    }
-    def findFirst[T, U](l: List[T], f: T => U, predicate: U => Boolean): Box[U] = {
-      l match {
-        case Nil => Empty
-        case x :: xs => {
-         val result = f(x)
-         if (predicate(result)) Full(result) else findFirst(xs, f, predicate)
+          val ret = try {
+            val classes: Array[Class[_]] = ptypes openOr params.map(_.getClass)
+            List(clz.getMethod(meth, classes : _*))
+          } catch {
+            case e: NullPointerException => Nil
+            case e: NoSuchMethodException => alternateMethods
+          }
+          if (Props.productionMode) {
+            methCacheLock.upgrade(methodCache(key) = ret)
+          }
+          ret
         }
       }
     }
+    /*
+     def findFirst[T, U](l: List[T], f: T => U, predicate: U => Boolean): Box[U] = {
+     l match {
+     case Nil => Empty
+     case x :: xs => {
+     val result = f(x)
+     if (predicate(result)) Full(result) else findFirst(xs, f, predicate)
+     }
+     }
+     }
+     */
     possibleMethods.elements.filter(m => inst != null || isStatic(m.getModifiers)).
-                                   map((m: Method) => tryo{m.invoke(inst, params : _*)}).
-                                   find((x: Box[Any]) => x match {
-                                            case result@Full(_) => true
-                                            case Failure(_, Full(c: IllegalAccessException), _) => false
-                                            case Failure(_, Full(c: IllegalArgumentException), _) => false
-                                            case Failure(_, Full(c), _) => if (c.getCause != null) throw c.getCause else throw c
-                                            case _ => false
-                                   }) match {
-                                            case Some(result@Full(_)) => result
-                                            case _ => Failure("invokeMethod " + meth, Empty, Empty)
-                                   }
+    map((m: Method) => tryo{m.invoke(inst, params : _*)}).
+    find((x: Box[Any]) => x match {
+        case result@Full(_) => true
+        case Failure(_, Full(c: IllegalAccessException), _) => false
+        case Failure(_, Full(c: IllegalArgumentException), _) => false
+        case Failure(_, Full(c), _) => if (c.getCause != null) throw c.getCause else throw c
+        case _ => false
+      }) match {
+      case Some(result@Full(_)) => result
+      case _ => Failure("invokeMethod " + meth, Empty, Empty)
+    }
   }
+
+  private val methCacheLock = new ConcurrentLock
+  private val methodCache: LRU[(String, String, Int), List[Method]] = new LRU(5000)
 
   /**
    * Create a new instance of a class
@@ -385,18 +401,18 @@ trait ClassHelpers { self: ControlHelpers =>
     on match {
       case null => Empty
       case instance => {
-        controllerMethods(instance).toList match {
+          controllerMethods(instance).toList match {
             case Nil => Empty
             case x :: xs => Full(() => {
-              try {
-                Full(x.invoke(instance))
-              } catch {
-                case e : InvocationTargetException => throw e.getCause
-              }
-            }
-          )
+                  try {
+                    Full(x.invoke(instance))
+                  } catch {
+                    case e : InvocationTargetException => throw e.getCause
+                  }
+                }
+              )
+          }
         }
-      }
     }
   }
 }

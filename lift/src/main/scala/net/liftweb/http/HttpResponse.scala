@@ -115,14 +115,24 @@ case class UnauthorizedDigestResponse(override val realm: String, qop: Qop.Value
       )), Nil, 401)
 }
 
+object ForbiddenResponse {
+  def apply() = new ForbiddenResponse("")
+}
+
+
 /**
  * 403 Forbidden
  *
  * The server understood the request, but is refusing to fulfill it.
  * Authorization will not help and the request SHOULD NOT be repeated.
  */
-case class ForbiddenResponse() extends LiftResponse with HeaderStuff {
-  def toResponse = InMemoryResponse(Array(), headers, cookies, 403)
+case class ForbiddenResponse(message: String) extends LiftResponse with HeaderStuff {
+  def toResponse = InMemoryResponse(message.getBytes("UTF-8"), "Content-Type" -> "text/plain" :: headers, cookies, 403)
+}
+
+
+object NotFoundResponse {
+  def apply() = new NotFoundResponse("")
 }
 
 /**
@@ -130,8 +140,8 @@ case class ForbiddenResponse() extends LiftResponse with HeaderStuff {
  *
  * The server has not found anything matching the Request-URI.
  */
-case class NotFoundResponse() extends LiftResponse with HeaderStuff {
-  def toResponse = InMemoryResponse(Array(), headers, cookies, 404)
+case class NotFoundResponse(message: String) extends LiftResponse with HeaderStuff {
+  def toResponse = InMemoryResponse(message.getBytes("UTF-8"), "Content-Type" -> "text/plain" :: headers, cookies, 404)
 }
 
 /**

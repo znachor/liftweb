@@ -148,7 +148,7 @@ object AltXML {
 
   def toXML(n: Node, stripComment: Boolean, convertAmp: Boolean,
             ieMode: Boolean): String = {
-    val sb = new StringBuilder()
+    val sb = new StringBuilder(50000)
     toXML(n, TopScope, sb, stripComment, convertAmp, ieMode)
     sb.toString()
   }
@@ -222,6 +222,8 @@ object AltXML {
   def sequenceToXML(children: Seq[Node], pscope: NamespaceBinding,
                     sb: StringBuilder, stripComment: Boolean,
                     convertAmp: Boolean, ieMode: Boolean): Unit = {
+    /*
+
     if (children.isEmpty)
     return
     else if (children forall { y => y.isInstanceOf[Atom[_]] && !y.isInstanceOf[Text] }) { // add space
@@ -236,6 +238,11 @@ object AltXML {
     } else {
       for (c <- children) toXML(c, pscope, sb, stripComment, convertAmp, ieMode)
     }
+    */
+   val it = children.elements
+   while (it.hasNext) {
+     toXML(it.next, pscope, sb, stripComment, convertAmp, ieMode)
+   }
   }
 
 }

@@ -535,7 +535,10 @@ class LiftSession(val contextPath: String, val uniqueId: String,
                   case _ => if (LiftRules.passNotFoundToChain) Empty else Full(request.createNotFound)
                 })
             case Right(Full(resp)) => Full(resp)
-            case _ => if (LiftRules.passNotFoundToChain) Empty else Full(request.createNotFound)
+            case _ if (LiftRules.passNotFoundToChain) => Empty
+            case _ if Props.mode == Props.RunModes.Development =>
+              Full(ForbiddenResponse("The requested page was not defined in your SiteMap, so access was blocked.  (This message is displayed in development mode only)"))
+            case _ => Full(request.createNotFound)
           }
 
           // Before returning the response check for redirect and set the appropriate state.
@@ -651,7 +654,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
       case s @ _ if (!s.isEmpty) => s
       case _ => List("index")
     }
-    findAnyTemplate(splits)
+    findAnyTemplate(splits, S.locale)
   }
 
   private[liftweb] def findTemplate(name: String): Box[NodeSeq] = {
@@ -660,7 +663,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
       case s => s
     }
 
-    findAnyTemplate("templates-hidden" :: splits) or findAnyTemplate(splits)
+    findAnyTemplate("templates-hidden" :: splits, S.locale) or findAnyTemplate(splits, S.locale)
   }
 
   private def findSnippetClass(name: String): Box[Class[AnyRef]] = {
@@ -689,7 +692,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     } firstOption
 
     for {
-      template <- findAnyTemplate(name) ?~ ("Template "+name+" not found")
+      template <- findAnyTemplate(name, S.locale) ?~ ("Template "+name+" not found")
       res <- findElem(processSurroundAndInclude(name.mkString("/", "/", ""), template))
     } yield res
   }
@@ -718,7 +721,40 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     })
 
 
-  private def processSnippet(page: String, snippetName: Box[String], attrs: MetaData, passedKids: NodeSeq): NodeSeq = {
+  private def reportSnippetError(page: String,
+                                 snippetName: Box[String],
+                                 why: LiftRules.SnippetFailures.Value,
+                                 whole: NodeSeq): NodeSeq =
+  {
+    for {
+      f <- LiftRules.snippetFailedFunc.toList
+    }
+    f(LiftRules.SnippetFailure(page, snippetName, why))
+
+    Props.mode match {
+      case Props.RunModes.Development =>
+        <div style="display: block; margin: 8px; border: 2px solid red">
+          Error processing snippet {snippetName openOr "N/A"}.  Reason: {why}
+          XML causing this error:
+          <br/>
+          <pre>
+            {whole.toString}
+          </pre>
+          <i>note: this error is displayed in the browser because
+            your application is running in "development" mode.  If you
+            set the system property run.mode=production, this error will not
+            be displayed, but there will be errors in the output logs.
+          </i>
+        </div>
+      case _ => <i>Failure</i>
+    }
+  }
+
+
+  private def processSnippet(page: String, snippetName: Box[String],
+                             attrs: MetaData,
+                             wholeTag: NodeSeq,
+                             passedKids: NodeSeq): NodeSeq = {
     val isForm = !attrs.get("form").toList.isEmpty
 
     val eagerEval: Boolean = attrs.get("eager_eval").map(toBoolean) getOrElse false
@@ -741,35 +777,43 @@ class LiftSession(val contextPath: String, val uniqueId: String,
 
               case Full(inst: StatefulSnippet) =>
                 if (inst.dispatch.isDefinedAt(method))
-                (if (isForm) SHtml.hidden(() => inst.registerThisSnippet) else Text("")) ++
+                (if (isForm) SHtml.hidden(() => inst.registerThisSnippet) else NodeSeq.Empty) ++
                 inst.dispatch(method)(kids)
-                else {LiftRules.snippetFailedFunc.toList.foreach(_(LiftRules.SnippetFailure(page, snippetName,
-                                                                                            LiftRules.SnippetFailures.StatefulDispatchNotMatched))); kids}
+                else reportSnippetError(page, snippetName,
+                                        LiftRules.SnippetFailures.StatefulDispatchNotMatched,
+                                        wholeTag)
+
               case Full(inst: DispatchSnippet) =>
                 if (inst.dispatch.isDefinedAt(method)) inst.dispatch(method)(kids)
-                else {LiftRules.snippetFailedFunc.toList.foreach(_(LiftRules.SnippetFailure(page, snippetName,
-                                                                                            LiftRules.SnippetFailures.DispatchSnippetNotMatched))); kids}
+                else reportSnippetError(page, snippetName,
+                                        LiftRules.SnippetFailures.StatefulDispatchNotMatched,
+                                        wholeTag)
 
               case Full(inst) => {
                   val ar: Array[AnyRef] = List(Group(kids)).toArray
                   ((invokeMethod(inst.getClass, inst, method, ar)) or invokeMethod(inst.getClass, inst, method)) match {
                     case CheckNodeSeq(md) => md
-                    case it => LiftRules.snippetFailedFunc.toList.foreach(_(LiftRules.SnippetFailure(page, snippetName,
-                                                                                                     LiftRules.SnippetFailures.MethodNotFound))); kids
+                    case it => 
+                      reportSnippetError(page, snippetName,
+                                         LiftRules.SnippetFailures.MethodNotFound,
+                                         wholeTag)
                   }
                 }
               case Failure(_, Full(exception), _) => Log.warn("Snippet instantiation error", exception)
-                LiftRules.snippetFailedFunc.toList.foreach(_(LiftRules.SnippetFailure(page, snippetName,
-                                                                                      LiftRules.SnippetFailures.InstantiationException))); kids
+                reportSnippetError(page, snippetName,
+                                   LiftRules.SnippetFailures.InstantiationException,
+                                   wholeTag)
 
-              case _ => LiftRules.snippetFailedFunc.toList.foreach(_(LiftRules.SnippetFailure(page, snippetName,
-                                                                                              LiftRules.SnippetFailures.ClassNotFound))); kids
+
+              case _ => reportSnippetError(page, snippetName,
+                                           LiftRules.SnippetFailures.ClassNotFound,
+                                           wholeTag)
+
             }
           }))).openOr{
-      LiftRules.snippetFailedFunc.toList.foreach(_(LiftRules.SnippetFailure(page, snippetName,
-                                                                            LiftRules.SnippetFailures.NoNameSpecified)))
-      Comment("FIX"+"ME -- no type defined for snippet")
-      kids
+      reportSnippetError(page, snippetName,
+                         LiftRules.SnippetFailures.NoNameSpecified,
+                         wholeTag)
     }
 
     def checkMultiPart(in: MetaData): MetaData = in.filter(_.key == "multipart").toList match {
@@ -815,10 +859,11 @@ class LiftSession(val contextPath: String, val uniqueId: String,
       metaData.get("type") match {
         case Some(tn) => NamedPF((tn.text, elm, metaData, kids, page),
                                  liftTagProcessing)
-        case _ => processSnippet(page, Empty , elm.attributes, elm.child)
+        case _ => processSnippet(page, Empty , elm.attributes, elm, elm.child)
       }
     case ("with-param", _, _, _, _) => NodeSeq.Empty
-    case (snippetInfo, elm, metaData, kids, page) => processSnippet(page, Full(snippetInfo) , metaData, kids)
+    case (snippetInfo, elm, metaData, kids, page) => 
+      processSnippet(page, Full(snippetInfo), metaData, elm, kids)
   }
 
   liftTagProcessing = LiftRules.liftTagProcessing.toList ::: List(_defaultLiftTagProcessing)
@@ -828,17 +873,36 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   /**
    * Processes the surround tag and other lift tags
    */
-  def processSurroundAndInclude(page: String, in: NodeSeq): NodeSeq = {
-    in.flatMap{
-      v =>
-      v match {
-        case Group(nodes) => Group(processSurroundAndInclude(page, nodes))
-        case elm: Elem if elm.prefix == "lift" || elm.prefix == "l" => S.setVars(elm.attributes)(processSurroundAndInclude(page, NamedPF((elm.label, elm, elm.attributes, asNodeSeq(elm.child), page), liftTagProcessing)))
-        case elm: Elem => Elem(v.prefix, v.label, processAttributes(v.attributes), v.scope, processSurroundAndInclude(page, v.child) : _*)
-        case _ => v
-      }
+  def processSurroundAndInclude(page: String, in: NodeSeq): NodeSeq =
+  in.flatMap{
+    v =>
+    v match {
+      case Group(nodes) => 
+        Group(processSurroundAndInclude(page, nodes))
+
+      case elm: Elem if elm.prefix == "lift" || elm.prefix == "l" => 
+        S.setVars(elm.attributes){
+          processSurroundAndInclude(page, NamedPF((elm.label, elm, elm.attributes,
+                                                   asNodeSeq(elm.child), page),
+                                                  liftTagProcessing))
+        }
+
+      case elm: Elem =>
+        Elem(v.prefix, v.label, processAttributes(v.attributes),
+             v.scope, processSurroundAndInclude(page, v.child) : _*)
+      case _ => v
     }
   }
+  
+  /**
+   * A nicely named proxy for processSurroundAndInclude.  This method processes
+   * a Lift template
+   *
+   * @param pageName -- the name of the page being processed (for error reporting)
+   * @param tempalte -- the template to process using Lift's templating engine
+   */
+  def runTemplate(pageName: String, template: NodeSeq): NodeSeq =
+  processSurroundAndInclude(pageName, template)
 
   /**
    * Finds all Comet actors by type
@@ -1039,36 +1103,82 @@ object TemplateFinder {
       }
   }
 
-  /**
+  import java.util.Locale
+
+  private val cache: LRU[(Locale, List[String]), NodeSeq] = new LRU(500)
+  private val cacheLock = new ConcurrentLock
+
+  private def lookupInCache(path: List[String], locale: Locale): Box[NodeSeq] =
+  if (Props.productionMode) cacheLock.read {
+    cache.get((locale, path))
+  } else Empty
+
+   /**
    * Given a list of paths (e.g. List("foo", "index")),
    * find the template.
    * @param places - the path to look in
    *
    * @return the template if it can be found
    */
-  def findAnyTemplate(places: List[String]): Box[NodeSeq] = {
+  def findAnyTemplate(places: List[String]): Box[NodeSeq] =
+  findAnyTemplate(places, S.locale)
+
+  /**
+   * Given a list of paths (e.g. List("foo", "index")),
+   * find the template.
+   * @param places - the path to look in
+   * @param locale - the locale of the template to search for
+   *
+   * @return the template if it can be found
+   */
+  def findAnyTemplate(places: List[String], locale: Locale): Box[NodeSeq] = {
     val part = places.dropRight(1)
     val last = places.last
 
-    findInViews(places, part, last, LiftRules.viewDispatch.toList) match {
+    val tr = lookupInCache(places, locale)
+
+    tr or findInViews(places, part, last, LiftRules.viewDispatch.toList) match {
       case Full(lv) =>
         Full(lv)
 
       case _ =>
         val pls = places.mkString("/","/", "")
+
+        case class NonLocalReturn(x: NodeSeq) extends Exception
+
+        val lookup: Option[NodeSeq] =
+        try {
+        for {
+          s <- suffixes
+          p <- List("_"+locale.toString, "_"+locale.getLanguage, "")
+          name = pls + p + (if (s.length > 0) "." + s else "")
+          res <- LiftRules.finder(name)
+          xml <- PCDataXmlParser(res)
+        } {
+          if (Props.productionMode) {
+              cacheLock.write(cache((locale, places)) = xml)
+            }
+          throw new NonLocalReturn(xml)
+        }
+        None
+        } catch {
+          case NonLocalReturn(x) => Full(x)
+        }
+
+        lookup or lookForClasses(places)
+        /*
         val toTry = for (s <- suffixes; p <- locales) yield pls + p + (if (s.length > 0) "." + s else "")
 
         first(toTry)(v => (LiftRules.templateCache openOr NoCache).findTemplate(v) {
-            LiftRules.finder(v).flatMap(PCDataXmlParser(_))
+            val ret = LiftRules.finder(v).flatMap(PCDataXmlParser(_))
+            if (ret.isDefined && Props.mode == Props.RunModes.Production) {
+              cache.synchronized(cache(places) = ret.open_!)
+            }
+            ret
           }) or lookForClasses(places)
+        */
     }
   }
-
-  private def locales: List[String] = {
-    val locale = S.locale
-    "_"+locale.toString :: "_"+locale.getLanguage :: "" :: Nil
-  }
-
 
   private def lookForClasses(places : List[String]): Box[NodeSeq] = {
     val (controller, action) = places match {
