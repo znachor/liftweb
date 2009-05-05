@@ -35,19 +35,56 @@ trait HasParams {
 }
 
 /**
- * An object representing the current state of the HTTP request and response
+ * An object representing the current state of the HTTP request and response.
  * It uses the DynamicVariable construct such that each thread has its own
- * local session info without passing a huge state construct around
+ * local session info without passing a huge state construct around. The S object
+ * is initialized by LiftSession on request startup.
+ *
+ * @see LiftSession
+ * @see LiftFilter
  */
 object S extends HasParams {
   /**
-   * Holds the partial function that re-write an incoming request
+   * RewriteHolder holds a partial function that re-writes an incoming request. It is
+   * used for per-session rewrites, as opposed to global rewrites, which are handled
+   * by the LiftRules.rewrite RulesSeq. This case class exists so that RewritePFs may
+   * be manipulated by name. See S.addSessionRewriter for example usage.
+   *
+   * @see #sessionRewriter
+   * @see #addSessionRewriter
+   * @see #clearSessionRewriter
+   * @see #removeSessionRewriter
+   * @see LiftRules#rewrite
    */
   case class RewriteHolder(name: String, rewrite: LiftRules.RewritePF)
+
+  /**
+   * DispatchHolder holds a partial function that maps a Req to a LiftResponse. It is
+   * used for per-session dispatch, as opposed to global dispatch, which are handled
+   * by the LiftRules.dispatch RulesSeq. This case class exists so that DispatchPFs may
+   * be manipulated by name. See S.addHighLevelSessionDispatcher for example usage.
+   *
+   * @see LiftResponse
+   * @see LiftRules#dispatch
+   * @see #highLevelSessionDispatchList
+   * @see #addHighLevelSessionDispatcher
+   * @see #removeHighLevelSessionDispatcher
+   * @see #clearHighLevelSessionDispatcher
+   */
   case class DispatchHolder(name: String, dispatch: LiftRules.DispatchPF)
 
   /**
-   * Holds information about cookies
+   * The CookieHolder class holds information about cookies to be sent during
+   * the session, as well as utility methods for adding and deleting cookies. It
+   * is used internally.
+   * 
+   * @see #_responseCookies
+   * @see #_init
+   * @see #addCookie
+   * @see #deleteCookie
+   * @see #receivedCookies
+   * @see #responseCookies
+   * @see #findCookie
    */
   case class CookieHolder(inCookies: List[Cookie], outCookies: List[Cookie]) {
     def add(in: Cookie) = CookieHolder(inCookies, in :: outCookies.filter(_.getName != in.getName))
@@ -64,16 +101,68 @@ object S extends HasParams {
     }
   }
 
+  /*
+   * The current session state is contained in the following val/vars:
+   */
+
   /**
-   * The current session
+   * Holds the current Req (request) on a per-thread basis.
+   * @see Req
    */
   private val _request = new ThreadGlobal[Req]
+
+  /**
+   * Holds the current functions mappings for this session. 
+   *
+   * @see #functionMap
+   * @see #addFunctionMap
+   * @see #clearFunctionMap
+   */
   private val _functionMap = new ThreadGlobal[HashMap[String, AFuncHolder]]
+
+  /**
+   * This is simply a flag so that we know whether or not the state for the S object
+   * has been initialized for our current scope.
+   *
+   * @see #inStatefulScope_?
+   * @see #initIfUninitted
+   */
   private val inS = (new ThreadGlobal[Boolean]).set(false)
+
+  /**
+   * The snippetMap holds mappings from snippet names to snippet functions. These mappings
+   * are valid only in the current request. This val
+   * is typically modified using the mapSnippet method.
+   *
+   * @see #mapSnippet
+   * @see #locateMappedSnippet
+   */
   private val snippetMap = new ThreadGlobal[HashMap[String, NodeSeq => NodeSeq]]
+
+  /**
+   * Holds the attributes that are set on the current snippet tag. Attributes are available
+   * to snippet functions via the S.attr and S.attrs methods.
+   *
+   * @see #attrs
+   * @see #attr
+   */
   private val _attrs = new ThreadGlobal[List[(Either[String, (String, String)], String)]]
 
+  /**
+   * Holds the per-request LiftSession instance.
+   *
+   * @see LiftSession
+   * @see #session
+   */
   private val _sessionInfo = new ThreadGlobal[LiftSession]
+
+  /**
+   * Holds a list of ResourceBundles for this request.
+   *
+   * @see #resourceBundles
+   * @see LiftRules#resourceNames
+   * @see LiftRules#resourceBundleFactories
+   */
   private val _resBundle = new ThreadGlobal[List[ResourceBundle]]
   private val _liftCoreResBundle = new ThreadGlobal[Box[ResourceBundle]]
   private val _stateSnip = new ThreadGlobal[HashMap[String, StatefulSnippet]]
@@ -86,43 +175,73 @@ object S extends HasParams {
   private object p_notice extends RequestVar(new ListBuffer[(NoticeType.Value, NodeSeq, Box[String])])
 
   /**
-   * Are we in the Scope of "S"
+   * This function returns true if the S object has been initialized for our current scope. If
+   * the S object has not been initialized then functionality on S will not work.
    */
   def inStatefulScope_? : Boolean = inS.value
 
   /**
-   * Get the current Req
+   * Get a Req representing our current HTTP request.
    *
-   * @return the current Req
+   * @return A Full(Req) if S has been initialized, Empty otherwise.
+   *
+   * @see Req
    */
   def request: Box[Req] = Box !! _request.value
 
   /**
-   * @return a List of any Cookies that have been set for this Response.
+   * @return a List of any Cookies that have been set for this Response. If you want
+   * a specific cookie, use findCookie.
+   *
+   * @see javax.servlet.http.Cookie
+   * @see #findCookie(String)
+   * @see #addCookie(Cookie)
+   * @see #deleteCookie(Cookie)
+   * @see #deleteCookie(String)
    */
   def receivedCookies: List[Cookie] =
   for (rc <- Box.legacyNullTest(_responseCookies.value).toList; c <- rc.inCookies)
   yield c.clone().asInstanceOf[Cookie]
 
   /**
-   * Finds a cookie with the given name
+   * Finds a cookie with the given name that was sent in the request.
+   * 
    * @param name - the name of the cookie to find
    *
-   * @return a Box of the cookie
+   * @return Full(cookie) if the cookie exists, Empty otherwise
+   *
+   * @see javax.servlet.http.Cookie
+   * @see #receivedCookies
+   * @see #addCookie(Cookie)
+   * @see #deleteCookie(Cookie)
+   * @see #deleteCookie(String)
    */
   def findCookie(name: String): Box[Cookie] =
   Box.legacyNullTest(_responseCookies.value).flatMap(
     rc => Box(rc.inCookies.filter(_.getName == name)).
     map(_.clone().asInstanceOf[Cookie]))
 
+  /**
+   * @return a List of any Cookies that have been added to the response to be sent
+   * back to the user. If you want the cookies that were sent with the request, see
+   * receivedCookies.
+   *
+   * @see javax.servlet.http.Cookie
+   * @see #receivedCookies
+   */
   def responseCookies: List[Cookie] = Box.legacyNullTest(_responseCookies.value).
   toList.flatMap(_.outCookies)
 
   /**
    * Adds a Cookie to the List[Cookies] that will be sent with the Response.
    *
-   * If you wish to delete a Cookie as part of the Response, add a Cookie with
-   * a MaxAge of 0.
+   * If you wish to delete a Cookie as part of the Response, use the deleteCookie
+   * method.
+   *
+   * @see javax.servlet.http.Cookie
+   * @see #deleteCookie(Cookie)
+   * @see #deleteCookie(String)
+   * @see #responseCookies
    */
   def addCookie(cookie: Cookie) {
     Box.legacyNullTest(_responseCookies.value).foreach(rc =>
@@ -132,7 +251,12 @@ object S extends HasParams {
 
   /**
    * Deletes the cookie from the user's browser.
+   * 
    * @param cookie the Cookie to delete
+   *
+   * @see javax.servlet.http.Cookie
+   * @see #addCookie(Cookie)
+   * @see #deleteCookie(String)
    */
   def deleteCookie(cookie: Cookie) {
     Box.legacyNullTest(_responseCookies.value).foreach(rc =>
@@ -142,7 +266,12 @@ object S extends HasParams {
 
   /**
    * Deletes the cookie from the user's browser.
+   * 
    * @param name the name of the cookie to delete
+   *
+   * @see javax.servlet.http.Cookie
+   * @see #addCookie(Cookie)
+   * @see #deleteCookie(Cookie)
    */
   def deleteCookie(name: String) {
     Box.legacyNullTest(_responseCookies.value).foreach(rc =>
@@ -152,8 +281,9 @@ object S extends HasParams {
 
 
   /**
-   * Find a template based on the attribute "template"
+   * Find a template based on the snippet attribute "template"
    */
+  // TODO: Is this used anywhere? - DCB
   def templateFromTemplateAttr: Box[NodeSeq] =
   for (templateName <- attr("template") ?~ "Template Attribute missing";
        val tmplList = templateName.roboSplit("/");
@@ -162,43 +292,140 @@ object S extends HasParams {
 
 
   /**
-   * Returns the Locale for this request based on the HTTP request's
-   * Accept-Language header. If that header corresponds to a Locale
-   * that's installed on this JVM then return it, otherwise return the
-   * default Locale for this JVM.
+   * Returns the Locale for this request based on the LiftRules.localeCalculator
+   * method. 
+   *
+   * @see LiftRules.localeCalculator(HttpServletRequest)
+   * @see java.util.Locale
    */
   def locale: Locale = LiftRules.localeCalculator(servletRequest)
 
   /**
-   * Return the current timezone
+   * Return the current timezone based on the LiftRules.timeZoneCalculator
+   * method.
+   *
+   * @see LiftRules.timeZoneCalculator(HttpServletRequest)
+   * @see java.util.TimeZone
    */
   def timeZone: TimeZone =
   LiftRules.timeZoneCalculator(servletRequest)
 
   /**
-   * Should the output be rendered in IE6&7 compatible mode?
+   * @return <code>true</code> if this response should be rendered in
+   * IE6/IE7 compatibility mode.
+   *
+   * @see LiftSession.ieMode
+   * @see LiftRules.calcIEMode
+   * @see Req.isIE6
+   * @see Req.isIE7
+   * @see Req.isIE8
+   * @see Req.isIE
    */
   def ieMode: Boolean = session.map(_.ieMode.is) openOr false // LiftRules.calcIEMode()
 
+  /**
+   * Return a List of the LiftRules.DispatchPF functions that are set for this
+   * session. See addHighLevelSessionDispatcher for an example of how these are
+   * used.
+   *
+   * @see LiftRules.DispatchPF
+   * @see #addHighLevelSessionDispatcher(String,LiftRules.DispatchPF)
+   * @see #removeHighLevelSessionDispatcher(String)
+   * @see #clearHighLevelSessionDispatcher
+   */
   def highLevelSessionDispatcher: List[LiftRules.DispatchPF] = highLevelSessionDispatchList.map(_.dispatch)
+
   /**
    * Return the list of DispatchHolders set for this session.
+   *
+   * @see DispatchHolder
    */
   def highLevelSessionDispatchList: List[DispatchHolder] =
   session map (_.highLevelSessionDispatcher.toList.map(t => DispatchHolder(t._1, t._2))) openOr Nil
 
+  /**
+   * Adds a dispatch function for the current session, as opposed to a global
+   * dispatch through LiftRules.dispatch. An example would be if we wanted a user
+   * to be able to download a document only when logged in. First, we define
+   * a dispatch function to handle the download, specific to a given user:
+   *
+   * <pre>
+   * def getDocument(userId : Long)() : Box[LiftResponse] = { ... }
+   * </pre>
+   *
+   * Then, in the login/logout handling snippets, we could install and remove
+   * the custom dispatch as appropriate:
+   *
+   * <pre>
+   *   def login(xhtml : NodeSeq) : NodeSeq = {
+   *     def doAuth () {
+   *       ...
+   *       if (user.loggedIn_?) {
+   *         S.addHighLevelSessionDispatcher("docDownload", {
+   *           case Req(List("download", "docs"), _, _) => getDocument(user.id)
+   *         })
+   *     }
+   *   }
+   *
+   *   def logout(xhtml : NodeSeq) : NodeSeq = {
+   *     def doLogout () {
+   *       ...
+   *       S.removeHighLevelSessionDispatcher("docDownload")
+   *       // or, if more than one dispatch has been installed, this is simpler
+   *       S.clearHighLevelSessionDispatcher
+   *     }
+   *   }
+   * </pre>
+   *
+   * @param name A name for the dispatch. This can be used to remove it later by name.
+   * @param disp The dispatch partial function
+   *
+   * @see LiftRules.DispatchPF
+   * @see LiftRules.dispatch
+   * @see #removeHighLevelSessionDispatcher
+   * @see #clearHighLevelSessionDispatcher
+   */
   def addHighLevelSessionDispatcher(name: String, disp: LiftRules.DispatchPF) =
   session map (_.highLevelSessionDispatcher += (name -> disp))
 
+  /**
+   * Removes a custom dispatch function for the current session. See
+   * addHighLevelSessionDispatcher for an example of usage.
+   *
+   * @param name The name of the custom dispatch to be removed.
+   * 
+   * @see LiftRules.DispatchPF
+   * @see LiftRules.dispatch
+   * @see #addHighLevelSessionDispatcher
+   * @see #clearHighLevelSessionDispatcher
+   */
   def removeHighLevelSessionDispatcher(name: String) =
   session map (_.highLevelSessionDispatcher -= name)
 
+  /**
+   * Clears all custom dispatch functions from the current session. See
+   * addHighLevelSessionDispatcher for an example of usage.
+   * 
+   * @see LiftRules.DispatchPF
+   * @see LiftRules.dispatch
+   * @see #addHighLevelSessionDispatcher
+   * @see #clearHighLevelSessionDispatcher
+   */
   def clearHighLevelSessionDispatcher = session map (_.highLevelSessionDispatcher.clear)
 
 
+  /**
+   * Return the list of RewriteHolders set for this session. See addSessionRewriter
+   * for an example of how to use per-session rewrites.
+   *
+   * @see RewriteHolder
+   * @see LiftRules#rewrite
+   */
   def sessionRewriter: List[RewriteHolder] =
   session map (_.sessionRewriter.toList.map(t => RewriteHolder(t._1, t._2))) openOr Nil
 
+  // TODO : More API docs - DCB
+  
   def addSessionRewriter(name: String, rw: LiftRules.RewritePF) =
   session map (_.sessionRewriter += (name -> rw))
 
@@ -768,7 +995,46 @@ object S extends HasParams {
   def locateMappedSnippet(name: String): Box[NodeSeq => NodeSeq] = Box(snippetMap.value.get(name))
 
   /**
-   * Associates a name with a snippet function 'func'
+   * Associates a name with a snippet function 'func'. This can be used to change a snippet
+   * mapping on a per-session basis. For example, if we have a page that we want to change
+   * behavior on based on query parameters, we could use mapSnippet to programmatically determine
+   * which snippet function to use for a given snippet in the template. Our code would look like:
+   *
+   * <pre>
+     import _root_.scala.xml.{NodeSeq,Text}
+     class SnipMap {
+       def topSnippet (xhtml : NodeSeq) : NodeSeq = {
+         if (S.param("showAll").isDefined) {
+           S.mapSnippet("listing", listing)
+         } else {
+           S.mapSnippet("listing", { ignore => Text("") })
+         }
+
+         ...
+       }
+
+       def listing(xhtml : NodeSeq) : NodeSeq = {
+         ...
+       }
+     </pre>
+   *
+   * Then, your template would simply look like:
+   *
+   * <pre>
+     &lt;lift:surround with="default" at="content"&gt;
+       ...
+       &lt;p&gt;&lt;lift:SnipMap.topSnippet /&gt;&lt;/p&gt;
+       &lt;p&gt;&lt;lift:listing /&gt;&lt;/p&gt;
+     &lt;/lift:surround&gt;
+   * </pre>
+   *
+   * Snippets are processed in the order that they're defined in the
+   * template, so if you want to use this approach make sure that
+   * the snippet that defines the mapping comes before the snippet that
+   * is being mapped.
+   *
+   * @param name The name of the snippet that you want to map (the part after "&lt;lift:").
+   * @param func The snippet function to map to.
    */
   def mapSnippet(name: String, func: NodeSeq => NodeSeq) {snippetMap.value(name) = func}
 
