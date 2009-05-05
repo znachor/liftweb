@@ -1138,16 +1138,23 @@ object TemplateFinder {
       case _ =>
         val pls = places.mkString("/","/", "")
 
-        var lookup: Box[NodeSeq] = Empty
+        case class NonLocalReturn(xml: NodeSeq) extends Exception
 
-        for {
-          s <- suffixes
-          p <- List("_"+locale.toString, "_"+locale.getLanguage, "")
-          name = pls + p + (if (s.length > 0) "." + s else "")
-          res <- LiftRules.finder(name)
-          xml <- PCDataXmlParser(res)
-        } {
-          lookup = Full(cache.cacheTemplate((locale, places), xml))
+        val lookup: Box[NodeSeq] = 
+        try {
+          for {
+            s <- suffixes
+            p <- List("_"+locale.toString, "_"+locale.getLanguage, "")
+            name = pls + p + (if (s.length > 0) "." + s else "")
+            res <- LiftRules.finder(name)
+            xml <- PCDataXmlParser(res)
+          } {
+            val node = cache.cacheTemplate((locale, places), xml)
+            throw new NonLocalReturn(node)
+          }
+          None
+        } catch {
+          case NonLocalReturn(xml) => Full(xml)
         }
 
         lookup or lookForClasses(places)
