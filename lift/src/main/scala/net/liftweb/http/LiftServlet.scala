@@ -609,6 +609,11 @@ class LiftFilter extends Filter with LiftFilterTrait
   private def postBoot {
     try {
       ResourceBundle getBundle (LiftRules.liftCoreResourceName)
+
+      if (Props.productionMode && LiftRules.templateCache.isEmpty) {
+        // Since we're in productin mode and user did not explicitely set any template caching, we're setting it
+        LiftRules.templateCache = Full(InMemoryCache(500))
+      }
     } catch {
       case _ => Log.error("LiftWeb core resource bundle for locale " + Locale.getDefault() + ", was not found ! ")
     } finally {

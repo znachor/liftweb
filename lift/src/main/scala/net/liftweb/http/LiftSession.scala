@@ -1105,15 +1105,7 @@ object TemplateFinder {
 
   import java.util.Locale
 
-  private val cache: LRU[(Locale, List[String]), NodeSeq] = new LRU(500)
-  private val cacheLock = new ConcurrentLock
-
-  private def lookupInCache(path: List[String], locale: Locale): Box[NodeSeq] =
-  if (Props.productionMode) cacheLock.read {
-    cache.get((locale, path))
-  } else Empty
-
-   /**
+  /**
    * Given a list of paths (e.g. List("foo", "index")),
    * find the template.
    * @param places - the path to look in
@@ -1135,7 +1127,9 @@ object TemplateFinder {
     val part = places.dropRight(1)
     val last = places.last
 
-    val tr = lookupInCache(places, locale)
+    val cache = LiftRules.templateCache openOr NoCache
+
+    val tr = cache.findTemplate((locale, places))
 
     tr or findInViews(places, part, last, LiftRules.viewDispatch.toList) match {
       case Full(lv) =>
@@ -1144,10 +1138,8 @@ object TemplateFinder {
       case _ =>
         val pls = places.mkString("/","/", "")
 
-        case class NonLocalReturn(x: NodeSeq) extends Exception
+        var lookup: Box[NodeSeq] = Empty
 
-        val lookup: Option[NodeSeq] =
-        try {
         for {
           s <- suffixes
           p <- List("_"+locale.toString, "_"+locale.getLanguage, "")
@@ -1155,28 +1147,11 @@ object TemplateFinder {
           res <- LiftRules.finder(name)
           xml <- PCDataXmlParser(res)
         } {
-          if (Props.productionMode) {
-              cacheLock.write(cache((locale, places)) = xml)
-            }
-          throw new NonLocalReturn(xml)
-        }
-        None
-        } catch {
-          case NonLocalReturn(x) => Full(x)
+          lookup = Full(cache.cacheTemplate((locale, places), xml))
         }
 
         lookup or lookForClasses(places)
-        /*
-        val toTry = for (s <- suffixes; p <- locales) yield pls + p + (if (s.length > 0) "." + s else "")
 
-        first(toTry)(v => (LiftRules.templateCache openOr NoCache).findTemplate(v) {
-            val ret = LiftRules.finder(v).flatMap(PCDataXmlParser(_))
-            if (ret.isDefined && Props.mode == Props.RunModes.Production) {
-              cache.synchronized(cache(places) = ret.open_!)
-            }
-            ret
-          }) or lookForClasses(places)
-        */
     }
   }
 

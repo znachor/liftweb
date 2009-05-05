@@ -894,7 +894,7 @@ object LiftRules {
                             Nil, 200))
   }
 
-  var templateCache: Box[TemplateCache] = Empty
+  var templateCache: Box[TemplateCache[(Locale, List[String])]] = Empty
 
   private def testFor304(req: Req, lastModified: Long): Box[LiftResponse] = {
     val mod = req.request.getHeader("if-modified-since")

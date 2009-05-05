@@ -1,32 +1,38 @@
 package net.liftweb.http
 
-import _root_.net.liftweb.util.{Box, Full, SoftReferenceCache}
+import _root_.net.liftweb.util.{Box, Full, Empty, LRU, ConcurrentLock}
 import _root_.scala.xml.{NodeSeq}
+import java.util.{Locale}
 
-trait TemplateCache {
+trait TemplateCache[K] {
 
   /**
-   * Returns a cached template by name. If the template is not cached yet,
-   * it will be provided by templateProvicer.
+   * Returns a cached template by a key. If the template is not cached yet,
+   * it will be provided by templateProvider.
    */
-  def findTemplate(name: String)(templateProvicer : => Box[NodeSeq]): Box[NodeSeq];
+  def findTemplate(key: K): Box[NodeSeq];
 
+  /**
+   * Adds the node in the cache
+   */
+  def cacheTemplate(key: K, node: NodeSeq): NodeSeq
+  
   /**
    * Removes a template from the cache
    */
-  def removeTemplate(name: String);
+  def removeTemplate(key: K);
 }
 
 /**
  * A cache that caches nothing
  */
-object NoCache extends TemplateCache {
+object NoCache extends TemplateCache[(Locale, List[String])] {
 
-  def findTemplate(name: String)(provider : => Box[NodeSeq]): Box[NodeSeq] = {
-	provider
-  }
+  def findTemplate(key: (Locale, List[String])): Box[NodeSeq] = Empty
+  
+  def cacheTemplate(key: (Locale, List[String]), node: NodeSeq): NodeSeq = node
 
-  override def removeTemplate(name: String) {
+  override def removeTemplate(key: (Locale, List[String])) {
   }
 }
 
@@ -34,32 +40,30 @@ object NoCache extends TemplateCache {
  * Companion module for InMemoryCache
  */
 object InMemoryCache {
-  SoftReferenceCache.initialize
-  LiftRules.unloadHooks.prepend {() =>
-    SoftReferenceCache.shutDown
-  }
   def apply(templatesCount: Int) = new InMemoryCache(templatesCount)
 }
 
 /**
  * Caches templates in a LRU map
  */
-private[http] class InMemoryCache(templatesCount: Int) extends TemplateCache {
+private[http] class InMemoryCache(templatesCount: Int) extends TemplateCache[(Locale, List[String])] {
 
-  private val cache = new SoftReferenceCache[String, Box[NodeSeq]](templatesCount)
-
-  def findTemplate(name: String)(provider : => Box[NodeSeq]): Box[NodeSeq] = {
-    cache(name) openOr {
-      val template = provider;
-      template map (node => {
-        cache += (name -> template)
-      })
-      template
+  private val cache : LRU[(Locale, List[String]), NodeSeq] = new LRU(templatesCount)
+  private val cacheLock = new ConcurrentLock
+  
+  def findTemplate(key: (Locale, List[String])): Box[NodeSeq] = {
+    cacheLock.read {
+     cache.get(key)
     }
   }
 
-  override def removeTemplate(name: String) {
-    cache.remove(name)
+  def cacheTemplate(key: (Locale, List[String]), node: NodeSeq): NodeSeq = cacheLock.write {
+    cache(key) = node
+    node
+  }
+
+  override def removeTemplate(key: (Locale, List[String])) {
+    cache.remove(key)
   }
 
 }
