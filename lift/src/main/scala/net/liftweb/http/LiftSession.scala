@@ -880,7 +880,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
       case Group(nodes) => 
         Group(processSurroundAndInclude(page, nodes))
 
-      case elm: Elem if elm.prefix == "lift" || elm.prefix == "l" => 
+      case elm: Elem if elm.prefix == "lift" || elm.prefix == "lift-tag" || elm.prefix == "l"=> 
         S.setVars(elm.attributes){
           processSurroundAndInclude(page, NamedPF((elm.label, elm, elm.attributes,
                                                    asNodeSeq(elm.child), page),
