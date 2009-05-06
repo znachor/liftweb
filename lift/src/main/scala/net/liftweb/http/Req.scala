@@ -328,13 +328,20 @@ class Req(val path: ParsePath,
    * of the parsed date.
    */
   lazy val ifModifiedSince: Box[java.util.Date] =
-    for {req <- Box !! request
-    ims <- Box !! req.getHeader("if-modified-since")
-    id <- boxParseInternetDate(ims)
-    } yield id
+  for {req <- Box !! request
+       ims <- Box !! req.getHeader("if-modified-since")
+       id <- boxParseInternetDate(ims)
+  } yield id
 
   def testIfModifiedSince(when: Long): Boolean =
-    (when / 1000L) > ((ifModifiedSince.map(_.getTime) openOr 0L) / 1000L)
+  (when / 1000L) > ((ifModifiedSince.map(_.getTime) openOr 0L) / 1000L)
+
+  def testFor304(lastModified: Long): Box[LiftResponse] =
+  if (testIfModifiedSince(lastModified))
+  Full(InMemoryResponse(new Array[Byte](0), Nil, Nil, 304))
+  else
+  Empty
+
 
   /**
    * The user agent of the browser that sent the request

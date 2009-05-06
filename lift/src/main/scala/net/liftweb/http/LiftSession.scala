@@ -1124,41 +1124,59 @@ object TemplateFinder {
    * @return the template if it can be found
    */
   def findAnyTemplate(places: List[String], locale: Locale): Box[NodeSeq] = {
-    val part = places.dropRight(1)
-    val last = places.last
+    /*
+     From a Scala coding standpoint, this method is ugly.  It's also a performance
+     hotspot that needed some tuning.  I've made the code very imperative and
+     tried to make sure there are no anonymous functions created in this method.
+     The few extra lines of code and the marginal reduction in readibility should
+     yield better performance.  Please don't change this method without chatting with
+     me first.  Thanks!  DPP
+    */
+    val lrCache = LiftRules.templateCache
+    val cache = if (lrCache.isDefined) lrCache.open_! else NoCache
 
-    val cache = LiftRules.templateCache openOr NoCache
+    val key = (locale, places)
+    val tr = cache.get(key)
 
-    val tr = cache.findTemplate((locale, places))
+    if (tr.isDefined) tr
+    else
+    {
+      val part = places.dropRight(1)
+      val last = places.last
 
-    tr or findInViews(places, part, last, LiftRules.viewDispatch.toList) match {
-      case Full(lv) =>
-        Full(lv)
+      findInViews(places, part, last, LiftRules.viewDispatch.toList) match {
+        case Full(lv) =>
+          Full(lv)
 
-      case _ =>
-        val pls = places.mkString("/","/", "")
+        case _ =>
+          val pls = places.mkString("/","/", "")
 
-        case class NonLocalReturn(xml: NodeSeq) extends Exception
-
-        val lookup: Box[NodeSeq] = 
-        try {
-          for {
-            s <- suffixes
-            p <- List("_"+locale.toString, "_"+locale.getLanguage, "")
-            name = pls + p + (if (s.length > 0) "." + s else "")
-            res <- LiftRules.finder(name)
-            xml <- PCDataXmlParser(res)
-          } {
-            val node = cache.cacheTemplate((locale, places), xml)
-            throw new NonLocalReturn(node)
+          val se = suffixes.elements
+          val sl = List("_"+locale.toString, "_"+locale.getLanguage, "")
+          
+          var found = false
+          var ret: NodeSeq = null
+          
+          while (!found && se.hasNext) {
+            val s = se.next
+            val le = sl.elements
+            while (!found && le.hasNext) {
+              val p = le.next
+              val name = pls + p + (if (s.length > 0) "." + s else "")
+              val rb = LiftRules.finder(name)
+              if (rb.isDefined) {
+                val xmlb = PCDataXmlParser(rb.open_!)
+                if (xmlb.isDefined) {
+                  found = true
+                  ret = (cache(key) = xmlb.open_!)
+                }
+              }
+            }
           }
-          None
-        } catch {
-          case NonLocalReturn(xml) => Full(xml)
-        }
-
-        lookup or lookForClasses(places)
-
+          
+          if (found) Full(ret)
+          else lookForClasses(places)
+      }
     }
   }
 

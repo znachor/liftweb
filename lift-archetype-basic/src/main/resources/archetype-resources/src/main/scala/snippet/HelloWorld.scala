@@ -1,6 +1,11 @@
 package ${packageName}.snippet
 
+import _root_.scala.xml.NodeSeq
+import _root_.net.liftweb.util.Helpers
+import Helpers._
+
 class HelloWorld {
-  def howdy = <span>Welcome to ${artifactId} at {new _root_.java.util.Date}</span>
+  def howdy(in: NodeSeq): NodeSeq =
+    Helpers.bind("b", in, "time" -> (new _root_.java.util.Date).toString)
 }
 

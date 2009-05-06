@@ -27,26 +27,26 @@ import _root_.scala.xml.{NodeSeq, Text, Group}
 
 object Template extends DispatchSnippet {
   def dispatch: DispatchIt =
-    Map("show" -> show _)
+  Map("show" -> show _)
 
   def show(in: NodeSeq): NodeSeq = {
     val ret: Box[NodeSeq] =
-      for (tmpl <- templateFromTemplateAttr;
-	   (tbl, row) <- template(tmpl, "temp", "tbl", "row"))
-	yield {
-	     val rows: NodeSeq =
-	       User.findAll match {
-		 case Nil => bind("item", row, "one" -> "No Records Found",
-				  "two" -> "")
-		 case xs => xs.flatMap(u => bind("item", row,
-						 "one" -> u.firstName.is,
-						 "two" -> u.email.is))
-	       }
+    for (tmpl <- templateFromTemplateAttr;
+         (tbl, row) <- template(tmpl, "temp", "tbl", "row"))
+    yield {
+      val rows: NodeSeq =
+      User.findAll match {
+        case Nil => bind("item", row, "one" -> "No Records Found",
+                         "two" -> "")
+        case xs => xs.flatMap(u => bind("item", row,
+                                        "one" -> u.firstName.is,
+                                        "two" -> u.email.is))
+      }
 
-	  bind("head", tbl, "one" -> "Name",
-	       "two" -> "Email",
-	       "rows" -> rows)
-	}
+      bind("head", tbl, "one" -> "Name",
+           "two" -> "Email",
+           "rows" -> rows)
+    }
 
     ret match {
       case Full(xs) => xs

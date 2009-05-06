@@ -873,7 +873,7 @@ object LiftRules {
   (liftSession, requestState) => {
     val modTime = cometScriptUpdateTime(liftSession)
 
-    testFor304(requestState, modTime) or
+    requestState.testFor304(modTime) or
     Full(JavaScriptResponse(renderCometScript(liftSession),
                             List("Last-Modified" -> toInternetDate(modTime),
                                  "Expires" -> toInternetDate(modTime + 10.minutes)),
@@ -887,22 +887,14 @@ object LiftRules {
   (liftSession, requestState) => {
     val modTime = ajaxScriptUpdateTime(liftSession)
 
-    testFor304(requestState, modTime) or
+    requestState.testFor304(modTime) or
     Full(JavaScriptResponse(renderAjaxScript(liftSession),
                             List("Last-Modified" -> toInternetDate(modTime),
                                  "Expires" -> toInternetDate(modTime + 10.minutes)),
                             Nil, 200))
   }
 
-  var templateCache: Box[TemplateCache[(Locale, List[String])]] = Empty
-
-  private def testFor304(req: Req, lastModified: Long): Box[LiftResponse] = {
-    val mod = req.request.getHeader("if-modified-since")
-    if (mod != null && ((lastModified / 1000L) * 1000L) <= parseInternetDate(mod).getTime)
-    Full(InMemoryResponse(new Array[Byte](0), Nil, Nil, 304))
-    else
-    Empty
-  }
+  var templateCache: Box[TemplateCache[(Locale, List[String]), NodeSeq]] = Empty
 }
 
 case object BreakOut
