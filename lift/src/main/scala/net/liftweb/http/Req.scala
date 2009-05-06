@@ -337,8 +337,8 @@ class Req(val path: ParsePath,
   (when / 1000L) > ((ifModifiedSince.map(_.getTime) openOr 0L) / 1000L)
 
   def testFor304(lastModified: Long): Box[LiftResponse] =
-  if (testIfModifiedSince(lastModified))
-  Full(InMemoryResponse(new Array[Byte](0), Nil, Nil, 304))
+  if (!testIfModifiedSince(lastModified))
+  Full(InMemoryResponse(new Array[Byte](0), List("Content-Type" -> "text/plain"), Nil, 304))
   else
   Empty
 
