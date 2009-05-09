@@ -37,6 +37,11 @@ object JSONParser extends SafeSeqParser with ImplicitConversions {
     case x => Empty
   }
 
+  def unapply(in: Any): Option[Any] = in match {
+    case s: String => parse(s)
+    case _ => None
+  }
+
   lazy val whitespace = elem(' ') | elem('\t') | elem('\n') | elem('\r')
 
   lazy val spaces = rep(whitespace)
