@@ -134,6 +134,7 @@ object MenuInfo {
     Menu(Loc("Surround", List("templating", "surround"), "Surround")),
     Menu(Loc("Embed", List("templating", "embed"), "Embed")),
     Menu(Loc("eval-order", List("templating", "eval_order"), "Evalutation Order")),
+    Menu(Loc("select-o-matuc", List("templating", "selectomatic"), "Select <div>s")),
     Menu(Loc("head", List("templating", "head"), "<head/> tag"))) ::
   Menu(Loc("ws", List("ws"), "Web Services", Unless(() => Props.inGAE, "Disabled for GAE"))) ::
   Menu(Loc("lang", List("lang"), "Localization")) ::
