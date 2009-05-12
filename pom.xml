@@ -130,6 +130,15 @@ Lift is a scala web framework.
       <email>java [at] chen-becker.org</email>
       <timezone>-7</timezone>
     </developer>
+    <developer>
+      <id>heiko.seeberger</id>
+      <name>Heiko Seeberger</name>
+      <email>heiko [dot] seeberger [at] googlemail [dot] com</email>
+      <timezone>+1</timezone>
+      <roles>
+        <role>OSGi expert and Scala enthusiast</role>
+      </roles>
+    </developer>
   </developers>
 
   <mailingLists>
@@ -158,6 +167,7 @@ Lift is a scala web framework.
   <modules>
     <module>lift-util</module>
     <module>lift</module>
+    <module>lift-osgi</module>
     <module>lift-mapper</module>
     <module>lift-machine</module>
     <module>lift-record</module>
@@ -213,6 +223,36 @@ Lift is a scala web framework.
         <scope>provided</scope>
       </dependency>
       <dependency>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>org.osgi.core</artifactId>
+        <version>1.2.0</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>org.osgi.compendium</artifactId>
+        <version>1.2.0</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.scalamodules</groupId>
+        <artifactId>scalamodules-core</artifactId>
+        <version>1.1-SNAPSHOT</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.ops4j.pax.web</groupId>
+        <artifactId>pax-web-bundle</artifactId>
+        <version>0.6.0</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.ops4j.pax.swissbox</groupId>
+        <artifactId>pax-swissbox-extender</artifactId>
+        <version>0.2.0</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
         <groupId>com.ibm.icu</groupId>
         <artifactId>icu4j</artifactId>
         <version>3.4.4</version>
@@ -230,6 +270,16 @@ Lift is a scala web framework.
       </extension>
     </extensions>
     <plugins>
+      <!-- Helps with importing Maven projects into Eclipse correctly -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>2.0.2</version>
+        <configuration>
+          <source>1.5</source>
+          <target>1.5</target>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>org.scala-tools</groupId>
         <artifactId>maven-scala-plugin</artifactId>
@@ -254,7 +304,7 @@ Lift is a scala web framework.
           <scalaVersion>${scala.version}</scalaVersion>
         </configuration>
       </plugin>
-      <plugin>
+      <!--plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-eclipse-plugin</artifactId>
         <configuration>
@@ -270,7 +320,7 @@ Lift is a scala web framework.
             <classpathContainer>ch.epfl.lamp.sdt.launching.SCALA_CONTAINER</classpathContainer>
           </classpathContainers>
         </configuration>
-      </plugin>
+      </plugin-->
       <plugin>
         <inherited>true</inherited>
         <artifactId>maven-source-plugin</artifactId>
@@ -288,7 +338,6 @@ Lift is a scala web framework.
         <artifactId>maven-changes-plugin</artifactId>
         <version>2.0</version>
       </plugin>
-
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
@@ -301,8 +350,32 @@ Lift is a scala web framework.
           </archive>
         </configuration>
       </plugin>
-
     </plugins>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.felix</groupId>
+          <artifactId>maven-bundle-plugin</artifactId>
+          <version>2.0.0</version>
+          <extensions>true</extensions>
+          <configuration>
+            <instructions>
+              <Bundle-RequiredExecutionEnvironment>J2SE-1.5</Bundle-RequiredExecutionEnvironment>
+              <_versionpolicy>[$(@),$(version;=+;$(@)))</_versionpolicy>
+            </instructions>
+          </configuration>
+          <executions>
+            <execution>
+              <id>create-bundle</id>
+              <phase>package</phase>
+              <goals>
+                <goal>bundle</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </pluginManagement>
   </build>
   <reporting>
     <plugins>
