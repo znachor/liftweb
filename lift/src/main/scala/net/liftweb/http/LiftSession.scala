@@ -911,9 +911,18 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     asyncComponents.elements.filter{case ((Full(name), _), _) => name == theType case _ => false}.toList.map{case (_, value) => value}
   }
 
+  private object cometSetup extends RequestVar[List[((Box[String], Box[String]), Any)]](Nil)
+
+  /**
+   * Allows you to send messages to a CometActor that may or may not be set up yet
+   */
+  def setupComet(theType: String, name: Box[String], msg: Any) {
+    cometSetup((Full(theType) -> name, msg) :: cometSetup.is)
+  }
+
   private[liftweb] def findComet(theType: Box[String], name: Box[String], defaultXml: NodeSeq, attributes: Map[String, String]): Box[CometActor] = synchronized {
     val what = (theType -> name)
-    Box(asyncComponents.get(what)).or( {
+    val ret = Box(asyncComponents.get(what)).or( {
         theType.flatMap{
           tpe =>
           val ret = findCometByType(tpe, name, defaultXml, attributes)
@@ -925,6 +934,13 @@ class LiftSession(val contextPath: String, val uniqueId: String,
           ret
         }
       })
+
+    for {
+      actor <- ret
+      (cst, csv) <- cometSetup.is if cst == what
+    }       actor ! csv
+
+    ret
   }
 
   /**
@@ -1131,7 +1147,7 @@ object TemplateFinder {
      The few extra lines of code and the marginal reduction in readibility should
      yield better performance.  Please don't change this method without chatting with
      me first.  Thanks!  DPP
-    */
+     */
     val lrCache = LiftRules.templateCache
     val cache = if (lrCache.isDefined) lrCache.open_! else NoCache
 
