@@ -20,7 +20,7 @@ import java.util.{List => JList}
 import java.util.concurrent.atomic.AtomicReference
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 import net.liftweb.http.LiftFilter
-import net.liftweb.util.{Box, Slf4jLogBoot}
+import net.liftweb.util.{Box, ClassHelpers, Log, Slf4jLogBoot}
 import org.ops4j.pax.swissbox.extender._
 import org.ops4j.pax.web.service.WebContainer
 import org.osgi.framework.{Bundle, BundleActivator, BundleContext}
@@ -49,6 +49,7 @@ class Activator extends BundleActivator {
       new BundleManifestScanner(new RegexKeyManifestFilter("Lift-Config")),
       LiftBundleObserver)
     bundleWatcher.start()
+    Log debug "Lift extender started."
 
     // Register resources and LiftFilter
     context track classOf[WebContainer] on {
@@ -57,6 +58,7 @@ class Activator extends BundleActivator {
           val liftHttpContext = LiftHttpContext(webContainer.createDefaultHttpContext)
           webContainer.registerResources("/", "/", liftHttpContext)
           webContainer.registerFilter(OsgiLiftFilter, Array("/*"), null, null, liftHttpContext)
+          Log debug "LiftFilter and resources registered with HttpService."
         }
       }
       case Removed(webContainer, _) => webContainerHolder.compareAndSet(webContainer, null)
@@ -71,11 +73,13 @@ class Activator extends BundleActivator {
       case webContainer => {
         webContainer unregisterFilter OsgiLiftFilter
         webContainer unregister "/"
+        Log debug "LiftFilter and resources unregistered from HttpService."
       }
     }
 
     // Stop Lift extender
     bundleWatcher.stop()
+    Log debug "Lift extender stopped."
   }
 
   private val webContainerHolder = new AtomicReference[WebContainer]
@@ -93,21 +97,38 @@ private object LiftBundleObserver extends BundleObserver[ManifestEntry] {
   val liftBundles = new AtomicReference[LiftBundles](Map.empty) 
 
   override def addingEntries(bundle: Bundle, entries: JList[ManifestEntry]) {
+
     assert(1 == entries.size, "Expecting exactly one manifest entry!")
+
+    // Create config
     val config = LiftBundleConfig(entries get 0)
-    update(lb => lb + (bundle -> config))
+
+    // Boot
+    val clazz = bundle loadClass "bootstrap.liftweb.Boot"
+    val invoker = ClassHelpers.createInvoker("boot", clazz.newInstance.asInstanceOf[AnyRef])
+    invoker map { f => f() }
+    Log debug "Lift-powered bundle " + bundle.getSymbolicName + " booted."
+
+    // Add config
+    update { liftBundle => liftBundle + (bundle -> config) }
+    Log debug "Lift-powered bundle " + bundle.getSymbolicName + " added."
   }
 
   override def removingEntries(bundle: Bundle, entries: JList[ManifestEntry]) {
+
     assert(1 == entries.size, "Expecting exactly one manifest entry!")
-    update(lb => lb - bundle)
+
+    // Remove config
+    update { liftBundle => liftBundle - bundle }
+    Log debug "Lift-powered bundle " + bundle.getSymbolicName + " removed."
+
+    // Unboot
+    // TODO: Unboot!
   }
 
   private def update[T](change: LiftBundles => LiftBundles) {
     val old = liftBundles.get
-    if (!liftBundles.compareAndSet(old, change(old))) {
-      update(change)
-    } 
+    if (!liftBundles.compareAndSet(old, change(old))) update(change) 
   }
 }
 
