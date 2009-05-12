@@ -167,6 +167,7 @@ Lift is a scala web framework.
   <modules>
     <module>lift-util</module>
     <module>lift</module>
+    <module>lift-osgi</module>
     <module>lift-mapper</module>
     <module>lift-machine</module>
     <module>lift-record</module>
@@ -222,6 +223,36 @@ Lift is a scala web framework.
         <scope>provided</scope>
       </dependency>
       <dependency>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>org.osgi.core</artifactId>
+        <version>1.2.0</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>org.osgi.compendium</artifactId>
+        <version>1.2.0</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.scalamodules</groupId>
+        <artifactId>scalamodules-core</artifactId>
+        <version>1.1-SNAPSHOT</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.ops4j.pax.web</groupId>
+        <artifactId>pax-web-bundle</artifactId>
+        <version>0.6.0</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.ops4j.pax.swissbox</groupId>
+        <artifactId>pax-swissbox-extender</artifactId>
+        <version>0.2.0</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
         <groupId>com.ibm.icu</groupId>
         <artifactId>icu4j</artifactId>
         <version>3.4.4</version>
@@ -273,7 +304,7 @@ Lift is a scala web framework.
           <scalaVersion>${scala.version}</scalaVersion>
         </configuration>
       </plugin>
-      <plugin>
+      <!--plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-eclipse-plugin</artifactId>
         <configuration>
@@ -289,7 +320,7 @@ Lift is a scala web framework.
             <classpathContainer>ch.epfl.lamp.sdt.launching.SCALA_CONTAINER</classpathContainer>
           </classpathContainers>
         </configuration>
-      </plugin>
+      </plugin-->
       <plugin>
         <inherited>true</inherited>
         <artifactId>maven-source-plugin</artifactId>

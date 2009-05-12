@@ -123,6 +123,7 @@
           <instructions>
             <Export-Package>net.liftweb.util.*;version="${pom.version}"</Export-Package>
             <Import-Package>org.slf4j.*;resolution:="optional",*</Import-Package>
+            <DynamicImport-Package>*</DynamicImport-Package>
           </instructions>
         </configuration>
       </plugin>
