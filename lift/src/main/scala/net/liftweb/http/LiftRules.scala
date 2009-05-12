@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2008 WorldWide Conferencing, LLC
+ * Copyright 2007-2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -341,7 +341,10 @@ object LiftRules {
    */
   var localeCalculator: Box[HttpServletRequest] => Locale = defaultLocaleCalculator _
 
-  def defaultLocaleCalculator(request: Box[HttpServletRequest]) = request.flatMap(_.getLocale() match {case null => Empty case l: Locale => Full(l)}).openOr(Locale.getDefault())
+  def defaultLocaleCalculator(request: Box[HttpServletRequest]) = 
+    request.flatMap(_.getLocale() match 
+		    {case null => Empty 
+		     case l: Locale => Full(l)}).openOr(Locale.getDefault())
 
   var resourceBundleFactories = RulesSeq[ResourceBundleFactoryPF]
 
@@ -522,12 +525,22 @@ object LiftRules {
   /**
    * Obtain the resource URL by name
    */
-  def getResource(name: String): Box[_root_.java.net.URL] = resourceFinder(name) match {case null => defaultFinder(name) match {case null => Empty; case s => Full(s)} ; case s => Full(s)}
+  var getResource: String => Box[_root_.java.net.URL] = defaultGetResource _
+
+  /**
+   * Obtain the resource URL by name
+   */
+  def defaultGetResource(name: String): Box[_root_.java.net.URL] =
+  for {
+    rf <- (Box !! resourceFinder(name)) or (Box !! defaultFinder(name))
+  } yield rf
+  // resourceFinder(name) match {case null => defaultFinder(name) match {case null => Empty; case s => Full(s)} ; case s => Full(s)}
 
   /**
    * Obtain the resource InputStream by name
    */
-  def getResourceAsStream(name: String): Box[_root_.java.io.InputStream] = getResource(name).map(_.openStream)
+  def getResourceAsStream(name: String): Box[_root_.java.io.InputStream] =
+  getResource(name).map(_.openStream)
 
   /**
    * Obtain the resource as an array of bytes by name

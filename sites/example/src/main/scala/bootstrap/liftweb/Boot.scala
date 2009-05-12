@@ -130,6 +130,11 @@ object MenuInfo {
        Menu(Loc("simple", Link(List("simple"), true, "/simple/index"),
                 "Simple Forms", Unless(() => Props.inGAE, "Disabled for GAE"))),
        Menu(Loc("template", List("template"), "Templates", Unless(() => Props.inGAE, "Disabled for GAE")))) ::
+  Menu(Loc("Templating", List("templating", "index"), "Templating"),
+    Menu(Loc("Surround", List("templating", "surround"), "Surround")),
+    Menu(Loc("Embed", List("templating", "embed"), "Embed")),
+    Menu(Loc("eval-order", List("templating", "eval_order"), "Evalutation Order")),
+    Menu(Loc("head", List("templating", "head"), "<head/> tag"))) ::
   Menu(Loc("ws", List("ws"), "Web Services", Unless(() => Props.inGAE, "Disabled for GAE"))) ::
   Menu(Loc("lang", List("lang"), "Localization")) ::
   Menu(Loc("menu_top", List("menu", "index"), "Menus"),

@@ -57,6 +57,7 @@ object Countries extends Enumeration(1) {
   val Australia = C10
   val Canada = C32
   val Sweden = C167
+  val UnitedKingdom = C184
 
 
   def I18NCountry = new I18NCountry
