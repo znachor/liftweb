@@ -366,11 +366,11 @@ Lift is a scala web framework.
           </configuration>
           <executions>
             <execution>
-              <id>create-bundle</id>
-              <phase>package</phase>
-              <goals>
-                <goal>bundle</goal>
-              </goals>
+              <id>bundle-manifest</id>
+              <phase>process-classes</phase>
+              <goals>    
+                <goal>manifest</goal>
+              </goals>   
             </execution>
           </executions>
         </plugin>
