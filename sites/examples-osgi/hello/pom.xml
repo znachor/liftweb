@@ -36,7 +36,6 @@
           <instructions>
             <Export-Package>net.liftweb.examples.osgi.hello.*;version="${project.version}"</Export-Package>
             <Private-Package>bootstrap.liftweb.*</Private-Package>
-            <Include-Resource>webapp=src/main/webapp</Include-Resource>
             <Lift-Config>xxx</Lift-Config>
           </instructions>
         </configuration>
@@ -44,9 +43,9 @@
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <configuration>
-          <archive>  
+          <archive>
             <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
-          </archive> 
+          </archive>
         </configuration>
       </plugin>
     </plugins>
