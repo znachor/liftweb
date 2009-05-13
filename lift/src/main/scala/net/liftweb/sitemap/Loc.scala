@@ -134,6 +134,12 @@ trait Loc[ParamType] {
         if (test()) Right(Full(msg()))
         else testParams(xs)
 
+      case Loc.TestAccess(func) :: xs =>
+        func() match {
+          case Full(resp) => Right(Full(resp))
+          case _ => testParams(xs)
+        }
+
       case x :: xs => testParams(xs)
     }
 
@@ -370,6 +376,13 @@ object Loc {
    * the page is accessed.
    */
   case class Unless(test: () => Boolean, failMsg: FailMsg) extends LocParam
+
+  /**
+   * Allows extra access testing for a given menu location such that
+   * you can build a menu that is displayed but redirects the user to a login
+   * page if they are not logged in
+   */
+  case class TestAccess(func: () => Box[LiftResponse]) extends LocParam
 
   /**
    * Tests to see if the request actually matches the requirements for access to
