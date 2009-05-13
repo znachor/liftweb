@@ -342,9 +342,9 @@ object LiftRules {
   var localeCalculator: Box[HttpServletRequest] => Locale = defaultLocaleCalculator _
 
   def defaultLocaleCalculator(request: Box[HttpServletRequest]) = 
-    request.flatMap(_.getLocale() match 
-		    {case null => Empty 
-		     case l: Locale => Full(l)}).openOr(Locale.getDefault())
+  request.flatMap(_.getLocale() match
+                  {case null => Empty
+      case l: Locale => Full(l)}).openOr(Locale.getDefault())
 
   var resourceBundleFactories = RulesSeq[ResourceBundleFactoryPF]
 
@@ -782,6 +782,8 @@ object LiftRules {
    */
   val onBeginServicing = RulesSeq[Req => Unit]
 
+  val beginRenderingHtml = new RulesSeq[Req => Box[LiftResponse]] with FirstBox[Req, LiftResponse]
+
   /**
    * Holds user function hooks when the request was processed
    */
@@ -951,6 +953,22 @@ trait RulesSeq[T] {
       rules = rules ::: List(r)
     }
     this
+  }
+}
+
+trait FirstBox[F, T] {
+  self: RulesSeq[F => Box[T]] =>
+
+  def firstFull(param: F): Box[T] = {
+    def finder(in: List[F => Box[T]]): Box[T] = in match {
+      case Nil => Empty
+      case x :: xs => x(param) match {
+          case Full(r) => Full(r)
+          case _ => finder(xs)
+        }
+    }
+
+    finder(toList)
   }
 }
 

@@ -483,63 +483,65 @@ class LiftSession(val contextPath: String, val uniqueId: String,
             case _ => Empty
           }
 
+          val early = LiftRules.beginRenderingHtml.firstFull(request)
+
           // Process but make sure we're okay, sitemap wise
-          val response: Box[LiftResponse] = request.testLocation match {
-            case Left(true) =>
-              cleanUpBeforeRender
-              ((locTemplate or findVisibleTemplate(request.path, request)).
-               map(xml => processSurroundAndInclude(request.uri+" -> "+request.path, xml)) match {
-                  case Full(rawXml: NodeSeq) => {
+          val response: Box[LiftResponse] = early or (request.testLocation match {
+              case Left(true) =>
+                cleanUpBeforeRender
+                ((locTemplate or findVisibleTemplate(request.path, request)).
+                 map(xml => processSurroundAndInclude(request.uri+" -> "+request.path, xml)) match {
+                    case Full(rawXml: NodeSeq) => {
 
-                      val xml = HeadHelper.mergeToHtmlHead(rawXml)
-                      val cometXform: List[RewriteRule] =
-                      if (LiftRules.autoIncludeComet(this))
-                      allElems(xml, !_.attributes.filter{case p: PrefixedAttribute => (p.pre == "lift" && p.key == "when")
-                          case _ => false}.toList.isEmpty) match {
-                        case Nil => Nil
-                        case xs =>
-                          val comets: List[CometVersionPair] = xs.flatMap(x => idAndWhen(x))
-                          List(new AddScriptToBody(comets))
-                      }
-                      else Nil
+                        val xml = HeadHelper.mergeToHtmlHead(rawXml)
+                        val cometXform: List[RewriteRule] =
+                        if (LiftRules.autoIncludeComet(this))
+                        allElems(xml, !_.attributes.filter{case p: PrefixedAttribute => (p.pre == "lift" && p.key == "when")
+                            case _ => false}.toList.isEmpty) match {
+                          case Nil => Nil
+                          case xs =>
+                            val comets: List[CometVersionPair] = xs.flatMap(x => idAndWhen(x))
+                            List(new AddScriptToBody(comets))
+                        }
+                        else Nil
 
 
-                      this.synchronized {
-                        S.functionMap.foreach {mi =>
-                          // ensure the right owner
-                          messageCallback(mi._1) = mi._2.owner match {
-                            case Empty => mi._2.duplicate(RenderVersion.get)
-                            case _ => mi._2
+                        this.synchronized {
+                          S.functionMap.foreach {mi =>
+                            // ensure the right owner
+                            messageCallback(mi._1) = mi._2.owner match {
+                              case Empty => mi._2.duplicate(RenderVersion.get)
+                              case _ => mi._2
+                            }
                           }
                         }
+
+                        val liftGC: List[RewriteRule] = LiftRules.enableLiftGC match {
+                          case true => (new AddLiftGCToBody(RenderVersion.get)) :: cometXform
+                          case _ => cometXform
+                        }
+
+                        val ajaxXform: List[RewriteRule] = if (LiftRules.autoIncludeAjax(this)) new AddAjaxToBody() :: liftGC
+                        else liftGC
+
+
+                        val realXml = if (ajaxXform.isEmpty) xml
+                        else (new RuleTransformer(ajaxXform :_*)).transform(xml)
+
+                        notices = Nil
+                        Full(LiftRules.convertResponse((realXml,
+                                                        S.getHeaders(LiftRules.defaultHeaders((realXml, request))),
+                                                        S.responseCookies,
+                                                        request)))
                       }
-
-                      val liftGC: List[RewriteRule] = LiftRules.enableLiftGC match {
-                        case true => (new AddLiftGCToBody(RenderVersion.get)) :: cometXform
-                        case _ => cometXform
-                      }
-
-                      val ajaxXform: List[RewriteRule] = if (LiftRules.autoIncludeAjax(this)) new AddAjaxToBody() :: liftGC
-                      else liftGC
-
-
-                      val realXml = if (ajaxXform.isEmpty) xml
-                      else (new RuleTransformer(ajaxXform :_*)).transform(xml)
-
-                      notices = Nil
-                      Full(LiftRules.convertResponse((realXml,
-                                                      S.getHeaders(LiftRules.defaultHeaders((realXml, request))),
-                                                      S.responseCookies,
-                                                      request)))
-                    }
-                  case _ => if (LiftRules.passNotFoundToChain) Empty else Full(request.createNotFound)
-                })
-            case Right(Full(resp)) => Full(resp)
-            case _ if (LiftRules.passNotFoundToChain) => Empty
-            case _ if Props.mode == Props.RunModes.Development =>
-              Full(ForbiddenResponse("The requested page was not defined in your SiteMap, so access was blocked.  (This message is displayed in development mode only)"))
-            case _ => Full(request.createNotFound)
-          }
+                    case _ => if (LiftRules.passNotFoundToChain) Empty else Full(request.createNotFound)
+                  })
+              case Right(Full(resp)) => Full(resp)
+              case _ if (LiftRules.passNotFoundToChain) => Empty
+              case _ if Props.mode == Props.RunModes.Development =>
+                Full(ForbiddenResponse("The requested page was not defined in your SiteMap, so access was blocked.  (This message is displayed in development mode only)"))
+              case _ => Full(request.createNotFound)
+            })
 
           // Before returning the response check for redirect and set the appropriate state.
           response.map(checkRedirect)
