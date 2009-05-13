@@ -1001,31 +1001,31 @@ object S extends HasParams {
    * which snippet function to use for a given snippet in the template. Our code would look like:
    *
    * <pre>
-     import _root_.scala.xml.{NodeSeq,Text}
-     class SnipMap {
-       def topSnippet (xhtml : NodeSeq) : NodeSeq = {
-         if (S.param("showAll").isDefined) {
-           S.mapSnippet("listing", listing)
-         } else {
-           S.mapSnippet("listing", { ignore => Text("") })
-         }
+   import _root_.scala.xml.{NodeSeq,Text}
+   class SnipMap {
+   def topSnippet (xhtml : NodeSeq) : NodeSeq = {
+   if (S.param("showAll").isDefined) {
+   S.mapSnippet("listing", listing)
+   } else {
+   S.mapSnippet("listing", { ignore => Text("") })
+   }
 
-         ...
-       }
+   ...
+   }
 
-       def listing(xhtml : NodeSeq) : NodeSeq = {
-         ...
-       }
-     </pre>
+   def listing(xhtml : NodeSeq) : NodeSeq = {
+   ...
+   }
+   </pre>
    *
    * Then, your template would simply look like:
    *
    * <pre>
-     &lt;lift:surround with="default" at="content"&gt;
-       ...
-       &lt;p&gt;&lt;lift:SnipMap.topSnippet /&gt;&lt;/p&gt;
-       &lt;p&gt;&lt;lift:listing /&gt;&lt;/p&gt;
-     &lt;/lift:surround&gt;
+   &lt;lift:surround with="default" at="content"&gt;
+   ...
+   &lt;p&gt;&lt;lift:SnipMap.topSnippet /&gt;&lt;/p&gt;
+   &lt;p&gt;&lt;lift:listing /&gt;&lt;/p&gt;
+   &lt;/lift:surround&gt;
    * </pre>
    *
    * Snippets are processed in the order that they're defined in the
@@ -1253,6 +1253,31 @@ object S extends HasParams {
     f(name)
   }
 
+  def render(xhtml:NodeSeq, httpRequest: HttpServletRequest): NodeSeq = {
+    def doRender(session: LiftSession): NodeSeq =
+    session.processSurroundAndInclude("external render", xhtml)
+
+    if (inS.value) doRender(session.open_!)
+    else {
+      val req = Req(httpRequest, LiftRules.rewriteTable(httpRequest), System.nanoTime)
+      val ses: LiftSession = SessionMaster.getSession(httpRequest, Empty) match {
+        case Full(ret) =>
+          ret.fixSessionTime()
+          ret
+
+        case _ =>
+          val ret = LiftSession(httpRequest.getSession, req.contextPath,
+                                req.headers)
+          ret.fixSessionTime()
+          SessionMaster.addSession(ret)
+          ret
+      }
+
+      init(req, ses) {
+        doRender(ses)
+      }
+    }
+  }
 
   /**
    * Similar with addFunctionMap but also returns the name.

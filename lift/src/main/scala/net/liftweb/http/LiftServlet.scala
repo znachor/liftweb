@@ -540,7 +540,7 @@ trait LiftFilterTrait {
         case (httpReq: HttpServletRequest, httpRes: HttpServletResponse) =>
           tryo { LiftRules.early.toList.foreach(_(httpReq)) }
 
-          var session = Req(httpReq, LiftRules.rewriteTable(httpReq), System.nanoTime)
+          val session = Req(httpReq, LiftRules.rewriteTable(httpReq), System.nanoTime)
 
           URLRewriter.doWith(url => NamedPF.applyBox(httpRes.encodeURL(url), LiftRules.urlDecorate.toList) openOr httpRes.encodeURL(url)) {
             if (!(isLiftRequest_?(session) && actualServlet.service(httpReq, httpRes, session))) {
