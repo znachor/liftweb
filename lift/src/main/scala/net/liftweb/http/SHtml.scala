@@ -441,7 +441,7 @@ object SHtml {
    */
   def untrustedSelect(opts: Seq[(String, String)], deflt: Box[String],
                       func: String => Any, attrs: (String, String)*): Elem =
-  untrustedSelect_*(opts, deflt, SFuncHolder(func))
+  untrustedSelect_*(opts, deflt, SFuncHolder(func), attrs:_*)
 
   /**
    * Create a select box based on the list with a default value and the function to be executed on
