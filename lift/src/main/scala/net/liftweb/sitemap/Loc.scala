@@ -122,7 +122,7 @@ trait Loc[ParamType] {
     else Empty
   }
 
-  def testAccess: Either[Boolean, Box[LiftResponse]] = {
+  private def testAccess(withTA: Boolean): Either[Boolean, Box[LiftResponse]] = {
     def testParams(what: List[Loc.LocParam]): Either[Boolean, Box[LiftResponse]] = what match {
       case Nil => Left(true)
 
@@ -134,7 +134,7 @@ trait Loc[ParamType] {
         if (test()) Right(Full(msg()))
         else testParams(xs)
 
-      case Loc.TestAccess(func) :: xs =>
+      case Loc.TestAccess(func) :: xs if withTA =>
         func() match {
           case Full(resp) => Right(Full(resp))
           case _ => testParams(xs)
@@ -142,13 +142,13 @@ trait Loc[ParamType] {
 
       case x :: xs => testParams(xs)
     }
-
-    testParams(params) match {
+     testParams(params) match {
       case Left(true) => _menu.testParentAccess
       case x => x
     }
   }
 
+  def testAccess: Either[Boolean, Box[LiftResponse]] = testAccess(true)
   /**
    * Is there a template assocaited with this Loc?
    */
@@ -242,7 +242,7 @@ trait Loc[ParamType] {
   }
 
   private[sitemap] def buildItem(kids: List[MenuItem], current: Boolean, path: Boolean): Box[MenuItem] =
-  (calcHidden(kids), testAccess) match {
+  (calcHidden(kids), testAccess(false)) match {
     case (false, Left(true)) =>
       for {p <- (forceParam or foundParam.is or defaultParams)
            t <- link.createLink(p)}
