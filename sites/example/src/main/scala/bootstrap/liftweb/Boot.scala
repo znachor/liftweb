@@ -131,11 +131,11 @@ object MenuInfo {
                 "Simple Forms", Unless(() => Props.inGAE, "Disabled for GAE"))),
        Menu(Loc("template", List("template"), "Templates", Unless(() => Props.inGAE, "Disabled for GAE")))) ::
   Menu(Loc("Templating", List("templating", "index"), "Templating"),
-    Menu(Loc("Surround", List("templating", "surround"), "Surround")),
-    Menu(Loc("Embed", List("templating", "embed"), "Embed")),
-    Menu(Loc("eval-order", List("templating", "eval_order"), "Evalutation Order")),
-    Menu(Loc("select-o-matuc", List("templating", "selectomatic"), "Select <div>s")),
-    Menu(Loc("head", List("templating", "head"), "<head/> tag"))) ::
+       Menu(Loc("Surround", List("templating", "surround"), "Surround")),
+       Menu(Loc("Embed", List("templating", "embed"), "Embed")),
+       Menu(Loc("eval-order", List("templating", "eval_order"), "Evalutation Order")),
+       Menu(Loc("select-o-matuc", List("templating", "selectomatic"), "Select <div>s")),
+       Menu(Loc("head", List("templating", "head"), "<head/> tag"))) ::
   Menu(Loc("ws", List("ws"), "Web Services", Unless(() => Props.inGAE, "Disabled for GAE"))) ::
   Menu(Loc("lang", List("lang"), "Localization")) ::
   Menu(Loc("menu_top", List("menu", "index"), "Menus"),
@@ -249,6 +249,8 @@ object BrowserLogger {
 object SessionInfoDumper extends Actor {
   private var lastTime = millis
 
+   import java.lang.ref.Reference
+
   val tenMinutes: Long = 10 minutes
   def act = {
     link(ActorWatcher)
@@ -258,10 +260,58 @@ object SessionInfoDumper extends Actor {
           if ((millis - tenMinutes) > lastTime) {
             lastTime = millis
             val rt = Runtime.getRuntime
+            rt.gc
             val dateStr: String = timeNow.toString
-            Log.info("At "+dateStr+" Number of open sessions: "+sessions.size)
-            Log.info("Free Memory: "+pretty(rt.freeMemory))
-            Log.info("Total Memory: "+pretty(rt.totalMemory))
+            Log.info("[MEMDEBUG] At "+dateStr+" Number of open sessions: "+sessions.size)
+            Log.info("[MEMDEBUG] Free Memory: "+pretty(rt.freeMemory))
+            Log.info("[MEMDEBUG] Total Memory: "+pretty(rt.totalMemory))
+            if (!Props.inGAE) {
+              try {
+                val agc = ActorGC
+                agc.synchronized {
+                  val rsf = agc.getClass.getDeclaredField("refSet")
+                  rsf.setAccessible(true)
+                  rsf.get(agc) match {
+                    case h: scala.collection.mutable.HashSet[Reference[Object]] =>
+                      Log.info("[MEMDEBUG] got the actor refSet... length: "+h.size)
+
+                      val nullRefs = h.elements.filter(f => f.get eq null).toList
+
+                      nullRefs.foreach(r => h -= r)
+
+                      val nonNull = h.elements.filter(f => f.get ne null).toList
+
+                      Log.info("[MEMDEBUG] got the actor refSet... non null elems: "+
+                               nonNull.size)
+                    
+                      nonNull.foreach{r =>
+                        val a = r.get.getClass.getDeclaredField("exiting")
+                        a.setAccessible(true)
+                        if (a.getBoolean(r.get)) {
+                          h -= r
+                          r.clear
+                        } else Log.info("[ACTORINFO] class "+r.get)
+                      }
+
+                      Log.info("[MEMDEBUG] (again) got the actor refSet... length: "+h.size)
+
+
+                      val tfa = h.getClass.getDeclaredField("table")
+                      tfa.setAccessible(true)
+                      tfa.get(h) match {
+                        case ao: Array[Object] =>
+                          Log.info("[MEMDEBUG] hashset table length "+ao.size)
+                          Log.info("[MEMDEBUG] hashset table non-null length "+ao.filter(_ ne null).size)
+                        case _ =>
+                      }
+
+                    case _ =>
+                  }
+                }
+              } catch {
+                case e => Log.error("[MEMDEBUG] failure", e)
+              }
+            }
           }
       }
     }

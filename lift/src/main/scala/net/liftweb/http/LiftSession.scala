@@ -483,12 +483,15 @@ class LiftSession(val contextPath: String, val uniqueId: String,
             case _ => Empty
           }
 
-          val early = LiftRules.beginRenderingHtml.firstFull(request)
+          val early = LiftRules.preAccessControlResponse_!!.firstFull(request)
 
           // Process but make sure we're okay, sitemap wise
           val response: Box[LiftResponse] = early or (request.testLocation match {
               case Left(true) =>
                 cleanUpBeforeRender
+
+              (request.location.flatMap(_.earlyResponse) or
+              LiftRules.earlyResponse.firstFull(request)) or {
                 ((locTemplate or findVisibleTemplate(request.path, request)).
                  map(xml => processSurroundAndInclude(request.uri+" -> "+request.path, xml)) match {
                     case Full(rawXml: NodeSeq) => {
@@ -536,6 +539,8 @@ class LiftSession(val contextPath: String, val uniqueId: String,
                       }
                     case _ => if (LiftRules.passNotFoundToChain) Empty else Full(request.createNotFound)
                   })
+              }
+
               case Right(Full(resp)) => Full(resp)
               case _ if (LiftRules.passNotFoundToChain) => Empty
               case _ if Props.mode == Props.RunModes.Development =>

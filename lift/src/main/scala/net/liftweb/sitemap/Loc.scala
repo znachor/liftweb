@@ -122,7 +122,9 @@ trait Loc[ParamType] {
     else Empty
   }
 
-  private def testAccess(withTA: Boolean): Either[Boolean, Box[LiftResponse]] = {
+  def testAccess: Either[Boolean, Box[LiftResponse]] = accessTestRes.is
+
+  protected def _testAccess = {
     def testParams(what: List[Loc.LocParam]): Either[Boolean, Box[LiftResponse]] = what match {
       case Nil => Left(true)
 
@@ -134,7 +136,7 @@ trait Loc[ParamType] {
         if (test()) Right(Full(msg()))
         else testParams(xs)
 
-      case Loc.TestAccess(func) :: xs if withTA =>
+      case Loc.TestAccess(func) :: xs =>
         func() match {
           case Full(resp) => Right(Full(resp))
           case _ => testParams(xs)
@@ -142,13 +144,32 @@ trait Loc[ParamType] {
 
       case x :: xs => testParams(xs)
     }
-     testParams(params) match {
+    testParams(params) match {
       case Left(true) => _menu.testParentAccess
       case x => x
     }
   }
+  
+  protected object accessTestRes extends 
+  RequestVar[Either[Boolean, Box[LiftResponse]]](_testAccess) {
+    override val __nameSalt = randomString(10)
+  }
 
-  def testAccess: Either[Boolean, Box[LiftResponse]] = testAccess(true)
+  def earlyResponse: Box[LiftResponse] = {
+    def early(what: List[Loc.LocParam]): Box[LiftResponse] = what match {
+      case Nil => Empty
+
+      case Loc.EarlyResponse(func) :: xs =>
+        func() match {
+          case Full(r) => Full(r)
+          case _ => early(xs)
+        }
+
+      case x :: xs => early(xs)
+    }
+    early(params)
+  }
+
   /**
    * Is there a template assocaited with this Loc?
    */
@@ -242,7 +263,7 @@ trait Loc[ParamType] {
   }
 
   private[sitemap] def buildItem(kids: List[MenuItem], current: Boolean, path: Boolean): Box[MenuItem] =
-  (calcHidden(kids), testAccess(false)) match {
+  (calcHidden(kids), testAccess) match {
     case (false, Left(true)) =>
       for {p <- (forceParam or foundParam.is or defaultParams)
            t <- link.createLink(p)}
@@ -379,10 +400,16 @@ object Loc {
 
   /**
    * Allows extra access testing for a given menu location such that
-   * you can build a menu that is displayed but redirects the user to a login
-   * page if they are not logged in
+   * you can generically return a response during access control
+   * testing
    */
   case class TestAccess(func: () => Box[LiftResponse]) extends LocParam
+
+  /**
+   * Allows you to generate an early response for the location rather than
+   * going through the whole Lift XHTML rendering pipeline
+   */
+  case class EarlyResponse(func: () => Box[LiftResponse]) extends LocParam
 
   /**
    * Tests to see if the request actually matches the requirements for access to

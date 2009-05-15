@@ -46,6 +46,9 @@ object LiftRules {
   type ExceptionHandlerPF = PartialFunction[(Props.RunModes.Value, Req, Throwable), LiftResponse]
   type ResourceBundleFactoryPF = PartialFunction[(String,Locale), ResourceBundle]
 
+  // access the object to work around Scala actor memory retention problems
+  PointlessActorToWorkAroundBug
+
   /**
    * A partial function that allows the application to define requests that should be
    * handled by lift rather than the default servlet handler
@@ -782,7 +785,9 @@ object LiftRules {
    */
   val onBeginServicing = RulesSeq[Req => Unit]
 
-  val beginRenderingHtml = new RulesSeq[Req => Box[LiftResponse]] with FirstBox[Req, LiftResponse]
+val preAccessControlResponse_!! = new RulesSeq[Req => Box[LiftResponse]] with FirstBox[Req, LiftResponse]
+
+  val earlyResponse = new RulesSeq[Req => Box[LiftResponse]] with FirstBox[Req, LiftResponse]
 
   /**
    * Holds user function hooks when the request was processed
