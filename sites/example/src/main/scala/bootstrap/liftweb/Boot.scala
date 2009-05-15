@@ -265,53 +265,6 @@ object SessionInfoDumper extends Actor {
             Log.info("[MEMDEBUG] At "+dateStr+" Number of open sessions: "+sessions.size)
             Log.info("[MEMDEBUG] Free Memory: "+pretty(rt.freeMemory))
             Log.info("[MEMDEBUG] Total Memory: "+pretty(rt.totalMemory))
-            if (!Props.inGAE) {
-              try {
-                val agc = ActorGC
-                agc.synchronized {
-                  val rsf = agc.getClass.getDeclaredField("refSet")
-                  rsf.setAccessible(true)
-                  rsf.get(agc) match {
-                    case h: scala.collection.mutable.HashSet[Reference[Object]] =>
-                      Log.info("[MEMDEBUG] got the actor refSet... length: "+h.size)
-
-                      val nullRefs = h.elements.filter(f => f.get eq null).toList
-
-                      nullRefs.foreach(r => h -= r)
-
-                      val nonNull = h.elements.filter(f => f.get ne null).toList
-
-                      Log.info("[MEMDEBUG] got the actor refSet... non null elems: "+
-                               nonNull.size)
-                    
-                      nonNull.foreach{r =>
-                        val a = r.get.getClass.getDeclaredField("exiting")
-                        a.setAccessible(true)
-                        if (a.getBoolean(r.get)) {
-                          h -= r
-                          r.clear
-                        } else Log.info("[ACTORINFO] class "+r.get)
-                      }
-
-                      Log.info("[MEMDEBUG] (again) got the actor refSet... length: "+h.size)
-
-
-                      val tfa = h.getClass.getDeclaredField("table")
-                      tfa.setAccessible(true)
-                      tfa.get(h) match {
-                        case ao: Array[Object] =>
-                          Log.info("[MEMDEBUG] hashset table length "+ao.size)
-                          Log.info("[MEMDEBUG] hashset table non-null length "+ao.filter(_ ne null).size)
-                        case _ =>
-                      }
-
-                    case _ =>
-                  }
-                }
-              } catch {
-                case e => Log.error("[MEMDEBUG] failure", e)
-              }
-            }
           }
       }
     }

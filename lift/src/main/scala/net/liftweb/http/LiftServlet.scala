@@ -658,6 +658,13 @@ class LiftFilter extends Filter with LiftFilterTrait
 object PointlessActorToWorkAroundBug extends Actor {
   import scala.collection.mutable.HashSet
   import java.lang.ref.Reference
+  import java.lang.reflect.Field
+
+  private def findField(in: Class[_], name: String): Box[Field] =
+  in match {
+    case null => Empty
+    case in => tryo(in.getDeclaredField(name)) or findField(in.getSuperclass, name)
+  }
 
   def act = loop {
     react {
@@ -684,12 +691,16 @@ object PointlessActorToWorkAroundBug extends Actor {
                           nonNull.size)
 
                 nonNull.foreach{r =>
-                  val a = r.get.getClass.getDeclaredField("exiting")
-                  a.setAccessible(true)
-                  if (a.getBoolean(r.get)) {
-                    h -= r
-                    r.clear
-                  } 
+                  for
+                  {
+                    a <- findField(r.get.getClass, "exiting")
+                  } {
+                    a.setAccessible(true)
+                    if (a.getBoolean(r.get)) {
+                      h -= r
+                      r.clear
+                    }
+                  }
                 }
 
                 Log.trace("[MEMDEBUG] (again) got the actor refSet... length: "+h.size)
