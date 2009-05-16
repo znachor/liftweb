@@ -36,7 +36,6 @@ object HeadHelper {
   def removeHtmlDuplicates(in: NodeSeq): NodeSeq = {
     var jsSources = new ListBuffer[NodeSeq]
     var hrefs = new ListBuffer[NodeSeq]
-    var seenNodes = new ListBuffer[NodeSeq]
 
     Text("\n\t") ++ (in flatMap { e =>
        val src = e.attributes("src")
@@ -51,8 +50,7 @@ object HeadHelper {
 
          case e: Text if (e.text.trim.length == 0) => NodeSeq.Empty
 
-         case e if (seenNodes contains e) => NodeSeq.Empty
-         case e => seenNodes += e; e
+         case e => e
       }
     }).flatMap(e => e ++ Text("\n\t"))
   }
