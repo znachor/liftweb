@@ -46,8 +46,10 @@ object LiftRules {
   type ExceptionHandlerPF = PartialFunction[(Props.RunModes.Value, Req, Throwable), LiftResponse]
   type ResourceBundleFactoryPF = PartialFunction[(String,Locale), ResourceBundle]
 
-  // access the object to work around Scala actor memory retention problems
-  PointlessActorToWorkAroundBug
+  if (!Props.inGAE) {
+    // access the object to work around Scala actor memory retention problems
+    PointlessActorToWorkAroundBug
+  }
 
   /**
    * A partial function that allows the application to define requests that should be
