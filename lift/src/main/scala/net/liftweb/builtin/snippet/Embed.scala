@@ -27,7 +27,7 @@ object Embed extends DispatchSnippet {
     case _ => render _
   }
 
-  def render(kids: NodeSeq) : NodeSeq = 
+  def render(kids: NodeSeq) : NodeSeq =
   (for {
       ctx <- S.session ?~ ("FIX"+"ME: session is invalid")
       what <- S.attr ~ ("what") ?~ ("FIX" + "ME The 'what' attribute not defined")

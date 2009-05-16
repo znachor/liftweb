@@ -51,9 +51,9 @@ class Chat extends CometActor with CometListener {
   // render the input area by binding the
   // appropriate dynamically generated code to the
   // view supplied by the template
-  override lazy val fixedRender: Box[NodeSeq] = 
+  override lazy val fixedRender: Box[NodeSeq] =
   ajaxForm(After(100, SetValueAndFocus(infoIn, "")),
-           bind("chat", inputArea, 
+           bind("chat", inputArea,
                 "input" -> text("", sendMessage _, "id" -> infoIn)))
 
   // send a message to the chat server
@@ -69,7 +69,7 @@ class Chat extends CometActor with CometListener {
   private def displayList(in: NodeSeq): NodeSeq = chats.reverse.flatMap(line)
 
   // render the whole list of chats
-  override def render = 
+  override def render =
   bind("chat", bodyArea,
        "name" -> userName,
        AttrBindParam("id", Text(infoId), "id"),

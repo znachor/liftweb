@@ -92,5 +92,5 @@ class LongTime extends CometActor {
       <span>Your job is complete.  <a href={where}>Click Me</a></span>
     case _ =>
       <span>We're working on your job... it's {progress}% complete</span>
-  }  
+  }
 }

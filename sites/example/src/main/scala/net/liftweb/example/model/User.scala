@@ -25,7 +25,7 @@ object User extends User with KeyedMetaMapper[Long, User] {
   override def dbTableName = "users" // define the DB table name
 
   // define the order fields will appear in forms and output
-  override lazy val fieldOrder = List(id, firstName, lastName, 
+  override lazy val fieldOrder = List(id, firstName, lastName,
 				      email, password, textArea)
 }
 

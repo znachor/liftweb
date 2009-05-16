@@ -130,7 +130,7 @@ class Misc {
   );
 
 
-  def lang(xhtml: Group): NodeSeq = 
+  def lang(xhtml: Group): NodeSeq =
   bind("showLoc", xhtml,
        "lang" -> locale.getDisplayLanguage(locale),
        "select" -> selectObj(locales.map(lo => (lo, lo.getDisplayName)),

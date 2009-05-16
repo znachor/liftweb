@@ -77,7 +77,7 @@ object S extends HasParams {
    * The CookieHolder class holds information about cookies to be sent during
    * the session, as well as utility methods for adding and deleting cookies. It
    * is used internally.
-   * 
+   *
    * @see #_responseCookies
    * @see #_init
    * @see #addCookie
@@ -112,7 +112,7 @@ object S extends HasParams {
   private val _request = new ThreadGlobal[Req]
 
   /**
-   * Holds the current functions mappings for this session. 
+   * Holds the current functions mappings for this session.
    *
    * @see #functionMap
    * @see #addFunctionMap
@@ -205,7 +205,7 @@ object S extends HasParams {
 
   /**
    * Finds a cookie with the given name that was sent in the request.
-   * 
+   *
    * @param name - the name of the cookie to find
    *
    * @return Full(cookie) if the cookie exists, Empty otherwise
@@ -251,7 +251,7 @@ object S extends HasParams {
 
   /**
    * Deletes the cookie from the user's browser.
-   * 
+   *
    * @param cookie the Cookie to delete
    *
    * @see javax.servlet.http.Cookie
@@ -266,7 +266,7 @@ object S extends HasParams {
 
   /**
    * Deletes the cookie from the user's browser.
-   * 
+   *
    * @param name the name of the cookie to delete
    *
    * @see javax.servlet.http.Cookie
@@ -293,7 +293,7 @@ object S extends HasParams {
 
   /**
    * Returns the Locale for this request based on the LiftRules.localeCalculator
-   * method. 
+   * method.
    *
    * @see LiftRules.localeCalculator(HttpServletRequest)
    * @see java.util.Locale
@@ -393,7 +393,7 @@ object S extends HasParams {
    * addHighLevelSessionDispatcher for an example of usage.
    *
    * @param name The name of the custom dispatch to be removed.
-   * 
+   *
    * @see LiftRules.DispatchPF
    * @see LiftRules.dispatch
    * @see #addHighLevelSessionDispatcher
@@ -405,7 +405,7 @@ object S extends HasParams {
   /**
    * Clears all custom dispatch functions from the current session. See
    * addHighLevelSessionDispatcher for an example of usage.
-   * 
+   *
    * @see LiftRules.DispatchPF
    * @see LiftRules.dispatch
    * @see #addHighLevelSessionDispatcher
@@ -425,7 +425,7 @@ object S extends HasParams {
   session map (_.sessionRewriter.toList.map(t => RewriteHolder(t._1, t._2))) openOr Nil
 
   // TODO : More API docs - DCB
-  
+
   def addSessionRewriter(name: String, rw: LiftRules.RewritePF) =
   session map (_.sessionRewriter += (name -> rw))
 

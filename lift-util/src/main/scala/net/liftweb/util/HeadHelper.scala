@@ -16,6 +16,7 @@ package net.liftweb.util
 
 import _root_.scala.xml._
 import _root_.scala.xml.transform._
+import _root_.scala.collection.mutable.ListBuffer
 
 import Helpers._
 
@@ -29,34 +30,50 @@ object HeadHelper {
   def identity(xml: NodeSeq) : NodeSeq = xml
 
   /**
+   * Removes duplicate node but treats <stript> and <link> tags differently. <script> containing the
+   * same src attribute and <link> containing the same href attribute value are considered duplicates.
+   */
+  def removeHtmlDuplicates(in: NodeSeq): NodeSeq = {
+    var jsSources = new ListBuffer[NodeSeq]
+    var hrefs = new ListBuffer[NodeSeq]
+    var seenNodes = new ListBuffer[NodeSeq]
+
+    Text("\n\t") ++ (in flatMap { e =>
+       val src = e.attributes("src")
+       val href = e.attributes("href")
+
+       e match {
+         case e : Elem if (e.label == "script") && (src != null) && (jsSources contains src) => NodeSeq.Empty
+         case e : Elem if (e.label == "script") && (src != null) &&  (!(jsSources contains src)) => jsSources += src; e
+
+         case e : Elem if (e.label == "link") && (href != null) && (hrefs contains href) => NodeSeq.Empty
+         case e : Elem if (e.label == "link") && (href != null) && !(hrefs contains href)=> hrefs += href; e
+
+         case e: Text if (e.text.trim.length == 0) => NodeSeq.Empty
+
+         case e if (seenNodes contains e) => NodeSeq.Empty
+         case e => seenNodes += e; e
+      }
+    }).flatMap(e => e ++ Text("\n\t"))
+  }
+
+
+  /**
    * This method finds all &lt;head&gt; tags that are descendants of
    * &lt;body&gt; tags in the specified NodeSequence and merges
    * the contents of those tags into the &lt;head&gt; tag closest
    * to the root of the XML tree.
    */
   def mergeToHtmlHead(xhtml: NodeSeq) : NodeSeq = {
-    def trimText(in: NodeSeq): NodeSeq = in flatMap {
-      case e: Elem =>
-        Elem(e.prefix, e.label, e.attributes, e.scope, trimText(e.child) :_*)
-
-      case g: Group =>
-        trimText(g.child)
-
-      case t: Text =>
-        val s = t.text.trim
-        if (s.length == 0) NodeSeq.Empty
-        Text(s)
-
-      case x => x
-    }
 
     val headInBody: NodeSeq =
     (for (body <- xhtml \ "body";
-          head <- findElems(body)(_.label == "head")) yield trimText(head.child)).
-    toList.removeDuplicates.flatMap(a => a)
+          head <- findElems(body)(_.label == "head")) yield head.child).
+      flatMap {e => e}
 
-    if (headInBody.isEmpty) xhtml
-    else {
+    if (headInBody.isEmpty) {
+      xhtml
+    } else {
       def xform(in: NodeSeq, inBody: Boolean): NodeSeq = in flatMap {
         case e: Elem if !inBody && e.label == "body" =>
           Elem(e.prefix, e.label, e.attributes, e.scope, xform(e.child, true) :_*)
@@ -65,7 +82,7 @@ object HeadHelper {
 
         case e: Elem if e.label == "head" =>
           Elem(e.prefix, e.label, e.attributes,
-               e.scope, e.child ++ headInBody :_*)
+               e.scope, removeHtmlDuplicates(e.child ++ headInBody) :_*)
 
         case e: Elem =>
           Elem(e.prefix, e.label, e.attributes, e.scope, xform(e.child, inBody) :_*)

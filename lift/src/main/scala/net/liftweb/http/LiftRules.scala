@@ -285,7 +285,9 @@ object LiftRules {
           "comet" -> Comet, "form" -> Form, "ignore" -> Ignore, "loc" -> Loc,
           "surround" -> Surround,
           "test_cond" -> TestCond,
-          "embed" -> Embed))
+          "embed" -> Embed,
+          "tail" -> Tail
+      ))
   }
   setupSnippetDispatch()
 
@@ -346,9 +348,9 @@ object LiftRules {
    */
   var localeCalculator: Box[HttpServletRequest] => Locale = defaultLocaleCalculator _
 
-  def defaultLocaleCalculator(request: Box[HttpServletRequest]) = 
-  request.flatMap(_.getLocale() match
-                  {case null => Empty
+  def defaultLocaleCalculator(request: Box[HttpServletRequest]) =
+    request.flatMap(_.getLocale() match {
+      case null => Empty
       case l: Locale => Full(l)}).openOr(Locale.getDefault())
 
   var resourceBundleFactories = RulesSeq[ResourceBundleFactoryPF]
@@ -787,7 +789,7 @@ object LiftRules {
    */
   val onBeginServicing = RulesSeq[Req => Unit]
 
-val preAccessControlResponse_!! = new RulesSeq[Req => Box[LiftResponse]] with FirstBox[Req, LiftResponse]
+  val preAccessControlResponse_!! = new RulesSeq[Req => Box[LiftResponse]] with FirstBox[Req, LiftResponse]
 
   val earlyResponse = new RulesSeq[Req => Box[LiftResponse]] with FirstBox[Req, LiftResponse]
 

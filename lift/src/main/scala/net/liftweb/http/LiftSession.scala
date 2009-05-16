@@ -230,9 +230,11 @@ object SessionMaster extends Actor {
       }
     }
   }
-
-
 }
+
+object TailVar extends RequestVar[NodeSeq](NodeSeq.Empty)
+
+object PageName extends RequestVar[String]("")
 
 object RenderVersion {
   private object ver extends RequestVar({
@@ -490,13 +492,16 @@ class LiftSession(val contextPath: String, val uniqueId: String,
               case Left(true) =>
                 cleanUpBeforeRender
 
-              (request.location.flatMap(_.earlyResponse) or
-              LiftRules.earlyResponse.firstFull(request)) or {
+                PageName(request.uri+" -> "+request.path)
+
+                (request.location.flatMap(_.earlyResponse) or
+                LiftRules.earlyResponse.firstFull(request)) or {
                 ((locTemplate or findVisibleTemplate(request.path, request)).
-                 map(xml => processSurroundAndInclude(request.uri+" -> "+request.path, xml)) match {
+                 map(xml => processSurroundAndInclude(PageName get, xml)) match {
                     case Full(rawXml: NodeSeq) => {
 
                         val xml = HeadHelper.mergeToHtmlHead(rawXml)
+
                         val cometXform: List[RewriteRule] =
                         if (LiftRules.autoIncludeComet(this))
                         allElems(xml, !_.attributes.filter{case p: PrefixedAttribute => (p.pre == "lift" && p.key == "when")
@@ -524,12 +529,12 @@ class LiftSession(val contextPath: String, val uniqueId: String,
                           case _ => cometXform
                         }
 
-                        val ajaxXform: List[RewriteRule] = if (LiftRules.autoIncludeAjax(this)) new AddAjaxToBody() :: liftGC
-                        else liftGC
+                        val transformers: List[RewriteRule] = new AddTailToBody :: (if (LiftRules.autoIncludeAjax(this)) new AddAjaxToBody() :: liftGC
+                        else liftGC)
 
 
-                        val realXml = if (ajaxXform.isEmpty) xml
-                        else (new RuleTransformer(ajaxXform :_*)).transform(xml)
+                        val realXml = if (transformers.isEmpty) xml
+                        else (new RuleTransformer(transformers :_*)).transform(xml)
 
                         notices = Nil
                         Full(LiftRules.convertResponse((realXml,
@@ -800,7 +805,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
                   val ar: Array[AnyRef] = List(Group(kids)).toArray
                   ((invokeMethod(inst.getClass, inst, method, ar)) or invokeMethod(inst.getClass, inst, method)) match {
                     case CheckNodeSeq(md) => md
-                    case it => 
+                    case it =>
                       reportSnippetError(page, snippetName,
                                          LiftRules.SnippetFailures.MethodNotFound,
                                          wholeTag)
@@ -869,7 +874,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
         case _ => processSnippet(page, Empty , elm.attributes, elm, elm.child)
       }
     case ("with-param", _, _, _, _) => NodeSeq.Empty
-    case (snippetInfo, elm, metaData, kids, page) => 
+    case (snippetInfo, elm, metaData, kids, page) =>
       processSnippet(page, Full(snippetInfo), metaData, elm, kids)
   }
 
@@ -884,10 +889,10 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   in.flatMap{
     v =>
     v match {
-      case Group(nodes) => 
+      case Group(nodes) =>
         Group(processSurroundAndInclude(page, nodes))
 
-      case elm: Elem if elm.prefix == "lift" || elm.prefix == "lift-tag" || elm.prefix == "l"=> 
+      case elm: Elem if elm.prefix == "lift" || elm.prefix == "lift-tag" || elm.prefix == "l"=>
         S.setVars(elm.attributes){
           processSurroundAndInclude(page, NamedPF((elm.label, elm, elm.attributes,
                                                    asNodeSeq(elm.child), page),
@@ -900,7 +905,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
       case _ => v
     }
   }
-  
+
   /**
    * A nicely named proxy for processSurroundAndInclude.  This method processes
    * a Lift template
@@ -1023,23 +1028,37 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     }
   }
 
-  class AddLiftGCToBody(val pageName: String) extends RewriteRule {
+  trait BodyRewrite extends RewriteRule {
     private var doneBody = false
+
+    override def transform(n: Node) = n match {
+      case e: Elem if e.label == "body" && !doneBody =>
+        doneBody = true
+        rewriteBody(e)
+      case n => n
+    }
+
+    def rewriteBody(n: Node) : NodeSeq
+  }
+
+  class  AddTailToBody extends BodyRewrite {
+     override def rewriteBody(n: Node) = n match {
+      case e: Elem =>
+        Elem(null, "body", e.attributes, e.scope, (e.child ++ HeadHelper.removeHtmlDuplicates(TailVar.get)) :_*)
+    }
+  }
+
+  class AddLiftGCToBody(val pageName: String) extends BodyRewrite {
 
     import js._
     import JsCmds._
     import JE._
 
-    override def transform(n: Node) = n match {
-
-
-      case e: Elem if e.label == "body" && !doneBody =>
-        doneBody = true
+    override def rewriteBody(n: Node) = n match {
+      case e: Elem =>
         Elem(null, "body", e.attributes,  e.scope, (e.child ++
                                                     JsCmds.Script(OnLoad(JsRaw("lift_successRegisterGC()")) &
                                                                   JsCrVar("lift_page", pageName))) :_*)
-
-      case n => n
     }
   }
 
@@ -1176,10 +1195,10 @@ object TemplateFinder {
 
           val se = suffixes.elements
           val sl = List("_"+locale.toString, "_"+locale.getLanguage, "")
-          
+
           var found = false
           var ret: NodeSeq = null
-          
+
           while (!found && se.hasNext) {
             val s = se.next
             val le = sl.elements
@@ -1196,7 +1215,7 @@ object TemplateFinder {
               }
             }
           }
-          
+
           if (found) Full(ret)
           else lookForClasses(places)
       }

@@ -45,14 +45,14 @@ class DivSelector extends StatefulSnippet {
                "checkbox" -> checkbox(value, v => whichDivs(num) = v))}))
 
   def selectDivs(in: NodeSeq): NodeSeq = {
-    def calcNum(in: String): Box[Int] = 
+    def calcNum(in: String): Box[Int] =
       if (in.startsWith("num_")) asInt(in.substring(4))
       else Empty
 
     for {
       div <- in \\ "div" // select the div tags
       id = (div \ "@id").text // get their id
-      num <- calcNum(id) if whichDivs(num) // filter 
+      num <- calcNum(id) if whichDivs(num) // filter
     } yield div
   }
 }

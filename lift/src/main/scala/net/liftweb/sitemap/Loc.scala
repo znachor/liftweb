@@ -149,8 +149,8 @@ trait Loc[ParamType] {
       case x => x
     }
   }
-  
-  protected object accessTestRes extends 
+
+  protected object accessTestRes extends
   RequestVar[Either[Boolean, Box[LiftResponse]]](_testAccess) {
     override val __nameSalt = randomString(10)
   }

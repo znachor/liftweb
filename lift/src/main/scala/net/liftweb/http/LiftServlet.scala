@@ -338,7 +338,7 @@ class LiftServlet extends HttpServlet {
 
         case BreakOut =>
           this ! 'byebye
-          
+
           actors.foreach{case (act, _) => tryo(act ! Unlisten(ListenerId(seqId)))}
           try {
             LiftRules.resumeRequest(
@@ -354,13 +354,6 @@ class LiftServlet extends HttpServlet {
         case _ =>
       }
     }
-
-    /*
-     override protected def finalize() {
-     pr intln("Finalizing "+this)
-     super.finalize()
-     }
-     */
 
     override def toString = "Actor dude "+seqId
   }
@@ -716,7 +709,7 @@ object PointlessActorToWorkAroundBug extends Actor {
       case _ =>
     }
   }
-  
+
   private def ctor() {
     this.start
     ping()

@@ -73,7 +73,7 @@ class Boot {
      */
     LiftRules.ajaxEnd =
     Full(() => LiftRules.jsArtifacts.hide("ajax-loader").cmd)
-   
+
     LiftRules.early.append(makeUtf8)
 
     LiftSession.onBeginServicing = RequestLogger.beginServicing _ ::
