@@ -238,6 +238,32 @@ object S extends HasParams {
    * If you wish to delete a Cookie as part of the Response, use the deleteCookie
    * method.
    *
+   * An example of adding and removing a Cookie is:
+   *
+   * <pre>
+   * import javax.servlet.http.Cookie
+   *
+   * class MySnippet {
+   *   final val cookieName = "Fred"
+   * 
+   *   def cookieDemo (xhtml : NodeSeq) : NodeSeq = {
+   *     var cookieVal = S.findCookie(cookieName).map(_.getvalue) openOr ""
+   * 
+   *     def setCookie() {
+   *       val cookie = new Cookie(cookieName, cookieVal)
+   *       cookie.setMaxAge(3600) // 3600 seconds, or one hour
+   *       S.addCookie(cookie)
+   *     }
+   *
+   *     bind("cookie", xhtml,
+   *          "value" -> SHtml.text(cookieVal, cookieVal = _),
+   *          "add" -> SHtml.submit("Add", setCookie)
+   *          "remove" -> SHtml.link(S.uri, () => S.deleteCookie(cookieName), "Delete Cookie")
+   *     )
+   *   }
+   * }
+   * </pre>
+   *
    * @see javax.servlet.http.Cookie
    * @see #deleteCookie(Cookie)
    * @see #deleteCookie(String)
@@ -377,6 +403,9 @@ object S extends HasParams {
    *   }
    * </pre>
    *
+   * It's important to note that per-session dispatch takes precedence over
+   * LiftRules.dispatch, so you can override things set there.
+   *
    * @param name A name for the dispatch. This can be used to remove it later by name.
    * @param disp The dispatch partial function
    *
@@ -424,26 +453,111 @@ object S extends HasParams {
   def sessionRewriter: List[RewriteHolder] =
   session map (_.sessionRewriter.toList.map(t => RewriteHolder(t._1, t._2))) openOr Nil
 
-  // TODO : More API docs - DCB
-  
+  /**
+   * Adds a per-session rewrite function. This can be used if you only want a particular rewrite
+   * to be valid within a given session. Per-session rewrites take priority over rewrites set in
+   * LiftRules.rewrite, so you can use this mechanism to override global functionality. For example,
+   * you could set up a global rule to make requests for the "account profile" page go back to the home
+   * page by default:
+   *
+   * <pre>
+   * package bootstrap.liftweb
+   * ... imports ...
+   * class Boot {
+   *   def boot {
+   *     LiftRules.rewrite.append {
+   *       case RewriteRequest(ParsePath(List("profile")), _, _, _) =>
+   *         RewriteResponse(List("index"))
+   *     }
+   *   }
+   * }
+   * </pre>
+   *
+   * Then, in your login snippet, you could set up a per-session rewrite to the correct template:
+   *
+   * <pre>
+   * def loginSnippet (xhtml : NodeSeq) : NodeSeq = {
+   *   ...
+   *   def doLogin () {
+   *     ...
+   *     S.addSessionRewriter("profile", {
+   *       case RewriteRequest(ParsePath(List("profile")), _, _, _) =>
+   *         RewriteResponse(List("viewProfile"), Map("user" -> user.id))
+   *     }
+   *     ...
+   *   }
+   *   ...
+   * }
+   * </pre>
+   *
+   * And in your logout snippet you can remove the rewrite:
+   *
+   * <pre>
+   *   def doLogout () {
+   *     S.removeSessionRewriter("profile")
+   *     // or
+   *     S.clearSessionRewriter
+   *   }
+   * </pre>
+   *   
+   *
+   * @param name A name for the rewrite function so that it can be replaced or deleted later.
+   * @rw The rewrite partial function
+   *
+   * @see LiftRules.rewrite
+   * @see #sessionRewriter
+   * @see #removeSessionRewriter
+   * @see #clearSessionRewriter
+   */
   def addSessionRewriter(name: String, rw: LiftRules.RewritePF) =
   session map (_.sessionRewriter += (name -> rw))
 
+  /**
+   * Removes the given per-session rewriter. See addSessionRewriter for an
+   * example of usage.
+   *
+   * @see LiftRules.rewrite
+   * @see #addSessionRewriter
+   * @see #clearSessionRewriter
+   */
   def removeSessionRewriter(name: String) =
   session map (_.sessionRewriter -= name)
 
+  /**
+   * Clears the per-session rewrite table. See addSessionRewriter for an
+   * example of usage.
+   *
+   * @see LiftRules.rewrite
+   * @see #addSessionRewriter
+   * @see #removeSessionRewriter
+   */
   def clearSessionRewriter = session map (_.sessionRewriter.clear)
 
   /**
-   * Test the current request to see if it's a POST
+   * Test the current request to see if it's a POST. This is a thin wrapper
+   * over Req.post_?
+   *
+   * @return <code>true</code> if the request is a POST request, <code>false</code>
+   * otherwise.
    */
   def post_? = request.map(_.post_?).openOr(false)
 
   /**
-   * Localize the incoming string based on a resource bundle for the current locale
-   * @param str the string or ID to localize (the default value is the
+   * Localize the incoming string based on a resource bundle for the current locale. The
+   * localized string is converted to an XML element if necessary via the <code>LiftRules.localizeStringToXml</code>
+   * function (the default behavior is to wrap it in a Text element). If the lookup fails for a given resource
+   * bundle (e.g. a null is returned), then the <code>LiftRules.localizationLookupFailureNotice</code>
+   * function is called with the input string and locale.
+   * 
+   * @param str the string or ID to localize
    *
-   * @return the localized XML or Empty if there's no way to do localization
+   * @return A Full box containing the localized XML or Empty if there's no way to do localization
+   *
+   * @see #locale
+   * @see #resourceBundles
+   * @see LiftRules.localizeStringToXml
+   * @see LiftRules.localizationLookupFailureNotice
+   * @see #loc(String,NodeSeq)
    */
   def loc(str: String): Box[NodeSeq] =
   resourceBundles.flatMap(r => tryo(r.getObject(str) match {
@@ -457,7 +571,24 @@ object S extends HasParams {
       }).flatMap(s => s)).find(e => true)
 
   /**
-   * Get the resource bundle for the current locale
+   * Localize the incoming string based on a resource bundle for the current locale,
+   * with a default value to to return if localization fails.
+   * 
+   * @param str the string or ID to localize
+   * @param dflt the default string to return if localization fails
+   *
+   * @return the localized XHTML or default value
+   *
+   * @see #loc(String)
+   */
+  def loc(str: String, dflt: NodeSeq): NodeSeq = loc(str).openOr(dflt)
+
+  /**
+   * Get a List of the resource bundles for the current locale. The resource bundles are defined by
+   * the LiftRules.resourceNames and LiftRules.resourceBundleFactories variables.
+   *
+   * @see LiftRules.resourceNames
+   * @see LiftRules.resourceBundleFactories
    */
   def resourceBundles: List[ResourceBundle] = {
     _resBundle.value match {
@@ -474,7 +605,10 @@ object S extends HasParams {
   }
 
   /**
-   * Get the lift core resource bundle for the current locale
+   * Get the lift core resource bundle for the current locale as defined by the
+   * LiftRules.liftCoreResourceName varibale.
+   *
+   * @see LiftRules.liftCoreResourceName
    */
   def liftCoreResourceBundle: Box[ResourceBundle] =
   Box.legacyNullTest(_liftCoreResBundle.value).openOr {
@@ -484,21 +618,27 @@ object S extends HasParams {
   }
 
   /**
-   * Get a localized string or return the original string
+   * Get a localized string or return the original string.
    *
    * @param str the string to localize
    *
    * @return the localized version of the string
+   *
+   * @see #resourceBundles
    */
   def ?(str: String): String = ?!(str, resourceBundles)
 
   /**
-   * Get a localized string or return the original string
+   * Attempt to localize and then format the given string. This uses the String.format method
+   * to format the localized string.
    *
    * @param str the string to localize
    * @param params the var-arg parameters applied for string formatting
    *
-   * @return the localized version of the string
+   * @return the localized and formatted version of the string
+   *
+   * @see String.format
+   * @see #resourceBundles
    */
   def ?(str: String, params: Any *): String =
   if (params.length == 0)
@@ -522,16 +662,6 @@ object S extends HasParams {
     LiftRules.localizationLookupFailureNotice.foreach(_(str, locale));
     str
   }
-
-  /**
-   * Localize the incoming string based on a resource bundle for the current locale
-   * @param str the string or ID to localize
-   * @param dflt the default string to return if localization fails
-   *
-   * @return the localized XHTML or default value
-   */
-  def loc(str: String, dflt: NodeSeq): NodeSeq = loc(str).openOr(dflt)
-
 
   /**
    * Test the current request to see if it's a GET
