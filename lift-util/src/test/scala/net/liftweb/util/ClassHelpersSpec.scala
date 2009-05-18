@@ -79,7 +79,7 @@ object ClassHelpersSpec extends Specification with ClassHelpers with ControlHelp
       def correspondingIndexInCamelCase(name: String, i: Int) = i - underscoresNumber(name, i)
       def correspondingCharInCamelCase(name: String, i: Int): Char = camelCase(name).charAt(correspondingIndexInCamelCase(name, i))
 
-      val doesntContainUnderscores = forAllProp(underscoredStrings)((name: String) => !camelCase(name).contains('_'))
+      val doesntContainUnderscores = forAllProp(underscoredStrings)((name: String) => !camelCase(name).contains("_"))
       val isCamelCased = forAllProp(underscoredStrings) ((name: String) => {
         name.forall(_ == '_') && camelCase(name).isEmpty ||
         name.toList.zipWithIndex.forall { case (c, i) =>

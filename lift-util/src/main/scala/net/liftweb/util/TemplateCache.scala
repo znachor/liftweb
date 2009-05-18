@@ -45,7 +45,7 @@ trait TemplateCache[K, V] {
 object NoCache extends TemplateCache[(Locale, List[String]), NodeSeq] {
 
   def get(key: T): Box[NodeSeq] = Empty
-  
+
   def set(key: T, node: NodeSeq): NodeSeq = node
 
   def delete(key: T) {
@@ -67,7 +67,7 @@ TemplateCache[(Locale, List[String]), NodeSeq] {
 
   private val cache : LRU[(Locale, List[String]), NodeSeq] = new LRU(templatesCount)
   private val cacheLock = new ConcurrentLock
-  
+
   def get(key: T): Box[NodeSeq] = {
     cacheLock.read {
      cache.get(key)

@@ -35,38 +35,37 @@ object ResourceServer {
   }
 
   private var pathRewriter: PartialFunction[List[String], List[String]] = {
-     case "jquery.js" :: Nil => List("jquery-1.3.2-min.js")
-     case "json.js" :: Nil => List( "json2-min.js")
-     case "json2.js" :: Nil => List( "json2-min.js")
-     case xs => xs
+    //case "jquery.js" :: Nil =>  List("jquery-1.3.2.js") // List("jquery-1.3.2-min.js")
+    //case "json.js" :: Nil => List( "json2.js") // List( "json2-min.js")
+    //case "json2.js" :: Nil => List( "json2.js") // List( "json2-min.js")
+    case "jquery.js" :: Nil => List("jquery-1.3.2-min.js")
+    case "json.js" :: Nil => List( "json2-min.js")
+    case "json2.js" :: Nil => List( "json2-min.js")
+    case xs => xs
   }
 
   /**
-    * The base package for serving resources.  This way, resource names can't be spoofed
-    */
+   * The base package for serving resources.  This way, resource names can't be spoofed
+   */
   var baseResourceLocation = "toserve"
 
-  def findResourceInClasspath(request: Req, _uri: List[String])(): Box[LiftResponse] = {
-    for (req <- S.request;
-	 r <- {
-    val uri = _uri.filter(!_.startsWith("."))
-    if (isAllowed(uri)) {
-      val rw = baseResourceLocation :: pathRewriter(uri)
-      val path = "/"+rw.mkString("/")
-      LiftRules.getResource(path).map{url =>
-      val uc = url.openConnection
-      val mod = req.request.getHeader("if-modified-since")
-      if (mod != null && ((uc.getLastModified / 1000L) * 1000L) <= parseInternetDate(mod).getTime) InMemoryResponse(new Array[Byte](0), Nil, Nil, 304)
-      else {
-        val stream = url.openStream
-        StreamingResponse(stream, () => stream.close, uc.getContentLength,
-          List(("Last-Modified", toInternetDate(uc.getLastModified)),
-               ("Expires", toInternetDate(millis + 12.hours)),
-              ("Content-Type", detectContentType(rw.last))), Nil, HttpServletResponse.SC_OK)
-      }
-      }
-    } else Empty}) yield r
+  def findResourceInClasspath(request: Req, uri: List[String])(): Box[LiftResponse] =
+  for {
+    auri <- Full(uri.filter(!_.startsWith("."))) if isAllowed(auri)
+    rw = baseResourceLocation :: pathRewriter(auri)
+    path = rw.mkString("/", "/", "")
+    url <- LiftRules.getResource(path)
+    uc <- tryo(url.openConnection)
+  } yield
+  request.testFor304(uc.getLastModified) openOr {
+    val stream = url.openStream
+    StreamingResponse(stream, () => stream.close, uc.getContentLength,
+                      List(("Last-Modified", toInternetDate(uc.getLastModified)),
+                           ("Expires", toInternetDate(millis + 48.hours)),
+                           ("Content-Type", detectContentType(rw.last))), Nil,
+                      HttpServletResponse.SC_OK)
   }
+
 
   /**
    * detect the Content-Type of file (path) with servlet-context-defined content-types
@@ -81,17 +80,9 @@ object ResourceServer {
    */
   def detectContentType(path: String) : String = {
     // Configure response with content type of resource
-    var contentType = LiftRules.context.getMimeType(path);
-    // If not found, fall back to
-    // FileResourceStream.getContentType() that looks into
-    // system or JVM content types
-    if (contentType == null) {
-      contentType = URLConnection.getFileNameMap().getContentTypeFor(path);
-    }
-    if (contentType == null) {
-      contentType = "application/octet-stream"
-    }
-    contentType
+    ((Box !! LiftRules.context.getMimeType(path)) or
+     (Box !! URLConnection.getFileNameMap().getContentTypeFor(path))) openOr
+    "application/octet-stream"
   }
 
   private def isAllowed(path: List[String]) = allowedPaths.isDefinedAt(path) && allowedPaths(path)

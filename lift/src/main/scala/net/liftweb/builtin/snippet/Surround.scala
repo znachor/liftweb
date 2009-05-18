@@ -26,12 +26,10 @@ object Surround extends DispatchSnippet {
     case _ => render _
   }
 
-  def render(kids: NodeSeq) : NodeSeq = 
+  def render(kids: NodeSeq) : NodeSeq =
   (for {ctx <- S.session ?~ ("FIX"+"ME: Invalid session")
         req <- S.request ?~ ("FIX"+"ME: Invalid request")
     } yield {
-      val page = req.uri + " -> " + req.path
-
       val paramElements: Seq[Node] = findElems(kids)(e => {
        val oldSyntax = e.label == "with-param" && e.prefix == "lift"
        val newSyntax = e.label == "with-param" && e.prefix == "lift-tag"
@@ -46,11 +44,10 @@ object Surround extends DispatchSnippet {
       val params: Seq[(String, NodeSeq)] =
       for {e <- paramElements
            name <- e.attributes.get("name")
-      }
-      yield (name.text, ctx.processSurroundAndInclude(page, e.child))
+      } yield (name.text, ctx.processSurroundAndInclude(PageName.get, e.child))
 
       val mainParam = (S.attr.~("at").map(_.text).
-                       getOrElse("main"), ctx.processSurroundAndInclude(page, kids))
+                       getOrElse("main"), ctx.processSurroundAndInclude(PageName.get, kids))
       val paramsMap = collection.immutable.Map(params: _*) + mainParam
       ctx.findAndMerge(S.attr.~("with"), paramsMap)
 

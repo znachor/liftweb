@@ -1,26 +1,26 @@
 package net.liftweb.util
 
 /*
-* Copyright 2007-2009 WorldWide Conferencing, LLC
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ * Copyright 2007-2009 WorldWide Conferencing, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 import _root_.scala.actors.{Actor, Exit}
 import _root_.scala.actors.Actor._
 import _root_.java.util.concurrent._
 import Helpers.TimeSpan
 /**
-* The ActorPing object schedules an actor to be ping-ed with a given message at specific intervals.
-* The schedule methods return a ScheduledFuture object which can be cancelled if necessary
-*/
+ * The ActorPing object schedules an actor to be ping-ed with a given message at specific intervals.
+ * The schedule methods return a ScheduledFuture object which can be cancelled if necessary
+ */
 object ActorPing {
 
   /** The underlying <code>java.util.concurrent.ScheduledExecutor</code> */
@@ -30,7 +30,7 @@ object ActorPing {
    * Re-create the underlying <code>SingleThreadScheduledExecutor</code>
    */
   def restart: Unit = synchronized { if ((service eq null) || service.isShutdown)
-                       service = Executors.newSingleThreadScheduledExecutor(TF) }
+                                    service = Executors.newSingleThreadScheduledExecutor(TF) }
 
   /**
    * Shut down the underlying <code>SingleThreadScheduledExecutor</code>
@@ -43,26 +43,30 @@ object ActorPing {
    * @return a <code>ScheduledFuture</code> which sends the <code>msg</code> to
    * the <code>to<code> Actor after the specified TimeSpan <code>delay</code>.
    */
-  def schedule(to: Actor, msg: Any, delay: TimeSpan): ScheduledFuture[AnyRef] = {
-    val r = new _root_.java.util.concurrent.Callable[AnyRef] { def call: AnyRef = { to ! msg; null } }
+  def schedule(to: Actor, msg: Any, delay: TimeSpan): ScheduledFuture[Unit] = {
+    val r = new _root_.java.util.concurrent.Callable[Unit] {
+      def call: Unit = { Helpers.tryo( to ! msg ) }
+    }
     try {
       service.schedule(r, delay.millis, TimeUnit.MILLISECONDS)
     } catch {
-      case e => throw ActorPingException(msg + " could not be scheduled on " + to, e)
+      case e: RejectedExecutionException => throw ActorPingException(msg + " could not be scheduled on " + to, e)
     }
   }
 
   /**
-  * Schedules the sending of the message <code>msg</code> to the <code>to<code> Actor,
-  * after <code>initialDelay</code> and then subsequently every <code>delay</code> TimeSpan.
-  */
+   * Schedules the sending of the message <code>msg</code> to the <code>to<code> Actor,
+   * after <code>initialDelay</code> and then subsequently every <code>delay</code> TimeSpan.
+   */
   def scheduleAtFixedRate(to: Actor, msg: Any, initialDelay: TimeSpan, delay: TimeSpan) {
     try {
       val future = service.scheduleAtFixedRate(new _root_.java.lang.Runnable {
-        def run = {
-          to ! msg;
-        }
-      }, initialDelay.millis, delay.millis, TimeUnit.MILLISECONDS)
+          def run = {
+            Helpers.tryo {
+              to ! msg
+            }
+          }
+        }, initialDelay.millis, delay.millis, TimeUnit.MILLISECONDS)
       actor {
         self.link(to)
         self.trapExit = true
@@ -70,9 +74,11 @@ object ActorPing {
         loop {
           react {
             case UnSchedule | Exit(_, _) =>
-            future cancel(true);
-            self.unlink(to)
-            exit
+              Helpers.tryo {
+                future cancel(true)
+              }
+              self.unlink(to)
+              exit
           }
         }
       }

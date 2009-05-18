@@ -73,7 +73,7 @@ class Boot {
      */
     LiftRules.ajaxEnd =
     Full(() => LiftRules.jsArtifacts.hide("ajax-loader").cmd)
-   
+
     LiftRules.early.append(makeUtf8)
 
     LiftSession.onBeginServicing = RequestLogger.beginServicing _ ::
@@ -130,6 +130,12 @@ object MenuInfo {
        Menu(Loc("simple", Link(List("simple"), true, "/simple/index"),
                 "Simple Forms", Unless(() => Props.inGAE, "Disabled for GAE"))),
        Menu(Loc("template", List("template"), "Templates", Unless(() => Props.inGAE, "Disabled for GAE")))) ::
+  Menu(Loc("Templating", List("templating", "index"), "Templating"),
+       Menu(Loc("Surround", List("templating", "surround"), "Surround")),
+       Menu(Loc("Embed", List("templating", "embed"), "Embed")),
+       Menu(Loc("eval-order", List("templating", "eval_order"), "Evalutation Order")),
+       Menu(Loc("select-o-matuc", List("templating", "selectomatic"), "Select <div>s")),
+       Menu(Loc("head", List("templating", "head"), "<head/> tag"))) ::
   Menu(Loc("ws", List("ws"), "Web Services", Unless(() => Props.inGAE, "Disabled for GAE"))) ::
   Menu(Loc("lang", List("lang"), "Localization")) ::
   Menu(Loc("menu_top", List("menu", "index"), "Menus"),
@@ -243,6 +249,8 @@ object BrowserLogger {
 object SessionInfoDumper extends Actor {
   private var lastTime = millis
 
+   import java.lang.ref.Reference
+
   val tenMinutes: Long = 10 minutes
   def act = {
     link(ActorWatcher)
@@ -252,10 +260,11 @@ object SessionInfoDumper extends Actor {
           if ((millis - tenMinutes) > lastTime) {
             lastTime = millis
             val rt = Runtime.getRuntime
+            rt.gc
             val dateStr: String = timeNow.toString
-            Log.info("At "+dateStr+" Number of open sessions: "+sessions.size)
-            Log.info("Free Memory: "+pretty(rt.freeMemory))
-            Log.info("Total Memory: "+pretty(rt.totalMemory))
+            Log.info("[MEMDEBUG] At "+dateStr+" Number of open sessions: "+sessions.size)
+            Log.info("[MEMDEBUG] Free Memory: "+pretty(rt.freeMemory))
+            Log.info("[MEMDEBUG] Total Memory: "+pretty(rt.totalMemory))
           }
       }
     }

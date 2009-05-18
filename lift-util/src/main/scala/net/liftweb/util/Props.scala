@@ -108,7 +108,8 @@ object Props {
   /**
     * Is the system in production mode (apply full optimizations)
     */
-  lazy val productionMode: Boolean = mode == RunModes.Production
+  lazy val productionMode: Boolean = mode == RunModes.Production ||
+  mode == RunModes.Pilot || mode == RunModes.Staging
 
   /**
    * The resource path segment corresponding to the current mode.

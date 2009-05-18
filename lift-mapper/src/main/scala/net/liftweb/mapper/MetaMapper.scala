@@ -1554,8 +1554,8 @@ trait KeyedMetaMapper[Type, A<:KeyedMapper[Type, A]] extends MetaMapper[A] with 
 case class FieldHolder[T](name: String, method: Method, field: MappedField[_, T])
 
 class KeyObfuscator {
-  var to: Map[String, Map[Any, String]] = Map.empty
-  var from: Map[String, Map[String, Any]] = Map.empty
+  private var to: Map[String, Map[Any, String]] = Map.empty
+  private var from: Map[String, Map[String, Any]] = Map.empty
 
   def obscure[KeyType, MetaType <: KeyedMapper[KeyType, MetaType]](theType:
                                                                    KeyedMetaMapper[KeyType, MetaType], key: KeyType): String = synchronized {

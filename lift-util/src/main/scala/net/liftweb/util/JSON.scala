@@ -26,7 +26,7 @@ object JSONParser extends SafeSeqParser with ImplicitConversions {
      * details about the JSON format.
      *
      * In the parsed results, each JSON object is returned as a
-     * <code>Map[String,Any]</code> that maps JSON object names to JSON 
+     * <code>Map[String,Any]</code> that maps JSON object names to JSON
      * values.  Each JSON array is returned as and a <code>List[Any]</code>
      * that contains JSON objects and/or JSON arrays.
      *

@@ -323,6 +323,7 @@ class LiftServlet extends HttpServlet {
     def act = loop {
       react {
         case BeginContinuation =>
+          this.link(PointlessActorToWorkAroundBug)
           val mySelf = self
           val sendItToMe: AnswerRender => Unit = ah => mySelf ! (seqId, ah)
 
@@ -330,19 +331,25 @@ class LiftServlet extends HttpServlet {
 
         case (theId: Long, ar: AnswerRender) =>
           answers = ar :: answers
-          ActorPing.schedule(this, BreakOut, TimeSpan(5))
+          ActorPing.schedule(this, BreakOut, 5)
+
+        case 'byebye =>
+          this.exit()
 
         case BreakOut =>
-          actors.foreach{case (act, _) => act ! Unlisten(ListenerId(seqId))}
-          LiftRules.resumeRequest(
-            S.init(request, sessionActor)
-            (LiftRules.performTransform(
-                convertAnswersToCometResponse(sessionActor,
-                                              answers.toArray, actors))),
-                                                request.request)
+          this ! 'byebye
 
-          sessionActor.exitComet(this)
-          this.exit()
+          actors.foreach{case (act, _) => tryo(act ! Unlisten(ListenerId(seqId)))}
+          try {
+            LiftRules.resumeRequest(
+              S.init(request, sessionActor)
+              (LiftRules.performTransform(
+                  convertAnswersToCometResponse(sessionActor,
+                                                answers.toArray, actors))),
+                                                  request.request)
+          } finally {
+            sessionActor.exitComet(this)
+          }
 
         case _ =>
       }
@@ -540,7 +547,7 @@ trait LiftFilterTrait {
         case (httpReq: HttpServletRequest, httpRes: HttpServletResponse) =>
           tryo { LiftRules.early.toList.foreach(_(httpReq)) }
 
-          var session = Req(httpReq, LiftRules.rewriteTable(httpReq), System.nanoTime)
+          val session = Req(httpReq, LiftRules.rewriteTable(httpReq), System.nanoTime)
 
           URLRewriter.doWith(url => NamedPF.applyBox(httpRes.encodeURL(url), LiftRules.urlDecorate.toList) openOr httpRes.encodeURL(url)) {
             if (!(isLiftRequest_?(session) && actualServlet.service(httpReq, httpRes, session))) {
@@ -639,6 +646,79 @@ class LiftFilter extends Filter with LiftFilterTrait
         context.getResource(session.uri) == null
     }
   }
+}
 
+object PointlessActorToWorkAroundBug extends Actor {
+  import scala.collection.mutable.HashSet
+  import java.lang.ref.Reference
+  import java.lang.reflect.Field
+
+  private def findField(in: Class[_], name: String): Box[Field] =
+  in match {
+    case null => Empty
+    case in => tryo(in.getDeclaredField(name)) or findField(in.getSuperclass, name)
+  }
+
+  def act = loop {
+    react {
+      case "ActorBug" =>
+        try {
+          import scala.collection.mutable.HashSet
+          import java.lang.ref.Reference
+
+          val agc = ActorGC
+          agc.synchronized {
+            val rsf = agc.getClass.getDeclaredField("refSet")
+            rsf.setAccessible(true)
+            rsf.get(agc) match {
+              case h: HashSet[Reference[Object]] =>
+                Log.trace("[MEMDEBUG] got the actor refSet... length: "+h.size)
+
+                val nullRefs = h.elements.filter(f => f.get eq null).toList
+
+                nullRefs.foreach(r => h -= r)
+
+                val nonNull = h.elements.filter(f => f.get ne null).toList
+
+                Log.trace("[MEMDEBUG] got the actor refSet... non null elems: "+
+                          nonNull.size)
+
+                nonNull.foreach{r =>
+                  for
+                  {
+                    a <- findField(r.get.getClass, "exiting")
+                  } {
+                    a.setAccessible(true)
+                    if (a.getBoolean(r.get)) {
+                      h -= r
+                      r.clear
+                    }
+                  }
+                }
+
+                Log.trace("[MEMDEBUG] (again) got the actor refSet... length: "+h.size)
+
+              case _ =>
+            }
+          }
+        } catch {
+          case e => Log.error("[MEMDEBUG] failure", e)
+        }
+        ping()
+
+      case _ =>
+    }
+  }
+
+  private def ctor() {
+    this.start
+    ping()
+  }
+
+  private def ping() {
+    ActorPing.schedule(this, "ActorBug", 1 minute)
+  }
+
+  ctor()
 }
 

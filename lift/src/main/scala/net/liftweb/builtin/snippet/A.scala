@@ -18,6 +18,7 @@ package net.liftweb.builtin.snippet
 import scala.xml._
 import net.liftweb.http._
 import net.liftweb.http.js._
+import net.liftweb.util._
 
 object A extends DispatchSnippet {
 
@@ -30,6 +31,7 @@ object A extends DispatchSnippet {
   private def addAjaxHREF(): MetaData = {
     val ajax: JsExp = SHtml.makeAjaxCall(JE.Str(S.attr.~("key").map(_.text + "=true").getOrElse("")))
 
+    Log.warn("<lift:a> is deprecated ! Please consider using other approaches provided by Lift to generate links.")
     new UnprefixedAttribute("onclick", Text(ajax.toJsCmd),
                             new UnprefixedAttribute("href", Text("javascript://"),
                                                     S.attrsToMetaData(name => name != "onclick" && name != "href")

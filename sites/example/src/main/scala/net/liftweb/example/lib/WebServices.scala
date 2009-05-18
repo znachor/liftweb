@@ -41,7 +41,7 @@ object WebServices {
         User.findAll.map(_.toXml)
       }
     </all_users>)
-  
+
 
   // extract the parameters, create a user
   // return the appropriate response

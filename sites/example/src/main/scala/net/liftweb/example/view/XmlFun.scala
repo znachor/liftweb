@@ -44,7 +44,7 @@ class XmlFun extends LiftView {
 
         <p><a href='/xml_fun'>Count US addresses.</a></p>
         <p><a href='/xml_fun?country=GB'>Count GB addresses.</a></p>
-        
+
 
       </lift:surround>)
   }
@@ -58,7 +58,7 @@ class XmlFun extends LiftView {
   </address>
 
 
-  private def countryCount(toMatch: String, xml: NodeSeq) = 
+  private def countryCount(toMatch: String, xml: NodeSeq) =
   (for {
       addr <- xml \\ "address"
       country <- addr \\ "country" if country.text == toMatch}

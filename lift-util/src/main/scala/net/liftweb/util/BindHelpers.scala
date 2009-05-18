@@ -465,7 +465,7 @@ trait BindHelpers {
         Log.warn("DEPRECATE WARNING: <lift:bind> has been deprecated. Please use <lift-tag:bind> instead !")
       }
 
-      oldSyntax || newSyntax 
+      oldSyntax || newSyntax
     }
 
     xml.flatMap {

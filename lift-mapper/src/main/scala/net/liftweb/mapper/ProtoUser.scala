@@ -399,7 +399,9 @@ trait MetaMegaProtoUser[ModelType <: MegaProtoUser[ModelType]] extends KeyedMeta
       flatMap(username => getSingleton.find(By(email, username))) match {
         case Full(user) if user.validated &&
           user.password.match_?(S.param("password").openOr("*")) =>
-          logUserIn(user); S.notice(S.??("logged.in")); S.redirectTo(homePage)
+          S.notice(S.??("logged.in"))
+          logUserIn(user)
+          S.redirectTo(homePage)
 
         case Full(user) if !user.validated =>
           S.error(S.??("account.validation.error"))

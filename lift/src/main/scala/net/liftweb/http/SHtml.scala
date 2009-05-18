@@ -26,7 +26,7 @@ import _root_.scala.xml._
 
 object SHtml {
 
-  private def deferCall(data: JsExp, jsFunc: Call): Call = 
+  private def deferCall(data: JsExp, jsFunc: Call): Call =
     Call(jsFunc.function, (jsFunc.params ++ List(AnonFunc(makeAjaxCall(data)))):_*)
 
   /**
@@ -263,7 +263,7 @@ object SHtml {
   def ajaxSelect(opts: Seq[(String, String)], deflt: Box[String],
                  jsFunc: Call, func: String => JsCmd, attrs: (String, String)*): Elem =
     ajaxSelect_*(opts, deflt, Full(jsFunc), SFuncHolder(func), attrs :_*)
-  
+
   private def ajaxSelect_*(opts: Seq[(String, String)], deflt: Box[String],
                            jsFunc: Box[Call], func: AFuncHolder, attrs: (String, String)*): Elem = {
     val raw = (funcName: String, value:String) => JsRaw("'" +funcName + "=' + this.options[" + value+ ".selectedIndex].value")
@@ -441,7 +441,7 @@ object SHtml {
    */
   def untrustedSelect(opts: Seq[(String, String)], deflt: Box[String],
                       func: String => Any, attrs: (String, String)*): Elem =
-  untrustedSelect_*(opts, deflt, SFuncHolder(func))
+  untrustedSelect_*(opts, deflt, SFuncHolder(func), attrs:_*)
 
   /**
    * Create a select box based on the list with a default value and the function to be executed on

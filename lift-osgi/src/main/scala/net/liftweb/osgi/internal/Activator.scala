@@ -30,8 +30,8 @@ import org.scalamodules.core.RichBundleContext.toRichBundleContext
 
 /**
  * <p>This activator enables OSGi support for Lift.</p>
- * <p>First logging is switched to SLF4J, because Log4j does not work in 
- * OSGi space. Second a Lift extender is created watching Lift-powered 
+ * <p>First logging is switched to SLF4J, because Log4j does not work in
+ * OSGi space. Second a Lift extender is created watching Lift-powered
  * bundles (<i>Lift-Config</i> manifest header). Third a Lift HttpContext is
  * created delegating requests for resources to the Lift-powered bundles.
  * Finally a modified LiftFilter (no booting) is registered.</p>
@@ -45,7 +45,7 @@ class Activator extends BundleActivator {
 
     // Create and start Lift extender
     bundleWatcher = new BundleWatcher[ManifestEntry](
-      context, 
+      context,
       new BundleManifestScanner(new RegexKeyManifestFilter("Lift-Config")),
       LiftBundleObserver)
     bundleWatcher.start()
@@ -94,7 +94,7 @@ private object LiftBundleObserver extends BundleObserver[ManifestEntry] {
 
   type LiftBundles = Map[Bundle, LiftBundleConfig]
 
-  val liftBundles = new AtomicReference[LiftBundles](Map.empty) 
+  val liftBundles = new AtomicReference[LiftBundles](Map.empty)
 
   override def addingEntries(bundle: Bundle, entries: JList[ManifestEntry]) {
 
@@ -128,7 +128,7 @@ private object LiftBundleObserver extends BundleObserver[ManifestEntry] {
 
   private def update[T](change: LiftBundles => LiftBundles) {
     val old = liftBundles.get
-    if (!liftBundles.compareAndSet(old, change(old))) update(change) 
+    if (!liftBundles.compareAndSet(old, change(old))) update(change)
   }
 }
 
@@ -140,7 +140,7 @@ private object OsgiLiftFilter extends LiftFilter {
 }
 
 /**
- * Configuration of a Lift-powered bundle. 
+ * Configuration of a Lift-powered bundle.
  */
 private case class LiftBundleConfig(manifestEntry: ManifestEntry) {
 
@@ -151,7 +151,7 @@ private case class LiftBundleConfig(manifestEntry: ManifestEntry) {
 }
 
 /**
- * Special HttpContext that delegates resource lookups to observerd 
+ * Special HttpContext that delegates resource lookups to observerd
  * Lift-powered bundles and other methods to wrapped HttpContext.
  */
 private case class LiftHttpContext(context: HttpContext) extends HttpContext {
@@ -174,6 +174,6 @@ private case class LiftHttpContext(context: HttpContext) extends HttpContext {
     }
   }
 
-  override def handleSecurity(req: HttpServletRequest, res: HttpServletResponse) = 
+  override def handleSecurity(req: HttpServletRequest, res: HttpServletResponse) =
     context.handleSecurity(req, res)
 }

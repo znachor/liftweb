@@ -26,7 +26,7 @@ import _root_.scala.xml.Text
 class Clock extends CometActor {
   override def defaultPrefix = Full("clk")
   // schedule a ping every 10 seconds so we redraw
-  ActorPing.schedule(this, Tick, 10 seconds) 
+  ActorPing.schedule(this, Tick, 10 seconds)
 
   private lazy val spanId = uniqueId+"_timespan"
 
@@ -37,7 +37,7 @@ class Clock extends CometActor {
   override def lowPriority = {
     case Tick =>
       partialUpdate(SetHtml(spanId, Text(timeNow.toString)))
-    ActorPing.schedule(this, Tick, 10 seconds) 
+    ActorPing.schedule(this, Tick, 10 seconds)
   }
 }
 

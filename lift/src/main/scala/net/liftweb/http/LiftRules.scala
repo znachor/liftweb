@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2008 WorldWide Conferencing, LLC
+ * Copyright 2007-2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,6 +45,11 @@ object LiftRules {
   type HttpAuthProtectedResourcePF = PartialFunction[ParsePath, Box[Role]]
   type ExceptionHandlerPF = PartialFunction[(Props.RunModes.Value, Req, Throwable), LiftResponse]
   type ResourceBundleFactoryPF = PartialFunction[(String,Locale), ResourceBundle]
+
+  if (!Props.inGAE) {
+    // access the object to work around Scala actor memory retention problems
+    PointlessActorToWorkAroundBug
+  }
 
   /**
    * A partial function that allows the application to define requests that should be
@@ -280,7 +285,9 @@ object LiftRules {
           "comet" -> Comet, "form" -> Form, "ignore" -> Ignore, "loc" -> Loc,
           "surround" -> Surround,
           "test_cond" -> TestCond,
-          "embed" -> Embed))
+          "embed" -> Embed,
+          "tail" -> Tail
+      ))
   }
   setupSnippetDispatch()
 
@@ -341,7 +348,10 @@ object LiftRules {
    */
   var localeCalculator: Box[HttpServletRequest] => Locale = defaultLocaleCalculator _
 
-  def defaultLocaleCalculator(request: Box[HttpServletRequest]) = request.flatMap(_.getLocale() match {case null => Empty case l: Locale => Full(l)}).openOr(Locale.getDefault())
+  def defaultLocaleCalculator(request: Box[HttpServletRequest]) =
+    request.flatMap(_.getLocale() match {
+      case null => Empty
+      case l: Locale => Full(l)}).openOr(Locale.getDefault())
 
   var resourceBundleFactories = RulesSeq[ResourceBundleFactoryPF]
 
@@ -393,8 +403,13 @@ object LiftRules {
     else {
       val cont = getContinuation.invoke(contSupport, req, LiftRules)
       val ret = getObject.invoke(cont)
-      setObject.invoke(cont, null)
-      Some(ret)
+      try {
+        setObject.invoke(cont, null)
+        Some(ret)
+      }
+      catch {
+        case e: Exception => None
+      }
     }
   }
 
@@ -522,12 +537,22 @@ object LiftRules {
   /**
    * Obtain the resource URL by name
    */
-  def getResource(name: String): Box[_root_.java.net.URL] = resourceFinder(name) match {case null => defaultFinder(name) match {case null => Empty; case s => Full(s)} ; case s => Full(s)}
+  var getResource: String => Box[_root_.java.net.URL] = defaultGetResource _
+
+  /**
+   * Obtain the resource URL by name
+   */
+  def defaultGetResource(name: String): Box[_root_.java.net.URL] =
+  for {
+    rf <- (Box !! resourceFinder(name)) or (Box !! defaultFinder(name))
+  } yield rf
+  // resourceFinder(name) match {case null => defaultFinder(name) match {case null => Empty; case s => Full(s)} ; case s => Full(s)}
 
   /**
    * Obtain the resource InputStream by name
    */
-  def getResourceAsStream(name: String): Box[_root_.java.io.InputStream] = getResource(name).map(_.openStream)
+  def getResourceAsStream(name: String): Box[_root_.java.io.InputStream] =
+  getResource(name).map(_.openStream)
 
   /**
    * Obtain the resource as an array of bytes by name
@@ -769,6 +794,10 @@ object LiftRules {
    */
   val onBeginServicing = RulesSeq[Req => Unit]
 
+  val preAccessControlResponse_!! = new RulesSeq[Req => Box[LiftResponse]] with FirstBox[Req, LiftResponse]
+
+  val earlyResponse = new RulesSeq[Req => Box[LiftResponse]] with FirstBox[Req, LiftResponse]
+
   /**
    * Holds user function hooks when the request was processed
    */
@@ -938,6 +967,22 @@ trait RulesSeq[T] {
       rules = rules ::: List(r)
     }
     this
+  }
+}
+
+trait FirstBox[F, T] {
+  self: RulesSeq[F => Box[T]] =>
+
+  def firstFull(param: F): Box[T] = {
+    def finder(in: List[F => Box[T]]): Box[T] = in match {
+      case Nil => Empty
+      case x :: xs => x(param) match {
+          case Full(r) => Full(r)
+          case _ => finder(xs)
+        }
+    }
+
+    finder(toList)
   }
 }
 

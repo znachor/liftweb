@@ -23,8 +23,12 @@ import Helpers._
 object Form extends DispatchSnippet {
 
   def dispatch : DispatchIt = {
-    case _ => render _
+    case "render" => render _
+    case "post" => post _
   }
+
+  def post(kids: NodeSeq): NodeSeq =
+  <form method="post" action={S.uri}>{kids}</form>
 
   def render(kids: NodeSeq) : NodeSeq = Elem(null, "form", addAjaxForm, TopScope, kids : _*)
 

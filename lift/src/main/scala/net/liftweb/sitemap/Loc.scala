@@ -122,7 +122,9 @@ trait Loc[ParamType] {
     else Empty
   }
 
-  def testAccess: Either[Boolean, Box[LiftResponse]] = {
+  def testAccess: Either[Boolean, Box[LiftResponse]] = accessTestRes.is
+
+  protected def _testAccess = {
     def testParams(what: List[Loc.LocParam]): Either[Boolean, Box[LiftResponse]] = what match {
       case Nil => Left(true)
 
@@ -134,13 +136,38 @@ trait Loc[ParamType] {
         if (test()) Right(Full(msg()))
         else testParams(xs)
 
+      case Loc.TestAccess(func) :: xs =>
+        func() match {
+          case Full(resp) => Right(Full(resp))
+          case _ => testParams(xs)
+        }
+
       case x :: xs => testParams(xs)
     }
-
     testParams(params) match {
       case Left(true) => _menu.testParentAccess
       case x => x
     }
+  }
+
+  protected object accessTestRes extends
+  RequestVar[Either[Boolean, Box[LiftResponse]]](_testAccess) {
+    override val __nameSalt = randomString(10)
+  }
+
+  def earlyResponse: Box[LiftResponse] = {
+    def early(what: List[Loc.LocParam]): Box[LiftResponse] = what match {
+      case Nil => Empty
+
+      case Loc.EarlyResponse(func) :: xs =>
+        func() match {
+          case Full(r) => Full(r)
+          case _ => early(xs)
+        }
+
+      case x :: xs => early(xs)
+    }
+    early(params)
   }
 
   /**
@@ -370,6 +397,19 @@ object Loc {
    * the page is accessed.
    */
   case class Unless(test: () => Boolean, failMsg: FailMsg) extends LocParam
+
+  /**
+   * Allows extra access testing for a given menu location such that
+   * you can generically return a response during access control
+   * testing
+   */
+  case class TestAccess(func: () => Box[LiftResponse]) extends LocParam
+
+  /**
+   * Allows you to generate an early response for the location rather than
+   * going through the whole Lift XHTML rendering pipeline
+   */
+  case class EarlyResponse(func: () => Box[LiftResponse]) extends LocParam
 
   /**
    * Tests to see if the request actually matches the requirements for access to
