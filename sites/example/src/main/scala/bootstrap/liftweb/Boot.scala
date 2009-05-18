@@ -40,6 +40,7 @@ import Actor._
  */
 class Boot {
   def boot {
+
     DB.defineConnectionManager(DefaultConnectionIdentifier, DBVendor)
     LiftRules.addToPackages("net.liftweb.example")
 
