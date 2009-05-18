@@ -495,56 +495,56 @@ class LiftSession(val contextPath: String, val uniqueId: String,
                 PageName(request.uri+" -> "+request.path)
 
                 (request.location.flatMap(_.earlyResponse) or
-                LiftRules.earlyResponse.firstFull(request)) or {
-                ((locTemplate or findVisibleTemplate(request.path, request)).
-                 map(xml => processSurroundAndInclude(PageName get, xml)) match {
-                    case Full(rawXml: NodeSeq) => {
+                 LiftRules.earlyResponse.firstFull(request)) or {
+                  ((locTemplate or findVisibleTemplate(request.path, request)).
+                   map(xml => processSurroundAndInclude(PageName get, xml)) match {
+                      case Full(rawXml: NodeSeq) => {
 
-                        val xml = HeadHelper.mergeToHtmlHead(rawXml)
+                          val xml = HeadHelper.mergeToHtmlHead(rawXml)
 
-                        val cometXform: List[RewriteRule] =
-                        if (LiftRules.autoIncludeComet(this))
-                        allElems(xml, !_.attributes.filter{case p: PrefixedAttribute => (p.pre == "lift" && p.key == "when")
-                            case _ => false}.toList.isEmpty) match {
-                          case Nil => Nil
-                          case xs =>
-                            val comets: List[CometVersionPair] = xs.flatMap(x => idAndWhen(x))
-                            List(new AddScriptToBody(comets))
-                        }
-                        else Nil
+                          val cometXform: List[RewriteRule] =
+                          if (LiftRules.autoIncludeComet(this))
+                          allElems(xml, !_.attributes.filter{case p: PrefixedAttribute => (p.pre == "lift" && p.key == "when")
+                              case _ => false}.toList.isEmpty) match {
+                            case Nil => Nil
+                            case xs =>
+                              val comets: List[CometVersionPair] = xs.flatMap(x => idAndWhen(x))
+                              List(new AddScriptToBody(comets))
+                          }
+                          else Nil
 
 
-                        this.synchronized {
-                          S.functionMap.foreach {mi =>
-                            // ensure the right owner
-                            messageCallback(mi._1) = mi._2.owner match {
-                              case Empty => mi._2.duplicate(RenderVersion.get)
-                              case _ => mi._2
+                          this.synchronized {
+                            S.functionMap.foreach {mi =>
+                              // ensure the right owner
+                              messageCallback(mi._1) = mi._2.owner match {
+                                case Empty => mi._2.duplicate(RenderVersion.get)
+                                case _ => mi._2
+                              }
                             }
                           }
+
+                          val liftGC: List[RewriteRule] = LiftRules.enableLiftGC match {
+                            case true => (new AddLiftGCToBody(RenderVersion.get)) :: cometXform
+                            case _ => cometXform
+                          }
+
+                          val transformers: List[RewriteRule] = new AddTailToBody :: (if (LiftRules.autoIncludeAjax(this)) new AddAjaxToBody() :: liftGC
+                                                                                      else liftGC)
+
+
+                          val realXml = if (transformers.isEmpty) xml
+                          else (new RuleTransformer(transformers :_*)).transform(xml)
+
+                          notices = Nil
+                          Full(LiftRules.convertResponse((realXml,
+                                                          S.getHeaders(LiftRules.defaultHeaders((realXml, request))),
+                                                          S.responseCookies,
+                                                          request)))
                         }
-
-                        val liftGC: List[RewriteRule] = LiftRules.enableLiftGC match {
-                          case true => (new AddLiftGCToBody(RenderVersion.get)) :: cometXform
-                          case _ => cometXform
-                        }
-
-                        val transformers: List[RewriteRule] = new AddTailToBody :: (if (LiftRules.autoIncludeAjax(this)) new AddAjaxToBody() :: liftGC
-                        else liftGC)
-
-
-                        val realXml = if (transformers.isEmpty) xml
-                        else (new RuleTransformer(transformers :_*)).transform(xml)
-
-                        notices = Nil
-                        Full(LiftRules.convertResponse((realXml,
-                                                        S.getHeaders(LiftRules.defaultHeaders((realXml, request))),
-                                                        S.responseCookies,
-                                                        request)))
-                      }
-                    case _ => if (LiftRules.passNotFoundToChain) Empty else Full(request.createNotFound)
-                  })
-              }
+                      case _ => if (LiftRules.passNotFoundToChain) Empty else Full(request.createNotFound)
+                    })
+                }
 
               case Right(Full(resp)) => Full(resp)
               case _ if (LiftRules.passNotFoundToChain) => Empty
@@ -678,6 +678,8 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     findAnyTemplate("templates-hidden" :: splits, S.locale) or findAnyTemplate(splits, S.locale)
   }
 
+  private object snippetMap extends RequestVar[Map[String, AnyRef]](Map())
+
   private def findSnippetClass(name: String): Box[Class[AnyRef]] = {
     if (name == null) Empty
     else findClass(name, LiftRules.buildPackage("snippet") ::: ("lift.app.snippet" :: "net.liftweb.builtin.snippet" :: Nil))
@@ -778,14 +780,20 @@ class LiftSession(val contextPath: String, val uniqueId: String,
          loc <- req.location;
          func <- loc.snippet(snippet)) yield func(kids)
 
+    def locateAndCacheSnippet(cls: String): Box[AnyRef] =
+    snippetMap.is.get(cls) or {
+      val ret = LiftRules.snippet(cls) or findSnippetInstance(cls)
+      ret.foreach(s => snippetMap.is(cls) = s)
+      ret
+    }
+
     val ret: NodeSeq = snippetName.map(snippet =>
       S.doSnippet(snippet)(
         (S.locateMappedSnippet(snippet).map(_(kids)) or
          locSnippet(snippet)).openOr(
           S.locateSnippet(snippet).map(_(kids)) openOr {
             val (cls, method) = splitColonPair(snippet, null, "render")
-            (LiftRules.snippet(cls) or
-             findSnippetInstance(cls)) match {
+            (locateAndCacheSnippet(cls)) match {
 
               case Full(inst: StatefulSnippet) =>
                 if (inst.dispatch.isDefinedAt(method))
@@ -1042,7 +1050,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   }
 
   class  AddTailToBody extends BodyRewrite {
-     override def rewriteBody(n: Node) = n match {
+    override def rewriteBody(n: Node) = n match {
       case e: Elem =>
         Elem(null, "body", e.attributes, e.scope, (e.child ++ HeadHelper.removeHtmlDuplicates(TailVar.get)) :_*)
     }

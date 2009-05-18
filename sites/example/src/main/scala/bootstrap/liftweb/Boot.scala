@@ -25,7 +25,7 @@ import example._
 import comet._
 import model._
 import lib._
-import snippet.{definedLocale, Template}
+import snippet.{definedLocale, Template, AllJson}
 
 import _root_.net.liftweb.mapper.{DB, ConnectionManager, Schemifier, DefaultConnectionIdentifier, ConnectionIdentifier}
 
@@ -60,7 +60,9 @@ class Boot {
           () => Full(RedirectResponse("/login/validate"))
       })
 
-    LiftRules.snippetDispatch.append(NamedPF("Template")(Map("Template" -> Template)))
+    LiftRules.snippetDispatch.append(NamedPF("Template")
+                                     (Map("Template" -> Template,
+                                          "AllJson" -> AllJson)))
 
     /*
      * Show the spinny image when an Ajax call starts
@@ -123,7 +125,8 @@ object MenuInfo {
        Menu(Loc("ajax", List("ajax"), "AJAX Samples")),
        Menu(Loc("ajax form", List("ajax-form"), "AJAX Form")),
        Menu(Loc("js confirm", List("rhodeisland"), "Modal Dialog")),
-       Menu(Loc("json", List("json"), "JSON Messaging"))) ::
+       Menu(Loc("json", List("json"), "JSON Messaging")),
+       Menu(Loc("json_more", List("json_more"), "More JSON"))) ::
   Menu(Loc("Persistence", List("persistence"), "Persistence", Unless(() => Props.inGAE, "Disabled for GAE")),
        Menu(Loc("xml fun", List("xml_fun"), "XML Fun", Unless(() => Props.inGAE, "Disabled for GAE"))),
        Menu(Loc("database", List("database"), "Database", Unless(() => Props.inGAE, "Disabled for GAE"))),
@@ -248,8 +251,6 @@ object BrowserLogger {
 
 object SessionInfoDumper extends Actor {
   private var lastTime = millis
-
-   import java.lang.ref.Reference
 
   val tenMinutes: Long = 10 minutes
   def act = {
