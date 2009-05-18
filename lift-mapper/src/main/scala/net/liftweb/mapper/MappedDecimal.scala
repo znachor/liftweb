@@ -112,6 +112,7 @@ class MappedDecimal[T <: Mapper[T]] (val fieldOwner : T, val context : MathConte
 
   def setFromAny (in : Any) : BigDecimal =
     in match {
+      case bd : BigDecimal => setAll(bd)
       case n :: _ => setFromString(n.toString)
       case Some(n) => setFromString(n.toString)
       case Full(n) => setFromString(n.toString)
