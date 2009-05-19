@@ -3,7 +3,7 @@
   <parent>
     <artifactId>lift</artifactId>
     <groupId>net.liftweb</groupId>
-    <version>1.0</version>
+    <version>1.0.1-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
   <artifactId>lift-mapper</artifactId>
@@ -28,11 +28,10 @@
       <version>5.1.6</version>
       <optional>true</optional>
     </dependency>
-
     <dependency>
-      <groupId>org.specs</groupId>
+      <groupId>org.scala-tools.testing</groupId>
       <artifactId>specs</artifactId>
-      <version>1.4.3</version>
+      <version>1.5.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
