@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2008 WorldWide Conferencing, LLC
+ * Copyright 2007-2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -312,6 +312,7 @@ class LiftServlet extends HttpServlet {
     def act = loop {
       react {
         case BeginContinuation =>
+          this.link(PointlessActorToWorkAroundBug)
           val mySelf = self
           val sendItToMe: AnswerRender => Unit = ah => mySelf ! (seqId, ah)
 
@@ -321,8 +322,14 @@ class LiftServlet extends HttpServlet {
           answers = ar :: answers
           ActorPing.schedule(this, BreakOut, TimeSpan(5))
 
+        case 'byebye =>
+          this.exit()
+
         case BreakOut =>
-          actors.foreach{case (act, _) => act ! Unlisten(ListenerId(seqId))}
+          this ! 'byebye
+
+          actors.foreach{case (act, _) => tryo(act ! Unlisten(ListenerId(seqId)))}
+          try {
           LiftRules.resumeRequest(
             S.init(request, sessionActor)
             (LiftRules.performTransform(
@@ -330,8 +337,9 @@ class LiftServlet extends HttpServlet {
                                               answers.toArray, actors))),
                                                 request.request)
 
+          } finally {
           sessionActor.exitComet(this)
-          this.exit()
+	  }
 
         case _ =>
       }
@@ -549,6 +557,10 @@ class LiftFilter extends Filter with LiftFilterTrait
 
     actualServlet = new LiftServlet(context)
     actualServlet.init
+
+      ActorSchedulerFixer.doActorSchedulerFix()
+      // access the object to work around Scala actor memory retention problems
+      PointlessActorToWorkAroundBug
   }
 
   //And throw it away on destruction
@@ -614,5 +626,151 @@ class LiftFilter extends Filter with LiftFilterTrait
     }
   }
 
+}
+
+object ActorSchedulerFixer {
+  var performFix = true
+
+  private var fixDone = false
+
+  def doActorSchedulerFix(): Unit = synchronized {
+
+    if (performFix && !fixDone) {
+      Scheduler.impl match {
+        case fj: FJTaskScheduler2 =>
+          fj.snapshot()
+          fj.shutdown()
+        case _ =>
+      }
+
+      Scheduler.impl = {
+        import java.util.concurrent.Executors
+        val es = Executors.newFixedThreadPool(10)
+
+        new IScheduler {
+
+          /** Submits a closure for execution.
+           *
+           *  @param  fun  the closure to be executed
+           */
+          def execute(fun: => Unit): Unit = es.execute(new Runnable {
+              def run() {
+                try {
+                  fun
+                } catch {
+                  case e => Log.error("Actor scheduler", e)
+                }
+              }
+            })
+
+          /** Submits a <code>Runnable</code> for execution.
+           *
+           *  @param  task  the task to be executed
+           */
+          def execute(task: Runnable): Unit = es.execute(new Runnable {
+              def run() {
+                try {
+                  task.run()
+                } catch {
+                  case e => Log.error("Actor scheduler", e)
+                }
+              }
+            })
+
+          /** Notifies the scheduler about activity of the
+           *  executing actor.
+           *
+           *  @param  a  the active actor
+           */
+          def tick(a: Actor): Unit = {}
+
+          /** Shuts down the scheduler.
+           */
+          def shutdown(): Unit = {}
+
+          def onLockup(handler: () => Unit): Unit = {}
+          def onLockup(millis: Int)(handler: () => Unit): Unit = {}
+          def printActorDump: Unit = {}
+
+        }
+      }
+    }
+    fixDone = true
+  }
+}
+
+object PointlessActorToWorkAroundBug extends Actor {
+  import scala.collection.mutable.HashSet
+  import java.lang.ref.Reference
+  import java.lang.reflect.Field
+
+  private def findField(in: Class[_], name: String): Box[Field] =
+  in match {
+    case null => Empty
+    case in => tryo(in.getDeclaredField(name)) or findField(in.getSuperclass, name)
+  }
+
+  def act = loop {
+    react {
+      case "ActorBug" =>
+        try {
+          import scala.collection.mutable.HashSet
+          import java.lang.ref.Reference
+
+          val agc = ActorGC
+          agc.synchronized {
+            val rsf = agc.getClass.getDeclaredField("refSet")
+            rsf.setAccessible(true)
+            rsf.get(agc) match {
+              case h: HashSet[Reference[Object]] =>
+                Log.trace("[MEMDEBUG] got the actor refSet... length: "+h.size)
+
+                val nullRefs = h.elements.filter(f => f.get eq null).toList
+
+                nullRefs.foreach(r => h -= r)
+
+                val nonNull = h.elements.filter(f => f.get ne null).toList
+
+                Log.trace("[MEMDEBUG] got the actor refSet... non null elems: "+
+                          nonNull.size)
+
+                nonNull.foreach{r =>
+                  for
+                  {
+                    a <- findField(r.get.getClass, "exiting")
+                  } {
+                    a.setAccessible(true)
+                    if (a.getBoolean(r.get)) {
+                      h -= r
+                      r.clear
+                    }
+                  }
+                }
+
+                Log.trace("[MEMDEBUG] (again) got the actor refSet... length: "+h.size)
+
+              case _ =>
+            }
+          }
+        } catch {
+          case e => Log.error("[MEMDEBUG] failure", e)
+        }
+        ping()
+
+      case _ =>
+    }
+  }
+
+  private def ctor() {
+    this.start
+    ping()
+
+  }
+
+  private def ping() {
+    ActorPing.schedule(this, "ActorBug", 1 minute)
+  }
+
+  ctor()
 }
 
