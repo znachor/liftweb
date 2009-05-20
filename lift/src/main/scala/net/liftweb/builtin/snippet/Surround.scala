@@ -30,7 +30,7 @@ object Surround extends DispatchSnippet {
   (for {ctx <- S.session ?~ ("FIX"+"ME: Invalid session")
         req <- S.request ?~ ("FIX"+"ME: Invalid request")
     } yield {
-      val paramElements: Seq[Node] = findElems(kids)(e => {
+       val paramElements: Seq[Node] = findElems(kids)(e => {
        val oldSyntax = e.label == "with-param" && e.prefix == "lift"
        val newSyntax = e.label == "with-param" && e.prefix == "lift-tag"
 
