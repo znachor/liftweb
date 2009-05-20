@@ -571,7 +571,7 @@ object SHtml {
 
   def checkbox[T](possible: Seq[T], actual: Seq[T], func: Seq[T] => Any, attrs: (String, String)*): ChoiceHolder[T] = {
     val len = possible.length
-    fmapFunc(LFuncHolder( (strl: List[String]) => {func(strl.map(toInt(_)).filter(x =>x >= 0 && x < len).map(possible(_))); true})){
+    fmapFunc(LFuncHolder( (strl: List[String]) => {func(strl.firstOption.toList.map(toInt(_)).filter(x =>x >= 0 && x < len).map(possible(_))); true})){
       name =>
 
 

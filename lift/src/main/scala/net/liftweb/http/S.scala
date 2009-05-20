@@ -1221,7 +1221,7 @@ object S extends HasParams {
       }
 
       def jsonCallback(in: List[String]): JsCmd = {
-        in.flatMap{
+        in.firstOption.toList.flatMap{
           s =>
           val parsed = JSONParser.parse(s.trim).toList
           val cmds = parsed.map(checkCmd)
@@ -1339,7 +1339,7 @@ object S extends HasParams {
   @serializable
   class SFuncHolder(val func: String => Any, val owner: Box[String]) extends AFuncHolder {
     def this(func: String => Any) = this(func, Empty)
-    def apply(in: List[String]): Any = in.map(func(_))
+    def apply(in: List[String]): Any = in.firstOption.toList.map(func(_))
     def duplicate(newOwner: String) = new SFuncHolder(func, Full(newOwner))
   }
 
@@ -1369,7 +1369,7 @@ object S extends HasParams {
    */
   @serializable
   class NFuncHolder(val func: () => Any,val owner: Box[String]) extends AFuncHolder {
-    def apply(in: List[String]): Any = in.map(s => func())
+    def apply(in: List[String]): Any = in.firstOption.toList.map(s => func())
     def duplicate(newOwner: String) = new NFuncHolder(func, Full(newOwner))
   }
 
