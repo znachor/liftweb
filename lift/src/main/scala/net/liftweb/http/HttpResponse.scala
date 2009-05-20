@@ -318,6 +318,7 @@ object DocType {
 
 object ResponseInfo {
   var docType: PartialFunction[Req, Box[String]] = {
+    case _ if S.skipDocType => Empty
     case _ if S.getDocType._1 => S.getDocType._2
     case _ => Full(DocType.xhtmlTransitional)
   }

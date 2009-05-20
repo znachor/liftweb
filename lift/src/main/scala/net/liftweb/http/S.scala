@@ -800,6 +800,13 @@ object S extends HasParams {
     rh => (rh.overrodeDocType, rh.docType)
   ).openOr( (false, Empty) )
 
+
+private object _skipDocType extends RequestVar(false)
+
+def skipDocType = _skipDocType.is
+
+def skipDocType_=(in: Boolean) {_skipDocType.set(in)}
+
   /**
    * Adds a cleanup function that will be executed at the end of the request pocessing.
    * Exceptions thrown from these functions will be swallowed.
