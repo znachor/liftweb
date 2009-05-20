@@ -760,7 +760,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
             be displayed, but there will be errors in the output logs.
           </i>
         </div>
-      case _ => <i>Failure</i>
+      case _ => NodeSeq.Empty
     }
   }
 
