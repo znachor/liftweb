@@ -664,20 +664,93 @@ object S extends HasParams {
   }
 
   /**
-   * Test the current request to see if it's a GET
+   * Test the current request to see if it's a GET. This is a thin wrapper on Req.get_?
+   *
+   * @return <code>true</code> if the request is a GET, <code>false</code> otherwise.
+   *
+   * @see Req.get_?
    */
   def get_? = request.map(_.get_?).openOr(false)
 
   /**
-   * The URI of the current request (not re-written)
+   * The URI of the current request (not re-written). The URI is the portion of the request
+   * URL after the servlet context path. For example, with a servlet context path of "myApp",
+   * Lift would return the following URIs for the given requests:
+   *
+   * <table>
+   * <tr align=left>
+   *   <th>HTTP request</th><th>URI</th>
+   * </tr>
+   * <tr>
+   *   <td>http://foo.com/myApp/foo/bar.html<td><td>/foo/bar.html</td>
+   * </tr>
+   * <tr>
+   *   <td>http://foo.com/myApp/test/<td><td>/test/</td>
+   * </tr>
+   * <tr>
+   *   <td>http://foo.com/myApp/item.html?id=42<td><td>/item.html</td>
+   * </tr>
+   * </table>
+   *
+   * If you want the full URI, including the servlet context path, you should retrieve it
+   * from the underlying HttpServletRequest. You could do something like:
+   *
+   * <pre>
+   *   val fullURI = S.request.map(_.request.getRequestURI) openOr ("Undefined")
+   * </pre>
+   *
+   * @see Req.uri
+   * @see javax.servlet.http.HttpServletRequest.getRequestURI
    */
   def uri: String = request.map(_.uri).openOr("/")
 
   /**
-   * Redirect the browser to a given URL
+   * Redirects the browser to a given URL. Note that the underlying mechanism for redirects is to
+   * throw a ResponseShortcutException, so if you're doing the redirect within a try/catch block,
+   * you need to make sure to either ignore the redirect exception or rethrow it. Two possible
+   * approaches would be:
+   *
+   * <pre>
+   *   ...
+   *   try {
+   *     // your code here
+   *     S.redirectTo(...)
+   *   } catch {
+   *     case e: Exception if !e.instanceOf[net.liftweb.http.ResponseShortcutException] => ...
+   *   }
+   * </pre>
+   *
+   * or
+   *
+   * <pre>
+   *   ...
+   *   try {
+   *     // your code here
+   *     S.redirectTo(...)
+   *   } catch {
+   *     case rse: net.liftweb.http.ResponseShortcutException => throw rse
+   *     case e: Exception => ...
+   *   }
+   * </pre>
+   *
+   * @param where The new URL to redirect to.
+   *
+   * @see ResponseShortcutException
+   * @see #redirectTo(String, () => Unit)
    */
   def redirectTo[T](where: String): T = throw ResponseShortcutException.redirect(where)
 
+  /**
+   * Redirects the browser to a given URL and registers a function that will be executed when the browser
+   * accesses the new URL. Otherwise the function is exactly the same as S.redirectTo(String), which has
+   * example documentation. Note that if the URL that you redirect to must be part of your web application
+   * or the function won't be executed. This is because the function is only registered locally.
+   *
+   * @param where The new URL to redirect to.
+   * @param func The function to be executed when the redirect is accessed.
+   *
+   * @see #redirectTo(String)
+   */
   def redirectTo[T](where: String, func: () => Unit): T =
   throw ResponseShortcutException.redirect(where, func)
 
