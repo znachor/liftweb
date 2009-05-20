@@ -455,23 +455,23 @@ class LiftSession(val contextPath: String, val uniqueId: String,
        template <- loc.template) yield template
 
   /**
-   * Appends comet stript to body
+   * Appends comet stript to body 
    */
-  private def cometAppend(body : Node): Node =
+  private def cometAppend(body : Node): Node = 
     CVPVar.get match {
-      case list if !list.isEmpty && LiftRules.autoIncludeComet(this) =>
-        Elem(body.prefix, body.label, body.attributes, body.scope,
+      case list if !list.isEmpty && LiftRules.autoIncludeComet(this) => 
+        Elem(body.prefix, body.label, body.attributes, body.scope, 
             (body.child ++ JsCmds.Script(LiftRules.renderCometPageContents(LiftSession.this, list)) :_*))
       case _ => body
     }
 
   /**
-   * Appends comet stript reference to head
+   * Appends comet stript reference to head 
    */
-  private def cometHeadAppend(body: Node): Node =
+  private def cometHeadAppend(body: Node): Node = 
     CVPVar.get match {
-      case list if !list.isEmpty && LiftRules.autoIncludeComet(this) =>
-        Elem(body.prefix, body.label, body.attributes, body.scope,
+      case list if !list.isEmpty && LiftRules.autoIncludeComet(this) => 
+        Elem(body.prefix, body.label, body.attributes, body.scope, 
             (body.child ++ <script src={S.encodeURL("/"+
                                        	LiftRules.cometPath +
                                        	"/" + uniqueId +
@@ -481,15 +481,15 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     }
 
   /**
-   * Appends lift GC script to body
+   * Appends lift GC script to body 
    */
-  private def liftGCAppend(body : Node): Node =
+  private def liftGCAppend(body : Node): Node = 
     if (LiftRules.enableLiftGC) {
       import js._
       import JsCmds._
       import JE._
 
-      Elem(body.prefix, body.label, body.attributes, body.scope,
+      Elem(body.prefix, body.label, body.attributes, body.scope, 
           (body.child ++ JsCmds.Script(OnLoad(JsRaw("lift_successRegisterGC()")) &
                                                 JsCrVar("lift_page", RenderVersion.get)) :_*))
     } else body
@@ -747,6 +747,8 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     findAnyTemplate("templates-hidden" :: splits, S.locale) or findAnyTemplate(splits, S.locale)
   }
 
+  private object snippetMap extends RequestVar[Map[String, AnyRef]](Map())
+
   private def findSnippetClass(name: String): Box[Class[AnyRef]] = {
     if (name == null) Empty
     else findClass(name, LiftRules.buildPackage("snippet") ::: ("lift.app.snippet" :: "net.liftweb.builtin.snippet" :: Nil))
@@ -827,7 +829,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
             be displayed, but there will be errors in the output logs.
           </i>
         </div>
-      case _ => <i>Failure</i>
+      case _ => NodeSeq.Empty
     }
   }
 
@@ -847,14 +849,20 @@ class LiftSession(val contextPath: String, val uniqueId: String,
          loc <- req.location;
          func <- loc.snippet(snippet)) yield func(kids)
 
+    def locateAndCacheSnippet(cls: String): Box[AnyRef] =
+    snippetMap.is.get(cls) or {
+      val ret = LiftRules.snippet(cls) or findSnippetInstance(cls)
+      ret.foreach(s => snippetMap.is(cls) = s)
+      ret
+    }
+
     val ret: NodeSeq = snippetName.map(snippet =>
       S.doSnippet(snippet)(
         (S.locateMappedSnippet(snippet).map(_(kids)) or
          locSnippet(snippet)).openOr(
           S.locateSnippet(snippet).map(_(kids)) openOr {
             val (cls, method) = splitColonPair(snippet, null, "render")
-            (LiftRules.snippet(cls) or
-             findSnippetInstance(cls)) match {
+            (locateAndCacheSnippet(cls)) match {
 
               case Full(inst: StatefulSnippet) =>
                 if (inst.dispatch.isDefinedAt(method))

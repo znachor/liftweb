@@ -577,6 +577,13 @@ class LiftFilter extends Filter with LiftFilterTrait
 
     actualServlet = new LiftServlet(context)
     actualServlet.init
+
+    if (!Props.inGAE) {
+      ActorSchedulerFixer.doActorSchedulerFix()
+      // access the object to work around Scala actor memory retention problems
+      PointlessActorToWorkAroundBug
+    }
+
   }
 
   //And throw it away on destruction
@@ -648,6 +655,77 @@ class LiftFilter extends Filter with LiftFilterTrait
   }
 }
 
+object ActorSchedulerFixer {
+  var performFix = true
+
+  private var fixDone = false
+
+  def doActorSchedulerFix(): Unit = synchronized {
+
+    if (performFix && !fixDone && !Props.inGAE) {
+      Scheduler.impl match {
+        case fj: FJTaskScheduler2 =>
+          fj.snapshot()
+          fj.shutdown()
+        case _ =>
+      }
+
+      Scheduler.impl = {
+        import java.util.concurrent.Executors
+        val es = Executors.newFixedThreadPool(10)
+
+        new IScheduler {
+
+          /** Submits a closure for execution.
+           *
+           *  @param  fun  the closure to be executed
+           */
+          def execute(fun: => Unit): Unit = es.execute(new Runnable {
+              def run() {
+                try {
+                  fun
+                } catch {
+                  case e => Log.error("Actor scheduler", e)
+                }
+              }
+            })
+
+          /** Submits a <code>Runnable</code> for execution.
+           *
+           *  @param  task  the task to be executed
+           */
+          def execute(task: Runnable): Unit = es.execute(new Runnable {
+              def run() {
+                try {
+                  task.run()
+                } catch {
+                  case e => Log.error("Actor scheduler", e)
+                }
+              }
+            })
+
+          /** Notifies the scheduler about activity of the
+           *  executing actor.
+           *
+           *  @param  a  the active actor
+           */
+          def tick(a: Actor): Unit = {}
+
+          /** Shuts down the scheduler.
+           */
+          def shutdown(): Unit = {}
+
+          def onLockup(handler: () => Unit): Unit = {}
+          def onLockup(millis: Int)(handler: () => Unit): Unit = {}
+          def printActorDump: Unit = {}
+
+        }
+      }
+    }
+    fixDone = true
+  }
+}
+
 object PointlessActorToWorkAroundBug extends Actor {
   import scala.collection.mutable.HashSet
   import java.lang.ref.Reference
@@ -713,6 +791,7 @@ object PointlessActorToWorkAroundBug extends Actor {
   private def ctor() {
     this.start
     ping()
+
   }
 
   private def ping() {
