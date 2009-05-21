@@ -1514,7 +1514,7 @@ object S extends HasParams {
   /**
    * Returns all the HTTP parameters having 'n' name
    */
-  def params(n: String): List[String] = request.map(_.params(n)).openOr(Nil)
+  def params(n: String): List[String] = request.flatMap(_.params.get(n)).openOr(Nil)
   /**
    * Returns the HTTP parameter having 'n' name
    */
