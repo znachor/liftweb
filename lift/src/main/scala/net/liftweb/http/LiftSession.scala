@@ -686,6 +686,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   }
 
   private def findAttributeSnippet(name: String, rest: MetaData): MetaData = {
+    S.doSnippet(name) {
     val (cls, method) = splitColonPair(name, null, "render")
 
     findSnippetClass(cls).flatMap(clz => instantiate(clz).flatMap(inst =>
@@ -693,6 +694,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
             case Full(md: MetaData) => Full(md.copy(rest))
             case _ => Empty
           }))).openOr(rest)
+    }
   }
 
   /**
@@ -877,8 +879,12 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   NamedPF("Default Lift Tags") {
     case ("snippet", elm, metaData, kids, page) =>
       metaData.get("type") match {
-        case Some(tn) => NamedPF((tn.text, elm, metaData, kids, page),
+        case Some(tn) =>
+          S.doSnippet(tn.text){
+            NamedPF((tn.text, elm, metaData, kids, page),
                                  liftTagProcessing)
+          }
+
         case _ => processSnippet(page, Empty , elm.attributes, elm, elm.child)
       }
     case ("with-param", _, _, _, _) => NodeSeq.Empty
@@ -901,11 +907,12 @@ class LiftSession(val contextPath: String, val uniqueId: String,
         Group(processSurroundAndInclude(page, nodes))
 
       case elm: Elem if elm.prefix == "lift" || elm.prefix == "lift-tag" || elm.prefix == "l"=>
+        S.doSnippet(elm.label){
         S.setVars(elm.attributes){
           processSurroundAndInclude(page, NamedPF((elm.label, elm, elm.attributes,
                                                    asNodeSeq(elm.child), page),
                                                   liftTagProcessing))
-        }
+        }}
 
       case elm: Elem =>
         Elem(v.prefix, v.label, processAttributes(v.attributes),

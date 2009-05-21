@@ -245,10 +245,10 @@ object S extends HasParams {
    *
    * class MySnippet {
    *   final val cookieName = "Fred"
-   * 
+   *
    *   def cookieDemo (xhtml : NodeSeq) : NodeSeq = {
    *     var cookieVal = S.findCookie(cookieName).map(_.getvalue) openOr ""
-   * 
+   *
    *     def setCookie() {
    *       val cookie = new Cookie(cookieName, cookieVal)
    *       cookie.setMaxAge(3600) // 3600 seconds, or one hour
@@ -499,7 +499,7 @@ object S extends HasParams {
    *     S.clearSessionRewriter
    *   }
    * </pre>
-   *   
+   *
    *
    * @param name A name for the rewrite function so that it can be replaced or deleted later.
    * @rw The rewrite partial function
@@ -548,7 +548,7 @@ object S extends HasParams {
    * function (the default behavior is to wrap it in a Text element). If the lookup fails for a given resource
    * bundle (e.g. a null is returned), then the <code>LiftRules.localizationLookupFailureNotice</code>
    * function is called with the input string and locale.
-   * 
+   *
    * @param str the string or ID to localize
    *
    * @return A Full box containing the localized XML or Empty if there's no way to do localization
@@ -573,7 +573,7 @@ object S extends HasParams {
   /**
    * Localize the incoming string based on a resource bundle for the current locale,
    * with a default value to to return if localization fails.
-   * 
+   *
    * @param str the string or ID to localize
    * @param dflt the default string to return if localization fails
    *
@@ -1120,7 +1120,7 @@ object S extends HasParams {
   /**
    * Returns 'type' S attribute
    */
-  def invokedAs: String = attr("type") openOr ""
+  def invokedAs: String = (currentSnippet or attr("type")) openOr ""
 
   /**
    * Sets a HttpSession attribute
