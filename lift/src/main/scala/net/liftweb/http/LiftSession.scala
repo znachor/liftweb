@@ -435,7 +435,6 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     var done: List[() => Unit] = Nil
 
     S.initIfUninitted(this) {
-
       onSessionEnd.foreach(_(this))
       synchronized {
         LiftSession.onAboutToShutdownSession.foreach(_(this))

@@ -532,7 +532,7 @@ object Loc {
                       mkString("/", "/", ""),
                       RedirectState(Empty, in -> NoticeType.Error))
 
-implicit def strFuncToFailMsg(in: () => String): FailMsg =
+  implicit def strFuncToFailMsg(in: () => String): FailMsg =
   () => RedirectWithState(LiftRules.siteMapFailRedirectLocation.
                       mkString("/", "/", ""),
                       RedirectState(Empty, in() -> NoticeType.Error))
