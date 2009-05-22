@@ -60,8 +60,8 @@ object ActorWatcher extends Actor {
   var failureFuncs: List[(Actor, Throwable) => Unit] = logActorFailure _ ::
   startAgain _ :: Nil
 
-  this.start
   this.trapExit = true
+  this.start
 }
 
 case object RelinkToActorWatcher
@@ -421,10 +421,10 @@ trait CometActor extends Actor with BindHelpers {
         }
       }
 
-      case ShutdownIfPastLifespan =>
-        for {
-          ls <- lifespan if (lastListenTime + ls.millis) < millis
-        } this ! ShutDown
+    case ShutdownIfPastLifespan =>
+      for {
+        ls <- lifespan if (lastListenTime + ls.millis) < millis
+      } this ! ShutDown
 
     case ReRender(all) => performReRender(all)
 

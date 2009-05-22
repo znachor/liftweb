@@ -657,8 +657,25 @@ class LiftFilter extends Filter with LiftFilterTrait
 
 object ActorSchedulerFixer {
   var performFix = true
+  import java.util.concurrent.{Executors, Executor}
 
   private var fixDone = false
+
+  var exeuctorCreator: () => Executor = Executors.newCachedThreadPool _
+
+  var doLogging: Throwable => Unit =
+  e => Log.error("Actor scheduler", e)
+
+  var runnableCreator: (() => Unit) => Runnable =
+  toRun => new Runnable {
+    def run() {
+      try {
+        toRun.apply()
+      } catch {
+        case e => doLogging(e)
+      }
+    }
+  }
 
   def doActorSchedulerFix(): Unit = synchronized {
 
@@ -671,8 +688,7 @@ object ActorSchedulerFixer {
       }
 
       Scheduler.impl = {
-        import java.util.concurrent.Executors
-        val es = Executors.newFixedThreadPool(10)
+        val es = exeuctorCreator()
 
         new IScheduler {
 
@@ -680,29 +696,27 @@ object ActorSchedulerFixer {
            *
            *  @param  fun  the closure to be executed
            */
-          def execute(fun: => Unit): Unit = es.execute(new Runnable {
-              def run() {
-                try {
-                  fun
-                } catch {
-                  case e => Log.error("Actor scheduler", e)
-                }
-              }
-            })
+          def execute(fun: => Unit): Unit = {
+          try {
+
+          es.execute(runnableCreator(() => fun))
+          } catch {
+            case e => e.printStackTrace
+          }
+          }
 
           /** Submits a <code>Runnable</code> for execution.
            *
            *  @param  task  the task to be executed
            */
-          def execute(task: Runnable): Unit = es.execute(new Runnable {
-              def run() {
-                try {
-                  task.run()
-                } catch {
-                  case e => Log.error("Actor scheduler", e)
-                }
-              }
-            })
+          def execute(task: Runnable): Unit = {
+            try {
+
+          es.execute(runnableCreator(() => task.run))
+            } catch {
+              case e => e.printStackTrace
+            }
+          }
 
           /** Notifies the scheduler about activity of the
            *  executing actor.
@@ -718,7 +732,6 @@ object ActorSchedulerFixer {
           def onLockup(handler: () => Unit): Unit = {}
           def onLockup(millis: Int)(handler: () => Unit): Unit = {}
           def printActorDump: Unit = {}
-
         }
       }
     }

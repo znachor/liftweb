@@ -527,14 +527,20 @@ object Loc {
   implicit def strToLinkText[T](in: => String): LinkText[T] = LinkText(T => Text(in))
   implicit def strLstToLink(in: Seq[String]): Link[NullLocParams] = new Link[NullLocParams](in.toList)
   implicit def strPairToLink(in: (Seq[String], Boolean)): Link[NullLocParams] = new Link[NullLocParams](in._1.toList, in._2)
-  implicit def strToFailMsg(in: String): FailMsg =
-  f(RedirectWithState(LiftRules.siteMapFailRedirectLocation.
+  implicit def strToFailMsg(in: => String): FailMsg =
+  () => RedirectWithState(LiftRules.siteMapFailRedirectLocation.
                       mkString("/", "/", ""),
-                      RedirectState(Empty, in -> NoticeType.Error)))
-  implicit def redirectToFailMsg(in: RedirectResponse): FailMsg = f(in)
+                      RedirectState(Empty, in -> NoticeType.Error))
 
-  def f(in: String): () => String = () => in
-  def f(in: RedirectResponse): () => RedirectResponse = () => in
+implicit def strFuncToFailMsg(in: () => String): FailMsg =
+  () => RedirectWithState(LiftRules.siteMapFailRedirectLocation.
+                      mkString("/", "/", ""),
+                      RedirectState(Empty, in() -> NoticeType.Error))
+
+  implicit def redirectToFailMsg(in: => RedirectResponse): FailMsg = () => in
+
+  //def f(in: String): () => String = () => in
+  //def f(in: => RedirectResponse): () => RedirectResponse = () => in
 }
 
 

@@ -210,6 +210,3 @@ object AnyVar {
   implicit def whatSessionVarIs[T](in: SessionVar[T]): T = in.is
   implicit def whatRequestVarIs[T](in: RequestVar[T]): T = in.is
 }
-
-
-
