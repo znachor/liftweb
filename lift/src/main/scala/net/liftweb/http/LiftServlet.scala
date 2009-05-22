@@ -21,8 +21,8 @@ import _root_.java.net.URLDecoder
 import _root_.scala.xml.{Node, NodeSeq,Group, Elem, MetaData, Null, XML, Comment, Text}
 import _root_.scala.collection.immutable.HashMap
 import _root_.scala.xml.transform._
-import _root_.scala.actors._
-import _root_.scala.actors.Actor._
+import _root_.scala.actors.{Actor => ScalaActor, Scheduler => ScalaScheduler}
+import ScalaActor._
 import _root_.net.liftweb.util.Helpers._
 import _root_.net.liftweb.util._
 import _root_.net.liftweb.util.Helpers
@@ -32,6 +32,7 @@ import _root_.java.net.URL
 import js._
 import _root_.javax.servlet._
 import auth._
+import _root_.net.liftweb.actor._
 
 /**
  * An implementation of HttpServlet.  Just drop this puppy into
@@ -53,8 +54,8 @@ class LiftServlet extends HttpServlet {
     try {
       LiftRules.ending = true
       LiftRules.runUnloadHooks()
-      Scheduler.snapshot // pause the Actor scheduler so we don't have threading issues
-      Scheduler.shutdown
+      ScalaScheduler.snapshot // pause the Actor scheduler so we don't have threading issues
+      ScalaScheduler.shutdown
       ActorPing.shutdown
       Log.debug("Destroyed servlet")
       // super.destroy
@@ -316,14 +317,13 @@ class LiftServlet extends HttpServlet {
   /**
    * An actor that manages continuations from container (Jetty style)
    */
-  class ContinuationActor(request: Req, sessionActor: LiftSession, actors: List[(CometActor, Long)]) extends Actor {
+  class ContinuationActor(request: Req, session: LiftSession, actors: List[(CometActor, Long)]) extends Actor {
     private var answers: List[AnswerRender] = Nil
     val seqId = Helpers.nextNum
 
-    def act = loop {
-      react {
+    def messageHandler = {
         case BeginContinuation =>
-          this.link(PointlessActorToWorkAroundBug)
+          // this.link(PointlessActorToWorkAroundBug)
           val mySelf = self
           val sendItToMe: AnswerRender => Unit = ah => mySelf ! (seqId, ah)
 
@@ -331,29 +331,24 @@ class LiftServlet extends HttpServlet {
 
         case (theId: Long, ar: AnswerRender) =>
           answers = ar :: answers
-          ActorPing.schedule(this, BreakOut, 5)
-
-        case 'byebye =>
-          this.exit()
+          // FIXME ActorPing.schedule(this, BreakOut, 5)
 
         case BreakOut =>
-          this ! 'byebye
-
           actors.foreach{case (act, _) => tryo(act ! Unlisten(ListenerId(seqId)))}
           try {
             LiftRules.resumeRequest(
-              S.init(request, sessionActor)
+              S.init(request, session)
               (LiftRules.performTransform(
-                  convertAnswersToCometResponse(sessionActor,
+                  convertAnswersToCometResponse(session,
                                                 answers.toArray, actors))),
                                                   request.request)
           } finally {
-            sessionActor.exitComet(this)
+            session.exitComet(this)
           }
 
         case _ =>
       }
-    }
+    
 
     override def toString = "Actor dude "+seqId
   }
@@ -362,31 +357,31 @@ class LiftServlet extends HttpServlet {
 
   private lazy val cometTimeout: Long = (LiftRules.cometRequestTimeout openOr 120) * 1000L
 
-  private def setupContinuation(requestState: Req, sessionActor: LiftSession, actors: List[(CometActor, Long)]): Nothing = {
-    val cont = new ContinuationActor(requestState, sessionActor, actors)
-    cont.start
+  private def setupContinuation(requestState: Req, session: LiftSession, actors: List[(CometActor, Long)]): Nothing = {
+    val cont = new ContinuationActor(requestState, session, actors)
+    // cont.start
 
     cont ! BeginContinuation
 
-    sessionActor.enterComet(cont)
+    session.enterComet(cont)
 
-    ActorPing.schedule(cont, BreakOut, TimeSpan(cometTimeout))
+    // FIXME ActorPing.schedule(cont, BreakOut, TimeSpan(cometTimeout))
 
     LiftRules.doContinuation(requestState.request, cometTimeout + 2000L)
   }
 
-  private def handleComet(requestState: Req, sessionActor: LiftSession): Box[LiftResponse] = {
+  private def handleComet(request: Req, session: LiftSession): Box[LiftResponse] = {
     val actors: List[(CometActor, Long)] =
-    requestState.params.toList.flatMap{case (name, when) =>
-        sessionActor.getAsyncComponent(name).toList.map(c => (c, toLong(when)))}
+    request.params.toList.flatMap{case (name, when) =>
+        session.getAsyncComponent(name).toList.map(c => (c, toLong(when)))}
 
     if (actors.isEmpty) Full(new JsCommands(JsCmds.RedirectTo(LiftRules.noCometSessionPage) :: Nil).toResponse)
-    else LiftRules.checkContinuations(requestState.request) match {
+    else LiftRules.checkContinuations(request.request) match {
       case Some(null) =>
-        setupContinuation(requestState, sessionActor, actors)
+        setupContinuation(request, session, actors)
 
       case _ =>
-        handleNonContinuationComet(requestState, sessionActor, actors)
+        handleNonContinuationComet(request, session, actors)
     }
   }
 
@@ -402,6 +397,7 @@ class LiftServlet extends HttpServlet {
 
   private def handleNonContinuationComet(requestState: Req, sessionActor: LiftSession, actors: List[(CometActor, Long)]): Box[LiftResponse] = {
 
+  /*
     LiftRules.cometLogger.debug("Comet Request: "+sessionActor.uniqueId+" "+requestState.params)
 
     sessionActor.enterComet(self)
@@ -441,6 +437,8 @@ class LiftServlet extends HttpServlet {
     } finally {
       sessionActor.exitComet(self)
     }
+    */
+   Empty // FIXME implement as an Actor and a future
   }
 
   val dumpRequestResponse = Props.getBool("dump.request.response", false)
@@ -654,163 +652,3 @@ class LiftFilter extends Filter with LiftFilterTrait
     }
   }
 }
-
-object ActorSchedulerFixer {
-  var performFix = true
-  import java.util.concurrent.{Executors, Executor}
-
-  private var fixDone = false
-
-  var exeuctorCreator: () => Executor = Executors.newCachedThreadPool _
-
-  var doLogging: Throwable => Unit =
-  e => Log.error("Actor scheduler", e)
-
-  var runnableCreator: (() => Unit) => Runnable =
-  toRun => new Runnable {
-    def run() {
-      try {
-        toRun.apply()
-      } catch {
-        case e => doLogging(e)
-      }
-    }
-  }
-
-  def doActorSchedulerFix(): Unit = synchronized {
-
-    if (performFix && !fixDone && !Props.inGAE) {
-      Scheduler.impl match {
-        case fj: FJTaskScheduler2 =>
-          fj.snapshot()
-          fj.shutdown()
-        case _ =>
-      }
-
-      Scheduler.impl = {
-        val es = exeuctorCreator()
-
-        new IScheduler {
-
-          /** Submits a closure for execution.
-           *
-           *  @param  fun  the closure to be executed
-           */
-          def execute(fun: => Unit): Unit = {
-          try {
-
-          es.execute(runnableCreator(() => fun))
-          } catch {
-            case e => e.printStackTrace
-          }
-          }
-
-          /** Submits a <code>Runnable</code> for execution.
-           *
-           *  @param  task  the task to be executed
-           */
-          def execute(task: Runnable): Unit = {
-            try {
-
-          es.execute(runnableCreator(() => task.run))
-            } catch {
-              case e => e.printStackTrace
-            }
-          }
-
-          /** Notifies the scheduler about activity of the
-           *  executing actor.
-           *
-           *  @param  a  the active actor
-           */
-          def tick(a: Actor): Unit = {}
-
-          /** Shuts down the scheduler.
-           */
-          def shutdown(): Unit = {}
-
-          def onLockup(handler: () => Unit): Unit = {}
-          def onLockup(millis: Int)(handler: () => Unit): Unit = {}
-          def printActorDump: Unit = {}
-        }
-      }
-    }
-    fixDone = true
-  }
-}
-
-object PointlessActorToWorkAroundBug extends Actor {
-  import scala.collection.mutable.HashSet
-  import java.lang.ref.Reference
-  import java.lang.reflect.Field
-
-  private def findField(in: Class[_], name: String): Box[Field] =
-  in match {
-    case null => Empty
-    case in => tryo(in.getDeclaredField(name)) or findField(in.getSuperclass, name)
-  }
-
-  def act = loop {
-    react {
-      case "ActorBug" =>
-        try {
-          import scala.collection.mutable.HashSet
-          import java.lang.ref.Reference
-
-          val agc = ActorGC
-          agc.synchronized {
-            val rsf = agc.getClass.getDeclaredField("refSet")
-            rsf.setAccessible(true)
-            rsf.get(agc) match {
-              case h: HashSet[Reference[Object]] =>
-                Log.trace("[MEMDEBUG] got the actor refSet... length: "+h.size)
-
-                val nullRefs = h.elements.filter(f => f.get eq null).toList
-
-                nullRefs.foreach(r => h -= r)
-
-                val nonNull = h.elements.filter(f => f.get ne null).toList
-
-                Log.trace("[MEMDEBUG] got the actor refSet... non null elems: "+
-                          nonNull.size)
-
-                nonNull.foreach{r =>
-                  for
-                  {
-                    a <- findField(r.get.getClass, "exiting")
-                  } {
-                    a.setAccessible(true)
-                    if (a.getBoolean(r.get)) {
-                      h -= r
-                      r.clear
-                    }
-                  }
-                }
-
-                Log.trace("[MEMDEBUG] (again) got the actor refSet... length: "+h.size)
-
-              case _ =>
-            }
-          }
-        } catch {
-          case e => Log.error("[MEMDEBUG] failure", e)
-        }
-        ping()
-
-      case _ =>
-    }
-  }
-
-  private def ctor() {
-    this.start
-    ping()
-
-  }
-
-  private def ping() {
-    ActorPing.schedule(this, "ActorBug", 1 minute)
-  }
-
-  ctor()
-}
-

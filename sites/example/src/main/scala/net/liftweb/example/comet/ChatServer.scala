@@ -15,8 +15,7 @@
  */
 package net.liftweb.example.comet
 
-import _root_.scala.actors.Actor
-import Actor._
+
 import _root_.net.liftweb._
 import http._
 import util._
@@ -24,6 +23,7 @@ import Helpers._
 import _root_.scala.xml.{NodeSeq, Text}
 import textile.TextileParser
 import _root_.java.util.Date
+import actor._
 
 /**
  * A chat server.  It gets messages and returns them
@@ -52,7 +52,6 @@ object ChatServer extends Actor with ListenerManager {
    */
   def toHtml(msg: String): NodeSeq = TextileParser.paraFixer(TextileParser.toHtml(msg, Empty))
 
-  this.start
 }
 
 case class ChatLine(user: String, msg: NodeSeq, when: Date)

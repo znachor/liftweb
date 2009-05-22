@@ -15,8 +15,8 @@
  */
 package net.liftweb.http
 
-import _root_.scala.actors.Actor
-import _root_.scala.actors.Actor._
+import _root_.scala.actors.{Actor => ScalaActor}
+import ScalaActor._
 import _root_.javax.servlet.http.{HttpSessionBindingListener, HttpSessionBindingEvent, HttpSession}
 import _root_.scala.collection.mutable.{HashMap, ArrayBuffer, ListBuffer}
 import _root_.scala.xml.{NodeSeq, Unparsed, Text}
@@ -32,6 +32,7 @@ import _root_.javax.servlet.http.{HttpSessionActivationListener, HttpSessionEven
 import _root_.scala.xml.transform._
 import _root_.java.util.concurrent.TimeUnit
 import js._
+import _root_.net.liftweb.actor._
 import scala.reflect.Manifest
 
 object LiftSession {
@@ -114,7 +115,7 @@ case class SessionToServletBridge(uniqueId: String) extends HttpSessionBindingLi
  * Manages LiftSessions because the servlet container is less than optimal at
  * timing sessions out.
  */
-object SessionMaster extends Actor {
+object SessionMaster extends ScalaActor {
   private case class LookupSession(uniqueId: String, when: Long)
 
   private var sessions: Map[String, LiftSession] = Map.empty
@@ -129,7 +130,7 @@ object SessionMaster extends Actor {
    * every 10 seconds with the current list of sessions:
    * SessionWatcherInfo
    */
-  var sessionWatchers: List[Actor] = Nil
+  var sessionWatchers: List[ScalaActor] = Nil
 
   /**
    * Returns a LiftSession or Empty if not found
@@ -332,17 +333,19 @@ class LiftSession(val contextPath: String, val uniqueId: String,
                                             state.uploadedFiles.filter(_.name == i.name).map(_.fileName)))
     }
 
-    val ret = toRun.map(_.owner).removeDuplicates.flatMap{w =>
+    val ret: List[Any] = toRun.map(_.owner).removeDuplicates.flatMap{w =>
       val f = toRun.filter(_.owner == w)
       w match {
         // if it's going to a CometActor, batch up the commands
         case Full(id) if asyncById.contains(id) =>
-          asyncById.get(id).toList.
-          flatMap(a => a !? (5000, ActionMessageSet(f.map(i => buildFunc(i)), state)) match {
-              case Some(li: List[_]) => li
-              case li: List[_] => li
-              case other => Nil
-            })
+          for {
+            actor <- asyncById.get(id).toList
+            val future = new Future[List[Any]]
+            val _ = actor ! ActionMessageSet(f.map(i => buildFunc(i)), state, future)
+            list <- future.get(5 seconds).toList
+            item <- list
+          } yield item
+
         case _ => f.map(i => buildFunc(i).apply())
       }
     }
@@ -405,7 +408,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
       if (running_?) this.shutDown()
     } finally {
       if (!Props.inGAE)
-      Actor.clearSelf
+      ScalaActor.clearSelf
     }
   }
 
@@ -1017,6 +1020,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   private def findCometByType(contType: String, name: Box[String], defaultXml: NodeSeq, attributes: Map[String, String]): Box[CometActor] = {
     findType[CometActor](contType, LiftRules.buildPackage("comet") ::: ("lift.app.comet" :: Nil)).flatMap{
       cls =>
+      println("**** LOoking for "+cls)
       tryo((e: Throwable) => e match {case e: _root_.java.lang.NoSuchMethodException => ()
           case e => Log.info("Comet find by type Failed to instantiate "+cls.getName, e)}) {
         val constr = cls.getConstructor()
@@ -1029,7 +1033,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
       }  or tryo((e: Throwable) => Log.info("Comet find by type Failed to instantiate "+cls.getName, e)) {
         val constr = cls.getConstructor(this.getClass , classOf[Box[String]], classOf[NodeSeq], classOf[Map[String, String]])
         val ret = constr.newInstance(this, name, defaultXml, attributes).asInstanceOf[CometActor];
-        ret.start
+       
         // ret.link(this)
         ret ! PerformSetupComet
         ret.asInstanceOf[CometActor]

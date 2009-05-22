@@ -97,7 +97,7 @@ object Menu extends DispatchSnippet {
 
         def buildANavItem(i: MenuItem) = {
           i match {
-             case m @ MenuItem(text, uri, kids, _, _, _) if m.placeholder_?  =>
+            case m @ MenuItem(text, uri, kids, _, _, _) if m.placeholder_?  =>
               Elem(null, innerTag, Null, TopScope,
                    <xml:group><span>{text}</span>{buildUlLine(kids)}</xml:group>) %
               S.prefixedAttrsToMetaData("li_item", liMap)
@@ -140,10 +140,20 @@ object Menu extends DispatchSnippet {
     }
   }
 
+  def secondaryMenuItems: Seq[MenuItem] =
+  for {
+    req <- S.request.toList
+    line <- req.buildMenu.lines
+    kid <- line.kids
+  } yield kid
+
   private def renderWhat(expandAll: Boolean): Seq[MenuItem] =
-      (if (expandAll) for {sm <- LiftRules.siteMap; req <- S.request} yield
-       sm.buildMenu(req.location).lines
-       else S.request.map(_.buildMenu.lines)) openOr Nil
+  if (expandAll) for {
+    sm <- LiftRules.siteMap.toList
+    req <- S.request.toList
+    line <- sm.buildMenu(req.location).lines
+  } yield line
+  else S.request.toList.flatMap(_.buildMenu.lines)
 
   def jsonMenu(ignore: NodeSeq): NodeSeq = {
     val toRender = renderWhat(true)

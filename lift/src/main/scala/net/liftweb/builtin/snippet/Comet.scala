@@ -20,6 +20,7 @@ import net.liftweb.http._
 import net.liftweb.util._
 import Helpers._
 import Box._
+import actor._
 
 object Comet extends DispatchSnippet {
 
@@ -40,17 +41,19 @@ object Comet extends DispatchSnippet {
        val theType: Box[String] = S.attr.~("type").map(_.text)
        val name: Box[String] = S.attr.~("name").map(_.text)
        try {
-         ctx.findComet(theType, name, kids, S.attrsFlattenToMap).map(c =>
+         ctx.findComet(theType, name, kids, S.attrsFlattenToMap).map{c =>
+           val future = new Future[AnswerRender]
+           c ! AskRender(future)
+           val ret = for {
+             answer <- future.get(26 seconds)
+           } yield
+           if (c.hasOuter)
+           <span id={c.uniqueId+"_outer"}>{c.buildSpan(answer.when, answer.response.inSpan)}{answer.response.outSpan}</span>
+           else
+           c.buildSpan(answer.when, answer.response.inSpan)
 
-            (c !? (26600, AskRender)) match {
-              case Some(AnswerRender(response, _, when, _)) if c.hasOuter =>
-                <span id={c.uniqueId+"_outer"}>{c.buildSpan(when, response.inSpan)}{response.outSpan}</span>
-
-              case Some(AnswerRender(response, _, when, _)) =>
-                c.buildSpan(when, response.inSpan)
-
-              case _ => <span id={c.uniqueId} lift:when="0">{Comment("FIXME comet type "+theType+" name "+name+" timeout") ++ kids}</span>
-            }) openOr Comment("FIXME - comet type: "+theType+" name: "+name+" Not Found ") ++ kids
+            ret openOr <span id={c.uniqueId} lift:when="0">{Comment("FIXME comet type "+theType+" name "+name+" timeout") ++ kids}</span>
+            } openOr Comment("FIXME - comet type: "+theType+" name: "+name+" Not Found ") ++ kids
           } catch {
             case e => Log.error("Failed to find a comet actor", e); kids
           }
