@@ -55,6 +55,6 @@ case class AddBlogWatcher(me : Actor, id : Long) // id is the blog id
 case class BlogUpdate(xs : List[Entry])
 
 object BlogCache {
-  val cache = {val ret = new BlogCache; ret.start; ret}
+  val cache = new BlogCache
 }
 
