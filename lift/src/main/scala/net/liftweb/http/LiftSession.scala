@@ -454,74 +454,26 @@ class LiftSession(val contextPath: String, val uniqueId: String,
        loc <- req.location;
        template <- loc.template) yield template
 
-  /**
-   * Appends comet stript to body 
-   */
-  private def cometAppend(body : Node): Node = 
-    CVPVar.get match {
-      case list if !list.isEmpty && LiftRules.autoIncludeComet(this) => 
-        Elem(body.prefix, body.label, body.attributes, body.scope, 
-            (body.child ++ JsCmds.Script(LiftRules.renderCometPageContents(LiftSession.this, list)) :_*))
-      case _ => body
-    }
 
   /**
-   * Appends comet stript reference to head 
+   * Manages the merge phase of the rendering pipeline
    */
-  private def cometHeadAppend(body: Node): Node = 
-    CVPVar.get match {
-      case list if !list.isEmpty && LiftRules.autoIncludeComet(this) => 
-        Elem(body.prefix, body.label, body.attributes, body.scope, 
-            (body.child ++ <script src={S.encodeURL("/"+
-                                       	LiftRules.cometPath +
-                                       	"/" + uniqueId +
-                                       	"/" + LiftRules.cometScriptName())}
-              							type="text/javascript"/>) :_*)
-      case _ => body
-    }
-
-  /**
-   * Appends lift GC script to body 
-   */
-  private def liftGCAppend(body : Node): Node = 
-    if (LiftRules.enableLiftGC) {
-      import js._
-      import JsCmds._
-      import JE._
-
-      Elem(body.prefix, body.label, body.attributes, body.scope, 
-          (body.child ++ JsCmds.Script(OnLoad(JsRaw("lift_successRegisterGC()")) &
-                                                JsCrVar("lift_page", RenderVersion.get)) :_*))
-    } else body
-
- /**
-  * Appends ajax stript to body
-  */
-  private def ajaxAppend(body: Node): Node =
-    if (LiftRules.autoIncludeAjax(this)) {
-      Elem(body.prefix, body.label, body.attributes, body.scope,
-          (body.child ++ <script src={S.encodeURL("/"+
-                                  		LiftRules.ajaxPath +
-                                  		"/" + LiftRules.ajaxScriptName())}
-                                  		type="text/javascript"/>) :_*)
-    } else body
-
-  /**
-   */
-  private def merge(xhtml: NodeSeq, tail: NodeSeq) : NodeSeq = {
+  private def merge(xhtml: NodeSeq) : NodeSeq = {
 
     val headInBody: NodeSeq =
     (for (body <- xhtml \ "body";
           head <- findElems(body)(_.label == "head")) yield head.child).
       flatMap {e => e}
 
+      /**
+       * Document walkthrough
+       */
       def xform(in: NodeSeq, inBody: Boolean)
       			(headAppenders : Node => Node)
       			(bodyAppenders : Node => Node): NodeSeq = in flatMap {
         case e: Elem if !inBody && e.label == "body" =>
           val n = Elem(e.prefix, e.label, e.attributes, e.scope,
-                       xform(e.child ++
-                               HeadHelper.removeHtmlDuplicates(tail) ++ Text("\n"), true)(headAppenders)(bodyAppenders) :_*)
+                       xform(e.child, true)(headAppenders)(bodyAppenders) :_*)
           bodyAppenders(n)
 
         case e: Elem if inBody && e.label == "head" => NodeSeq.Empty
@@ -544,11 +496,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
         case x => x
       }
 
-      xform(xhtml, false) {
-        (ajaxAppend _) andThen (cometHeadAppend _)
-      } {
-        (liftGCAppend _) andThen (cometAppend _)
-      }
+      xform(xhtml, false)(DomAppenders.headAppenders(this))(DomAppenders.bodyAppenders(this))
   }
 
   private[http] def processRequest(request: Req): Box[LiftResponse] = {
@@ -591,8 +539,8 @@ class LiftSession(val contextPath: String, val uniqueId: String,
                  // Phase 1: snippets & templates processing
                  map(xml => processSurroundAndInclude(PageName get, xml)) match {
                     case Full(rawXml: NodeSeq) => {
-                    	// Phase 2: Head & Tail merge, add additional elements to body &head
-                        val xml = merge(rawXml, TailVar.get)
+                    	// Phase 2: Head & Tail merge, add additional elements to body & head
+                        val xml = merge(rawXml)
 
                         this.synchronized {
                           S.functionMap.foreach {mi =>
