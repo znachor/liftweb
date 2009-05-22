@@ -2,11 +2,10 @@ package net.liftweb.flot_demo.web.model
 
 import scala.collection.mutable.{HashMap, HashSet}
 
-import scala.actors.Actor
-import scala.actors.Actor._
 
 import net.liftweb.widgets.flot._
 import net.liftweb.util._
+import net.liftweb.actor._
 
 /*
  * This examples simulates a sampling device that takes every 2 seconds different measures.

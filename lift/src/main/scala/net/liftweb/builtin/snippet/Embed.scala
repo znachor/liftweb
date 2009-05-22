@@ -35,7 +35,7 @@ object Embed extends DispatchSnippet {
     } yield template) match {
     case Full(t) => t
     case Failure(msg, _, _) => Comment(msg)
-    case _ => Comment("FIXME: session is invalid")
+    case _ => Comment("FIX" + "ME: session is invalid")
   }
 
 }

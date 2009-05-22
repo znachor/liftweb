@@ -1,7 +1,6 @@
 package net.liftweb.amqp
 
-import _root_.scala.actors.Actor
-import _root_.scala.actors.Actor._
+import _root_.net.liftweb.actor.Actor
 import _root_.com.rabbitmq.client._
 import _root_.java.io.ByteArrayOutputStream
 import _root_.java.io.ObjectOutputStream
@@ -30,13 +29,10 @@ abstract class AMQPSender[T](cf: ConnectionFactory, host: String, port: Int, exc
     channel.basicPublish(ticket, exchange, routingKey, null, bytes.toByteArray)
   }
 
-  def act = loop
-
-  def loop {
-    react {
-      case AMQPMessage(msg: T) => send(msg); loop
-    }
+  def messageHandler = {
+    case AMQPMessage(msg: T) => send(msg)
   }
+  
 }
 
 /**
@@ -72,7 +68,7 @@ class ExampleStringAMQPSender {
   val factory = new ConnectionFactory(params)
 
   val amqp = new StringAMQPSender(factory, "localhost", 5672, "mult", "routeroute")
-  amqp.start
+
   amqp ! AMQPMessage("hi")
 }
 

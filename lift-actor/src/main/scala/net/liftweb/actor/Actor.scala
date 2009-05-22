@@ -133,7 +133,7 @@ trait SpecializeActor[T] extends IMailboxItem[T] {
             } catch {
               case e: Exception => if (eh.isDefinedAt(e)) eh(e)
             }
-          case _ => done = false
+          case _ => done = true
         }
       }
     } catch {

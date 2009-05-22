@@ -325,7 +325,7 @@ trait CometActor extends Actor with BindHelpers {
       }
 
     case PerformSetupComet =>
-      this ! RelinkToActorWatcher
+      // this ! RelinkToActorWatcher
       localSetup
       performReRender(true)
 
@@ -354,7 +354,7 @@ trait CometActor extends Actor with BindHelpers {
       this.reRender(true)
 
 
-    case AnswerQuestion(what, otherListeners, future) =>
+    case aq @ AnswerQuestion(what, otherListeners, future) =>
       S.initIfUninitted(theSession) {
         S.functionLifespan(true) {
           askingWho.foreach {
@@ -421,6 +421,8 @@ trait CometActor extends Actor with BindHelpers {
    * coersable into RenderOut, the compiler "does the right thing"(tm) for you.
    */
   def render: RenderOut
+
+  def reRender: Unit = reRender(false)
 
   def reRender(sendAll: Boolean) {
     this ! ReRender(sendAll)

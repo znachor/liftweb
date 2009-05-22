@@ -6,10 +6,7 @@ import java.util.concurrent.locks._
 import net.liftweb.util._
 import Map._
 import Helpers._
-import ActorPing._
 
-import _root_.scala.actors.{Actor, Exit, OutputChannel}
-import _root_.scala.actors.Actor._
 
 /**
  * Companion module that has the role of monitoring garbage collected references and remove the orphaned

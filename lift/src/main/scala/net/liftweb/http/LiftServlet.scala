@@ -21,8 +21,6 @@ import _root_.java.net.URLDecoder
 import _root_.scala.xml.{Node, NodeSeq,Group, Elem, MetaData, Null, XML, Comment, Text}
 import _root_.scala.collection.immutable.HashMap
 import _root_.scala.xml.transform._
-import _root_.scala.actors.{Actor => ScalaActor, Scheduler => ScalaScheduler}
-import ScalaActor._
 import _root_.net.liftweb.util.Helpers._
 import _root_.net.liftweb.util._
 import _root_.net.liftweb.util.Helpers
@@ -54,8 +52,7 @@ class LiftServlet extends HttpServlet {
     try {
       LiftRules.ending = true
       LiftRules.runUnloadHooks()
-      ScalaScheduler.snapshot // pause the Actor scheduler so we don't have threading issues
-      ScalaScheduler.shutdown
+      Pinger.shutdown
       ActorPing.shutdown
       Log.debug("Destroyed servlet")
       // super.destroy
@@ -317,37 +314,34 @@ class LiftServlet extends HttpServlet {
   /**
    * An actor that manages continuations from container (Jetty style)
    */
-  class ContinuationActor(request: Req, session: LiftSession, actors: List[(CometActor, Long)]) extends Actor {
+  class ContinuationActor(request: Req, session: LiftSession, 
+                          actors: List[(CometActor, Long)],
+                          onBreakout: List[AnswerRender] => Unit) extends Actor {
     private var answers: List[AnswerRender] = Nil
     val seqId = Helpers.nextNum
+    private var brokenOut = false
 
     def messageHandler = {
-        case BeginContinuation =>
-          // this.link(PointlessActorToWorkAroundBug)
-          val mySelf = self
-          val sendItToMe: AnswerRender => Unit = ah => mySelf ! (seqId, ah)
+      case BeginContinuation =>
+        val sendItToMe: AnswerRender => Unit = ah => this ! ah
 
-          actors.foreach{case (act, when) => act ! Listen(when, ListenerId(seqId), sendItToMe)}
+        actors.foreach{case (act, when) => act ! Listen(when, ListenerId(seqId), sendItToMe)}
 
-        case (theId: Long, ar: AnswerRender) =>
-          answers = ar :: answers
-          // FIXME ActorPing.schedule(this, BreakOut, 5)
+      case ar: AnswerRender =>
+        answers = ar :: answers
+        Pinger.schedule(this, BreakOut, 5 millis)
 
-        case BreakOut =>
-          actors.foreach{case (act, _) => tryo(act ! Unlisten(ListenerId(seqId)))}
-          try {
-            LiftRules.resumeRequest(
-              S.init(request, session)
-              (LiftRules.performTransform(
-                  convertAnswersToCometResponse(session,
-                                                answers.toArray, actors))),
-                                                  request.request)
-          } finally {
-            session.exitComet(this)
-          }
+      case BreakOut if !brokenOut =>
+        brokenOut = true
+        actors.foreach{case (act, _) => tryo(act ! Unlisten(ListenerId(seqId)))}
+        try {
+          onBreakout(answers)
+        } finally {
+          session.exitComet(this)
+        }
 
-        case _ =>
-      }
+      case _ =>
+    }
     
 
     override def toString = "Actor dude "+seqId
@@ -357,17 +351,22 @@ class LiftServlet extends HttpServlet {
 
   private lazy val cometTimeout: Long = (LiftRules.cometRequestTimeout openOr 120) * 1000L
 
-  private def setupContinuation(requestState: Req, session: LiftSession, actors: List[(CometActor, Long)]): Nothing = {
-    val cont = new ContinuationActor(requestState, session, actors)
-    // cont.start
+  private def setupContinuation(request: Req, session: LiftSession, actors: List[(CometActor, Long)]): Nothing = {
+    val cont = new ContinuationActor(request, session, actors,
+                                     answers =>  LiftRules.resumeRequest(
+        S.init(request, session)
+        (LiftRules.performTransform(
+            convertAnswersToCometResponse(session,
+                                          answers.toArray, actors))),
+                                            request.request))
 
     cont ! BeginContinuation
 
     session.enterComet(cont)
 
-    // FIXME ActorPing.schedule(cont, BreakOut, TimeSpan(cometTimeout))
+    Pinger.schedule(cont, BreakOut, TimeSpan(cometTimeout))
 
-    LiftRules.doContinuation(requestState.request, cometTimeout + 2000L)
+    LiftRules.doContinuation(request.request, cometTimeout + 2000L)
   }
 
   private def handleComet(request: Req, session: LiftSession): Box[LiftResponse] = {
@@ -395,50 +394,21 @@ class LiftServlet extends HttpServlet {
     (new JsCommands(JsCmds.Run(jsUpdateTime) :: jsUpdateStuff)).toResponse
   }
 
-  private def handleNonContinuationComet(requestState: Req, sessionActor: LiftSession, actors: List[(CometActor, Long)]): Box[LiftResponse] = {
+  private def handleNonContinuationComet(request: Req, session: LiftSession,
+                                         actors: List[(CometActor, Long)]): Box[LiftResponse] = {
 
-  /*
-    LiftRules.cometLogger.debug("Comet Request: "+sessionActor.uniqueId+" "+requestState.params)
+    val future = new Future[List[AnswerRender]]
+    val cont = new ContinuationActor(request, session, actors,
+                                     answers =>  future.satisfy(answers))
 
-    sessionActor.enterComet(self)
-    try {
-      val seqId = Helpers.nextNum
+    cont ! BeginContinuation
 
-      def drainTheSwamp(len: Long, in: List[AnswerRender]): List[AnswerRender] = { // remove any message from the current thread's inbox
-        receiveWithin(len) {
-          case TIMEOUT =>
-            in
+    session.enterComet(cont)
 
-          case (theId: Long, ar: AnswerRender) if theId == seqId =>
-            drainTheSwamp(0, ar :: in)
+    Pinger.schedule(cont, BreakOut, TimeSpan(cometTimeout))
 
-          case BreakOut => in
-
-          case s =>
-            Log.trace("Drained "+s)
-            drainTheSwamp(len, in)
-        }
-      }
-
-      val mySelf = self
-
-      // the function that sends an AnswerHandler to me
-      val sendItToMe: AnswerRender => Unit = ah => mySelf ! (seqId, ah)
-
-      actors.foreach{case (act, when) => act ! Listen(when, ListenerId(seqId), sendItToMe)}
-
-      val ret = drainTheSwamp(cometTimeout, Nil)
-
-      actors.foreach{case (act, _) => act ! Unlisten(ListenerId(seqId))}
-
-      val ret2 = drainTheSwamp(5L, ret)
-
-      Full(convertAnswersToCometResponse(sessionActor, ret2, actors))
-    } finally {
-      sessionActor.exitComet(self)
-    }
-    */
-   Empty // FIXME implement as an Actor and a future
+    future.get(cometTimeout + 1.second).map(ret2 =>
+      convertAnswersToCometResponse(session, ret2, actors))
   }
 
   val dumpRequestResponse = Props.getBool("dump.request.response", false)
@@ -576,11 +546,13 @@ class LiftFilter extends Filter with LiftFilterTrait
     actualServlet = new LiftServlet(context)
     actualServlet.init
 
+    /*
     if (!Props.inGAE) {
       ActorSchedulerFixer.doActorSchedulerFix()
       // access the object to work around Scala actor memory retention problems
       PointlessActorToWorkAroundBug
     }
+    */
 
   }
 

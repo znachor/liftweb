@@ -16,7 +16,6 @@
 package net.liftweb.http
 
 import _root_.scala.actors.{Actor => ScalaActor}
-import ScalaActor._
 import _root_.javax.servlet.http.{HttpSessionBindingListener, HttpSessionBindingEvent, HttpSession}
 import _root_.scala.collection.mutable.{HashMap, ArrayBuffer, ListBuffer}
 import _root_.scala.xml.{NodeSeq, Unparsed, Text}
@@ -115,7 +114,7 @@ case class SessionToServletBridge(uniqueId: String) extends HttpSessionBindingLi
  * Manages LiftSessions because the servlet container is less than optimal at
  * timing sessions out.
  */
-object SessionMaster extends ScalaActor {
+object SessionMaster extends Actor {
   private case class LookupSession(uniqueId: String, when: Long)
 
   private var sessions: Map[String, LiftSession] = Map.empty
@@ -131,6 +130,7 @@ object SessionMaster extends ScalaActor {
    * SessionWatcherInfo
    */
   var sessionWatchers: List[ScalaActor] = Nil
+  var sessionWatchersLift: List[Actor] = Nil
 
   /**
    * Returns a LiftSession or Empty if not found
@@ -162,13 +162,7 @@ object SessionMaster extends ScalaActor {
 
   private val LiftMagicID = "$lift_magic_session_thingy$"
 
-  def act = {
-    doPing()
-    link(ActorWatcher)
-    loop {
-      react(reaction)
-    }
-  }
+  def messageHandler = reaction
 
   private val reaction: PartialFunction[Any, Unit] = {
     case RemoveSession(sessionId) =>
@@ -203,13 +197,10 @@ object SessionMaster extends ScalaActor {
       }
       if (!Props.inGAE) {
         sessionWatchers.foreach(_ ! SessionWatcherInfo(ses))
-        doPing()
       }
-  }
-
-  // Don't start the actor is we're running in the Google App Engine
-  if (!Props.inGAE) {
-    this.start
+      this.sessionWatchersLift.foreach(_ ! SessionWatcherInfo(ses))
+      doPing()
+      
   }
 
   private[http] def sendMsg(in: Any): Unit =
@@ -223,13 +214,13 @@ object SessionMaster extends ScalaActor {
   }
 
   private def doPing() {
-    if (!Props.inGAE) {
-      try {
-        ActorPing schedule(this, CheckAndPurge, 10 seconds)
-      } catch {
-        case e => Log.error("Couldn't start SessionMaster ping", e)
-      }
+
+    try {
+      Pinger schedule(this, CheckAndPurge, 10 seconds)
+    } catch {
+      case e => Log.error("Couldn't start SessionMaster ping", e)
     }
+    
   }
 }
 
@@ -404,12 +395,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   }
 
   private[http] def doShutDown() {
-    try {
-      if (running_?) this.shutDown()
-    } finally {
-      if (!Props.inGAE)
-      ScalaActor.clearSelf
-    }
+    if (running_?) this.shutDown()
   }
 
   private[http] def cleanupUnseenFuncs(): Unit = synchronized {
@@ -1020,7 +1006,6 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   private def findCometByType(contType: String, name: Box[String], defaultXml: NodeSeq, attributes: Map[String, String]): Box[CometActor] = {
     findType[CometActor](contType, LiftRules.buildPackage("comet") ::: ("lift.app.comet" :: Nil)).flatMap{
       cls =>
-      println("**** LOoking for "+cls)
       tryo((e: Throwable) => e match {case e: _root_.java.lang.NoSuchMethodException => ()
           case e => Log.info("Comet find by type Failed to instantiate "+cls.getName, e)}) {
         val constr = cls.getConstructor()

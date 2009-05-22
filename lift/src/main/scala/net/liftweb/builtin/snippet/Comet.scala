@@ -52,11 +52,11 @@ object Comet extends DispatchSnippet {
            else
            c.buildSpan(answer.when, answer.response.inSpan)
 
-            ret openOr <span id={c.uniqueId} lift:when="0">{Comment("FIXME comet type "+theType+" name "+name+" timeout") ++ kids}</span>
-            } openOr Comment("FIXME - comet type: "+theType+" name: "+name+" Not Found ") ++ kids
+            ret openOr <span id={c.uniqueId} lift:when="0">{Comment("FIX" +"ME comet type "+theType+" name "+name+" timeout") ++ kids}</span>
+            } openOr Comment("FIX" +"ME - comet type: "+theType+" name: "+name+" Not Found ") ++ kids
           } catch {
             case e => Log.error("Failed to find a comet actor", e); kids
           }
-    }) openOr Comment("FIXME: session or request are invalid")
+    }) openOr Comment("FIX" +"ME: session or request are invalid")
   }
 }

@@ -22,7 +22,7 @@ import Helpers._
 import _root_.scala.actors._
 import Actor._
 
-
+/*
 /**
  * An actor that monitors other actors that are linked with it. If a watched
  * actor terminates,this actor captures the Exit messag, executes failureFuncs
@@ -220,3 +220,4 @@ object PointlessActorToWorkAroundBug extends Actor {
   ctor()
 }
 
+*/
