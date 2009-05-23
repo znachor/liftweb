@@ -52,7 +52,7 @@ class LiftServlet extends HttpServlet {
     try {
       LiftRules.ending = true
       LiftRules.runUnloadHooks()
-      Pinger.shutdown
+      LAPinger.shutdown
       ActorPing.shutdown
       Log.debug("Destroyed servlet")
       // super.destroy
@@ -316,7 +316,7 @@ class LiftServlet extends HttpServlet {
    */
   class ContinuationActor(request: Req, session: LiftSession, 
                           actors: List[(CometActor, Long)],
-                          onBreakout: List[AnswerRender] => Unit) extends Actor {
+                          onBreakout: List[AnswerRender] => Unit) extends LiftActor {
     private var answers: List[AnswerRender] = Nil
     val seqId = Helpers.nextNum
     private var brokenOut = false
@@ -329,7 +329,7 @@ class LiftServlet extends HttpServlet {
 
       case ar: AnswerRender =>
         answers = ar :: answers
-        Pinger.schedule(this, BreakOut, 5 millis)
+        LAPinger.schedule(this, BreakOut, 5 millis)
 
       case BreakOut if !brokenOut =>
         brokenOut = true
@@ -364,7 +364,7 @@ class LiftServlet extends HttpServlet {
 
     session.enterComet(cont)
 
-    Pinger.schedule(cont, BreakOut, TimeSpan(cometTimeout))
+    LAPinger.schedule(cont, BreakOut, TimeSpan(cometTimeout))
 
     LiftRules.doContinuation(request.request, cometTimeout + 2000L)
   }
@@ -397,7 +397,7 @@ class LiftServlet extends HttpServlet {
   private def handleNonContinuationComet(request: Req, session: LiftSession,
                                          actors: List[(CometActor, Long)]): Box[LiftResponse] = {
 
-    val future = new Future[List[AnswerRender]]
+    val future = new LAFuture[List[AnswerRender]]
     val cont = new ContinuationActor(request, session, actors,
                                      answers =>  future.satisfy(answers))
 
@@ -405,7 +405,7 @@ class LiftServlet extends HttpServlet {
 
     session.enterComet(cont)
 
-    Pinger.schedule(cont, BreakOut, TimeSpan(cometTimeout))
+    LAPinger.schedule(cont, BreakOut, TimeSpan(cometTimeout))
 
     future.get(cometTimeout + 1.second).map(ret2 =>
       convertAnswersToCometResponse(session, ret2, actors))

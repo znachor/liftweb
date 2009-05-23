@@ -42,7 +42,7 @@ object Comet extends DispatchSnippet {
        val name: Box[String] = S.attr.~("name").map(_.text)
        try {
          ctx.findComet(theType, name, kids, S.attrsFlattenToMap).map{c =>
-           val future = new Future[AnswerRender]
+           val future = new LAFuture[AnswerRender]
            c ! AskRender(future)
            val ret = for {
              answer <- future.get(26 seconds)

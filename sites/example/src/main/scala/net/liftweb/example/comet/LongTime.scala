@@ -30,7 +30,7 @@ import Helpers._
 case class BuildStatus(progress: Int, url: Box[String])
 
 // a singleton that builds a "thing"
-object ThingBuilder extends Actor {
+object ThingBuilder extends LiftActor {
   def boot() {
     LiftRules.dispatch.append {
       case Req("getit":: Nil, _, GetRequest) =>
@@ -39,15 +39,15 @@ object ThingBuilder extends Actor {
   }
 
   def messageHandler= {
-      case a: Actor =>
+      case a: LiftActor =>
         this ! (a, 1)
 
-      case (a: Actor, x: Int) if x >= 10 =>
+      case (a: LiftActor, x: Int) if x >= 10 =>
         a ! BuildStatus(100, Full("/getit"))
 
-      case (a: Actor, i: Int) =>
+      case (a: LiftActor, i: Int) =>
         a ! BuildStatus(i * 10, Empty)
-        Pinger.schedule(this, (a, i + 1), 2 seconds)
+        LAPinger.schedule(this, (a, i + 1), 2 seconds)
 
       case _ =>
   }

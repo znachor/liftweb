@@ -86,7 +86,7 @@ case class HttpDigestAuthentication(realmName: String)(func: PartialFunction[(St
   private object CheckAndPurge
   private var running = true
 
-  val nonceWatcher = new Actor {
+  val nonceWatcher = new LiftActor {
     def messageHandler = {
       case CheckAndPurge =>
         doPing()
@@ -101,7 +101,7 @@ case class HttpDigestAuthentication(realmName: String)(func: PartialFunction[(St
       
     private def doPing() {
       try {
-        if (running) Pinger.schedule(this, CheckAndPurge, 5 seconds)
+        if (running) LAPinger.schedule(this, CheckAndPurge, 5 seconds)
       } catch {
         case e => Log.error("Couldn't start NonceWatcher ping", e)
       }

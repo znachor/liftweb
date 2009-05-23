@@ -2,6 +2,7 @@ package com.hellolift.comet
 
 import _root_.net.liftweb.http._
 import _root_.net.liftweb.util._
+import _root_.net.liftweb.actor._
 import _root_.net.liftweb.sitemap._
 import _root_.net.liftweb.sitemap.Loc._
 import _root_.scala.xml._
@@ -32,14 +33,12 @@ class DynamicBlogView extends CometActor {
   // localSetup is the first thing run, we use it to setup the blogid or
   // redirect them to / if no blogid was given.
   override def localSetup {
-    name match {
-      case Full(t) => this.blogid = Helpers.toLong(t)
-    }
+    name.foreach(t => this.blogid = Helpers.toLong(t))
 
     // Let the BlogCache know that we are watching for updates for this blog.
-    (BlogCache.cache !? AddBlogWatcher(this, this.blogid)) match {
-      case BlogUpdate(entries) => this.blog = entries
-    }
+    val f = new LAFuture[BlogUpdate]
+    (BlogCache.cache ! AddBlogWatcher(this, this.blogid, f))
+    this.blog = f.get.xs
   }
 
   // lowPriority will receive messages sent from the BlogCache

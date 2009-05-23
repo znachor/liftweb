@@ -251,7 +251,7 @@ object BrowserLogger {
   }
 }
 
-object SessionInfoDumper extends Actor {
+object SessionInfoDumper extends LiftActor {
   private var lastTime = millis
 
   val tenMinutes: Long = 10 minutes

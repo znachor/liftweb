@@ -39,7 +39,7 @@ case class RecvMsg(chat: Chat, msg: Message)
 case class BulkMsg(chat: Chat, msg: List[Message])
 
 // A RosterListener that sends events to the Actor given.
-abstract class DispatchRosterListener(val dispatch: Actor) extends RosterListener
+abstract class DispatchRosterListener(val dispatch: LiftActor) extends RosterListener
 
 /**
  * An XMPP Dispatcher connects to an XMPP server on behalf of a User.
@@ -50,7 +50,7 @@ abstract class DispatchRosterListener(val dispatch: Actor) extends RosterListene
  *              by logging in.
  * @author Steve Jenson (stevej@pobox.com)
  */
-class XMPPDispatcher(val connf: () => ConnectionConfiguration, val login: XMPPConnection => Unit) extends Actor {
+class XMPPDispatcher(val connf: () => ConnectionConfiguration, val login: XMPPConnection => Unit) extends LiftActor {
   val conn = new XMPPConnection(connf())
   conn.connect
   login(conn)
@@ -89,14 +89,14 @@ class XMPPDispatcher(val connf: () => ConnectionConfiguration, val login: XMPPCo
       }
     })
 
-  private var clients: List[Actor] = Nil
+  private var clients: List[LiftActor] = Nil
 
   def messageHandler = {
     /* These are all messages we process from the client Actors. */
-    case AddListener(actor: Actor) => {
+    case AddListener(actor: LiftActor) => {
         actor ! NewRoster(roster)
       }
-    case RemoveListener(actor: Actor) => clients.remove(_ == actor)
+    case RemoveListener(actor: LiftActor) => clients.remove(_ == actor)
     case SetPresence(presence) => conn.sendPacket(presence)
     case GetPendingMsg(to) => pendingMsg.getOrElse(to, Nil) match {
         case Nil => pendingMsg -= to
@@ -150,14 +150,14 @@ class XMPPDispatcher(val connf: () => ConnectionConfiguration, val login: XMPPCo
   }
 
   // Accepts messages from XMPP and sends them to the local actor for dispatching.
-  class MessageDispatcher(dispatch: Actor) extends MessageListener {
+  class MessageDispatcher(dispatch: LiftActor) extends MessageListener {
     def processMessage(chat: Chat, msg: Message) {
       dispatch ! RecvMsg(chat, msg)
     }
   }
 }
-case class AddListener(actor: Actor)
-case class RemoveListener(actor: Actor)
+case class AddListener(actor: LiftActor)
+case class RemoveListener(actor: LiftActor)
 case object Start
 
 
@@ -167,7 +167,7 @@ case object Start
  * @param username is the username to login to at Google Talk: format: something@gmail.com
  * @param password is the password for the user account at Google Talk.
  */
-class ConsoleChatActor(val username: String, val password: String) extends Actor {
+class ConsoleChatActor(val username: String, val password: String) extends LiftActor {
   def connf() = new ConnectionConfiguration("talk.google.com", 5222, "gmail.com")
   def login(conn: XMPPConnection) = conn.login(username, password)
   val xmpp = new XMPPDispatcher(connf, login)

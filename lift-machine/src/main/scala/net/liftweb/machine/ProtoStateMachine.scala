@@ -305,9 +305,9 @@ trait MetaProtoStateMachine [MyType <: ProtoStateMachine[MyType, StateType],
    */
   def timedEventPeriodicWait = 10000L
 
-  private class TimedEventManager(val metaOwner: Meta) extends Actor {
+  private class TimedEventManager(val metaOwner: Meta) extends LiftActor {
     private def ctor() = {
-      Pinger.schedule(this, Ping, TimeSpan(timedEventInitialWait)) // give the system 2 minutes to "warm up" then start pinging
+      LAPinger.schedule(this, Ping, TimeSpan(timedEventInitialWait)) // give the system 2 minutes to "warm up" then start pinging
     }
 
     def messageHandler = {
@@ -327,7 +327,7 @@ trait MetaProtoStateMachine [MyType <: ProtoStateMachine[MyType, StateType],
         } catch {
           case e => Log.error("State machine loop", e)
         }
-        Pinger.schedule(this, Ping, TimeSpan(timedEventPeriodicWait))
+        LAPinger.schedule(this, Ping, TimeSpan(timedEventPeriodicWait))
 
     }
 
@@ -335,7 +335,7 @@ trait MetaProtoStateMachine [MyType <: ProtoStateMachine[MyType, StateType],
     case object Ping
   }
 
-  private class TimedEventHandler(val metaOwner: Meta) extends Actor {
+  private class TimedEventHandler(val metaOwner: Meta) extends LiftActor {
     def messageHandler = {
       case (item: MyType, event: Event) =>
         try {
@@ -348,8 +348,8 @@ trait MetaProtoStateMachine [MyType <: ProtoStateMachine[MyType, StateType],
     case object Ping
   }
 
-  val timedEventManager: Actor = new TimedEventManager(getSingleton)
+  val timedEventManager: LiftActor = new TimedEventManager(getSingleton)
 
-  val timedEventHandler: Actor = new TimedEventHandler(getSingleton)
+  val timedEventHandler: LiftActor = new TimedEventHandler(getSingleton)
 }
 

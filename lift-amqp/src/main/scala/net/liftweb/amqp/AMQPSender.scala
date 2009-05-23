@@ -1,6 +1,6 @@
 package net.liftweb.amqp
 
-import _root_.net.liftweb.actor.Actor
+import _root_.net.liftweb.actor._
 import _root_.com.rabbitmq.client._
 import _root_.java.io.ByteArrayOutputStream
 import _root_.java.io.ObjectOutputStream
@@ -11,7 +11,7 @@ import _root_.java.io.ObjectOutputStream
  * @see ExampleStringAMQPSender for an example use.
  * @author Steve Jenson (stevej@pobox.com)
  */
-abstract class AMQPSender[T](cf: ConnectionFactory, host: String, port: Int, exchange: String, routingKey: String) extends Actor {
+abstract class AMQPSender[T](cf: ConnectionFactory, host: String, port: Int, exchange: String, routingKey: String) extends LiftActor {
   val conn = cf.newConnection(host, port)
   val channel = conn.createChannel()
   val ticket = configure(channel)

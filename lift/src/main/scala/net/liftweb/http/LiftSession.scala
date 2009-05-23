@@ -114,7 +114,7 @@ case class SessionToServletBridge(uniqueId: String) extends HttpSessionBindingLi
  * Manages LiftSessions because the servlet container is less than optimal at
  * timing sessions out.
  */
-object SessionMaster extends Actor {
+object SessionMaster extends LiftActor {
   private case class LookupSession(uniqueId: String, when: Long)
 
   private var sessions: Map[String, LiftSession] = Map.empty
@@ -130,7 +130,7 @@ object SessionMaster extends Actor {
    * SessionWatcherInfo
    */
   var sessionWatchers: List[ScalaActor] = Nil
-  var sessionWatchersLift: List[Actor] = Nil
+  var sessionWatchersLift: List[LiftActor] = Nil
 
   /**
    * Returns a LiftSession or Empty if not found
@@ -216,7 +216,7 @@ object SessionMaster extends Actor {
   private def doPing() {
 
     try {
-      Pinger schedule(this, CheckAndPurge, 10 seconds)
+      LAPinger schedule(this, CheckAndPurge, 10 seconds)
     } catch {
       case e => Log.error("Couldn't start SessionMaster ping", e)
     }
@@ -278,18 +278,18 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     LiftSession.onSetupSession.foreach(_(this))
   }
 
-  private var cometList: List[Actor] = Nil
+  private var cometList: List[LiftActor] = Nil
 
   private[http] def breakOutComet(): Unit = {
     val cl = synchronized {cometList}
     cl.foreach(_ ! BreakOut)
   }
 
-  private[http] def enterComet(what: Actor): Unit = synchronized {
+  private[http] def enterComet(what: LiftActor): Unit = synchronized {
     cometList = what :: cometList
   }
 
-  private[http] def exitComet(what: Actor): Unit = synchronized {
+  private[http] def exitComet(what: LiftActor): Unit = synchronized {
     cometList = cometList.remove(_ eq what)
   }
 
@@ -331,7 +331,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
         case Full(id) if asyncById.contains(id) =>
           for {
             actor <- asyncById.get(id).toList
-            val future = new Future[List[Any]]
+            val future = new LAFuture[List[Any]]
             val _ = actor ! ActionMessageSet(f.map(i => buildFunc(i)), state, future)
             list <- future.get(5 seconds).toList
             item <- list

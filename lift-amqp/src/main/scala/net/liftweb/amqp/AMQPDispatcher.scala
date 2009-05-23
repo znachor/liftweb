@@ -10,7 +10,7 @@ import _root_.net.liftweb.actor._
 /**
  * @param a The actor to add as a Listener to this Dispatcher.
  */
-case class AMQPAddListener(a: Actor)
+case class AMQPAddListener(a: LiftActor)
 
 /**
  * @param message A deserialized value received via AMQP.
@@ -40,7 +40,7 @@ case class AMQPReconnect(delay: Long)
  *
  * @author Steve Jenson (stevej@pobox.com)
  */
-abstract class AMQPDispatcher[T](cf: ConnectionFactory, host: String, port: Int) extends Actor {
+abstract class AMQPDispatcher[T](cf: ConnectionFactory, host: String, port: Int) extends LiftActor {
   var (conn, channel) = connect()
 
   private def connect(): (Connection, Channel) = {
@@ -57,7 +57,7 @@ abstract class AMQPDispatcher[T](cf: ConnectionFactory, host: String, port: Int)
 
  
   private val reconnectTimer = new Timer("AMQPReconnectTimer")
-  private var as: List[Actor] = Nil
+  private var as: List[LiftActor] = Nil
   def messageHandler = {
     case AMQPAddListener(a) => as = a :: as
     case msg@AMQPMessage(t) => as.foreach(_ ! msg)
@@ -87,7 +87,7 @@ abstract class AMQPDispatcher[T](cf: ConnectionFactory, host: String, port: Int)
 /**
  *
  */
-class SerializedConsumer[T](channel: Channel, a: Actor) extends DefaultConsumer(channel) {
+class SerializedConsumer[T](channel: Channel, a: LiftActor) extends DefaultConsumer(channel) {
   override def handleDelivery(tag: String, env: Envelope, props: AMQP.BasicProperties, body: Array[Byte]) {
     val routingKey = env.getRoutingKey
     val contentType = props.contentType
@@ -135,7 +135,7 @@ class ExampleStringAMQPListener {
   val amqp = new ExampleSerializedAMQPDispatcher[String](factory, "thor.local", 5672)
 
   // Example Listener that just prints the String it receives.
-  class StringListener extends Actor {
+  class StringListener extends LiftActor {
     def messageHandler =  {
       case msg@AMQPMessage(contents: String) => println("received: " + msg)
     }

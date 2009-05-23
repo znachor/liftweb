@@ -19,7 +19,7 @@ package net.liftweb.actor
 import util._
 import Helpers._
 
-class Future[T] {
+class LAFuture[T] {
   private var item: T = _
   private var satisfied = false
 

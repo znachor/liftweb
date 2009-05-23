@@ -29,7 +29,7 @@ import actor._
  * A chat server.  It gets messages and returns them
  */
 
-object ChatServer extends Actor with ListenerManager {
+object ChatServer extends LiftActor with ListenerManager {
   private var chats: List[ChatLine] = Nil
 
   override def lowPriority = {

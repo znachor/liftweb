@@ -100,12 +100,12 @@ object CurrentCometActor extends ThreadGlobal[Box[CometActor]] {
   this.set(Empty)
 }
 
-case class AddAListener(who: Actor)
-case class RemoveAListener(who: Actor)
+case class AddAListener(who: LiftActor)
+case class RemoveAListener(who: LiftActor)
 
 trait ListenerManager {
-  self: Actor =>
-  private var listeners: List[Actor] = Nil
+  self: LiftActor =>
+  private var listeners: List[LiftActor] = Nil
 
   def messageHandler =
       highPriority orElse mediumPriority orElse
@@ -136,7 +136,7 @@ trait CometListener extends CometListenee
 
 trait CometListenee extends CometActor {
 
-  protected def registerWith: Actor
+  protected def registerWith: LiftActor
 
   override protected def localSetup() {
     registerWith ! AddAListener(this)
@@ -153,7 +153,7 @@ trait CometListenee extends CometActor {
  * Takes care of the plumbing for building Comet-based Web Apps
  */
 @serializable
-trait CometActor extends Actor with BindHelpers {
+trait CometActor extends LiftActor with BindHelpers {
   val uniqueId = Helpers.nextFuncName
   private var spanId = uniqueId
   private var lastRenderTime = Helpers.nextNum
@@ -325,7 +325,6 @@ trait CometActor extends Actor with BindHelpers {
       }
 
     case PerformSetupComet =>
-      // this ! RelinkToActorWatcher
       localSetup
       performReRender(true)
 
@@ -492,7 +491,7 @@ trait CometActor extends Actor with BindHelpers {
 
   protected def answer(answer: Any) {
     for {a <- whosAsking} {
-      val f = new Future[String]
+      val f = new LAFuture[String]
       a ! AnswerQuestion(answer, listeners, f)
       f.get(5 seconds)
     }
@@ -612,15 +611,15 @@ private [http] class XmlOrJsCmd(val id: String,
 }
 
 case class PartialUpdateMsg(cmd: () => JsCmd) extends CometMessage
-case class AskRender(reply: Future[AnswerRender]) extends CometMessage
+case class AskRender(reply: LAFuture[AnswerRender]) extends CometMessage
 case class AnswerRender(response: XmlOrJsCmd, who: CometActor, when: Long, displayAll: Boolean) extends CometMessage
 case object PerformSetupComet extends CometMessage
 case object ShutdownIfPastLifespan extends CometMessage
 case class AskQuestion(what: Any, who: CometActor, listeners: List[(ListenerId, AnswerRender => Unit)]) extends CometMessage
-case class AnswerQuestion(what: Any, listeners: List[(ListenerId, AnswerRender => Unit)], future: Future[String]) extends CometMessage
+case class AnswerQuestion(what: Any, listeners: List[(ListenerId, AnswerRender => Unit)], future: LAFuture[String]) extends CometMessage
 case class Listen(when: Long, uniqueId: ListenerId, action: AnswerRender => Unit) extends CometMessage
 case class Unlisten(uniqueId: ListenerId) extends CometMessage
-case class ActionMessageSet(msg: List[() => Any], req: Req, future: Future[List[Any]]) extends CometMessage
+case class ActionMessageSet(msg: List[() => Any], req: Req, future: LAFuture[List[Any]]) extends CometMessage
 case class ReRender(doAll: Boolean) extends CometMessage
 case class ListenerId(id: Long)
 case class Error(id: Box[String], msg: NodeSeq) extends CometMessage

@@ -26,15 +26,15 @@ case class Sample (time: Long, measures: List[Double]) {
 
 //
 
-case class AddListener(listener: Actor)
+case class AddListener(listener: LiftActor)
 
-case class RemoveListener(listener: Actor)
+case class RemoveListener(listener: LiftActor)
 
 /**
  * can a "window" of samples in memory
  */
 
-class AcumSamplesActor (max : Int) extends Actor {
+class AcumSamplesActor (max : Int) extends LiftActor {
 
   val options = new FlotOptions () {
         override val xaxis = Full (new FlotAxisOptions () {
@@ -58,7 +58,7 @@ class AcumSamplesActor (max : Int) extends Actor {
     Nil
 
   // listeners
-  var listeners: List[Actor] = Nil
+  var listeners: List[LiftActor] = Nil
 
   def notifyListeners (newData : FlotNewData) = {
     listeners.foreach(_ ! newData)
@@ -88,13 +88,13 @@ class AcumSamplesActor (max : Int) extends Actor {
           notifyListeners (FlotNewData (series, newDatas))
         }
 
-        case AddListener(listener: Actor) =>
+        case AddListener(listener: LiftActor) =>
           listeners = listener :: listeners
           //
           reply (FlotInfo ("", series, options))
 
 
-        case RemoveListener(listener: Actor) =>
+        case RemoveListener(listener: LiftActor) =>
           listeners = listeners.remove(listener.eq)
       }
     }

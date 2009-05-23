@@ -20,7 +20,7 @@ import Helpers.TimeSpan
  * The ActorPing object schedules an actor to be ping-ed with a given message at specific intervals.
  * The schedule methods return a ScheduledFuture object which can be cancelled if necessary
  */
-object Pinger {
+object LAPinger {
 
   /** The underlying <code>java.util.concurrent.ScheduledExecutor</code> */
   private var service = Executors.newSingleThreadScheduledExecutor(TF)
@@ -42,7 +42,7 @@ object Pinger {
    * @return a <code>ScheduledFuture</code> which sends the <code>msg</code> to
    * the <code>to<code> Actor after the specified TimeSpan <code>delay</code>.
    */
-  def schedule[T](to: SpecializeActor[T], msg: T, delay: TimeSpan): ScheduledFuture[Unit] = {
+  def schedule[T](to: SpecializedLiftActor[T], msg: T, delay: TimeSpan): ScheduledFuture[Unit] = {
     val r = new Callable[Unit] {
       def call: Unit = { to ! msg }
     }
