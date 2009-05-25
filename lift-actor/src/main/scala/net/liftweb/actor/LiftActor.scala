@@ -55,10 +55,10 @@ object LAScheduler {
 }
 
 trait SpecializedLiftActor[T] {
-  private var processing = false
-  private val baseMailbox: MailboxItem = new SpecialMailbox
-  private var msgList: List[T] = Nil
-  private var startCnt = 0
+  private[this] var processing = false
+  private[this] val baseMailbox: MailboxItem = new SpecialMailbox
+  private[this] var msgList: List[T] = Nil
+  private[this] var startCnt = 0
 
   private class MailboxItem(val item: T) {
     var next: MailboxItem = _
@@ -169,6 +169,10 @@ trait SpecializedLiftActor[T] {
     }
   }
 
+  protected def testTranslate[R](v: T, f: T => R) = f(v)
+
+  protected def execTranslate[R](v: T, f: T => R) = f(v)
+
   protected def messageHandler: PartialFunction[T, Unit]
 
   protected def exceptionHandler: PartialFunction[Throwable, Unit] = {
@@ -176,4 +180,40 @@ trait SpecializedLiftActor[T] {
   }
 }
 
-trait LiftActor extends SpecializedLiftActor[Any]
+trait LiftActor extends SpecializedLiftActor[Any] {
+  private[this] var responseFuture: LAFuture[Any] = null
+
+  private case class MsgWithResp(msg: Any, future: LAFuture[Any])
+
+  def !?(msg: Any): Any = {
+    val future = new LAFuture[Any]
+    this ! MsgWithResp(msg, future)
+    future.get
+  }
+
+  def !?(timeout: Long, msg: Any): Option[Any] = {
+    val future = new LAFuture[Any]
+    this ! MsgWithResp(msg, future)
+    future.get(timeout)
+  }
+
+  override protected def testTranslate[R](v: Any, f: Any => R) = v match {
+    case MsgWithResp(msg, _) => f(msg)
+    case v => f(v)
+  }
+
+  override protected def execTranslate[R](v: Any, f: Any => R) = v match {
+    case MsgWithResp(msg, future) =>
+      responseFuture = future
+      try {
+        f(msg)
+      } finally {
+        responseFuture = null
+      }
+    case v => f(v)
+  }
+
+  protected def reply(v: Any) {
+    if (null ne responseFuture) responseFuture.satisfy(v)
+  }
+}
