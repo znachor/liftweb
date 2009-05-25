@@ -38,7 +38,7 @@ class Clock extends CometActor {
   override def lowPriority = {
     case Tick =>
       partialUpdate(SetHtml(spanId, Text(timeNow.toString)))
-    LAPinger.schedule(this, Tick, 10 seconds)
+      if (theSession.running_?) LAPinger.schedule(this, Tick, 10 seconds)
   }
 }
 

@@ -214,7 +214,6 @@ object SessionMaster extends LiftActor {
   }
 
   private def doPing() {
-
     try {
       LAPinger schedule(this, CheckAndPurge, 10 seconds)
     } catch {
@@ -222,6 +221,7 @@ object SessionMaster extends LiftActor {
     }
     
   }
+  doPing()
 }
 
 object TailVar extends RequestVar[NodeSeq](NodeSeq.Empty)
@@ -248,7 +248,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
                   val httpSession: HttpSession, val initialHeaders: List[(String, String)]) {
   import TemplateFinder._
 
-  private var running_? = false
+  private var _running_? = false
 
   private var messageCallback: HashMap[String, S.AFuncHolder] = new HashMap
 
@@ -272,13 +272,15 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   private [http] var sessionRewriter = new HashMap[String, LiftRules.RewritePF]()
 
   private[http] def startSession(): Unit = {
-    running_? = true
+    _running_? = true
     inactivityLength = httpSession.getMaxInactiveInterval.toLong * 1000L
     lastServiceTime = millis
     LiftSession.onSetupSession.foreach(_(this))
   }
 
   private var cometList: List[LiftActor] = Nil
+
+  def running_? = _running_?
 
   private[http] def breakOutComet(): Unit = {
     val cl = synchronized {cometList}
@@ -395,7 +397,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   }
 
   private[http] def doShutDown() {
-    if (running_?) this.shutDown()
+    if (_running_?) this.shutDown()
   }
 
   private[http] def cleanupUnseenFuncs(): Unit = synchronized {
@@ -429,7 +431,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
         LiftSession.onAboutToShutdownSession.foreach(_(this))
 
         // Log.debug("Shutting down session")
-        running_? = false
+        _running_? = false
 
         SessionMaster.sendMsg(RemoveSession(this.uniqueId))
 
