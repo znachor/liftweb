@@ -256,6 +256,8 @@ class LiftSession(val contextPath: String, val uniqueId: String,
                   val httpSession: HttpSession, val initialHeaders: List[(String, String)]) {
   import TemplateFinder._
 
+  type AnyActor = {def !(in: Any): Unit}
+
   private var running_? = false
 
   private var messageCallback: HashMap[String, S.AFuncHolder] = new HashMap
@@ -286,17 +288,18 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     LiftSession.onSetupSession.foreach(_(this))
   }
 
-  private var cometList: List[Actor] = Nil
+  private var cometList: List[AnyActor] = Nil
 
-  private[http] def breakOutComet(): Unit = synchronized {
-    cometList.foreach(_ ! BreakOut)
+  private[http] def breakOutComet(): Unit = {
+    val cl = synchronized {cometList}
+    cl.foreach(_ ! BreakOut)
   }
 
-  private[http] def enterComet(what: Actor): Unit = synchronized {
+  private[http] def enterComet(what: AnyActor): Unit = synchronized {
     cometList = what :: cometList
   }
 
-  private[http] def exitComet(what: Actor): Unit = synchronized {
+  private[http] def exitComet(what: AnyActor): Unit = synchronized {
     cometList = cometList.remove(_ eq what)
   }
 
@@ -387,8 +390,9 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     }
   }
 
-  private[http] def doCometActorCleanup(): Unit = synchronized {
-    this.asyncComponents.values.foreach(_ ! ShutdownIfPastLifespan)
+  private[http] def doCometActorCleanup(): Unit = {
+    val acl = synchronized {this.asyncComponents.values.toList}
+    acl.foreach(_ ! ShutdownIfPastLifespan)
   }
 
   /**
@@ -429,21 +433,27 @@ class LiftSession(val contextPath: String, val uniqueId: String,
         }))
   }
 
-  private def shutDown() = synchronized {
+  private def shutDown() = {
+    var done: List[() => Unit] = Nil
+
     S.initIfUninitted(this) {
       onSessionEnd.foreach(_(this))
+      synchronized {
+        LiftSession.onAboutToShutdownSession.foreach(_(this))
 
-      LiftSession.onAboutToShutdownSession.foreach(_(this))
+        // Log.debug("Shutting down session")
+        running_? = false
 
-      // Log.debug("Shutting down session")
-      running_? = false
+        SessionMaster.sendMsg(RemoveSession(this.uniqueId))
 
-      SessionMaster.sendMsg(RemoveSession(this.uniqueId))
-
-      asyncComponents.foreach{case (_, comp) => tryo(comp ! ShutDown)}
-      cleanUpSession()
-      LiftSession.onShutdownSession.foreach(_(this))
+        asyncComponents.foreach{case (_, comp) => done ::= (() => tryo(comp ! ShutDown))}
+        cleanUpSession()
+        LiftSession.onShutdownSession.foreach(f => done ::= (() => f(this)))
+      }
     }
+  
+    done.foreach(_.apply())
+
   }
 
   /**
@@ -687,13 +697,13 @@ class LiftSession(val contextPath: String, val uniqueId: String,
 
   private def findAttributeSnippet(name: String, rest: MetaData): MetaData = {
     S.doSnippet(name) {
-    val (cls, method) = splitColonPair(name, null, "render")
+      val (cls, method) = splitColonPair(name, null, "render")
 
-    findSnippetClass(cls).flatMap(clz => instantiate(clz).flatMap(inst =>
-        (invokeMethod(clz, inst, method) match {
-            case Full(md: MetaData) => Full(md.copy(rest))
-            case _ => Empty
-          }))).openOr(rest)
+      findSnippetClass(cls).flatMap(clz => instantiate(clz).flatMap(inst =>
+          (invokeMethod(clz, inst, method) match {
+              case Full(md: MetaData) => Full(md.copy(rest))
+              case _ => Empty
+            }))).openOr(rest)
     }
   }
 
@@ -882,7 +892,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
         case Some(tn) =>
           S.doSnippet(tn.text){
             NamedPF((tn.text, elm, metaData, kids, page),
-                                 liftTagProcessing)
+                    liftTagProcessing)
           }
 
         case _ => processSnippet(page, Empty , elm.attributes, elm, elm.child)
@@ -908,11 +918,11 @@ class LiftSession(val contextPath: String, val uniqueId: String,
 
       case elm: Elem if elm.prefix == "lift" || elm.prefix == "lift-tag" || elm.prefix == "l"=>
         S.doSnippet(elm.label){
-        S.setVars(elm.attributes){
-          processSurroundAndInclude(page, NamedPF((elm.label, elm, elm.attributes,
-                                                   asNodeSeq(elm.child), page),
-                                                  liftTagProcessing))
-        }}
+          S.setVars(elm.attributes){
+            processSurroundAndInclude(page, NamedPF((elm.label, elm, elm.attributes,
+                                                     asNodeSeq(elm.child), page),
+                                                    liftTagProcessing))
+          }}
 
       case elm: Elem =>
         Elem(v.prefix, v.label, processAttributes(v.attributes),
@@ -947,28 +957,35 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     cometSetup((Full(theType) -> name, msg) :: cometSetup.is)
   }
 
-  private[liftweb] def findComet(theType: Box[String], name: Box[String], defaultXml: NodeSeq, attributes: Map[String, String]): Box[CometActor] = synchronized {
+  private[liftweb] def findComet(theType: Box[String], name: Box[String], defaultXml: NodeSeq, attributes: Map[String, String]): Box[CometActor] =
+  {
     val what = (theType -> name)
-    val ret = Box(asyncComponents.get(what)).or( {
-        theType.flatMap{
-          tpe =>
-          val ret = findCometByType(tpe, name, defaultXml, attributes)
-          ret.foreach(r =>
-            synchronized {
-              asyncComponents(what) = r
-              asyncById(r.uniqueId) = r
-            })
-          ret
-        }
-      })
+    val ret = synchronized {
+   
+      val ret = Box(asyncComponents.get(what)).or( {
+          theType.flatMap{
+            tpe =>
+            val ret = findCometByType(tpe, name, defaultXml, attributes)
+            ret.foreach(r =>
+              synchronized {
+                asyncComponents(what) = r
+                asyncById(r.uniqueId) = r
+              })
+            ret
+          }
+        })
+    
+      ret
+    }
 
     for {
       actor <- ret
       (cst, csv) <- cometSetup.is if cst == what
-    }       actor ! csv
+    } actor ! csv
 
     ret
   }
+
 
   /**
    * Finds a Comet actor by ID

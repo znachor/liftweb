@@ -762,9 +762,6 @@ object S extends HasParams {
   def redirectTo[T](where: String, func: () => Unit): T =
   throw ResponseShortcutException.redirect(where, func)
 
-  private val executionInfo = new ThreadGlobal[HashMap[String, Function[Array[String], Any]]]
-
-
   private[http] object oldNotices extends
   RequestVar[Seq[(NoticeType.Value, NodeSeq, Box[String])]](Nil)
 

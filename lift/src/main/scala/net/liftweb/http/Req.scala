@@ -278,7 +278,9 @@ class Req(val path: ParsePath,
     if (LiftRules.siteMap.isEmpty) Left(true)
     else location.map(_.testAccess) match {
       case Full(Left(true)) => Left(true)
-      case Full(Right(Full(resp))) => Right(Full(resp))
+      case Full(Right(Full(resp))) =>
+        object theResp extends RequestVar(resp.apply())
+        Right(Full(theResp.is))
       case _ => Right(Empty)
     }
   }

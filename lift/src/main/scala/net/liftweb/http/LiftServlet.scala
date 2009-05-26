@@ -33,6 +33,8 @@ import js._
 import _root_.javax.servlet._
 import auth._
 
+import _root_.net.liftweb.actor._
+
 /**
  * An implementation of HttpServlet.  Just drop this puppy into
  * your Java web container, do a little magic in web.xml, and
@@ -56,6 +58,7 @@ class LiftServlet extends HttpServlet {
       Scheduler.snapshot // pause the Actor scheduler so we don't have threading issues
       Scheduler.shutdown
       ActorPing.shutdown
+      LAScheduler.shutdown
       Log.debug("Destroyed servlet")
       // super.destroy
     } catch {
@@ -316,43 +319,28 @@ class LiftServlet extends HttpServlet {
   /**
    * An actor that manages continuations from container (Jetty style)
    */
-  class ContinuationActor(request: Req, sessionActor: LiftSession, actors: List[(CometActor, Long)]) extends Actor {
+  class ContinuationActor(request: Req, session: LiftSession, 
+                          actors: List[(CometActor, Long)],
+                          onBreakout: List[AnswerRender] => Unit) extends LiftActor {
     private var answers: List[AnswerRender] = Nil
     val seqId = Helpers.nextNum
 
-    def act = loop {
-      react {
-        case BeginContinuation =>
-          this.link(PointlessActorToWorkAroundBug)
-          val mySelf = self
-          val sendItToMe: AnswerRender => Unit = ah => mySelf ! (seqId, ah)
+    def messageHandler = {
+      case BeginContinuation =>
+        val sendItToMe: AnswerRender => Unit = ah => this ! ah
 
-          actors.foreach{case (act, when) => act ! Listen(when, ListenerId(seqId), sendItToMe)}
+        actors.foreach{case (act, when) => act ! Listen(when, ListenerId(seqId), sendItToMe)}
 
-        case (theId: Long, ar: AnswerRender) =>
-          answers = ar :: answers
-          ActorPing.schedule(this, BreakOut, 5)
+      case ar: AnswerRender =>
+        answers = ar :: answers
+        LAPinger.schedule(this, BreakOut, 5 millis)
 
-        case 'byebye =>
-          this.exit()
+      case BreakOut =>
+        session.exitComet(this)
+        actors.foreach{case (act, _) => tryo(act ! Unlisten(ListenerId(seqId)))}
+        onBreakout(answers)
 
-        case BreakOut =>
-          this ! 'byebye
-
-          actors.foreach{case (act, _) => tryo(act ! Unlisten(ListenerId(seqId)))}
-          try {
-            LiftRules.resumeRequest(
-              S.init(request, sessionActor)
-              (LiftRules.performTransform(
-                  convertAnswersToCometResponse(sessionActor,
-                                                answers.toArray, actors))),
-                                                  request.request)
-          } finally {
-            sessionActor.exitComet(this)
-          }
-
-        case _ =>
-      }
+      case _ =>
     }
 
     override def toString = "Actor dude "+seqId
@@ -362,17 +350,22 @@ class LiftServlet extends HttpServlet {
 
   private lazy val cometTimeout: Long = (LiftRules.cometRequestTimeout openOr 120) * 1000L
 
-  private def setupContinuation(requestState: Req, sessionActor: LiftSession, actors: List[(CometActor, Long)]): Nothing = {
-    val cont = new ContinuationActor(requestState, sessionActor, actors)
-    cont.start
+  private def setupContinuation(request: Req, session: LiftSession, actors: List[(CometActor, Long)]): Nothing = {
+    val cont = new ContinuationActor(request, session, actors,
+                                     answers => LiftRules.resumeRequest(
+        S.init(request, session)
+        (LiftRules.performTransform(
+            convertAnswersToCometResponse(session,
+                                          answers.toArray, actors))),
+                                            request.request))
 
     cont ! BeginContinuation
 
-    sessionActor.enterComet(cont)
+    session.enterComet(cont)
 
-    ActorPing.schedule(cont, BreakOut, TimeSpan(cometTimeout))
+    LAPinger.schedule(cont, BreakOut, TimeSpan(cometTimeout))
 
-    LiftRules.doContinuation(requestState.request, cometTimeout + 2000L)
+    LiftRules.doContinuation(request.request, cometTimeout + 2000L)
   }
 
   private def handleComet(requestState: Req, sessionActor: LiftSession): Box[LiftResponse] = {
@@ -400,46 +393,22 @@ class LiftServlet extends HttpServlet {
     (new JsCommands(JsCmds.Run(jsUpdateTime) :: jsUpdateStuff)).toResponse
   }
 
-  private def handleNonContinuationComet(requestState: Req, sessionActor: LiftSession, actors: List[(CometActor, Long)]): Box[LiftResponse] = {
+  private def handleNonContinuationComet(request: Req, session: LiftSession, actors: List[(CometActor, Long)]): Box[LiftResponse] = {
+    val f = new LAFuture[List[AnswerRender]]
+    val cont = new ContinuationActor(request, session, actors,
+                                     answers => f.satisfy(answers))
 
-    LiftRules.cometLogger.debug("Comet Request: "+sessionActor.uniqueId+" "+requestState.params)
-
-    sessionActor.enterComet(self)
     try {
-      val seqId = Helpers.nextNum
+      cont ! BeginContinuation
 
-      def drainTheSwamp(len: Long, in: List[AnswerRender]): List[AnswerRender] = { // remove any message from the current thread's inbox
-        receiveWithin(len) {
-          case TIMEOUT =>
-            in
+      session.enterComet(cont)
 
-          case (theId: Long, ar: AnswerRender) if theId == seqId =>
-            drainTheSwamp(0, ar :: in)
+      LAPinger.schedule(cont, BreakOut, TimeSpan(cometTimeout))
 
-          case BreakOut => in
-
-          case s =>
-            Log.trace("Drained "+s)
-            drainTheSwamp(len, in)
-        }
-      }
-
-      val mySelf = self
-
-      // the function that sends an AnswerHandler to me
-      val sendItToMe: AnswerRender => Unit = ah => mySelf ! (seqId, ah)
-
-      actors.foreach{case (act, when) => act ! Listen(when, ListenerId(seqId), sendItToMe)}
-
-      val ret = drainTheSwamp(cometTimeout, Nil)
-
-      actors.foreach{case (act, _) => act ! Unlisten(ListenerId(seqId))}
-
-      val ret2 = drainTheSwamp(5L, ret)
-
-      Full(convertAnswersToCometResponse(sessionActor, ret2, actors))
+      val ret2 = f.get(cometTimeout) openOr Nil
+      Full(convertAnswersToCometResponse(session, ret2, actors))
     } finally {
-      sessionActor.exitComet(self)
+      session.exitComet(cont)
     }
   }
 
@@ -657,8 +626,25 @@ class LiftFilter extends Filter with LiftFilterTrait
 
 object ActorSchedulerFixer {
   var performFix = true
+  import java.util.concurrent.{Executors, Executor}
 
   private var fixDone = false
+
+  var exeuctorCreator: () => Executor = Executors.newCachedThreadPool _
+
+  var doLogging: Throwable => Unit =
+  e => Log.error("Actor scheduler", e)
+
+  var runnableCreator: (() => Unit) => Runnable =
+  toRun => new Runnable {
+    def run() {
+      try {
+        toRun.apply()
+      } catch {
+        case e => doLogging(e)
+      }
+    }
+  }
 
   def doActorSchedulerFix(): Unit = synchronized {
 
@@ -671,8 +657,7 @@ object ActorSchedulerFixer {
       }
 
       Scheduler.impl = {
-        import java.util.concurrent.Executors
-        val es = Executors.newFixedThreadPool(10)
+        val es = exeuctorCreator()
 
         new IScheduler {
 
@@ -680,29 +665,27 @@ object ActorSchedulerFixer {
            *
            *  @param  fun  the closure to be executed
            */
-          def execute(fun: => Unit): Unit = es.execute(new Runnable {
-              def run() {
-                try {
-                  fun
-                } catch {
-                  case e => Log.error("Actor scheduler", e)
-                }
-              }
-            })
+          def execute(fun: => Unit): Unit = {
+            try {
+
+              es.execute(runnableCreator(() => fun))
+            } catch {
+              case e => e.printStackTrace
+            }
+          }
 
           /** Submits a <code>Runnable</code> for execution.
            *
            *  @param  task  the task to be executed
            */
-          def execute(task: Runnable): Unit = es.execute(new Runnable {
-              def run() {
-                try {
-                  task.run()
-                } catch {
-                  case e => Log.error("Actor scheduler", e)
-                }
-              }
-            })
+          def execute(task: Runnable): Unit = {
+            try {
+
+              es.execute(runnableCreator(() => task.run))
+            } catch {
+              case e => e.printStackTrace
+            }
+          }
 
           /** Notifies the scheduler about activity of the
            *  executing actor.
@@ -718,7 +701,6 @@ object ActorSchedulerFixer {
           def onLockup(handler: () => Unit): Unit = {}
           def onLockup(millis: Int)(handler: () => Unit): Unit = {}
           def printActorDump: Unit = {}
-
         }
       }
     }

@@ -91,5 +91,5 @@ trait HasKids {
 
   def isRoot_? = false
 
-  private[sitemap] def testAccess: Either[Boolean, Box[LiftResponse]] = Left(true)
+  private[sitemap] def testAccess: Either[Boolean, Box[() => LiftResponse]] = Left(true)
 }
