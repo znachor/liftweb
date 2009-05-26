@@ -122,23 +122,23 @@ trait Loc[ParamType] {
     else Empty
   }
 
-  def testAccess: Either[Boolean, Box[LiftResponse]] = accessTestRes.is
+  def testAccess: Either[Boolean, Box[() => LiftResponse]] = accessTestRes.is
 
-  protected def _testAccess = {
-    def testParams(what: List[Loc.LocParam]): Either[Boolean, Box[LiftResponse]] = what match {
+  protected def _testAccess: Either[Boolean, Box[() => LiftResponse]] = {
+    def testParams(what: List[Loc.LocParam]): Either[Boolean, Box[() => LiftResponse]] = what match {
       case Nil => Left(true)
 
       case Loc.If(test, msg) :: xs =>
-        if (!test()) Right(Full(msg()))
+        if (!test()) Right(Full(msg))
         else testParams(xs)
 
       case Loc.Unless(test, msg) :: xs =>
-        if (test()) Right(Full(msg()))
+        if (test()) Right(Full(msg))
         else testParams(xs)
 
       case Loc.TestAccess(func) :: xs =>
         func() match {
-          case Full(resp) => Right(Full(resp))
+          case Full(resp) => Right(Full(() => resp))
           case _ => testParams(xs)
         }
 
@@ -151,7 +151,7 @@ trait Loc[ParamType] {
   }
 
   protected object accessTestRes extends
-  RequestVar[Either[Boolean, Box[LiftResponse]]](_testAccess) {
+  RequestVar[Either[Boolean, Box[() => LiftResponse]]](_testAccess) {
     override val __nameSalt = randomString(10)
   }
 
