@@ -664,44 +664,144 @@ object S extends HasParams {
   }
 
   /**
-   * Test the current request to see if it's a GET
+   * Test the current request to see if it's a GET. This is a thin wrapper on Req.get_?
+   *
+   * @return <code>true</code> if the request is a GET, <code>false</code> otherwise.
+   *
+   * @see Req.get_?
    */
   def get_? = request.map(_.get_?).openOr(false)
 
   /**
-   * The URI of the current request (not re-written)
+   * The URI of the current request (not re-written). The URI is the portion of the request
+   * URL after the servlet context path. For example, with a servlet context path of "myApp",
+   * Lift would return the following URIs for the given requests:
+   *
+   * <table>
+   * <tr align=left>
+   *   <th>HTTP request</th><th>URI</th>
+   * </tr>
+   * <tr>
+   *   <td>http://foo.com/myApp/foo/bar.html<td><td>/foo/bar.html</td>
+   * </tr>
+   * <tr>
+   *   <td>http://foo.com/myApp/test/<td><td>/test/</td>
+   * </tr>
+   * <tr>
+   *   <td>http://foo.com/myApp/item.html?id=42<td><td>/item.html</td>
+   * </tr>
+   * </table>
+   *
+   * If you want the full URI, including the servlet context path, you should retrieve it
+   * from the underlying HttpServletRequest. You could do something like:
+   *
+   * <pre>
+   *   val fullURI = S.request.map(_.request.getRequestURI) openOr ("Undefined")
+   * </pre>
+   *
+   * @see Req.uri
+   * @see javax.servlet.http.HttpServletRequest.getRequestURI
    */
   def uri: String = request.map(_.uri).openOr("/")
 
   /**
-   * Redirect the browser to a given URL
+   * Redirects the browser to a given URL. Note that the underlying mechanism for redirects is to
+   * throw a ResponseShortcutException, so if you're doing the redirect within a try/catch block,
+   * you need to make sure to either ignore the redirect exception or rethrow it. Two possible
+   * approaches would be:
+   *
+   * <pre>
+   *   ...
+   *   try {
+   *     // your code here
+   *     S.redirectTo(...)
+   *   } catch {
+   *     case e: Exception if !e.instanceOf[net.liftweb.http.ResponseShortcutException] => ...
+   *   }
+   * </pre>
+   *
+   * or
+   *
+   * <pre>
+   *   ...
+   *   try {
+   *     // your code here
+   *     S.redirectTo(...)
+   *   } catch {
+   *     case rse: net.liftweb.http.ResponseShortcutException => throw rse
+   *     case e: Exception => ...
+   *   }
+   * </pre>
+   *
+   * @param where The new URL to redirect to.
+   *
+   * @see ResponseShortcutException
+   * @see #redirectTo(String, () => Unit)
    */
   def redirectTo[T](where: String): T = throw ResponseShortcutException.redirect(where)
 
+  /**
+   * Redirects the browser to a given URL and registers a function that will be executed when the browser
+   * accesses the new URL. Otherwise the function is exactly the same as S.redirectTo(String), which has
+   * example documentation. Note that if the URL that you redirect to must be part of your web application
+   * or the function won't be executed. This is because the function is only registered locally.
+   *
+   * @param where The new URL to redirect to.
+   * @param func The function to be executed when the redirect is accessed.
+   *
+   * @see #redirectTo(String)
+   */
   def redirectTo[T](where: String, func: () => Unit): T =
   throw ResponseShortcutException.redirect(where, func)
-
-  private val executionInfo = new ThreadGlobal[HashMap[String, Function[Array[String], Any]]]
-
 
   private[http] object oldNotices extends
   RequestVar[Seq[(NoticeType.Value, NodeSeq, Box[String])]](Nil)
 
   /**
-   * Initialize the current request session
+   * Initialize the current request session. Generally this is handled by Lift during request
+   * processing, but this method is available in case you want to use S outside the scope
+   * of a request (standard HTTP or Comet).
+   *
+   * @param request The Req instance for this request
+   * @param session the LiftSession for this request
+   * @param f 
    */
+  // TODO: what is f?
   def init[B](request: Req, session: LiftSession)(f: => B) : B = {
     _init(request,session)(() => f)
   }
 
   /**
-   * The current LiftSession
+   * The current LiftSession.
    */
   def session: Box[LiftSession] = Box.legacyNullTest(_sessionInfo.value)
 
   /**
    * Log a query for the given request.  The query log can be tested to see
-   * if queries for the particular page rendering took too long
+   * if queries for the particular page rendering took too long. The query log
+   * starts empty for each new request. This method can be used as a log function
+   * for the net.liftweb.mapper.DB.addLogFunc method to enable logging of
+   * Mapper queries. You would set it up in your bootstrap like:
+   *
+   * <pre>
+   * import net.liftweb.mapper.DB
+   * import net.liftweb.http.S
+   * class Boot {
+   *   def boot {
+   *     ...
+   *     DB.addLogFunc(S.logQuery _)
+   *     ...
+   *   }
+   * }
+   * </pre>
+   *
+   * Note that the query log is simply stored as a List and is not sent to any output
+   * byt default. To retrieve the List of query log items, use S.queryLog. You can also
+   * provide your own analysis function that will process the query log vi S.addAnalyzer.
+   *
+   * @see #queryLog
+   * @see #addAnalyzer
+   * @see net.liftweb.mapper.DB.addLogFun((String,Long) => Any)
    */
   def logQuery(query: String, time: Long) = p_queryLog.is += (query, time)
 
@@ -719,7 +819,12 @@ object S extends HasParams {
                                     List[(String, Long)]) => Any] = Nil
 
   /**
-   * Add a query analyzer (passed queries for analysis or logging)
+   * Add a query analyzer (passed queries for analysis or logging). The analyzer
+   * methods are executed with the request, total time to process the request, and
+   * the List of query log entries once the current request completes.
+   *
+   * @see #logQuery
+   * @see #queryLog
    */
   def addAnalyzer(f: (Box[Req], Long,
                       List[(String, Long)]) => Any): Unit =
@@ -736,19 +841,56 @@ object S extends HasParams {
   /**
    * You can wrap the handling of an HTTP request with your own wrapper.  The wrapper can
    * execute code before and after the request is processed (but still have S scope).
-   * This allows for query analysis, etc.
+   * This allows for query analysis, etc. See S.addAround(LoanWrapper) for an example.
+   * This version of the method takes a list of LoanWrappers that are applied in order.
+   *
+   * @see #addAround(LoanWrapper)
+   * @see LoanWrapper
    */
   def addAround(lw: List[LoanWrapper]): Unit = aroundRequest = lw ::: aroundRequest
 
   /**
    * You can wrap the handling of an HTTP request with your own wrapper.  The wrapper can
    * execute code before and after the request is processed (but still have S scope).
-   * This allows for query analysis, etc.
+   * This allows for query analysis, etc. Wrappers are chained, much like servlet filters,
+   * so you can layer processing on the request. As an example, let's look at a wrapper that opens
+   * a resource and makes it available via a RequestVar, then closes the resource when finished:
+   *
+   * <pre>
+   * import net.liftweb.http.{ResourceVar,S}
+   * import net.liftweb.util.LoanWrapper
+   *
+   * // Where "ResourceType" is defined by you
+   * object myResource extends ResourceVar[ResourceType](...)
+   * 
+   * class Boot {
+   *   def boot {
+   *     ...
+   *     S.addAround(
+   *       new LoanWrapper {
+   *         def apply[T](f: => T) : T = {
+   *           myResource(... code to open and return a resource instance ...)
+   *           f() // This call propagates the request further down the "chain" for template processing, etc.
+   *           myResource.is.close() // Release the resource
+   *         }
+   *       }
+   *     )
+   *     ...
+   *   }
+   * }
+   * </pre>
+   * 
+   * @see #addAround(LoanWrapper)
+   * @see LoanWrapper 
    */
   def addAround(lw: LoanWrapper): Unit = aroundRequest = lw :: aroundRequest
 
   /**
-   * Get a list of the logged queries
+   * Get a list of the logged queries. These log entries are added via the logQuery method, which
+   * has a more detailed explanation of usage.
+   *
+   * @see #logQuery(String,Long)
+   * @see #addAnalyzer
    */
   def queryLog: List[(String, Long)] = p_queryLog.is.toList
 
@@ -763,7 +905,16 @@ object S extends HasParams {
   }
 
   /**
-   * Sets a HTTP header attribute
+   * Sets a HTTP header attribute. For example, you could set a "Warn" header in
+   * your response:
+   *
+   * <pre>
+   *   ...
+   *   S.setHeader("Warn", "The cheese is old and moldy")
+   *   ...
+   * </pre>
+   *
+   * @see #getHeaders
    */
   def setHeader(name: String, value: String) {
     Box.legacyNullTest(_responseHeaders.value).foreach(
@@ -773,7 +924,11 @@ object S extends HasParams {
   }
 
   /**
-   * Returns the HTTP headers as a List[(String, String)]
+   * Returns the currently set HTTP headers as a List[(String, String)]. To retrieve
+   * a specific header, use S.getHeader.
+   *
+   * @see #setHeader(String,String)
+   * @see #getHeader(String)
    */
   def getHeaders(in: List[(String, String)]): List[(String, String)] = {
     Box.legacyNullTest(_responseHeaders.value).map(
@@ -781,6 +936,21 @@ object S extends HasParams {
       rh.headers.elements.toList :::
       in.filter{case (n, v) => !rh.headers.contains(n)}
     ).openOr(Nil)
+  }
+
+  /**
+   * Returns the current set value of the given HTTP header as a Box.
+   *
+   * @param name The name of the HTTP header to retrieve
+   * @return A Full(value) or Empty if the header isn't set
+   *
+   * @see #setHeader(String,String)
+   * @see #getHeaders(List[(String,String)])
+   */
+  def getHeader(name : String) : Box[String] = {
+    Box.legacyNullTest(_responseHeaders.value).map(
+      rh => Box(rh.headers.get(name))
+    ).openOr(Empty)
   }
 
   /**
@@ -1047,7 +1217,7 @@ object S extends HasParams {
   /**
    * Returns 'type' S attribute
    */
-  def invokedAs: String = attr("type") openOr ""
+  def invokedAs: String = (currentSnippet or attr("type")) openOr ""
 
   /**
    * Sets a HttpSession attribute
@@ -1441,7 +1611,7 @@ object S extends HasParams {
   /**
    * Returns all the HTTP parameters having 'n' name
    */
-  def params(n: String): List[String] = request.map(_.params(n)).openOr(Nil)
+  def params(n: String): List[String] = request.flatMap(_.params.get(n)).openOr(Nil)
   /**
    * Returns the HTTP parameter having 'n' name
    */

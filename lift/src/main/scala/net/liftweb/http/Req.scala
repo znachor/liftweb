@@ -98,10 +98,8 @@ object Req {
       val normal: List[NormalParamHolder] = allInfo.flatMap{case v: NormalParamHolder => List(v) case _ => Nil}
       val files: List[FileParamHolder] = allInfo.flatMap{case v: FileParamHolder => List(v) case _ => Nil}
 
-      val params = normal.foldLeft(eMap)((a,b) => a.get(b.name) match {
-          case None => a + (b.name -> List(b.value))
-          case Some(v) => a + (b.name -> (v ::: List(b.value)))
-        })
+      val params = normal.foldLeft(eMap)((a,b) => 
+        a + (b.name -> (a.getOrElse(b.name, Nil) ::: List(b.value))))
 
       (normal.map(_.name).removeDuplicates, localParams ++ params, files, Empty)
     } else if (reqType.get_?) {

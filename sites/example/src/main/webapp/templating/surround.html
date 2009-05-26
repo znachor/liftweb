@@ -56,7 +56,7 @@ name of the template.  By convension, templates are stored in the
 /templates-hidden directory.  Lift will not serve direct HTTP request
 from any directory that contains "-hidden".  The "at" attribute specifies
 where the content should be placed in the loaded template.  Lift will
-look for a &lt;lift-tag:bind name=&quot;...&quot;/&gt; tag in the target
+look for a &lt;lift:bind name=&quot;...&quot;/&gt; tag in the target
 template and insert the body of the surround tag at the bind point.
 </p>
 
@@ -100,7 +100,7 @@ template and insert the body of the surround tag at the bind point.
     &lt;/<span class="function-name">div</span>&gt;
     
     &lt;<span class="function-name">div</span> <span class="variable-name">class</span>=<span class="string">"contents"</span>&gt;
-      &lt;<span class="sgml-namespace">lift-tag</span>:<span class="function-name">bind</span> <span class="variable-name">name</span>=<span class="string">"content"</span> /&gt;
+      &lt;<span class="sgml-namespace">lift</span>:<span class="function-name">bind</span> <span class="variable-name">name</span>=<span class="string">"content"</span> /&gt;
     &lt;/<span class="function-name">div</span>&gt;
   &lt;/<span class="function-name">body</span>&gt;
 &lt;/<span class="function-name">html</span>&gt;
