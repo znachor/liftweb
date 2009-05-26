@@ -699,6 +699,14 @@ object S extends HasParams {
    *   val fullURI = S.request.map(_.request.getRequestURI) openOr ("Undefined")
    * </pre>
    *
+   * The URI may be used to provide a link back to the same page as the current request:
+   *
+   * <pre>
+   *   bind(...,
+   *        "selflink" -> SHtml.link(S.uri, { () => ... }, Text("Self link")),
+   *        ...)
+   * </pre>
+   *
    * @see Req.uri
    * @see javax.servlet.http.HttpServletRequest.getRequestURI
    */
