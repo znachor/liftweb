@@ -256,6 +256,8 @@ class LiftSession(val contextPath: String, val uniqueId: String,
                   val httpSession: HttpSession, val initialHeaders: List[(String, String)]) {
   import TemplateFinder._
 
+  type AnyActor = {def !(in: Any): Unit}
+
   private var running_? = false
 
   private var messageCallback: HashMap[String, S.AFuncHolder] = new HashMap
@@ -286,18 +288,18 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     LiftSession.onSetupSession.foreach(_(this))
   }
 
-  private var cometList: List[Actor] = Nil
+  private var cometList: List[AnyActor] = Nil
 
   private[http] def breakOutComet(): Unit = {
     val cl = synchronized {cometList}
     cl.foreach(_ ! BreakOut)
   }
 
-  private[http] def enterComet(what: Actor): Unit = synchronized {
+  private[http] def enterComet(what: AnyActor): Unit = synchronized {
     cometList = what :: cometList
   }
 
-  private[http] def exitComet(what: Actor): Unit = synchronized {
+  private[http] def exitComet(what: AnyActor): Unit = synchronized {
     cometList = cometList.remove(_ eq what)
   }
 
