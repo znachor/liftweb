@@ -86,8 +86,39 @@ object LiftRules {
    * LiftSession is necessary.
    */
   var sessionCreator: (HttpSession,  String, List[(String, String)]) => LiftSession = {
-    case (httpSession, contextPath, headers) => new LiftSession(contextPath, httpSession.getId, httpSession, headers)
+    case (httpSession, contextPath, headers) => new LiftSession(contextPath, httpSession.getId, Full(httpSession), headers)
   }
+
+  var getLiftSession: (Req, HttpServletRequest) => LiftSession =
+  (req, httpReq) => getLiftSession(req, httpReq.getSession)
+
+   /**
+   * Returns a LiftSession instance.
+   */
+  private def getLiftSession(request: Req, httpSession: HttpSession): LiftSession = {
+    val wp = request.path.wholePath
+    val cometSessionId =
+    if (wp.length >= 3 && wp.head == LiftRules.cometPath)
+    Full(wp(2))
+    else
+    Empty
+
+    val ret = SessionMaster.getSession(httpSession, cometSessionId) match {
+      case Full(ret) =>
+        ret.fixSessionTime()
+        ret
+
+      case _ =>
+        val ret = LiftSession(httpSession, request.contextPath, request.headers)
+        ret.fixSessionTime()
+        SessionMaster.addSession(ret)
+        ret
+    }
+
+    ret.breakOutComet()
+    ret
+  }
+
 
   /**
    * The path to handle served resources
@@ -281,7 +312,8 @@ object LiftRules {
           "surround" -> Surround,
           "test_cond" -> TestCond,
           "embed" -> Embed,
-          "tail" -> Tail
+          "tail" -> Tail,
+          "with-param" -> WithParam
       ))
   }
   setupSnippetDispatch()

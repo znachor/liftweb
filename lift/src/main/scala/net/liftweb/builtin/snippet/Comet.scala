@@ -36,6 +36,17 @@ object Comet extends DispatchSnippet {
   }
 
   private def buildComet(kids: NodeSeq) : NodeSeq = {
+
+    def accumulate(e: NodeSeq): NodeSeq = {
+      val elem : Node = e first
+
+      for {id <- elem.attribute("id")
+    	   when <- elem.attribute(null, "when")} yield {
+    	   CVPVar(CVPVar.get ::: List(CVP(id.text, toLong(when.text))))
+      }
+      e
+    }
+
     (for {ctx <- S.session} yield {
        val theType: Box[String] = S.attr.~("type").map(_.text)
        val name: Box[String] = S.attr.~("name").map(_.text)
@@ -44,10 +55,10 @@ object Comet extends DispatchSnippet {
 
             (c !? (26600, AskRender)) match {
               case Some(AnswerRender(response, _, when, _)) if c.hasOuter =>
-                <span id={c.uniqueId+"_outer"}>{c.buildSpan(when, response.inSpan)}{response.outSpan}</span>
+                <span id={c.uniqueId+"_outer"}>{accumulate(c.buildSpan(when, response.inSpan))}{response.outSpan}</span>
 
               case Some(AnswerRender(response, _, when, _)) =>
-                c.buildSpan(when, response.inSpan)
+                accumulate(c.buildSpan(when, response.inSpan))
 
               case _ => <span id={c.uniqueId} lift:when="0">{Comment("FIXME comet type "+theType+" name "+name+" timeout") ++ kids}</span>
             }) openOr Comment("FIXME - comet type: "+theType+" name: "+name+" Not Found ") ++ kids

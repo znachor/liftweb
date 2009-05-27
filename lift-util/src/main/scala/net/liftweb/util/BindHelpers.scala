@@ -458,14 +458,7 @@ trait BindHelpers {
   def bind(vals: Map[String, NodeSeq], xml: NodeSeq): NodeSeq = {
 
     val isBind = (node: Elem) => {
-      val oldSyntax = node.prefix == "lift" && node.label == "bind"
-      val newSyntax = node.prefix == "lift-tag" && node.label == "bind"
-
-      if (oldSyntax) {
-        Log.warn("DEPRECATE WARNING: <lift:bind> has been deprecated. Please use <lift-tag:bind> instead !")
-      }
-
-      oldSyntax || newSyntax
+      node.prefix == "lift" && node.label == "bind"
     }
 
     xml.flatMap {

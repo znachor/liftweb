@@ -30,27 +30,10 @@ object Surround extends DispatchSnippet {
   (for {ctx <- S.session ?~ ("FIX"+"ME: Invalid session")
         req <- S.request ?~ ("FIX"+"ME: Invalid request")
     } yield {
-       val paramElements: Seq[Node] = findElems(kids)(e => {
-       val oldSyntax = e.label == "with-param" && e.prefix == "lift"
-       val newSyntax = e.label == "with-param" && e.prefix == "lift-tag"
-
-       if (oldSyntax) {
-         Log.warn("DEPRECATE WARNING: <lift:with-param> is deprecated. Please use <lift-tag:with-param> instead !")
-       }
-
-       oldSyntax || newSyntax
-      })
-
-      val params: Seq[(String, NodeSeq)] =
-      for {e <- paramElements
-           name <- e.attributes.get("name")
-      } yield (name.text, ctx.processSurroundAndInclude(PageName.get, e.child))
-
       val mainParam = (S.attr.~("at").map(_.text).
                        getOrElse("main"), ctx.processSurroundAndInclude(PageName.get, kids))
-      val paramsMap = collection.immutable.Map(params: _*) + mainParam
+      val paramsMap = WithParamVar.get + mainParam
       ctx.findAndMerge(S.attr.~("with"), paramsMap)
-
     }) match {
     case Full(x) => x
     case Empty => Comment("FIX"+ "ME: session or request are invalid")

@@ -156,7 +156,7 @@ object SessionMaster extends Actor {
     }
     liftSession.startSession()
     val b = SessionToServletBridge(liftSession.uniqueId)
-    liftSession.httpSession.setAttribute(LiftMagicID, b)
+    liftSession.httpSession.foreach(_.setAttribute(LiftMagicID, b))
   }
 
   private val LiftMagicID = "$lift_magic_session_thingy$"
@@ -176,7 +176,7 @@ object SessionMaster extends Actor {
         try {
           s.doShutDown
           try {
-            s.httpSession.removeAttribute(LiftMagicID)
+            s.httpSession.foreach(_.removeAttribute(LiftMagicID))
           } catch {
             case e => // ignore... sometimes you can't do this and it's okay
           }
@@ -253,12 +253,13 @@ object RenderVersion {
  */
 @serializable
 class LiftSession(val contextPath: String, val uniqueId: String,
-                  val httpSession: HttpSession, val initialHeaders: List[(String, String)]) {
+                  val httpSession: Box[HttpSession], val initialHeaders: List[(String, String)]) {
   import TemplateFinder._
 
   type AnyActor = {def !(in: Any): Unit}
 
-  private var running_? = false
+  @volatile
+  private var _running_? = false
 
   private var messageCallback: HashMap[String, S.AFuncHolder] = new HashMap
 
@@ -276,17 +277,22 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   private[http] var lastServiceTime = millis
 
   @volatile
-  private[http] var inactivityLength = 180000L
+  private[http] var inactivityLength: Long = 30 minutes
 
   private [http] var highLevelSessionDispatcher = new HashMap[String, LiftRules.DispatchPF]()
   private [http] var sessionRewriter = new HashMap[String, LiftRules.RewritePF]()
 
   private[http] def startSession(): Unit = {
-    running_? = true
-    inactivityLength = httpSession.getMaxInactiveInterval.toLong * 1000L
+    _running_? = true
+    for (sess <- httpSession) {
+    inactivityLength = sess.getMaxInactiveInterval.toLong * 1000L
+    }
+
     lastServiceTime = millis
     LiftSession.onSetupSession.foreach(_(this))
   }
+
+  def running_? = _running_?
 
   private var cometList: List[AnyActor] = Nil
 
@@ -378,6 +384,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   }
 
   private [http] def fixSessionTime(): Unit = synchronized {
+    for (httpSession <- this.httpSession) {
     lastServiceTime = millis // DO NOT REMOVE THIS LINE!!!!!
     val diff = lastServiceTime - httpSession.getLastAccessedTime
     val maxInactive = httpSession.getMaxInactiveInterval()
@@ -387,6 +394,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     // extends the lifespan of the HttpSession
     if (diff > 1000L && togo < 120) {
       httpSession.setMaxInactiveInterval(maxInactive + 120)
+    }
     }
   }
 
@@ -442,7 +450,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
         LiftSession.onAboutToShutdownSession.foreach(_(this))
 
         // Log.debug("Shutting down session")
-        running_? = false
+        _running_? = false
 
         SessionMaster.sendMsg(RemoveSession(this.uniqueId))
 
@@ -463,6 +471,51 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   for (req <- S.request;
        loc <- req.location;
        template <- loc.template) yield template
+
+
+  /**
+   * Manages the merge phase of the rendering pipeline
+   */
+  private def merge(xhtml: NodeSeq) : NodeSeq = {
+
+    val headInBody: NodeSeq =
+    (for (body <- xhtml \ "body";
+          head <- findElems(body)(_.label == "head")) yield head.child).
+      flatMap {e => e}
+
+      /**
+       * Document walkthrough
+       */
+      def xform(in: NodeSeq, inBody: Boolean)
+      			(headAppenders : Node => Node)
+      			(bodyAppenders : Node => Node): NodeSeq = in flatMap {
+        case e: Elem if !inBody && e.label == "body" =>
+          val n = Elem(e.prefix, e.label, e.attributes, e.scope,
+                       xform(e.child, true)(headAppenders)(bodyAppenders) :_*)
+          bodyAppenders(n)
+
+        case e: Elem if inBody && e.label == "head" => NodeSeq.Empty
+
+        case e: Elem if e.label == "head" =>
+            val n = if (!headInBody.isEmpty) {
+              Elem(e.prefix, e.label, e.attributes,
+            				e.scope, HeadHelper.removeHtmlDuplicates(e.child ++ headInBody) :_*)
+            } else {
+              e
+            }
+            headAppenders(n)
+
+        case e: Elem =>
+          Elem(e.prefix, e.label, e.attributes, e.scope, xform(e.child, inBody)(headAppenders)(bodyAppenders) :_*)
+
+        case g: Group =>
+          xform(g.child, inBody)(headAppenders)(bodyAppenders)
+
+        case x => x
+      }
+
+      xform(xhtml, false)(DomAppenders.headAppenders(this))(DomAppenders.bodyAppenders(this))
+  }
 
   private[http] def processRequest(request: Req): Box[LiftResponse] = {
     ieMode.is // make sure this is primed
@@ -489,12 +542,6 @@ class LiftSession(val contextPath: String, val uniqueId: String,
 
           runParams(request)
 
-          def idAndWhen(in: Node): Box[CometVersionPair] =
-          ((in \ "@id").toList, in.attributes.filter{case p: PrefixedAttribute => (p.pre == "lift" && p.key == "when") case _ => false}.toList) match {
-            case (x :: _, y :: _) => Full(CVP(x.text,toLong(y.value.text)))
-            case _ => Empty
-          }
-
           val early = LiftRules.preAccessControlResponse_!!.firstFull(request)
 
           // Process but make sure we're okay, sitemap wise
@@ -505,56 +552,33 @@ class LiftSession(val contextPath: String, val uniqueId: String,
                 PageName(request.uri+" -> "+request.path)
 
                 (request.location.flatMap(_.earlyResponse) or
-                 LiftRules.earlyResponse.firstFull(request)) or {
-                  ((locTemplate or findVisibleTemplate(request.path, request)).
-                   map(xml => processSurroundAndInclude(PageName get, xml)) match {
-                      case Full(rawXml: NodeSeq) => {
-
-                          val xml = HeadHelper.mergeToHtmlHead(rawXml)
-
-                          val cometXform: List[RewriteRule] =
-                          if (LiftRules.autoIncludeComet(this))
-                          allElems(xml, !_.attributes.filter{case p: PrefixedAttribute => (p.pre == "lift" && p.key == "when")
-                              case _ => false}.toList.isEmpty) match {
-                            case Nil => Nil
-                            case xs =>
-                              val comets: List[CometVersionPair] = xs.flatMap(x => idAndWhen(x))
-                              List(new AddScriptToBody(comets))
-                          }
-                          else Nil
-
-
-                          this.synchronized {
-                            S.functionMap.foreach {mi =>
-                              // ensure the right owner
-                              messageCallback(mi._1) = mi._2.owner match {
-                                case Empty => mi._2.duplicate(RenderVersion.get)
-                                case _ => mi._2
-                              }
+                LiftRules.earlyResponse.firstFull(request)) or {
+                ((locTemplate or findVisibleTemplate(request.path, request)).
+                 // Phase 1: snippets & templates processing
+                 map(xml => processSurroundAndInclude(PageName get, xml)) match {
+                    case Full(rawXml: NodeSeq) => {
+                    	// Phase 2: Head & Tail merge, add additional elements to body & head
+                        val xml = merge(rawXml)
+                        this.synchronized {
+                          S.functionMap.foreach {mi =>
+                            // ensure the right owner
+                            messageCallback(mi._1) = mi._2.owner match {
+                              case Empty => mi._2.duplicate(RenderVersion.get)
+                              case _ => mi._2
                             }
                           }
-
-                          val liftGC: List[RewriteRule] = LiftRules.enableLiftGC match {
-                            case true => (new AddLiftGCToBody(RenderVersion.get)) :: cometXform
-                            case _ => cometXform
-                          }
-
-                          val transformers: List[RewriteRule] = new AddTailToBody :: (if (LiftRules.autoIncludeAjax(this)) new AddAjaxToBody() :: liftGC
-                                                                                      else liftGC)
-
-
-                          val realXml = if (transformers.isEmpty) xml
-                          else (new RuleTransformer(transformers :_*)).transform(xml)
-
-                          notices = Nil
-                          Full(LiftRules.convertResponse((realXml,
-                                                          S.getHeaders(LiftRules.defaultHeaders((realXml, request))),
-                                                          S.responseCookies,
-                                                          request)))
                         }
-                      case _ => if (LiftRules.passNotFoundToChain) Empty else Full(request.createNotFound)
-                    })
-                }
+
+                        notices = Nil
+                        // Phase 3: Response conversion including fixHtml
+                        Full(LiftRules.convertResponse((xml,
+                                                        S.getHeaders(LiftRules.defaultHeaders((xml, request))),
+                                                        S.responseCookies,
+                                                        request)))
+                      }
+                    case _ => if (LiftRules.passNotFoundToChain) Empty else Full(request.createNotFound)
+                  })
+              }
 
               case Right(Full(resp)) => Full(resp)
               case _ if (LiftRules.passNotFoundToChain) => Empty
@@ -897,7 +921,6 @@ class LiftSession(val contextPath: String, val uniqueId: String,
 
         case _ => processSnippet(page, Empty , elm.attributes, elm, elm.child)
       }
-    case ("with-param", _, _, _, _) => NodeSeq.Empty
     case (snippetInfo, elm, metaData, kids, page) =>
       processSnippet(page, Full(snippetInfo), metaData, elm, kids)
   }
@@ -916,7 +939,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
       case Group(nodes) =>
         Group(processSurroundAndInclude(page, nodes))
 
-      case elm: Elem if elm.prefix == "lift" || elm.prefix == "lift-tag" || elm.prefix == "l"=>
+      case elm: Elem if elm.prefix == "lift" || elm.prefix == "l"=>
         S.doSnippet(elm.label){
           S.setVars(elm.attributes){
             processSurroundAndInclude(page, NamedPF((elm.label, elm, elm.attributes,
@@ -1045,80 +1068,9 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     findTemplate(name).map(s => bind(atWhat, s)).openOr(atWhat.values.flatMap(_.elements).toList)
   }
 
-  class AddAjaxToBody() extends RewriteRule {
-    private var done = false
-    override def transform(n: Node) = n match {
-      case e: Elem if e.label == "head" && !done =>
-        done = true
-        Elem(null, "head", e.attributes,  e.scope, (e.child ++
-                                                    <script
-              src={S.encodeURL("/"+
-                               LiftRules.ajaxPath +
-                               "/" + LiftRules.ajaxScriptName())}
-              type="text/javascript"/>) :_*)
-      case n => n
-    }
-  }
-
-  trait BodyRewrite extends RewriteRule {
-    private var doneBody = false
-
-    override def transform(n: Node) = n match {
-      case e: Elem if e.label == "body" && !doneBody =>
-        doneBody = true
-        rewriteBody(e)
-      case n => n
-    }
-
-    def rewriteBody(n: Node) : NodeSeq
-  }
-
-  class  AddTailToBody extends BodyRewrite {
-    override def rewriteBody(n: Node) = n match {
-      case e: Elem =>
-        Elem(null, "body", e.attributes, e.scope, (e.child ++ HeadHelper.removeHtmlDuplicates(TailVar.get)) :_*)
-    }
-  }
-
-  class AddLiftGCToBody(val pageName: String) extends BodyRewrite {
-
-    import js._
-    import JsCmds._
-    import JE._
-
-    override def rewriteBody(n: Node) = n match {
-      case e: Elem =>
-        Elem(null, "body", e.attributes,  e.scope, (e.child ++
-                                                    JsCmds.Script(OnLoad(JsRaw("lift_successRegisterGC()")) &
-                                                                  JsCrVar("lift_page", pageName))) :_*)
-    }
-  }
-
-  class AddScriptToBody(val cometVar: List[CometVersionPair]) extends RewriteRule {
-    private var doneHead = false
-    private var doneBody = false
-
-    override def transform(n: Node) = n match {
-      case e: Elem if e.label == "head" && !doneHead =>
-        doneHead = true
-        Elem(null, "head",
-             e.attributes,
-             e.scope,
-             (e.child ++
-              <script src={S.encodeURL("/"+
-                                       LiftRules.cometPath +
-                                       "/" + uniqueId +
-                                       "/" + LiftRules.cometScriptName())}
-              type="text/javascript"/>) :_*)
-
-      case e: Elem if e.label == "body" && !doneBody =>
-        doneBody = true
-        Elem(null, "body", e.attributes,  e.scope, (e.child ++
-                                                    JsCmds.Script(LiftRules.renderCometPageContents(LiftSession.this, cometVar))) :_*)
-      case n => n
-    }
-  }
 }
+
+private[liftweb] object CVPVar extends RequestVar[List[CometVersionPair]](Nil)
 
 /**
  * The response from a page saying that it's been rendered
