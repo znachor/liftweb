@@ -312,7 +312,8 @@ object LiftRules {
           "surround" -> Surround,
           "test_cond" -> TestCond,
           "embed" -> Embed,
-          "tail" -> Tail
+          "tail" -> Tail,
+          "with-param" -> WithParam
       ))
   }
   setupSnippetDispatch()
