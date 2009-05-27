@@ -962,7 +962,12 @@ object S extends HasParams {
   }
 
   /**
-   * Sets the document type for the response
+   * Sets the document type for the response. If this is not set, the DocType for Lift responses
+   * defaults to XHTML 1.0 Transitional.
+   *
+   * @see getDocType
+   * @see ResponseInfo.docType
+   * @see DocType
    */
   def setDocType(what: Box[String]) {
     Box.legacyNullTest(_responseHeaders.value).foreach(
@@ -972,7 +977,11 @@ object S extends HasParams {
   }
 
   /**
-   * Returns the document type that was set for the response
+   * Returns the document type that was set for the response. The default is XHTML 1.0
+   * Transitional.
+   *
+   * @see setDocType
+   * @see DocType
    */
   def getDocType: (Boolean, Box[String]) = Box.legacyNullTest(_responseHeaders.value).map(
     rh => (rh.overrodeDocType, rh.docType)
@@ -981,13 +990,32 @@ object S extends HasParams {
 
   private object _skipDocType extends RequestVar(false)
 
-  def skipDocType = _skipDocType.is
+  /**
+   * When this is true, Lift will not emit a DocType definition at the start of the response
+   * content. If you're sending XHTML and this is set to true, you need to include the DocType
+   * in your template.
+   *
+   * @see #skipDocType_=(Boolean)
+   */
+  def skipDocType : Boolean = _skipDocType.is
 
-  def skipDocType_=(in: Boolean) {_skipDocType.set(in)}
+  /**
+   * Sets Lift's DocType behavior. If this is set to true, Lift will not emit a DocType definition
+   * at the start of the response content. If you're sending XHTML and this is set to true, you need
+   * to include the DocType in your template.
+   *
+   * @param skip Set to <code>true</code> to prevent Lift from emitting a DocType in its response
+   *
+   * @see #skipDocType
+   */
+  def skipDocType_=(skip: Boolean) {_skipDocType.set(skip)}
 
   /**
    * Adds a cleanup function that will be executed at the end of the request pocessing.
-   * Exceptions thrown from these functions will be swallowed.
+   * Exceptions thrown from these functions will be swallowed, so make sure to handle any
+   * expected exceptions within your function.
+   *
+   * @param f The function to execute at the end of the request.
    */
   def addCleanupFunc(f: () => Unit): Unit = postFuncs.is += f
 
@@ -1045,31 +1073,68 @@ object S extends HasParams {
   }
 
   /**
-   * Is the user logged in
+   * This method is a convenience accessor for LiftRules.loggedInTest. You can define your own
+   * function to check to see if a user is logged in there and this will call it.
+   *
+   * @see LiftRules.loggedInTest
+   *
+   * @return the value from executing LiftRules.loggedInTest, or <code>false</code> if a test function
+   * is not defined.
    */
   def loggedIn_? : Boolean = LiftRules.loggedInTest.map(_.apply()) openOr false
 
   /**
-   * Returns the 'Referer' HTTP header attribute
+   * Returns the 'Referer' HTTP header attribute. 
    */
   def referer: Box[String] = servletRequest.flatMap(r => Box.legacyNullTest(r.getHeader("Referer")))
 
   /**
-   * Functions that are mapped to HTML elements are, but default
-   * garbage collected if they are not seen in the browser in the last 10 minutes
+   * Functions that are mapped to HTML elements are, by default,
+   * garbage collected if they are not seen in the browser in the last 10 minutes (defined in LiftRules.unusedFunctionsLifeTime).
    * In some cases (e.g., JSON handlers), you may want to extend the
    * lifespan of the functions to the lifespan of the session.
+   *
+   * @param span If <code>true</code>, extend the mapped function lifetime to the life of the session
+   * @param f A function to execute in the context of specified span
+   *
+   * @see LiftRules.unusedFunctionsLifeTime
    */
   def functionLifespan[T](span: Boolean)(f: => T): T =
   _lifeTime.doWith(span)(f)
 
   /**
-   * What's the current lifespan of functions?
+   * Returns whether functions are currently extended to the lifetime of the session.
+   *
+   * @return <code>true</code> if mapped functions will currently last the life of the session.
    */
   def functionLifespan_? : Boolean = _lifeTime.box openOr false
 
   /**
-   * Get a list of current attributes
+   * <p>Get a list of current attributes. Each attribute item is a pair of (key,value). The key
+   * is an Either that depends on whether the attribute is prefixed or not. If the attribute
+   * is prefixed, the key is a Right((prefix, name)). If the attribute is unprefixed then the
+   * key is a Left(name). For example, the following table shows how various tag attributes
+   * would be represented:</p>
+   *
+   * <table>
+   *   <tr>
+   *     <td>&lt;lift:MySnippet testname="test" /&gt;</td>
+   *     <td>List((Left("testname"), "test"))</td>
+   *   </tr>
+   *   <tr>
+   *     <td>&lt;lift:MySnippet anchor:name="test" /&gt;</td>
+   *     <td>List((Right(("anchor", "name")), "test"))</td>
+   *   </tr>
+   * </table>
+   *
+   * <p>The prefixedAttrsToMap method provides a convenient way to retrieve only attributes with
+   * a given prefix. The prefixedAttrsToMetaData method can be used to add attributes onto an XML
+   * node</p>
+   *
+   * @see #prefixedAttrsToMap(String)
+   * @see #prefixedAttrsToMap(String,Map)
+   * @see #prefixedAttrsToMetaData(String)
+   * @see #prefixedAttrsToMetaData(String,Map)
    */
   def attrs: List[(Either[String, (String, String)], String)] = S._attrs.value match {
     case null => Nil
@@ -1081,9 +1146,14 @@ object S extends HasParams {
    * that will be 'merged' with the 'start' Map
    *
    * @param prefix the prefix to be matched
-   * @start the initial Map
+   * @param start the initial Map
    *
    * @return Map[String, String]
+   * 
+   * @see #prefixedAttrsToMap(String)
+   * @see #prefixedAttrsToMetaData(String)
+   * @see #prefixedAttrsToMetaData(String,Map)
+   * 
    */
   def prefixedAttrsToMap(prefix: String, start: Map[String, String]): Map[String, String] =
   attrs.reverse.flatMap {
@@ -1099,24 +1169,57 @@ object S extends HasParams {
    * @param prefix the prefix to be matched
    *
    * @return Map[String, String]
+   *
+   * @see #prefixedAttrsToMap(String,Map)
+   * @see #prefixedAttrsToMetaData(String)
+   * @see #prefixedAttrsToMetaData(String,Map)
+   * 
    */
   def prefixedAttrsToMap(prefix: String): Map[String, String] =
   prefixedAttrsToMap(prefix: String, Map.empty)
 
   /**
-   * Returns the S attributes that are prefixed by 'prefix' parameter as a MetaData.
+   * <p>Returns the S attributes that are prefixed by 'prefix' parameter as a MetaData.
    * The start Map will be 'merged' with the Map resulted after prefix matching and
-   * the result Map will be converted to a MetaData.
+   * the result Map will be converted to a MetaData. The MetaData can be used to add attributes
+   * back onto XML elements via Scala's '%' method. For example, if we wanted to add
+   * attributes prefixed with "anchor" to any &lt;a&gt; elements we create, we could
+   * do something like:</p>
+   *
+   * <pre>
+   *   val myLink = (<a href={...}>...</a>) % S.prefixedAttrsToMetaData("anchor", Map("id" -> "myAnchor"))
+   * </pre>
    *
    * @param prefix the prefix to be matched
+   * @param start the initial Map
    *
-   * @return MetaData
+   * @return MetaData representing the combination of current attributes plus the start Map of attributes
+   *
+   * @see #prefixedAttrsToMap(String)
+   * @see #prefixedAttrsToMap(String,Map)
+   * @see #prefixedAttrsToMetaData(String)
+   * 
    */
   def prefixedAttrsToMetaData(prefix: String, start: Map[String, String]): MetaData =
   mapToAttrs(prefixedAttrsToMap(prefix, start))
 
   /**
-   * Converts a Map[String, String] into a MetaData
+   * Similar with prefixedAttrsToMetaData(prefix: String, start: Map[String, String])
+   * but there is no 'start' Map
+   */
+  def prefixedAttrsToMetaData(prefix: String): MetaData = prefixedAttrsToMetaData(prefix, Map.empty)
+
+  /**
+   * Converts a Map[String, String] into a MetaData instance. This can be used to
+   * add attributes to an XML element based on a map of attribute->value pairs. See
+   * prefixedAttrsToMetaData(String,Map) for an example.
+   *
+   * @param in The map of attributes
+   * 
+   * @return MetaData representing the Map of attributes as unprefixed attributes.
+   *
+   * @see #prefixedAttrsToMetaData(String,Map)
+   * 
    */
   def mapToAttrs(in: Map[String, String]): MetaData =
   in.foldLeft[MetaData](Null) {
@@ -1124,7 +1227,13 @@ object S extends HasParams {
   }
 
   /**
-   * Converts the S.attrs to a Map[String, String]
+   * Converts the S.attrs to a Map[String, String]. The key of the map depends on whether
+   * the attribute is prefixed or not. Prefixed attributes have keys of the form
+   * "prefix:name", while unprefixed attributes have keys of the form "name". If you only want
+   * attributes for a specific prefix, use prefixedAttrsToMap.
+   *
+   * @see #prefixedAttrsToMap(String)
+   * @see #prefixedAttrsToMap(String,Map)
    */
   def attrsFlattenToMap: Map[String, String] = Map.empty ++ attrs.flatMap {
     case (Left(key), value) => List((key, value))
@@ -1132,8 +1241,39 @@ object S extends HasParams {
     case _ => Nil
   }
 
+  /**
+   * Converts S.attrs attributes to a MetaData object that can be used to add
+   * attributes to one or more XML elements. Similar to prefixedAttrsToMetaData, except
+   * that it handles both prefixed and unprefixed attributes. This version of the method will
+   * use all of the currently set attributes from S.attrs. If you want to filter it, use the
+   * attrsToMetaData(String => Boolean) version, which allows you to specify a predicate
+   * function for filtering. For example, if you want all of the current attributes to be
+   * added to a div tag, you could do:
+   *
+   * <pre>
+   * val myDiv = (<div>{...}</div>) % S.attrsToMetaData
+   * </pre>
+   *
+   * @return a MetaData instance representing all attributes in S.attrs
+   *
+   * @see #attrsToMetaData(String => Boolean)
+   */
   def attrsToMetaData: MetaData = attrsToMetaData(ignore => true)
 
+  /**
+   * Similar to S.attrsToMetaData, but lets you specify a predicate function that filters the
+   * generated MetaData. For example, if you only wanted the "id" attribute, you could do:
+   *
+   * <pre>
+   * val myDiv = (<div>{...}</div>) % S.attrsToMetaData(_.equalsIgnoreCase("id"))
+   * </pre>
+   *
+   * @param predicate The predicate function which is executed for each attribute name. If the function
+   * returns <code>true</code>, then the attribute is included in the MetaData.
+   * 
+   * @see #attrsToMetaData
+   * 
+   */
   def attrsToMetaData(predicate: String => Boolean): MetaData = {
     attrs.foldLeft[MetaData](Null) {
       case (md, (Left(name), value)) if (predicate(name))=> new UnprefixedAttribute(name, value, md)
@@ -1141,12 +1281,6 @@ object S extends HasParams {
       case _ => Null
     }
   }
-
-  /**
-   * Similar with prefixedAttrsToMetaData(prefix: String, start: Map[String, String])
-   * but there is no 'start' Map
-   */
-  def prefixedAttrsToMetaData(prefix: String): MetaData = prefixedAttrsToMetaData(prefix, Map.empty)
 
   /**
    * Find and process a template
