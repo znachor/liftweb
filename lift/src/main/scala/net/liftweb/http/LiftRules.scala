@@ -23,7 +23,7 @@ import _root_.net.liftweb.http.js.JSArtifacts
 import _root_.net.liftweb.http.js.jquery._
 import _root_.scala.xml._
 import _root_.scala.collection.mutable.{ListBuffer}
-import _root_.java.util.{Locale, TimeZone, ResourceBundle}
+import _root_.java.util.{Locale, TimeZone, ResourceBundle, Date}
 import _root_.javax.servlet.http.{HttpServlet, HttpServletRequest , HttpServletResponse, HttpSession, Cookie}
 import _root_.javax.servlet.{ServletContext}
 import _root_.java.io.{InputStream, ByteArrayOutputStream, BufferedReader, StringReader}
@@ -178,7 +178,21 @@ object LiftRules {
       ma <- """lift_version: (.*)""".r.findFirstMatchIn(str)
     } yield ma.group(1)
 
-    ret openOr "Unknown Lift Version (maybe 1.1-M1)"
+    ret openOr "Unknown Lift Version"
+  }
+
+  lazy val liftBuildDate: Date = {
+    val cn = """\.""".r.replaceAllIn(LiftRules.getClass.getName, "/")
+    val ret: Box[Date] =
+    for {
+      url <- Box !! LiftRules.getClass.getResource("/"+cn+".class")
+      val newUrl = new java.net.URL(url.toExternalForm.split("!")(0)+"!"+"/META-INF/MANIFEST.MF")
+      str <- tryo(new String(readWholeStream(newUrl.openConnection.getInputStream), "UTF-8"))
+      ma <- """Bnd-LastModified: (.*)""".r.findFirstMatchIn(str)
+      asLong <- asLong(ma.group(1))
+    } yield new Date(asLong)
+
+    ret openOr new Date(0L)
   }
 
   /**
@@ -315,7 +329,9 @@ object LiftRules {
           "test_cond" -> TestCond,
           "embed" -> Embed,
           "tail" -> Tail,
-          "with-param" -> WithParam
+          "with-param" -> WithParam,
+          "VersionInfo" -> VersionInfo,
+          "version_info" -> VersionInfo
       ))
   }
   setupSnippetDispatch()
