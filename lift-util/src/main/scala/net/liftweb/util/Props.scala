@@ -106,8 +106,8 @@ object Props {
   }
 
   /**
-    * Is the system in production mode (apply full optimizations)
-    */
+   * Is the system in production mode (apply full optimizations)
+   */
   lazy val productionMode: Boolean = mode == RunModes.Production ||
   mode == RunModes.Pilot || mode == RunModes.Staging
 
@@ -130,8 +130,8 @@ object Props {
   lazy val userName = System.getProperty("user.name") + "."
 
   /**
-  * Is the app running in the Google App engine (the System property in.gae.j is set)
-  */
+   * Is the app running in the Google App engine (the System property in.gae.j is set)
+   */
   lazy val inGAE: Boolean = System.getProperty("in.gae.j") != null
 
   /**
@@ -145,31 +145,43 @@ object Props {
    * in /props
    */
   lazy val toTry: List[() => String] = List(
-                 () => "/props/" + modeName + userName + hostName,
-					       () => "/props/" + modeName + userName,
-					       () => "/props/" + modeName + hostName,
-                 () => "/props/" + modeName + "default.",
-					       () => "/" + modeName + userName + hostName,
-					       () => "/" + modeName + userName,
-					       () => "/" + modeName + hostName,
-                 () => "/" + modeName + "default.")
+    () => "/props/" + modeName + userName + hostName,
+      () => "/props/" + modeName + userName,
+      () => "/props/" + modeName + hostName,
+      () => "/props/" + modeName + "default.",
+      () => "/" + modeName + userName + hostName,
+      () => "/" + modeName + userName,
+      () => "/" + modeName + hostName,
+      () => "/" + modeName + "default.")
 
   /**
    * The map of key/value pairs retrieved from the property file.
    */
-  lazy val props = {
-    // find the first property file that is available
-    first(toTry)(f => tryo(getClass.getResourceAsStream(f()+"props")).filter(_ ne null)).map{s => val ret = new Properties; ret.load(s); ret} match {
+  lazy val props: Map[String, String] = {
+    import java.io.{InputStreamReader, ByteArrayInputStream}
+    import java.util.InvalidPropertiesFormatException
+    import _root_.java.util.{Map => JMap}
 
+    // find the first property file that is available
+    first(toTry){f => tryo(getClass.getResourceAsStream(f()+"props")).filter(_ ne null).
+                 map{s => val ret = new Properties;
+                     val ba = Helpers.readWholeStream(s)
+                     try {
+          ret.loadFromXML(new ByteArrayInputStream(ba))
+        } catch {
+          case _: InvalidPropertiesFormatException =>
+            ret.load(new InputStreamReader(new ByteArrayInputStream(ba), "UTF-8"));
+        }
+                     ret
+      }} match {
       // if we've got a propety file, create name/value pairs and turn them into a Map
       case Full(prop) =>
-        Map(prop.entrySet.toArray.map{
-          s2 =>
-            val s = s2.asInstanceOf[_root_.java.util.Map.Entry[String, String]]
-          (s.getKey,s.getValue)
-        } :_*)
+        Map(prop.entrySet.toArray.flatMap{
+            case s: JMap.Entry[String, String] => List((s.getKey, s.getValue))
+            case _ => Nil
+          } :_*)
 
-      case _ => Map.empty[String, String] // if none, it's an empty map
+      case _ => Map()
     }
   }
 }
