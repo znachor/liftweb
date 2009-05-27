@@ -157,7 +157,7 @@ object SessionMaster extends LiftActor {
     }
     liftSession.startSession()
     val b = SessionToServletBridge(liftSession.uniqueId)
-    liftSession.httpSession.setAttribute(LiftMagicID, b)
+    liftSession.httpSession.foreach(_.setAttribute(LiftMagicID, b))
   }
 
   private val LiftMagicID = "$lift_magic_session_thingy$"
@@ -171,7 +171,7 @@ object SessionMaster extends LiftActor {
         try {
           s.doShutDown
           try {
-            s.httpSession.removeAttribute(LiftMagicID)
+            s.httpSession.foreach(_.removeAttribute(LiftMagicID))
           } catch {
             case e => // ignore... sometimes you can't do this and it's okay
           }
@@ -245,7 +245,7 @@ object RenderVersion {
  */
 @serializable
 class LiftSession(val contextPath: String, val uniqueId: String,
-                  val httpSession: HttpSession, val initialHeaders: List[(String, String)]) {
+                  val httpSession: Box[HttpSession], val initialHeaders: List[(String, String)]) {
   import TemplateFinder._
 
   private var _running_? = false
@@ -266,14 +266,16 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   private[http] var lastServiceTime = millis
 
   @volatile
-  private[http] var inactivityLength = 180000L
+  private[http] var inactivityLength: Long = 30 minutes
 
   private [http] var highLevelSessionDispatcher = new HashMap[String, LiftRules.DispatchPF]()
   private [http] var sessionRewriter = new HashMap[String, LiftRules.RewritePF]()
 
   private[http] def startSession(): Unit = {
     _running_? = true
-    inactivityLength = httpSession.getMaxInactiveInterval.toLong * 1000L
+    for (sess <- httpSession) {
+    inactivityLength = sess.getMaxInactiveInterval.toLong * 1000L
+    }
     lastServiceTime = millis
     LiftSession.onSetupSession.foreach(_(this))
   }
@@ -372,6 +374,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   }
 
   private [http] def fixSessionTime(): Unit = synchronized {
+    for (httpSession <- this.httpSession) {
     lastServiceTime = millis // DO NOT REMOVE THIS LINE!!!!!
     val diff = lastServiceTime - httpSession.getLastAccessedTime
     val maxInactive = httpSession.getMaxInactiveInterval()
@@ -381,6 +384,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     // extends the lifespan of the HttpSession
     if (diff > 1000L && togo < 120) {
       httpSession.setMaxInactiveInterval(maxInactive + 120)
+    }
     }
   }
 

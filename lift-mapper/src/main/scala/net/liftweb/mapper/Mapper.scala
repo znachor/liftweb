@@ -312,6 +312,8 @@ trait KeyedMapper[KeyType, OwnerType<:KeyedMapper[KeyType, OwnerType]] extends M
 
   def asSafeJs(f: KeyObfuscator): JsExp = getSingleton.asSafeJs(this, f)
 
+  override def hashCode(): Int = primaryKeyField.is.hashCode
+
   override def equals(other: Any): Boolean = {
     other match {
       case null => false

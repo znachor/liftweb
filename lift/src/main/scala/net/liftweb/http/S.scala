@@ -1212,7 +1212,7 @@ object S extends HasParams {
   /**
    * Returns the HttpSession
    */
-  def servletSession: Box[HttpSession] = session.map(_.httpSession).or(servletRequest.map(_.getSession))
+  def servletSession: Box[HttpSession] = session.flatMap(_.httpSession).or(servletRequest.map(_.getSession))
 
   /**
    * Returns 'type' S attribute

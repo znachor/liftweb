@@ -65,32 +65,8 @@ class LiftServlet extends HttpServlet {
     LiftRules.ending = false
   }
 
-  /**
-   * Returns a LiftSession instance.
-   */
-  def getLiftSession(request: Req, httpSession: HttpSession): LiftSession = {
-    val wp = request.path.wholePath
-    val cometSessionId =
-    if (wp.length >= 3 && wp.head == LiftRules.cometPath)
-    Full(wp(2))
-    else
-    Empty
-
-    val ret = SessionMaster.getSession(httpSession, cometSessionId) match {
-      case Full(ret) =>
-        ret.fixSessionTime()
-        ret
-
-      case _ =>
-        val ret = LiftSession(httpSession, request.contextPath, request.headers)
-        ret.fixSessionTime()
-        SessionMaster.addSession(ret)
-        ret
-    }
-
-    ret.breakOutComet()
-    ret
-  }
+  def getLiftSession(request: Req, httpRequest: HttpServletRequest): LiftSession =
+  LiftRules.getLiftSession(request, httpRequest)
 
   /**
    * Processes the HTTP requests
@@ -169,7 +145,7 @@ class LiftServlet extends HttpServlet {
       }
     } else {
 	    // otherwise do a stateful response
-      val liftSession = getLiftSession(requestState, request.getSession)
+      val liftSession = getLiftSession(requestState, request)
       S.init(requestState, liftSession) {
         dispatchStatefulRequest(request, liftSession, requestState)
       }
