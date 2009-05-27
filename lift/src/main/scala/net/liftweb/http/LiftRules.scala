@@ -89,13 +89,15 @@ object LiftRules {
     case (httpSession, contextPath, headers) => new LiftSession(contextPath, httpSession.getId, Full(httpSession), headers)
   }
 
+  var enableServletSessions = true
+
   var getLiftSession: (Req, HttpServletRequest) => LiftSession =
-  (req, httpReq) => getLiftSession(req, httpReq.getSession)
+  (req, httpReq) => _getLiftSession(req, httpReq)
 
    /**
    * Returns a LiftSession instance.
    */
-  private def getLiftSession(request: Req, httpSession: HttpSession): LiftSession = {
+  private def _getLiftSession(request: Req, httpReq: HttpServletRequest): LiftSession = {
     val wp = request.path.wholePath
     val cometSessionId =
     if (wp.length >= 3 && wp.head == LiftRules.cometPath)
@@ -103,13 +105,13 @@ object LiftRules {
     else
     Empty
 
-    val ret = SessionMaster.getSession(httpSession, cometSessionId) match {
+    val ret = SessionMaster.getSession(httpReq, cometSessionId) match {
       case Full(ret) =>
         ret.fixSessionTime()
         ret
 
       case _ =>
-        val ret = LiftSession(httpSession, request.contextPath, request.headers)
+        val ret = LiftSession(httpReq.getSession, request.contextPath, request.headers)
         ret.fixSessionTime()
         SessionMaster.addSession(ret)
         ret

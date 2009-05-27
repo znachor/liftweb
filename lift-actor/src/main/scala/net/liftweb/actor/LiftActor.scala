@@ -38,7 +38,6 @@ object LAScheduler {
       def execute(f: () => Unit): Unit =
       es.execute(new Runnable{def run() {f()}})
 
-
       def shutdown(): Unit = {}
     }
   }

@@ -43,9 +43,13 @@ class LAFuture[T] {
   def get(timeout: TimeSpan): Box[T] = synchronized {
     if (satisfied) Full(item)
     else {
-      wait(timeout.millis)
-      if (satisfied) Full(item)
-      else Empty
+      try {
+        wait(timeout.millis)
+        if (satisfied) Full(item)
+        else Empty
+      } catch {
+        case _: InterruptedException => Empty
+      }
     }
   }
 }

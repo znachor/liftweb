@@ -134,7 +134,7 @@ object SessionMaster extends Actor {
   /**
    * Returns a LiftSession or Empty if not found
    */
-  def getSession(httpSession: HttpSession, otherId: Box[String]): Box[LiftSession] =
+  def getSession(httpSession: => HttpSession, otherId: Box[String]): Box[LiftSession] =
   synchronized {
     otherId.flatMap(sessions.get) or Box(sessions.get(httpSession.getId()))
   }

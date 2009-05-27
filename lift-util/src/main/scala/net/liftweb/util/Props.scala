@@ -158,7 +158,7 @@ object Props {
    * The map of key/value pairs retrieved from the property file.
    */
   lazy val props: Map[String, String] = {
-    import java.io.{InputStreamReader, ByteArrayInputStream}
+    import java.io.{ByteArrayInputStream}
     import java.util.InvalidPropertiesFormatException
     import _root_.java.util.{Map => JMap}
 
@@ -170,7 +170,7 @@ object Props {
           ret.loadFromXML(new ByteArrayInputStream(ba))
         } catch {
           case _: InvalidPropertiesFormatException =>
-            ret.load(new InputStreamReader(new ByteArrayInputStream(ba), "UTF-8"));
+            ret.load(new ByteArrayInputStream(ba))
         }
                      ret
       }} match {

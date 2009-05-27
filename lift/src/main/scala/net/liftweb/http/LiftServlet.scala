@@ -86,8 +86,8 @@ class LiftServlet extends HttpServlet {
       LiftRules.checkContinuations(req) match {
         case None => doIt
         case r if r eq null => doIt
-        case r: LiftResponse => sendResponse(r.toResponse, resp, Empty) ; true
-        case Some(r: LiftResponse) => sendResponse(r.toResponse, resp, Empty); true
+          //case (req: Request, r: LiftResponse) => sendResponse(r.toResponse, resp, Empty) ; true
+        case Some((or: Req, r: LiftResponse)) if (requestState.path == or.path) => sendResponse(r.toResponse, resp, Empty); true
         case _ => doIt
       }
     } catch {
@@ -219,19 +219,25 @@ class LiftServlet extends HttpServlet {
 
     val wp = requestState.path.wholePath
 
+    if (LiftRules.enableServletSessions) requestState.request.getSession
+
     val toTransform: Box[LiftResponse] =
-    if (dispatch._1) dispatch._2
-    else if (wp.length == 3 && wp.head == LiftRules.cometPath &&
-             wp(2) == LiftRules.cometScriptName())
-    LiftRules.serveCometScript(liftSession, requestState)
-    else if ((wp.length >= 1) && wp.head == LiftRules.cometPath)
-    handleComet(requestState, liftSession)
-    else if (wp.length == 2 && wp.head == LiftRules.ajaxPath &&
-             wp(1) == LiftRules.ajaxScriptName())
-    LiftRules.serveAjaxScript(liftSession, requestState)
-    else if (wp.length >= 1 && wp.head == LiftRules.ajaxPath)
-    handleAjax(liftSession, requestState)
-    else liftSession.processRequest(requestState)
+    if (dispatch._1) 
+    {
+      dispatch._2
+    } else if (wp.length == 3 && wp.head == LiftRules.cometPath &&
+               wp(2) == LiftRules.cometScriptName()) {
+      LiftRules.serveCometScript(liftSession, requestState)
+    } else if ((wp.length >= 1) && wp.head == LiftRules.cometPath) {
+      handleComet(requestState, liftSession)
+    } else if (wp.length == 2 && wp.head == LiftRules.ajaxPath &&
+               wp(1) == LiftRules.ajaxScriptName()) {
+      LiftRules.serveAjaxScript(liftSession, requestState)
+    } else if (wp.length >= 1 && wp.head == LiftRules.ajaxPath){
+      handleAjax(liftSession, requestState)
+    } else {
+      liftSession.processRequest(requestState)
+    }
 
     toTransform.map(LiftRules.performTransform)
   }
@@ -299,6 +305,7 @@ class LiftServlet extends HttpServlet {
                           actors: List[(CometActor, Long)],
                           onBreakout: List[AnswerRender] => Unit) extends LiftActor {
     private var answers: List[AnswerRender] = Nil
+    private var done = false
     val seqId = Helpers.nextNum
 
     def messageHandler = {
@@ -311,7 +318,8 @@ class LiftServlet extends HttpServlet {
         answers = ar :: answers
         LAPinger.schedule(this, BreakOut, 5 millis)
 
-      case BreakOut =>
+      case BreakOut if !done =>
+        done = true
         session.exitComet(this)
         actors.foreach{case (act, _) => tryo(act ! Unlisten(ListenerId(seqId)))}
         onBreakout(answers)
@@ -329,11 +337,11 @@ class LiftServlet extends HttpServlet {
   private def setupContinuation(request: Req, session: LiftSession, actors: List[(CometActor, Long)]): Nothing = {
     val cont = new ContinuationActor(request, session, actors,
                                      answers => LiftRules.resumeRequest(
-        S.init(request, session)
-        (LiftRules.performTransform(
-            convertAnswersToCometResponse(session,
-                                          answers.toArray, actors))),
-                                            request.request))
+        (request, S.init(request, session)
+         (LiftRules.performTransform(
+              convertAnswersToCometResponse(session,
+                                            answers.toArray, actors)))),
+                                              request.request))
 
     cont ! BeginContinuation
 
@@ -351,7 +359,7 @@ class LiftServlet extends HttpServlet {
 
     if (actors.isEmpty) Full(new JsCommands(JsCmds.RedirectTo(LiftRules.noCometSessionPage) :: Nil).toResponse)
     else LiftRules.checkContinuations(requestState.request) match {
-      case Some(null) =>
+      case Some(null) => 
         setupContinuation(requestState, sessionActor, actors)
 
       case _ =>

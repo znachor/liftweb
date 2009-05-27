@@ -1591,9 +1591,13 @@ class KeyObfuscator {
     obscure(what)
   }
 
+
   def recover[KeyType, MetaType <: KeyedMapper[KeyType, MetaType]](theType:
                                                                    KeyedMetaMapper[KeyType, MetaType], id: String): Box[KeyType] = synchronized {
-    Box(from.get(theType.dbTableName)).flatMap(h => Box(h.get(id)).map(_.asInstanceOf[KeyType]))
+    for {
+      map <- from.get(theType.dbTableName)
+      item <- map.get(id)
+    } yield item.asInstanceOf[KeyType]
   }
 }
 
