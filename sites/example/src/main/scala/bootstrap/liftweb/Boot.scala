@@ -25,7 +25,7 @@ import example._
 import comet._
 import model._
 import lib._
-import snippet.{definedLocale, Template, AllJson}
+import snippet.{definedLocale, Template, AllJson, RuntimeStats}
 
 import _root_.net.liftweb.mapper.{DB, ConnectionManager, Schemifier, DefaultConnectionIdentifier, ConnectionIdentifier}
 
@@ -64,6 +64,8 @@ class Boot {
     LiftRules.snippetDispatch.append(NamedPF("Template")
                                      (Map("Template" -> Template,
                                           "AllJson" -> AllJson)))
+
+    LiftRules.snippetDispatch.append(Map("runtime_stats" -> RuntimeStats))
 
     /*
      * Show the spinny image when an Ajax call starts
@@ -263,6 +265,12 @@ object SessionInfoDumper extends Actor {
             lastTime = millis
             val rt = Runtime.getRuntime
             rt.gc
+
+            RuntimeStats.lastUpdate = timeNow
+            RuntimeStats.totalMem = rt.totalMemory
+            RuntimeStats.freeMem = rt.freeMemory
+            RuntimeStats.sessions = sessions.size
+
             val dateStr: String = timeNow.toString
             Log.info("[MEMDEBUG] At "+dateStr+" Number of open sessions: "+sessions.size)
             Log.info("[MEMDEBUG] Free Memory: "+pretty(rt.freeMemory))
