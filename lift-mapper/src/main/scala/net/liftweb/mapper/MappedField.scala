@@ -218,7 +218,7 @@ trait MappedForeignKey[KeyType, MyOwner <: Mapper[MyOwner], Other <: KeyedMapper
    * Prime the reference of this FK reference
    */
   def primeObj(obj: Box[Other]) = synchronized {
-    _obj
+    _obj = obj
     _calcedObj = true
   }
 
