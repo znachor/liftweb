@@ -17,6 +17,7 @@
     <module>hellolift</module>
     <module>hellodarwin</module>
     <module>JPADemo</module>
+    <module>liftImmutable</module>
     <module>http-authentication</module>
   </modules>
   <dependencies>

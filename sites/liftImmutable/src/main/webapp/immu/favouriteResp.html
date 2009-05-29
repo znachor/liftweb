@@ -1,0 +1,31 @@
+<lift:surround with="immuTemplate" at="content">
+
+    <lift:ImmuControl.favouriteResp form="POST">
+
+        <h3>Your Favourite Framework Choice</h3>
+
+        <div>
+
+            <p>
+                Hi <favourite:yourNameOrNickname />. 
+            </p>
+            <p>
+                Your favourite framework is <favourite:framework />.
+            </p>
+            <p>
+                <favourite:thoughts />.
+            </p>
+            <p>
+                Can you make your payment of <favourite:donation />
+                payable to Acme international before <favourite:donationDate />.
+            </p>
+
+            <input type="submit" name="favourite:continue" value="How it works"/><input type="submit" name="favourite:cancel" value="Back"/>
+
+
+        </div>
+
+    </lift:ImmuControl.favouriteResp>
+
+</lift:surround>
+

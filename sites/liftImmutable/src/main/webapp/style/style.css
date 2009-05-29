@@ -1,0 +1,88 @@
+body {
+	font-family: arial, tahoma, verdana, sans-serif;
+	font-size: 80%;
+	height: 100%;
+	line-height: 1.4;
+}
+
+.td_error {
+	background: #FFFFFF; color: #CC0000;
+}
+
+.td_error td {
+	padding: 0px 10px 0px 0pt;
+	color: #CC0000;
+}
+.td_error span {
+	margin-left: 5px;
+	color: #CC0000;
+}
+
+td { border-bottom:2px;}
+th { border-bottom:2px; }
+
+h3 { background-color: gray; color: white; }
+
+.credit {
+  background: #FFAAAA;
+  font-style: italic;
+}
+
+.disputed {
+  background: #CCCCCC;
+  font-style: oblique;
+}
+
+.colborder {
+	border-right: none;
+}
+
+#top_block { 	border-width: 0px;
+	border-spacing: 0;
+	border-style: none;
+	border-collapse: collapse;
+}
+#top_block img {margin:0; padding: 0; }
+
+#navmenu ul {list-style-type: none; list-style-image: none; background-color:black; margin:0; padding: 4px 0px 6px 0px;}
+#navmenu li {display: inline; }
+
+#navmenu ul li a {text-decoration:none; padding: 6px 20px 6px 20px; color: white; background: black; font-size: 90%;}
+#navmenu ul li a:hover {color: white; background: gray; }
+
+.simple-table table tr td {border: 0; margin:0; padding: 9px; }
+.simple-table table tr th {border: 0; margin:0; padding: 0; background-color: white; color: black;}
+
+table.topsample {
+
+	border-width: 0px;
+	border-spacing: 0;
+	border-style: none;
+	border-collapse: collapse;
+    margin-bottom:0;
+}
+table.topsample td {
+    border: 0; margin:0; padding:0;
+    margin-bottom:0;
+	border-width: 0px;
+	padding: 0px;
+	border-style: none;
+}
+
+table.sample {
+	border-spacing: 0;
+	border-color: gray;
+	border-collapse: collapse;
+}
+table.sample th {
+    background-color: gray;
+    color: white;
+	border-bottom:2px solid #CCCCCC;
+	padding: 4px 0 1px 0;
+	border-color: gray;
+}
+table.sample td {
+    border-bottom:2px solid #CCCCCC;
+	padding: 4px 0 4px 0;
+}
+

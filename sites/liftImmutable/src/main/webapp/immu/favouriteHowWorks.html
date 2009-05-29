@@ -1,0 +1,59 @@
+<lift:surround with="immuTemplate" at="content">
+
+    <lift:ImmuControl.favouriteHowWorks form="POST">
+
+        <h3>How the immutable binding works</h3>
+
+        <div>
+
+            <p>
+                The Binder object uses Lift's function mapping to set and get values from the client, but wraps Lift's binding functions, hiding them.
+            </p>
+            <p>
+                When the FavouiteB class is created, the objects within FavouriteB are bound to the current values stored in BinderMutable (hidden),
+                and are immutable. For instance, if favouriteB is an instance of FavouriteB, favouriteB.yourName.get always returns the same String
+            </p>
+            <p>
+                All bound objects are required, by default, and have a mandatory validation. If you want an
+                optional value, for lets say, a String, you can use bindStringOpt - yourNickName.get returns an Option[String]
+            </p>
+            <p>
+                Objects such as donationDate, have a default validation requiring that they are Valid (i.e. can be converted from a string to the required type).
+            </p>
+            <fieldset>
+                class FavouriteB extends Binder {
+                <div style="padding-left:10px">
+                    <br/>// this is the default date format, but you can set it to whatever you wan
+                    <br/> override val defaultDateFormat = new java.text.SimpleDateFormat("dd MMM yyyy")
+
+                    <br/><br/>val yourName = bindString("yourName") // mandatory is the default for all bound object type
+                    <br/>val yourNickname = bindStringOpt("yourNickname") // optional stri
+                    <br/>val framework = bindDroplistSelect[FavouriteFramework.Value]("framework", FavouriteFramework) // change the enumerations into a drop list
+                    <br/>val leastFramework = bindRadioOpt[FavouriteFramework.Value]("leastFramework", FavouriteFramework)// change the enumerations into a radio group
+                    <br/>val donation = bindUSD("donation", Validator.positive) // use a default value of 10 dollars, make sure they are giving not taking
+                    <br/>val donationDate = bindDate("donationDate")
+                    <br/>val terms = bindCheckbox("terms") // the default is false
+
+                    <br/><br/>def set {
+                    <br/>reset // clear out future bindings
+                    <br/>donation := US(10) // next time the class is instaniated, this will be the value
+                    <br/>donationDate := new java.util.Date()
+                    <br/>terms := false // false by default, but whatever
+                    <br/>}
+                </div>
+                <br/>}
+            </fieldset>
+
+                        <p>
+ If you want to have a look at the code, ImmuControl.scala is your starting point. It calls Favourite.scala, FavouriteResp.scala or FavouriteHowWorks.scala.
+ </p>
+
+            <input type="submit" name="favourite:cancel" value="Back"/>
+
+
+        </div>
+
+    </lift:ImmuControl.favouriteHowWorks>
+
+</lift:surround>
+

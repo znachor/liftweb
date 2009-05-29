@@ -1,0 +1,54 @@
+<lift:surround with="immuTemplate" at="content">
+
+    <lift:ImmuControl.favourite form="POST">
+
+        <h3>Your Favourite Framework</h3>
+
+        <div>
+            <table>
+                <colgroup width="200px" />
+                <colgroup width="300px" />
+                <colgroup width="400px" />
+                <tr>
+                    <td><label>Your Name</label></td>
+                    <td><input name="favourite:yourName" size="20" maxlength="40"/>
+                    <span class="td_error"><lift:msg id="yourName" type="msgs"/></span></td>
+                </tr>
+                <tr>
+                    <td><label>Your Nickname</label></td>
+                    <td><input name="favourite:yourNickname" size="15" maxlength="16"/>
+                    <span class="td_error"><lift:msg id="yourNickname" type="msgs"/></span></td>
+                </tr>
+                <tr>
+                    <th>Favourite framework</th>
+                    <td><select name="favourite:framework" style="width:130px" />
+                    <span class="td_error"><lift:msg id="framework" type="msgs"/></span></td>
+                </tr>
+                <tr><th>Least Favourite framework</th><td><favourite:leastFramework /></td></tr>
+                <tr>
+                    <td><label>Your Donation</label></td>
+                    <td><input name="favourite:donation" size="15" maxlength="16"/>
+                    <span class="td_error"><lift:msg id="donation" type="msgs"/></span></td>
+                </tr>
+                <tr>
+                    <td><label>The date on which to donate</label></td>
+                    <td><input name="favourite:donationDate" size="15" maxlength="16"/>
+                    <span class="td_error"><lift:msg id="donationDate" type="msgs"/></span></td>
+                </tr>
+            </table>
+
+            <fieldset>
+
+                <p><label>Terms and Conditions - I understand this is just for fun</label></p>
+                <input id="acceptTerms" type="checkbox" name="favourite:terms"/><label for="acceptTerms">I accept the terms and conditions</label>
+                <span class="td_error"><lift:msg id="terms" type="msgs"/></span>
+
+            </fieldset>
+            <input type="submit" name="favourite:continue" value="Proceed"/><input type="submit" name="favourite:reset" value="Reset"/>
+
+        </div>
+
+    </lift:ImmuControl.favourite>
+
+</lift:surround>
+
