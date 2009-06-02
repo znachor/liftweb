@@ -16,8 +16,8 @@ package net.liftweb.util
  * and limitations under the License.
  */
 
-import java.util.Locale
-import java.text.{NumberFormat, DecimalFormat}
+import _root_.java.util.Locale
+import _root_.java.text.{NumberFormat, DecimalFormat}
 
 trait TwoFractionDigits {
     val numberOfFractionDigits = 2
@@ -62,6 +62,7 @@ abstract class CurrencyZone {
 
     var locale: Locale
     def make(x: BigDecimal): Currency
+    
     def apply(x: String): Currency = {
         try {
             make(BigDecimal(x)) // try normal number
@@ -69,7 +70,7 @@ abstract class CurrencyZone {
                     try {
                         make(BigDecimal(""+NumberFormat.getNumberInstance(locale).parse(x))) // try with grouping separator
                     } catch { case e: java.text.ParseException => {
-                                 make(BigDecimal(""+NumberFormat.getCurrencyInstance(locale).parse(x))) } // try with currency symbol and grouping separator
+                                make(BigDecimal(""+NumberFormat.getCurrencyInstance(locale).parse(x))) } // try with currency symbol and grouping separator
                     }
                 }
         }
@@ -79,7 +80,7 @@ abstract class CurrencyZone {
     def apply(x: BigDecimal): Currency = make(x)
    
     /* currency factory*/
-    abstract class AbstractCurrency(val designation: String) extends Ordered[AbstractCurrency] {
+    abstract class AbstractCurrency(val designation: String) extends Ordered[Currency] {
 
         val _locale: Locale = locale
         val amount: BigDecimal
@@ -90,20 +91,22 @@ abstract class CurrencyZone {
         val scale: Int
 
         def +(that: Currency): Currency = make(this.amount + that.amount)
+        def +(that: Int): Currency = this + make(that)
 
         def *(that: Currency): Currency = make(this.amount * that.amount)
         def *(that: Int): Currency = this * make(that)
 
         def -(that: Currency): Currency = make(this.amount - that.amount)
+        def -(that: Int): Currency = this - make(that)
 
         def /(that: Currency): Currency =
         make(new BigDecimal(this.amount.bigDecimal.divide(that.amount.bigDecimal, scale, java.math.BigDecimal.ROUND_HALF_UP)) )
         def /(that: Int): Currency = this / make(that)
 
-        def compare(that: AbstractCurrency) = this.amount compareTo that.amount
+        def compare(that: Currency) = this.amount compareTo that.amount
 
         override def equals(that: Any) = that match {
-            case that: AbstractCurrency => this.designation+format("", scale) == that.designation+format("", scale)
+            case that: AbstractCurrency => this.designation+this.format("", scale) == that.designation+that.format("", scale)
             case _ => false
         }
 

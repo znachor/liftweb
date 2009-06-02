@@ -28,6 +28,17 @@ object CurrencyZoneSpec extends Specification {
             auBoolean mustEqual true
         }
 
+        "be not equal to a different amount of its own money" in {
+            val auBoolean = AU(4.48) == AU(4.481)
+            auBoolean mustEqual false
+        }
+
+
+        "be equal to the same amount of its own money" in {
+            val auBoolean = AU(4.42) == AU(4.42)
+            auBoolean mustEqual true
+        }
+
         "be comparable not gt" in {
             val auBoolean = AU(4.42) > AU(4.420000)
             auBoolean mustEqual false
