@@ -49,7 +49,7 @@ object Favourite {
         val yourNickname = bindStringOpt("yourNickname") // optional string
         val framework = bindDroplistSelect[FavouriteFramework.Value]("framework", FavouriteFramework) // change the enumerations into a drop list
         val leastFramework = bindRadioOpt[FavouriteFramework.Value]("leastFramework", FavouriteFramework)// change the enumerations into a radio group
-        val donation = bindUSD("donation", Validator.positive) // use a default value of 10 dollars, make sure they are giving not taking
+        val donation = bindUSD("donation") // use a default value of 10 dollars, make sure they are giving not taking
         val donationDate = bindDate("donationDate") 
         val terms = bindCheckbox("terms") // the default is false
 
@@ -78,7 +78,7 @@ object Favourite {
         Log.debug ("FavouriteB.process")
         import favouriteB._
         var validations = favouriteB.validate
-        if (!terms.get) validations = terms.mkValidationError("Please accept the terms and conditions") :: validations
+        if (!terms.get) validations = terms.mkError("Please accept the terms and conditions") :: validations
 
         validations match {
             case Nil =>
@@ -87,7 +87,7 @@ object Favourite {
                 val theNickName: Option[String] = yourNickname.get // its optional, so it returns an Option[String]
 
                 // you can continue validation once you know the basic input is valid
-                if (donation.get.toString == "0.00") FormReturn.fail(donation.name, "Please dontate more money")
+                if (donation.get.toString == "0.00") FormReturn.fail(donation.mkError("Please dontate more money"))
                 else FormReturn.success("/immu/favouriteResp")
             case validations =>
                 Log.debug ("Register favourite account input not valid "+" "+validations)
@@ -99,7 +99,7 @@ object Favourite {
      Get the xhtml to display, processProc and resetProc are provided by the controling class
      */
     def show(xhtml: NodeSeq, favouriteB: FavouriteB): NodeSeq = {
-        Log.debug ("Favourite.show")
+        Log.debug ("Favourite.show3")
 
         /*
          SBind is a replacement for Bind, that also accepts Binder objects,

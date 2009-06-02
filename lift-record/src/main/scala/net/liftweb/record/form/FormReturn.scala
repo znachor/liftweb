@@ -10,50 +10,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.liftweb.record.form
 
-import net.liftweb.http.S._
+import _root_.net.liftweb.http.S._
+import _root_.net.liftweb.http.{FieldError, FieldIdentifier}
+import _root_.scala.xml.{Node, Text}
+import _root_.net.liftweb.record.Validator
 
 class FormReturn[A] {
 
-    val errors = List[ValidationError]()
+    val errors = List[FieldError]()
     val successTo: Option[String] = None
     val successObj: Option[A] = None
     def onSuccess(onProcess: (A) => Unit): FormReturn[A] = {
         successObj match {
             case None => this;
-            case Some(obj) => 
+            case Some(obj) =>
                 onProcess(obj)
                 this
         }
     }
 
-    def mkLiftErrors { errors foreach ( _.mkLiftError ) }
     def isError = errors.size > 0
     def isSuccess = !isError
 
     def continue {
-        mkLiftErrors
+        error(errors)
         successTo match {
             case None => ;
             case Some(toWhere) => redirectTo(toWhere)
         }
     }
-
 }
 
 object FormReturn {
 
     def fail[A](msg: String) = new FormReturn[A]{
-        override val errors = ValidationError(null, null, msg) :: Nil
+        override val errors = FieldError(new FieldIdentifier{}, Text(msg)) :: Nil
     }
 
-    def fail[A](name: String, msg: String) = new FormReturn[A]{
-        override val errors = ValidationError(name, null, msg) :: Nil
+    def fail[A](err: FieldError) = new FormReturn[A]{
+        override val errors = err :: Nil
     }
-    
-    def fail[A](validations: List[ValidationError]) = new FormReturn[A]{
+
+    def fail[A](validations: List[FieldError]) = new FormReturn[A]{
         override val errors = validations
     }
 

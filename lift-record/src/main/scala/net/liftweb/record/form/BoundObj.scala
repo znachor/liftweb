@@ -17,10 +17,11 @@ import net.liftweb.http.S._
 import net.liftweb.http.SHtml._
 import net.liftweb.util.Helpers._
 import scala.xml.{Node, NodeSeq, Text, Elem, Group, MetaData, Null, UnprefixedAttribute, PrefixedAttribute}
-
+import net.liftweb.util._
+import net.liftweb.http.{FieldError, SHtml, FieldIdentifier}
+import net.liftweb.record.Validator
+import net.liftweb.record.BoundObjParam
 import net.liftweb.http.SHtml
-
-trait BoundObjParam {}
 
 class HtmlAttribute(val name: String, val value: String) extends BoundObjParam {
     override def toString = "A:"+name+"="+value
@@ -31,7 +32,7 @@ object HtmlAttribute {
 }
 
 class BoundObjConstuctor(
-      val name: String
+    val name: String
     , val addBoundObj:(String, BoundObj[Any]) => Unit
     , val setRebindMap: (String, String) => Unit
     , val getRebindMap: (String) => Option[String]
@@ -42,10 +43,14 @@ abstract class BoundObj[A](boc: BoundObjConstuctor) {
     {boc.addBoundObj(boc.name, this.asInstanceOf[BoundObj[Any]])}
 
     val name = boc.name
+    val fieldIdentifier = new FieldIdentifier {
+        override def uniqueFieldId = Full(boc.name) //todo addIndex
+        override def toString = name
+    }
     private[form] def setRebindMap = boc.setRebindMap
     private[form] def getRebindMap = boc.getRebindMap
     val htmlAttributes = boc.params.toList.filter(_.isInstanceOf[HtmlAttribute]).map(_.asInstanceOf[HtmlAttribute])
-    val validatorParams = boc.params.toList.filter(_.isInstanceOf[Validator]).map(_.asInstanceOf[Validator])
+    val validatorParams = boc.params.toList.filter(_.isInstanceOf[Validator[A]]).map(_.asInstanceOf[Validator[A]])
 
     val getStringOpt: Option[String] = getRebindMap(name)
 
@@ -54,13 +59,13 @@ abstract class BoundObj[A](boc: BoundObjConstuctor) {
     def getOpt: Option[A]
 
     def getOrElse(orElse: => A): A = getOpt.getOrElse(orElse)
-    
+
     private[form] def setRebind = (v: String) => setRebindMap(name, v)
 
     def :=(v: A) { setRebindMap(name, if (v == null) "" else mkString(v)) }
 
     def ::=(v: String) = { setRebindMap(name, if (v == null) "" else v) }
-    
+
     def html: NodeSeq = {
         val attrs = htmlAttributes map (v => (v.name -> v.value) )
         net.liftweb.http.SHtml.text(getStringOpt.getOrElse(""), setRebind, attrs:_*)
@@ -70,19 +75,48 @@ abstract class BoundObj[A](boc: BoundObjConstuctor) {
 
     def stringBindParam: BindParam = name -> scala.xml.Text(getStringOpt.getOrElse(""))
 
+    val validatePositive: Option[Validator[A]] = None
     val defaultInvalidMsg = "Invalid"
-    val defaultMandatoryMsg = "Required"
-    def validations: List[Validator] = {
+    val defaultMandatoryMsg = Validator.defaultMandatory.get
+    val defaultPositiveMsg = "Positive values only"
+    def validations: List[Validator[A]] = {
         var outList = validatorParams
-        if (!outList.exists(_.errorType == "VALID")) outList = Validator.valid(defaultInvalidMsg) :: outList
-        if (!outList.exists(v => v.errorType == "MANDATORY" || v.errorType == "OPTIONAL")) outList = Validator.mandatory(defaultMandatoryMsg) :: outList
+        if (!outList.exists(_.errorType == "valid")) {
+            outList = Validator.valid[A](defaultInvalidMsg) :: outList
+        }
+        if (!outList.exists(v => v.errorType == "mandatory" || v.errorType == "optional")) {
+            outList = Validator.mandatory[A](defaultMandatoryMsg) :: outList
+        }
+        validatePositive match {
+            case Some(v) if (!outList.exists(v => v.errorType == "gtEQ_0" || v.errorType == "postitveOrNegative"))  =>
+                outList = v :: outList
+            case _ => ;
+
+        }
         outList
     }
 
-    def validate: List[ValidationError] = validations flatMap {_.validate(this.asInstanceOf[BoundObj[AnyRef]])}
+    def validate: List[FieldError] = {
+        val box = getOpt match {
+            case None if (isEmpty) => Empty
+            case None => Failure(getStringOpt.getOrElse(""), Empty, Empty)
+            case Some(x) => Full(x)
+        }
+        validations flatMap {v =>
+            v.validate(box) match {
 
-    def mkValidationError(errStr: String): ValidationError = {
-        new ValidationError(name, "ANYERR", errStr)
+                case Full(node) =>
+                    println("field="+fieldIdentifier+" value="+getStringOpt+" "+v.errorType+"="+node)
+                    new FieldError(fieldIdentifier, node) :: Nil
+                case x =>
+                    println("field="+fieldIdentifier+" value="+getStringOpt+" "+v.errorType+"="+x)
+                    Nil
+            }
+        }
+    }
+
+    def mkError(errStr: String): FieldError = {
+        new FieldError(fieldIdentifier, Text(errStr))
     }
 
     def mkString(obj: A) = if (obj == null) "" else obj.toString

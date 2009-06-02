@@ -29,6 +29,8 @@ import java.util.Formatter
 import net.liftweb.util.{Box, Empty, Failure, Full}
 import FuncUtil.tryFunc
 import net.liftweb.http.SessionVar
+import net.liftweb.http.{FieldError, SHtml, FieldIdentifier}
+import net.liftweb.record.Validator
 
 class BinderMutable {
     var rebindMap = scala.collection.mutable.Map[String, String]()
@@ -97,7 +99,7 @@ abstract class Binder(binderMutableOpt: Option[BinderMutable]) {
         binderMutable.rebindMap += ((name+index) -> str)
     }
 
-    def validate: List[ValidationError] = (boundObjList flatMap (_.validate) ) ::: ( binderList flatMap (_.validate) )
+    def validate: List[FieldError] = (boundObjList flatMap (_.validate) ) ::: ( binderList flatMap (_.validate) )
 
     def bindParams: List[BindParam] = ( boundObjList map (_.bindParam) ) ::: ( binderList flatMap (_.bindParams)  )
 
@@ -124,22 +126,22 @@ abstract class Binder(binderMutableOpt: Option[BinderMutable]) {
     new BoundStringOpt(boc(name, HtmlAttribute("type", "password") :: addOpt(vt.toList)) )
 
     def bindAUD(name: String, vt: BoundObjParam*) =
-    new BoundMoney[AU.AUD](AU, boc(name, addOpt(vt.toList)) )
+    new BoundMoney(AU, AU(0), boc(name, addOpt(vt.toList)) )
 
     def bindAUDOpt(name: String, vt: BoundObjParam*) =
-    new BoundMoneyOpt[AU.AUD](AU, boc(name, addOpt(vt.toList)))
+    new BoundMoneyOpt(AU, AU(0), boc(name, addOpt(vt.toList)))
 
     def bindUSD(name: String, vt: BoundObjParam*) =
-    new BoundMoney[US.USD](US, boc(name, vt.toList))
+    new BoundMoney(US, US(0), boc(name, vt.toList))
 
     def bindUSDOpt(name: String, vt: BoundObjParam*) =
-    new BoundMoneyOpt[US.USD](US, boc(name, addOpt(vt.toList)))
+    new BoundMoneyOpt(US, US(0), boc(name, addOpt(vt.toList)))
 
-    def bindMoney[A <: CurrencyZone#AbstractCurrency](currency: CurrencyZone, name: String, vt: BoundObjParam*) =
-    new BoundMoney[A](currency, boc(name, vt.toList))
+    def bindMoney[A <: CurrencyZone#AbstractCurrency](currency: CurrencyZone, zero: A, name: String, vt: BoundObjParam*) =
+    new BoundMoney[A](currency, zero, boc(name, vt.toList))
 
-    def bindMoneyOpt[A <: CurrencyZone#AbstractCurrency](currency: CurrencyZone, name: String, vt: BoundObjParam*) =
-    new BoundMoneyOpt[A](currency, boc(name, addOpt(vt.toList)) )
+    def bindMoneyOpt[A <: CurrencyZone#AbstractCurrency](currency: CurrencyZone, zero: A, name: String, vt: BoundObjParam*) =
+    new BoundMoneyOpt(currency, zero: A, boc(name, addOpt(vt.toList)) )
 
     val defaultDateFormat = new java.text.SimpleDateFormat("dd MMM yyyy")
 
@@ -169,7 +171,7 @@ abstract class Binder(binderMutableOpt: Option[BinderMutable]) {
 
     def bindDroplistSelect[A](name: String, enum: EnumWithDescription, filter: String => Boolean, vt: BoundObjParam*) =
     new BoundDropList[A](boc(name, vt.toList), Some("select"), Some(filter), enum)
-   
+
     def bindInteger(name: String, vt: BoundObjParam*) =
     new BoundNumber[Integer](boc(name, vt.toList), Integer.parseInt(_))
 
@@ -214,9 +216,9 @@ abstract class Binder(binderMutableOpt: Option[BinderMutable]) {
             <input class="radiol" type="radio" id={constructor.enumName} name={constructor.liftName} value={constructor.enumName} />
     }
 
-    def mkValidationError(name: String, errStr: String): ValidationError = {
+    /*def mkError(name: String, errStr: String): ValidationError = {
         new ValidationError(name, "ANYERR", errStr)
-    }
+    }*/
 
 }
 
@@ -241,13 +243,14 @@ abstract class BoundStringBase(boc: BoundObjConstuctor) extends BoundObj[String]
     def getOpt: Option[String] = getStringOpt
 }
 
-class BoundMoney[A <: CurrencyZone#AbstractCurrency](currency: CurrencyZone, boc: BoundObjConstuctor)
-extends BoundMoneyBase[A](boc, currency) {def get = getOpt.getOrElse(null).asInstanceOf[A]}
-class BoundMoneyOpt[A <: CurrencyZone#AbstractCurrency](currency: CurrencyZone, boc: BoundObjConstuctor)
-extends BoundMoneyBase[A](boc, currency) {def get = getOpt.asInstanceOf[Option[A]]}
-abstract class BoundMoneyBase[A <: CurrencyZone#AbstractCurrency](boc: BoundObjConstuctor, currency: CurrencyZone) extends BoundObj[A](boc) {
-    override val defaultInvalidMsg = "Invalid Amount"
-    
+class BoundMoney[A <: CurrencyZone#AbstractCurrency](currency: CurrencyZone, zero: A, boc: BoundObjConstuctor)
+extends BoundMoneyBase[A](boc, zero, currency) {def get = getOpt.getOrElse(null).asInstanceOf[A]}
+class BoundMoneyOpt[A <: CurrencyZone#AbstractCurrency](currency: CurrencyZone, zero: A, boc: BoundObjConstuctor)
+extends BoundMoneyBase[A](boc, zero, currency) {def get = getOpt.asInstanceOf[Option[A]]}
+abstract class BoundMoneyBase[A <: CurrencyZone#AbstractCurrency](boc: BoundObjConstuctor, zero: A, currency: CurrencyZone) extends BoundObj[A](boc) {
+    override val defaultInvalidMsg = Validator.defaultAmountValid.get
+    override val validatePositive = Some(Validator.fnValidator[A]("gtEQ_0", false, (x: A) => {if (x.amount < zero.amount) Full(Text("Enter a positive amount")) else Empty}))
+
     def getOpt: Option[A] = {
         getStringOpt match {case None => None; case Some(str) => tryFunc( currency.apply(str.toString.replaceAll(",", "")).asInstanceOf[A] ) }
     }
