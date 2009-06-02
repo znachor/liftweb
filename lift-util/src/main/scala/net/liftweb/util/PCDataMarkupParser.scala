@@ -144,13 +144,68 @@ object AltXML {
   val ieBadTags: Set[String] = Set("br", "hr")
 
   val inlineTags: Set[String] = Set("base", "meta", "link", "hr", "br",
-  "param", "img", "area", "input", "col" )
+                                    "param", "img", "area", "input", "col" )
 
   def toXML(n: Node, stripComment: Boolean, convertAmp: Boolean,
             ieMode: Boolean): String = {
     val sb = new StringBuilder(50000)
     toXML(n, TopScope, sb, stripComment, convertAmp, ieMode)
     sb.toString()
+  }
+
+  def toXML(n: Node, stripComment: Boolean, convertAmp: Boolean): String = {
+    val sb = new StringBuilder(50000)
+    toXML(n, TopScope, sb, stripComment, convertAmp)
+    sb.toString()
+  }
+
+  /**
+   * Appends a tree to the given stringbuffer within given namespace scope.
+   *
+   * @param n            the node
+   * @param pscope       the parent scope
+   * @param sb           stringbuffer to append to
+   * @param stripComment if true, strip comments
+   */
+  def toXML(x: Node, pscope: NamespaceBinding, sb: StringBuilder,
+            stripComment: Boolean, convertAmp: Boolean): Unit =
+  x match {
+    case c: Comment if !stripComment =>
+      c.toString(sb)
+
+    case er: EntityRef if convertAmp =>
+      HtmlEntities.entMap.get(er.entityName) match {
+        case Some(chr) if chr.toInt >= 128 => sb.append(chr)
+        case _ => er.toString(sb)
+      }
+
+    case x: SpecialNode =>
+      x.toString(sb)
+
+    case g: Group =>
+      for (c <- g.nodes)
+      toXML(c, x.scope, sb, stripComment, convertAmp)
+
+    case e: Elem if ((e.child eq null) || e.child.isEmpty) =>
+      sb.append('<')
+      e.nameToString(sb)
+      if (e.attributes ne null) e.attributes.toString(sb)
+      e.scope.toString(sb, pscope)
+      sb.append(" />")
+
+    case e: Elem =>
+      // print tag with namespace declarations
+      sb.append('<')
+      e.nameToString(sb)
+      if (e.attributes ne null) e.attributes.toString(sb)
+      e.scope.toString(sb, pscope)
+      sb.append('>')
+      sequenceToXML(e.child, e.scope, sb, stripComment, convertAmp)
+      sb.append("</")
+      e.nameToString(sb)
+      sb.append('>')
+
+    case _ => // dunno what it is, but ignore it
   }
 
   /**
@@ -222,27 +277,25 @@ object AltXML {
   def sequenceToXML(children: Seq[Node], pscope: NamespaceBinding,
                     sb: StringBuilder, stripComment: Boolean,
                     convertAmp: Boolean, ieMode: Boolean): Unit = {
-    /*
-
-    if (children.isEmpty)
-    return
-    else if (children forall { y => y.isInstanceOf[Atom[_]] && !y.isInstanceOf[Text] }) { // add space
-      val it = children.elements
-      val f = it.next
-      toXML(f, pscope, sb, stripComment, convertAmp, ieMode)
-      while (it.hasNext) {
-        val x = it.next
-        sb.append(' ')
-        toXML(x, pscope, sb, stripComment, convertAmp, ieMode)
-      }
-    } else {
-      for (c <- children) toXML(c, pscope, sb, stripComment, convertAmp, ieMode)
+    val it = children.elements
+    while (it.hasNext) {
+      toXML(it.next, pscope, sb, stripComment, convertAmp, ieMode)
     }
-    */
-   val it = children.elements
-   while (it.hasNext) {
-     toXML(it.next, pscope, sb, stripComment, convertAmp, ieMode)
-   }
+  }
+
+  /**
+   * @param children     ...
+   * @param pscope       ...
+   * @param sb           ...
+   * @param stripComment ...
+   */
+  def sequenceToXML(children: Seq[Node], pscope: NamespaceBinding,
+                    sb: StringBuilder, stripComment: Boolean,
+                    convertAmp: Boolean): Unit = {
+    val it = children.elements
+    while (it.hasNext) {
+      toXML(it.next, pscope, sb, stripComment, convertAmp)
+    }
   }
 
 }
