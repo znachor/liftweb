@@ -709,7 +709,11 @@ class LiftSession(val contextPath: String, val uniqueId: String,
       case s => s
     }
 
-    findAnyTemplate("templates-hidden" :: splits, S.locale) or findAnyTemplate(splits, S.locale)
+    findAnyTemplate("templates-hidden" :: splits, S.locale) match {
+      case Full(x) => Full(x)
+      case f: Failure if Props.devMode => f
+      case _ => findAnyTemplate(splits, S.locale)
+    }
   }
 
   private object snippetMap extends RequestVar[Map[String, AnyRef]](Map())
@@ -1062,10 +1066,26 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     }
   }
 
+  private def failedFind(in: Failure): NodeSeq =
+  <html  xmlns:lift="http://liftweb.net" xmlns="http://www.w3.org/1999/xhtml"><head/>
+    <body><div style="border: 1px red solid">Error locating template.  Message: {in.msg} <br/>
+              {
+                in.exception.map(e => <pre>{e.toString}
+{e.getStackTrace.map(_.toString).mkString("\n")}
+                            </pre>).openOr(NodeSeq.Empty)
+              }
+                  This message is displayed because you are in Development mode.
+                  </div></body></html>
+
   private[liftweb] def findAndMerge(templateName: Box[Seq[Node]], atWhat: Map[String, NodeSeq]): NodeSeq = {
     val name = templateName.map(s => if (s.text.startsWith("/")) s.text else "/"+ s.text).openOr("/templates-hidden/default")
 
-    findTemplate(name).map(s => bind(atWhat, s)).openOr(atWhat.values.flatMap(_.elements).toList)
+    findTemplate(name) match {
+      case f@ Failure(msg, be, _) if Props.devMode =>
+        failedFind(f)
+      case Full(s) => bind(atWhat, s)
+      case _ => atWhat.values.flatMap(_.elements).toList
+    }
   }
 
 }
@@ -1191,7 +1211,23 @@ object TemplateFinder {
               val name = pls + p + (if (s.length > 0) "." + s else "")
               val rb = LiftRules.finder(name)
               if (rb.isDefined) {
-                val xmlb = PCDataXmlParser(rb.open_!)
+                import scala.xml.dtd.ValidationException
+                val xmlb = try {
+                  PCDataXmlParser(rb.open_!)
+                } catch {
+                  case e: ValidationException if Props.devMode =>
+                    return(Full(<div style="border: 1px red solid">Error locating template {name}.<br/>  Message: {e.getMessage} <br/>
+              {
+                <pre>
+{e.toString}
+{e.getStackTrace.map(_.toString).mkString("\n")}
+                            </pre>
+              }
+                  This message is displayed because you are in Development mode.
+                  </div>))
+
+                  case e: ValidationException => Empty
+                }
                 if (xmlb.isDefined) {
                   found = true
                   ret = (cache(key) = xmlb.open_!)

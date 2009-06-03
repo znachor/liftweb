@@ -141,28 +141,50 @@ class PCDataXmlParser(val input: Source) extends ConstructingHandler with PCData
     (aMap,scope)
   }
 
-  // val input = from
+  /**
+   * report a syntax error
+   */
+  override def reportSyntaxError(pos: Int, msg: String) {
+    
+    //error("MarkupParser::synerr") // DEBUG
+    import scala.io._
+    
+    
+    val line = Position.line(pos)
+    val col = Position.column(pos)
+    val report = curInput.descr + ":" + line + ":" + col + ": " + msg
+    System.err.println(report)
+    try {
+	    System.err.println(curInput.getLine(line))
+    } catch {
+      case e: Exception => // ignore
+    }
+    var i = 1
+    while (i < col) {
+      System.err.print(' ')
+      i += 1
+    }
+    System.err.println('^')
+    throw new ValidationException(report)
+  }
+
 }
 
 object PCDataXmlParser {
+  import Helpers._
+
   def apply(in: InputStream): Box[NodeSeq] = {
-    val source = Source.fromInputStream(in)
-    val p = new PCDataXmlParser(source)
-    while (p.ch != '<' && p.curInput.hasNext) p.nextch
-    p.document match {
-      case null => Empty
-      case doc => Full(doc)
-    }
+    for {
+      source <- tryo{Source.fromInputStream(in)}
+      p <- tryo{new PCDataXmlParser(source)}
+      val _ = while (p.ch != '<' && p.curInput.hasNext) p.nextch
+      doc <- Box !! p.document
+    } yield doc
   }
 
   def apply(in: String): Box[NodeSeq] = {
-    val source = Source.fromString(in)
-    val p = new PCDataXmlParser(source)
-    while (p.ch != '<' && p.curInput.hasNext) p.nextch
-    p.document match {
-      case null => Empty
-      case doc => Full(doc)
-    }
+    import java.io.ByteArrayInputStream
+    apply(new ByteArrayInputStream(in.getBytes("UTF-8")))
   }
 }
 
