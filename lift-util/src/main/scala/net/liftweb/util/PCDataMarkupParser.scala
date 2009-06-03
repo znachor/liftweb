@@ -91,6 +91,56 @@ trait PCDataMarkupParser[PCM <: MarkupParser with MarkupHandler] extends MarkupP
 class PCDataXmlParser(val input: Source) extends ConstructingHandler with PCDataMarkupParser[PCDataXmlParser] with ExternalSources  {
   val preserveWS = true
   ent ++= HtmlEntities()
+  import scala.xml._
+  /** parse attribute and create namespace scope, metadata
+   *  [41] Attributes    ::= { S Name Eq AttValue }
+   */
+  override def xAttributes(pscope:NamespaceBinding): (MetaData,NamespaceBinding) = {
+    var scope: NamespaceBinding = pscope
+    var aMap: MetaData = Null
+    while (isNameStart(ch)) {
+      val pos = this.pos
+
+      val qname = xName
+      val _     = xEQ
+      val value = xAttributeValue()
+
+      Utility.prefix(qname) match {
+        case Some("xmlns") =>
+          val prefix = qname.substring(6 /*xmlns:*/ , qname.length);
+          scope = new NamespaceBinding(prefix, value, scope);
+
+        case Some(prefix)       =>
+          val key = qname.substring(prefix.length+1, qname.length);
+          aMap = new PrefixedAttribute(prefix, key, Text(value), aMap);
+
+        case _             =>
+          if( qname == "xmlns" )
+          scope = new NamespaceBinding(null, value, scope);
+          else
+          aMap = new UnprefixedAttribute(qname, Text(value), aMap);
+      }
+
+      if ((ch != '/') && (ch != '>') && ('?' != ch))
+      xSpace;
+    }
+
+    def findIt(base: MetaData, what: MetaData): MetaData = (base, what) match {
+      case (_, Null) => Null
+      case (upb: UnprefixedAttribute, upn: UnprefixedAttribute) if upb.key == upn.key => upn
+      case (pb: PrefixedAttribute, pn: PrefixedAttribute) if pb.key == pn.key && pb.pre == pn.key => pn
+      case _ => findIt(base, what.next)
+    }
+
+    if(!aMap.wellformed(scope)) {
+      if (findIt(aMap, aMap.next) != Null) {
+        reportSyntaxError( "double attribute")
+      }
+    }
+
+    (aMap,scope)
+  }
+
   // val input = from
 }
 

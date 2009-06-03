@@ -722,18 +722,18 @@ object PointlessActorToWorkAroundBug extends Actor {
 
                 nullRefs.foreach(r => h -= r)
 
-                val nonNull = h.elements.filter(f => f.get ne null).toList
+                val nonNull = h.elements.toList.flatMap(r => r.get match {case null => None case x => Some((x, r))})
 
                 Log.trace("[MEMDEBUG] got the actor refSet... non null elems: "+
                           nonNull.size)
 
-                nonNull.foreach{r =>
+                nonNull.foreach{case (f, r) =>
                   for
                   {
-                    a <- findField(r.get.getClass, "exiting")
+                    a <- findField(f.getClass, "exiting")
                   } {
                     a.setAccessible(true)
-                    if (a.getBoolean(r.get)) {
+                    if (a.getBoolean(f)) {
                       h -= r
                       r.clear
                     }
