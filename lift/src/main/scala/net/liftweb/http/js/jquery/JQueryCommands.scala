@@ -40,8 +40,8 @@ trait JQueryLeft {
 
 
   def >>(that: JQueryLeft with JQueryRight): JsExp with JQueryLeft =
-    new JsExp with JQueryLeft {
-      def toJsCmd = JQueryLeft.this.toJsCmd + "."+ that.toJsCmd
+  new JsExp with JQueryLeft {
+    def toJsCmd = JQueryLeft.this.toJsCmd + "."+ that.toJsCmd
   }
 }
 
@@ -59,11 +59,23 @@ object JqJE {
     def toJsCmd = "attr(" + key.encJs + ")"
   }
 
-    /**
+  /**
    * A JQuery query
    */
   case class Jq(query: JsExp) extends JsExp with JQueryLeft {
     override def toJsCmd = "jQuery("+query.toJsCmd+")"
+  }
+
+  case object JqDoc extends JsExp with JQueryLeft {
+    override def toJsCmd = "jQuery(document)"
+  }
+
+  case class JqKeypress(what: (Char, JsCmd)*) extends JsExp with JQueryRight {
+    override def toJsCmd = "keypress(function(e) {"+
+    what.map{ case (chr, cmd) =>
+        "if (e.which == "+chr.toInt+") {"+cmd.toJsCmd+"}"
+    }.mkString(" else \n")+
+    "})"
   }
 
   /**
@@ -84,7 +96,7 @@ object JqJE {
     override def toJsCmd = "append("+fixHtml("inline", content)+")"
   }
 
- /**
+  /**
    * Remove JQuery
    */
   case class JqRemove() extends JsExp with JQueryRight with JQueryLeft {
@@ -115,9 +127,9 @@ object JqJE {
 
   object JqCss {
     def apply(name: JsExp, value: JsExp): JsExp with JQueryRight with JQueryLeft =
-      new JsExp with JQueryRight with JQueryLeft {
-        override def toJsCmd = "css("+name.toJsCmd+","+value.toJsCmd+")"
-      }
+    new JsExp with JQueryRight with JQueryLeft {
+      override def toJsCmd = "css("+name.toJsCmd+","+value.toJsCmd+")"
+    }
   }
 
   /**
@@ -168,23 +180,23 @@ object JqJE {
 
   object JqTabsClick {
     def apply(tab: JsExp): JsExp with JQueryRight with JQueryLeft =
-      new JsExp with JQueryRight with JQueryLeft {
-        def toJsCmd = "tabsClick("+tab.toJsCmd+")"
-      }
+    new JsExp with JQueryRight with JQueryLeft {
+      def toJsCmd = "tabsClick("+tab.toJsCmd+")"
+    }
 
     def apply(tab: Int): JsExp with JQueryRight with JQueryLeft =
-      apply(Num(tab))
+    apply(Num(tab))
   }
 
- object JqTabs {
-   def apply(in: JsExp): JsExp with JQueryRight with JQueryLeft =
-     new JsExp with JQueryRight with JQueryLeft {
-       def toJsCmd = "tabs("+in.toJsCmd+")"
-     }
+  object JqTabs {
+    def apply(in: JsExp): JsExp with JQueryRight with JQueryLeft =
+    new JsExp with JQueryRight with JQueryLeft {
+      def toJsCmd = "tabs("+in.toJsCmd+")"
+    }
 
-   def apply(): JsExp with JQueryRight with JQueryLeft =
-     apply(JsRaw(""))
- }
+    def apply(): JsExp with JQueryRight with JQueryLeft =
+    apply(JsRaw(""))
+  }
 
 }
 
@@ -201,7 +213,7 @@ object JqJsCmds {
    */
   object AppendHtml {
     def apply(uid: String, content: NodeSeq): JsCmd =
-      JqJE.JqId(JE.Str(uid)) >> JqJE.JqAppend(content)
+    JqJE.JqId(JE.Str(uid)) >> JqJE.JqAppend(content)
   }
 
   /**
@@ -209,7 +221,7 @@ object JqJsCmds {
    */
   object AppendToHtml {
     def apply(uid: String, content: NodeSeq): JsCmd =
-      JqJE.JqId(JE.Str(uid)) >> JqJE.JqAppendTo(content)
+    JqJE.JqId(JE.Str(uid)) >> JqJE.JqAppendTo(content)
   }
 
   /**
@@ -217,7 +229,7 @@ object JqJsCmds {
    */
   object PrependHtml {
     def apply(uid: String, content: NodeSeq): JsCmd =
-      JqJE.JqId(JE.Str(uid)) >> JqJE.JqPrepend(content)
+    JqJE.JqId(JE.Str(uid)) >> JqJE.JqPrepend(content)
   }
 
   /**
@@ -225,7 +237,7 @@ object JqJsCmds {
    */
   object EmptyAfter {
     def apply(uid: String, content: NodeSeq): JsCmd =
-      JqJE.JqId(JE.Str(uid)) >> JqJE.JqEmptyAfter(content)
+    JqJE.JqId(JE.Str(uid)) >> JqJE.JqEmptyAfter(content)
   }
 
   /**
@@ -233,7 +245,7 @@ object JqJsCmds {
    */
   object PrependToHtml {
     def apply(uid: String, content: NodeSeq): JsCmd =
-      JqJE.JqId(JE.Str(uid)) >> JqJE.JqPrependTo(content)
+    JqJE.JqId(JE.Str(uid)) >> JqJE.JqPrependTo(content)
   }
 
 
@@ -273,7 +285,7 @@ object JqJsCmds {
 
   class ModalDialog(html: NodeSeq, css: Box[String]) extends JsCmd {
     def toJsCmd = "jQuery.blockUI({ message: "+AltXML.toXML(Group(S.session.map(s =>
-    s.fixHtml(s.processSurroundAndInclude("Modal Dialog", html))).openOr(html)), false, true, S.ieMode).encJs+
+          s.fixHtml(s.processSurroundAndInclude("Modal Dialog", html))).openOr(html)), false, true, S.ieMode).encJs+
     (css.map(w => ",  css: '"+w+"' ").openOr("")) + "});"
   }
 

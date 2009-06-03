@@ -515,8 +515,8 @@ object SHtml {
   private def selected(in: Boolean) = if (in) new UnprefixedAttribute("selected", "selected", Null) else Null
 
   def multiSelect(opts: Seq[(String, String)], deflt: Seq[String],
-                  func: String => Any, attrs: (String, String)*): Elem =
-  multiSelect_*(opts, deflt, SFuncHolder(func), attrs :_*)
+                  func: List[String] => Any, attrs: (String, String)*): Elem =
+  multiSelect_*(opts, deflt, LFuncHolder(func), attrs :_*)
 
   def multiSelect_*(opts: Seq[(String, String)],
                     deflt: Seq[String],
