@@ -1,11 +1,12 @@
 import _root_.org.mortbay.jetty.Connector;
+import org.mortbay.jetty.nio._
 import _root_.org.mortbay.jetty.Server;
 import _root_.org.mortbay.jetty.bio.SocketConnector;
 import _root_.org.mortbay.jetty.webapp.WebAppContext;
 
 object RunWebApp extends Application {
         val server = new Server();
-        val connector = new SocketConnector();
+        val connector = new SelectChannelConnector();
         connector.setPort(8888);
         server.setConnectors(Array(connector));
 

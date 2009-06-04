@@ -1,9 +1,14 @@
 import org.mortbay.jetty.Connector;
+import org.mortbay.jetty.nio._
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.webapp.WebAppContext;
 
 object RunWebApp extends Application {
-  val server = new Server(8080);
+  val server = new Server
+  val scc = new SelectChannelConnector
+  scc.setPort(8080)
+  server.setConnectors(Array(scc))
+
   val context = new WebAppContext()
   context.setServer(server)
   context.setContextPath("/")
