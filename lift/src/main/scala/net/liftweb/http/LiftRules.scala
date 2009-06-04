@@ -674,10 +674,13 @@ object LiftRules {
    * Takes a Node, headers, cookies, and a session and turns it into an XhtmlResponse.
    */
   private def cvt(ns: Node, headers: List[(String, String)], cookies: List[Cookie], session: Req) =
-  convertResponse((XhtmlResponse(Group(session.fixHtml(ns)),
+  convertResponse({val ret = XhtmlResponse(Group(session.fixHtml(ns)),
                                  ResponseInfo.docType(session),
                                  headers, cookies, 200,
-                                 S.ieMode), headers, cookies, session))
+                                 S.ieMode)
+         ret._includeXmlVersion = !S.skipDocType
+         ret
+  }, headers, cookies, session)
 
   var defaultHeaders: PartialFunction[(NodeSeq, Req), List[(String, String)]] = {
     case _ => List("Expires" -> Helpers.nowAsInternetDate,

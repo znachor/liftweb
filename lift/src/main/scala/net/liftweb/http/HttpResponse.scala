@@ -356,9 +356,10 @@ trait NodeResponse extends LiftResponse {
   def code: Int
   def docType: Box[String]
   def renderInIEMode: Boolean = false
+  def includeXmlVersion = true
 
   def toResponse = {
-    val encoding: String =
+    val encoding: String = if (!includeXmlVersion) "" else
     (out, headers.ciGet("Content-Type")) match {
       case (up: Unparsed,  _) => ""
 
@@ -398,7 +399,10 @@ case class XhtmlResponse(out: Node, docType: Box[String],
                          headers: List[(String, String)],
                          cookies: List[Cookie],
                          code: Int,
-                         override val renderInIEMode: Boolean) extends NodeResponse
+                         override val renderInIEMode: Boolean) extends NodeResponse {
+  private[http] var _includeXmlVersion = true
+  override def includeXmlVersion = _includeXmlVersion
+                         }
 
 
 /**
