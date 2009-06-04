@@ -1,7 +1,7 @@
 package net.liftweb.mapper
 
 /*
- * Copyright 2006-2008 WorldWide Conferencing, LLC
+ * Copyright 2006-2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -229,6 +229,12 @@ object DB {
     (colNames, lb.toList)
   }
 
+  /**
+   * Executes the given parameterized query string with the given parameters.
+   * Parameters are substituted in order. For Date/Time types, passing a java.util.Date will result in a
+   * Timestamp parameter. If you want a specific SQL Date/Time type, use the corresponding
+   * java.sql.Date, java.sql.Time, or java.sql.Timestamp classes.
+   */
   def runQuery(query: String, params: List[Any]): (List[String], List[List[String]]) = {
     use(DefaultConnectionIdentifier)(conn => prepareStatement(query, conn) {
         ps =>
@@ -238,7 +244,13 @@ object DB {
           case (l: Long, idx) => ps.setLong(idx + 1, l)
           case (d: Double, idx) => ps.setDouble(idx + 1, d)
           case (f: Float, idx) => ps.setFloat(idx + 1, f)
-          case (d: _root_.java.util.Date, idx) => ps.setDate(idx + 1, new _root_.java.sql.Date(d.getTime))
+	  // Allow the user to specify how they want the Date handled based on the input type
+	  case (t: _root_.java.sql.Timestamp, idx) => ps.setTimestamp(idx + 1, t)
+	  case (d: _root_.java.sql.Date, idx) => ps.setDate(idx + 1, d)
+	  case (t: _root_.java.sql.Time, idx) => ps.setTime(idx + 1, t)
+	  /* java.util.Date has to go last, since the java.sql date/time classes subclass it. By default we
+	   * assume a Timestamp value */
+          case (d: _root_.java.util.Date, idx) => ps.setTimestamp(idx + 1, new _root_.java.sql.Timestamp(d.getTime))
           case (b: Boolean, idx) => ps.setBoolean(idx + 1, b)
           case (s: String, idx) => ps.setString(idx + 1, s)
           case (bn: _root_.java.math.BigDecimal, idx) => ps.setBigDecimal(idx + 1, bn)

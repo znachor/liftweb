@@ -1,7 +1,7 @@
 package net.liftweb.mapper
 
 /*
- * Copyright 2006-2008 WorldWide Conferencing, LLC
+ * Copyright 2006-2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ abstract class DriverType(val name : String) {
   def clobColumnType: String
   def booleanColumnType: String
   def dateTimeColumnType: String
+  def dateColumnType: String
+  def timeColumnType: String
   def integerColumnType: String
   def integerIndexColumnType: String
   def enumColumnType: String
@@ -72,6 +74,8 @@ object DerbyDriver extends DriverType("Apache Derby") {
   def booleanColumnType = "SMALLINT"
   def clobColumnType = "LONG VARCHAR"
   def dateTimeColumnType = "TIMESTAMP"
+  def dateColumnType = "DATE"
+  def timeColumnType = "TIME"
   def integerColumnType = "INTEGER"
   def integerIndexColumnType = "INTEGER NOT NULL GENERATED ALWAYS AS IDENITY"
   def enumColumnType = "BIGINT"
@@ -89,6 +93,8 @@ object MySqlDriver extends DriverType("MySQL") {
   def clobColumnType = "LONGTEXT"
   def booleanColumnType = "BOOLEAN"
   def dateTimeColumnType = "DATETIME"
+  def dateColumnType = "DATE"
+  def timeColumnType = "TIME"
   def integerColumnType = "INTEGER"
   def integerIndexColumnType = "INTEGER NOT NULL AUTO_INCREMENT UNIQUE"
   def enumColumnType = "BIGINT"
@@ -106,6 +112,8 @@ object H2Driver extends DriverType("H2") {
   def clobColumnType = "LONGVARCHAR"
   def booleanColumnType = "BOOLEAN"
   def dateTimeColumnType = "TIMESTAMP"
+  def dateColumnType = "DATE"
+  def timeColumnType = "TIME"
   def integerColumnType = "INTEGER"
   def integerIndexColumnType = "INTEGER NOT NULL AUTO_INCREMENT"
   def enumColumnType = "BIGINT"
@@ -130,6 +138,8 @@ object PostgreSqlDriver extends DriverType("PostgreSQL") {
   def clobColumnType = "TEXT"
   def booleanColumnType = "BOOLEAN"
   def dateTimeColumnType = "TIMESTAMP"
+  def dateColumnType = "DATE"
+  def timeColumnType = "TIME"
   def integerColumnType = "INTEGER"
   def integerIndexColumnType = "SERIAL"
   def enumColumnType = "BIGINT"
@@ -160,6 +170,8 @@ object SqlServerDriver extends DriverType("Microsoft SQL Server") {
   def booleanColumnType = "BIT"
   def clobColumnType = "VARCHAR(MAX)"
   def dateTimeColumnType = "DATETIME"
+  def dateColumnType = "DATE"
+  def timeColumnType = "TIME"
   def integerColumnType = "INT"
   def integerIndexColumnType = "INT IDENTITY NOT NULL"
   def enumColumnType = "BIGINT"
@@ -177,6 +189,14 @@ object OracleDriver extends DriverType("Oracle") {
   def booleanColumnType = "NUMBER"
   def clobColumnType = "CLOB"
   def dateTimeColumnType = "TIMESTAMP"
+  /*
+   * It's unclear whether DATE would suffice here. The PL/SQL ref at
+   * http://download.oracle.com/docs/cd/B19306_01/java.102/b14355/apxref.htm
+   * seems to indicate that DATE and TIMESTAMP can both be used
+   * for java.sql.Date and java.sql.Time representations.
+   */
+  def dateColumnType = "TIMESTAMP"
+  def timeColumnType = "TIMESTAMP"
   def integerColumnType = "NUMBER"
   def integerIndexColumnType = "ROWID"
   def enumColumnType = "NUMBER"
@@ -192,6 +212,8 @@ object MaxDbDriver extends DriverType("MaxDB") {
   def booleanColumnType = "BOOLEAN"
   def clobColumnType = "CLOB"
   def dateTimeColumnType = "TIMESTAMP"
+  def dateColumnType = "DATE"
+  def timeColumnType = "TIME"
   def integerColumnType = "INTEGER"
   def integerIndexColumnType = "FIXED(10) DEFAULT SERIAL"
   def enumColumnType = "FIXED(38)"
