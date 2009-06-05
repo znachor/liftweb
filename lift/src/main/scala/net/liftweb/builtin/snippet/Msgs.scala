@@ -19,6 +19,7 @@ import _root_.net.liftweb.http._
 import S._
 import _root_.scala.xml._
 import _root_.net.liftweb.util.Helpers._
+import _root_.net.liftweb.util.Log
 import _root_.net.liftweb.util.{Box, Full, Empty}
 
 /**
@@ -45,6 +46,12 @@ object Msgs extends DispatchSnippet {
 
   def render(styles: NodeSeq): NodeSeq = {
     val f = noIdMessages _
+
+    val makeTitle: (String) => String = {text => 
+      Log.debug("Msgs: Default " + text + " is not rendered as the default title is now empty string")
+      ""
+    }
+
     val msgs = List((f(S.errors),
                      (styles \\ "error_msg"), S.??("msg.error"),
                      ((styles \\ "error_class") ++
@@ -59,8 +66,8 @@ object Msgs extends DispatchSnippet {
                      (styles \\ "notice_msg" \\ "@class"), 2)).flatMap
     {
       case (msg, titleList, defaultTitle, styleList, ord) =>
-        val title: String = titleList.toList. filter(_.prefix == "lift").
-        map(_.text.trim).filter(_.length > 0) headOr defaultTitle
+        val title: String = titleList.toList.filter(_.prefix == "lift").
+        map(_.text.trim).filter(_.length > 0) headOr makeTitle(defaultTitle)
         val styles = styleList.toList.map(_.text.trim)
         if (!styles.isEmpty) {
           ord match {
