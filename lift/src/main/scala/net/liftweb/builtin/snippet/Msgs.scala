@@ -55,15 +55,15 @@ object Msgs extends DispatchSnippet {
     val msgs = List((f(S.errors),
                      (styles \\ "error_msg"), S.??("msg.error"),
                      ((styles \\ "error_class") ++
-                      (styles \\ "error_msg" \\ "@class")), 0),
+                      (styles \\ "error_msg" \\ "@class")), "error"),
                     (f(S.warnings),
                      (styles \\ "warning_msg"), S.??("msg.warning"),
                      ((styles \\ "warning_class")++
-                      (styles \\ "warning_msg" \\ "@class")), 1),
+                      (styles \\ "warning_msg" \\ "@class")), "warn"),
                     (f(S.notices),
                      (styles \\ "notice_msg"), S.??("msg.notice"),
                      ((styles \\ "notice_class")) ++
-                     (styles \\ "notice_msg" \\ "@class"), 2)).flatMap
+                     (styles \\ "notice_msg" \\ "@class"), "notice")).flatMap
     {
       case (msg, titleList, defaultTitle, styleList, ord) =>
         val title: String = titleList.toList.filter(_.prefix == "lift").
@@ -71,17 +71,17 @@ object Msgs extends DispatchSnippet {
         val styles = styleList.toList.map(_.text.trim)
         if (!styles.isEmpty) {
           ord match {
-            case 0 => MsgsErrorMeta(Full(AjaxMessageMeta(Full(title),
+            case "error" => MsgsErrorMeta(Full(AjaxMessageMeta(Full(title),
                                                          Full(styles.mkString(" ")))))
-            case 1 => MsgsWarningMeta(Full(AjaxMessageMeta(Full(title),
+            case "warn" => MsgsWarningMeta(Full(AjaxMessageMeta(Full(title),
                                                            Full(styles.mkString(" ")))))
-            case 2 => MsgsNoticeMeta(Full(AjaxMessageMeta(Full(title),
+            case "notice" => MsgsNoticeMeta(Full(AjaxMessageMeta(Full(title),
                                                           Full(styles.mkString(" ")))))
           }
         }
         msg.toList.map(e => (<li>{e}</li>) ) match {
           case Nil => Nil
-          case msgList => val ret = (<div>{title}<ul>{msgList}</ul></div>)
+          case msgList => val ret = (<div id={LiftRules.noticesContainerId + "_" + ord}>{title}<ul>{msgList}</ul></div>)
             styles.foldLeft(ret)((xml, style) => xml % new UnprefixedAttribute("class", Text(style), Null))
         }
     }
