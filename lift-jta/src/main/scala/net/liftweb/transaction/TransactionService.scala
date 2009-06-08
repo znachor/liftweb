@@ -28,6 +28,7 @@ import javax.transaction.{
   TransactionRequiredException
 }
 import javax.persistence.{
+  Persistence,
   EntityManager,
   EntityManagerFactory,
   NonUniqueResultException,
@@ -35,27 +36,42 @@ import javax.persistence.{
 }
 
 import net.liftweb.util.Log
+import org.scala_libs.jpa.{ScalaEMFactory, ScalaEntityManager}
 
 /**
- * Transaction service.
+ * JTA Transaction service.
  */
 trait TransactionService {
-  def getTransactionManager: TransactionManager  
-  def getEntityManagerFactory: EntityManagerFactory
+  def transactionManager: TransactionManager  
+  def entityManagerFactory: EntityManagerFactory
+}
+
+/**
+ * JPA Entity Manager service.
+ */
+trait EntityManagerService {
+  // FIXME: make configurable
+  val JPA_PERSISTENT_UNIT = "LiftPersistenceUnit"
+  lazy val entityManagerFactory = Persistence.createEntityManagerFactory(JPA_PERSISTENT_UNIT)
 }
 
 /**
  * Atomikos implementation of the transaction service trait.
  */
-class AtomikosTransactionService extends TransactionService with TransactionProtocol {
+class AtomikosTransactionService extends
+  TransactionService with
+  EntityManagerService with
+  TransactionProtocol {
+
   import com.atomikos.icatch.jta.{J2eeTransactionManager, J2eeUserTransaction}
   import com.atomikos.icatch.config.{TSInitInfo, UserTransactionService, UserTransactionServiceImp}
 
+  // FIXME: make configurable
   val JTA_TRANSACTION_TIMEOUT = 60
   private val txService: UserTransactionService = new UserTransactionServiceImp
   private val info: TSInitInfo = txService.createTSInitInfo
 
-  protected[liftweb] val tm =
+  val transactionManager =
     try {
       txService.init(info)
       val tm: TransactionManager = new J2eeTransactionManager
@@ -64,10 +80,6 @@ class AtomikosTransactionService extends TransactionService with TransactionProt
     } catch {
       case e => throw new SystemException("Could not create a new Atomikos J2EE Transaction Manager, due to: " + e.toString)
     }
-
-  def getTransactionManager: TransactionManager = tm
-
-  def getEntityManagerFactory: EntityManagerFactory = null
 
   // TODO: gracefully shutdown of the TM
   //txService.shutdown(false)
@@ -237,7 +249,9 @@ trait TransactionProtocol {
     }
   }
 
-  //--- Helper methods
+  // ---------------------------
+  // Helper methods
+  // ---------------------------
 
   /**
    * Checks if a transaction is an existing transaction.
@@ -255,6 +269,9 @@ trait TransactionProtocol {
    */
   protected def isRollbackOnly(tm: TransactionManager): Boolean = tm.getStatus == Status.STATUS_MARKED_ROLLBACK
 
+  /**
+   * Join JTA transaction.
+   */
   private def joinTransaction = {
     val em = TransactionContext.getEntityManager
     val tm = TransactionContext.getTransactionManager

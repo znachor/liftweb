@@ -17,28 +17,72 @@
 package net.liftweb.transaction
 
 import javax.persistence.{EntityManager, EntityManagerFactory}
-import javax.transaction.TransactionManager
-
+import javax.transaction.{Transaction, Status, TransactionManager}
 import net.liftweb.util.Log
-
+import org.scala_libs.jpa.{ScalaEntityManager, ScalaEMFactory}
 /**
  * Base monad for the transaction monad implementations.
  */
 trait TransactionMonad {
+
+  // -----------------------------
+  // Monadic definitions  
+  // -----------------------------
+
   def map[T](f: TransactionMonad => T): T
-    
   def flatMap[T](f: TransactionMonad => T): T
-
   def foreach(f: TransactionMonad => Unit): Unit
+  def filter(f: TransactionMonad => Boolean): TransactionMonad =
+    if (f(this)) this else TransactionContext.NoOpTransactionMonad
 
+  // -----------------------------
+  // JTA Transaction definitions
+  // -----------------------------
+
+  /**
+   * Returns the current Transaction.
+   */
+  def getTransaction: Transaction = TransactionContext.getTransactionManager.getTransaction
+
+  /**
+   * Marks the current transaction as doomed.
+   */
   def setRollbackOnly = TransactionContext.setRollbackOnly
 
-  def getTransactionManager: TransactionManager = TransactionContext.getTransactionManager
+  /**
+   * Marks the current transaction as doomed.
+   */
+  def doom = TransactionContext.setRollbackOnly
 
+  /**
+   * Checks if the current transaction is doomed.
+   */
+  def isRollbackOnly = TransactionContext.isRollbackOnly
+
+  /**
+   * Checks that the current transaction is NOT doomed.
+   */
+  def isNotDoomed = !TransactionContext.isRollbackOnly
+
+  // -----------------------------
+  // JPA EntityManager definitions
+  // -----------------------------
+
+  /**
+   * Returns the current EntityManager.
+   */
   def getEntityManager: EntityManager = TransactionContext.getEntityManager
 
-  def hasEntityManager: Boolean = TransactionContext.hasEntityManager
+  /**
+   * Checks if an EntityManager exists in current context.
+   */
+  //def hasEntityManager: Boolean = TransactionContext.hasEntityManager
 
+  /**
+   * Closes and removes the current EntityManager.
+   * <p/>
+   * IMPORTANT: This method must always be used to close the EntityManager, never use em.close directly.
+   */
   def closeEntityManager = TransactionContext.closeEntityManager
 }
 
@@ -48,16 +92,27 @@ trait TransactionMonad {
  * Choose TransactionService implementation by implicit definition of the implementation of choice, 
  * e.g. <code>implicit val txService = TransactionServices.AtomikosTransactionService</code>.
  * <p/>
- * Example usage:
+ * Example usage 1:
  * <pre>
  * for {
  *   ctx <- TransactionContext.Required
  *   entity <- updatedEntities
- *   if (!entity.isValid) ctx.setRollbackOnly
+ *   if !ctx.isRollbackOnly
  * } {
  *   // transactional stuff
- *   val em = ctx.getEntityManager
- *   em.merge(entity)
+ *   ctx.getEntityManager.merge(entity)
+ * }
+ * </pre>
+ * Example usage 2:
+ * <pre>
+ * val users = for {
+ *   ctx <- TransactionContext.Required
+ *   name <- userNames
+ * } yield {
+ *   // transactional stuff
+ *   val query = ctx.getEntityManager.createNamedQuery("findUserByName")
+ *   query.setParameter("userName", name)
+ *   query.getSingleResult
  * }
  * </pre>
  */
@@ -67,67 +122,58 @@ object TransactionContext extends TransactionProtocol {
   
   private[TransactionContext] val stack = new scala.util.DynamicVariable(new TransactionContext)
   
-  //override def foreach(f: A => Any): Unit = f(value)
-  //override def map[T](f: A => B): Box[T] = Full(f(value))
-  //override def flatMap[T](f: A => Box[T]): Box[T] = f(value)
-  
   object Required extends TransactionMonad {
     def map[T](f: TransactionMonad => T): T =        withTxRequired { f(this) }
     def flatMap[T](f: TransactionMonad => T): T =    withTxRequired { f(this) }
     def foreach(f: TransactionMonad => Unit): Unit = withTxRequired { f(this) }
   }
+
   object RequiresNew extends TransactionMonad {
     def map[T](f: TransactionMonad => T): T =        withTxRequiresNew { f(this) }
     def flatMap[T](f: TransactionMonad => T): T =    withTxRequiresNew { f(this) }
     def foreach(f: TransactionMonad => Unit): Unit = withTxRequiresNew { f(this) }
   }
+  
   object Supports extends TransactionMonad {
     def map[T](f: TransactionMonad => T): T =        withTxSupports { f(this) }
     def flatMap[T](f: TransactionMonad => T): T =    withTxSupports { f(this) }
     def foreach(f: TransactionMonad => Unit): Unit = withTxSupports { f(this) }
   }
+  
   object Mandatory extends TransactionMonad {
     def map[T](f: TransactionMonad => T): T =        withTxMandatory { f(this) }
     def flatMap[T](f: TransactionMonad => T): T =    withTxMandatory { f(this) }
     def foreach(f: TransactionMonad => Unit): Unit = withTxMandatory { f(this) }
   }
+ 
   object Never extends TransactionMonad {
     def map[T](f: TransactionMonad => T): T =        withTxNever { f(this) }
     def flatMap[T](f: TransactionMonad => T): T =    withTxNever { f(this) }
     def foreach(f: TransactionMonad => Unit): Unit = withTxNever { f(this) }
+  }  
+
+  object NoOpTransactionMonad extends TransactionMonad {
+    def map[T](f: TransactionMonad => T): T =        f(this)
+    def flatMap[T](f: TransactionMonad => T): T =    f(this)
+    def foreach(f: TransactionMonad => Unit): Unit = f(this)
+    override def filter(f: TransactionMonad => Boolean): TransactionMonad = this
   }
+
+  private[transaction] def setRollbackOnly = current.setRollbackOnly
   
-  /**
-   * Marks the current transaction as doomed.
-   */
-  def setRollbackOnly = current.setRollbackOnly
+  private[transaction] def isRollbackOnly = current.isRollbackOnly
   
-  /**
-   * Returns the current TransactionManager.
-   */
-  def getTransactionManager: TransactionManager = current.getTransactionManager
+  private[transaction] def getTransactionManager: TransactionManager = current.getTransactionManager
 
-  /**
-   * Returns the current EntityManager.
-   */
-  def getEntityManager: EntityManager = current.getEntityManager
+  private[transaction] def getTransaction: Transaction = current.getTransactionManager.getTransaction
 
-  /**
-   * Checks if an EntityManager exists in current context.
-   */
-  def hasEntityManager: Boolean = current.em.isDefined
+  private[transaction] def getEntityManager: EntityManager = current.getEntityManager
 
-  /**
-   * Closes and removes the current EntityManager.
-   * <p/>
-   * NOTE: This method must always be used to close the EntityManager, never use em.close directly.
-   */
-  def closeEntityManager = current.closeEntityManager
+  //private[transaction] def hasEntityManager: Boolean = current.getEntityManager
 
-  /**
-   * Returns the current context.
-   */
-  private def current = stack.value
+  private[transaction] def closeEntityManager = current.closeEntityManager
+
+  private[this] def current = stack.value
 
   /**
    * Continues with the invocation defined in 'body' with the brand new context define in 'newCtx', the old
@@ -139,40 +185,27 @@ object TransactionContext extends TransactionProtocol {
 /**
  * Transaction context, holds the EntityManager and the TransactionManager.
  */
-class TransactionContext(private implicit val transactionService: TransactionService) { 
-  private var em: Option[EntityManager] = None
-  private val tm: TransactionManager = transactionService.getTransactionManager
+class TransactionContext(private implicit val transactionService: TransactionService)
+    extends ScalaEntityManager with ScalaEMFactory { 
 
-  /**
-   * Marks the current transaction as doomed.
-   */
+  val em: EntityManager = transactionService.getEntityManagerFactory.createEntityManager
+  val tm: TransactionManager = transactionService.getTransactionManager
+
   private def setRollbackOnly = tm.setRollbackOnly
 
-  /**
-   * Returns the current TransactionManager.
-   */
+  private def isRollbackOnly: Boolean = tm.getStatus == Status.STATUS_MARKED_ROLLBACK
+
   private def getTransactionManager: TransactionManager = tm
 
-  /**
-   * Returns the current EntityManager.
-   */
-   private def getEntityManager: EntityManager = em match {
-     case Some(entityManager) => entityManager
-     case None => 
-       val entityManager = transactionService.getEntityManagerFactory.createEntityManager
-       em = Some(entityManager)
-       entityManager
-   }
+  private def getEntityManager: EntityManager = em
 
-  /**
-   * Closes and removes the current EntityManager.
-   * <p/>
-   * PLEASE NOTE: This method must always be used to close the EntityManager, never use em.close directly.
-   */
-  private def closeEntityManager = if (em.isDefined) {
-    em.get.close
-    em = None
-  }
+  private def closeEntityManager = em.close
+
+  // ---------------------------------
+  // To make ScalaEMFactory happy
+  val factory = this
+  def openEM: javax.persistence.EntityManager = em
+  def closeEM(e: javax.persistence.EntityManager) = closeEntityManager
 }
 
 
