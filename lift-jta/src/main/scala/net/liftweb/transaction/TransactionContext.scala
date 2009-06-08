@@ -188,8 +188,8 @@ object TransactionContext extends TransactionProtocol {
 class TransactionContext(private implicit val transactionService: TransactionService)
     extends ScalaEntityManager with ScalaEMFactory { 
 
-  val em: EntityManager = transactionService.getEntityManagerFactory.createEntityManager
-  val tm: TransactionManager = transactionService.getTransactionManager
+  val em: EntityManager = transactionService.entityManagerFactory.createEntityManager
+  val tm: TransactionManager = transactionService.transactionManager
 
   private def setRollbackOnly = tm.setRollbackOnly
 
