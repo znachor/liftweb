@@ -71,14 +71,14 @@ object SiteMap {
     })
 
   def buildLink(name: String, text: NodeSeq): NodeSeq =
-  for (loc <- findAndTestLoc(name).toList;
+  (for (loc <- findAndTestLoc(name).toList;
        link <- loc.createDefaultLink)
   yield <a href={link}>{
       text match {
         case x if x.text.length > 0 => x
         case _ => loc.linkText openOr Text(loc.name)
       }
-    }</a>
+    }</a>).first
 
   def buildLink(name: String): NodeSeq =
   buildLink(name, Nil)
