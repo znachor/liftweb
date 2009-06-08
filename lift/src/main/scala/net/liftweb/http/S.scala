@@ -240,7 +240,7 @@ object S extends HasParams {
    *
    * An example of adding and removing a Cookie is:
    *
-   * <pre>
+   * <pre name="code" class="scala" >
    * import javax.servlet.http.Cookie
    *
    * class MySnippet {
@@ -375,14 +375,14 @@ object S extends HasParams {
    * to be able to download a document only when logged in. First, we define
    * a dispatch function to handle the download, specific to a given user:
    *
-   * <pre>
+   * <pre name="code" class="scala" >
    * def getDocument(userId : Long)() : Box[LiftResponse] = { ... }
    * </pre>
    *
    * Then, in the login/logout handling snippets, we could install and remove
    * the custom dispatch as appropriate:
    *
-   * <pre>
+   * <pre name="code" class="scala" >
    *   def login(xhtml : NodeSeq) : NodeSeq = {
    *     def doAuth () {
    *       ...
@@ -460,7 +460,7 @@ object S extends HasParams {
    * you could set up a global rule to make requests for the "account profile" page go back to the home
    * page by default:
    *
-   * <pre>
+   * <pre name="code" class="scala" >
    * package bootstrap.liftweb
    * ... imports ...
    * class Boot {
@@ -475,7 +475,7 @@ object S extends HasParams {
    *
    * Then, in your login snippet, you could set up a per-session rewrite to the correct template:
    *
-   * <pre>
+   * <pre name="code" class="scala" >
    * def loginSnippet (xhtml : NodeSeq) : NodeSeq = {
    *   ...
    *   def doLogin () {
@@ -492,7 +492,7 @@ object S extends HasParams {
    *
    * And in your logout snippet you can remove the rewrite:
    *
-   * <pre>
+   * <pre name="code" class="scala" >
    *   def doLogout () {
    *     S.removeSessionRewriter("profile")
    *     // or
@@ -695,13 +695,13 @@ object S extends HasParams {
    * If you want the full URI, including the servlet context path, you should retrieve it
    * from the underlying HttpServletRequest. You could do something like:
    *
-   * <pre>
+   * <pre name="code" class="scala" >
    *   val fullURI = S.request.map(_.request.getRequestURI) openOr ("Undefined")
    * </pre>
    *
    * The URI may be used to provide a link back to the same page as the current request:
    *
-   * <pre>
+   * <pre name="code" class="scala" >
    *   bind(...,
    *        "selflink" -> SHtml.link(S.uri, { () => ... }, Text("Self link")),
    *        ...)
@@ -718,7 +718,7 @@ object S extends HasParams {
    * you need to make sure to either ignore the redirect exception or rethrow it. Two possible
    * approaches would be:
    *
-   * <pre>
+   * <pre name="code" class="scala" >
    *   ...
    *   try {
    *     // your code here
@@ -730,7 +730,7 @@ object S extends HasParams {
    *
    * or
    *
-   * <pre>
+   * <pre name="code" class="scala" >
    *   ...
    *   try {
    *     // your code here
@@ -791,7 +791,7 @@ object S extends HasParams {
    * for the net.liftweb.mapper.DB.addLogFunc method to enable logging of
    * Mapper queries. You would set it up in your bootstrap like:
    *
-   * <pre>
+   * <pre name="code" class="scala" >
    * import net.liftweb.mapper.DB
    * import net.liftweb.http.S
    * class Boot {
@@ -864,7 +864,7 @@ object S extends HasParams {
    * so you can layer processing on the request. As an example, let's look at a wrapper that opens
    * a resource and makes it available via a RequestVar, then closes the resource when finished:
    *
-   * <pre>
+   * <pre name="code" class="scala" >
    * import net.liftweb.http.{ResourceVar,S}
    * import net.liftweb.util.LoanWrapper
    *
@@ -916,7 +916,7 @@ object S extends HasParams {
    * Sets a HTTP header attribute. For example, you could set a "Warn" header in
    * your response:
    *
-   * <pre>
+   * <pre name="code" class="scala" >
    *   ...
    *   S.setHeader("Warn", "The cheese is old and moldy")
    *   ...
@@ -1110,13 +1110,17 @@ object S extends HasParams {
   def functionLifespan_? : Boolean = _lifeTime.box openOr false
 
   /**
-   * <p>Get a list of current attributes. Each attribute item is a pair of (key,value). The key
+   * Get a list of current attributes. Each attribute item is a pair of (key,value). The key
    * is an Either that depends on whether the attribute is prefixed or not. If the attribute
    * is prefixed, the key is a Right((prefix, name)). If the attribute is unprefixed then the
    * key is a Left(name). For example, the following table shows how various tag attributes
-   * would be represented:</p>
+   * would be represented:
    *
    * <table>
+   *   <tr>
+   *     <th>Snippet Tag</th>
+   *     <th>Parsed attrs</th>
+   *   </tr>
    *   <tr>
    *     <td>&lt;lift:MySnippet testname="test" /&gt;</td>
    *     <td>List((Left("testname"), "test"))</td>
@@ -1186,7 +1190,7 @@ object S extends HasParams {
    * attributes prefixed with "anchor" to any &lt;a&gt; elements we create, we could
    * do something like:</p>
    *
-   * <pre>
+   * <pre name="code" class="scala" >
    *   val myLink = (<a href={...}>...</a>) % S.prefixedAttrsToMetaData("anchor", Map("id" -> "myAnchor"))
    * </pre>
    *
@@ -1250,7 +1254,7 @@ object S extends HasParams {
    * function for filtering. For example, if you want all of the current attributes to be
    * added to a div tag, you could do:
    *
-   * <pre>
+   * <pre name="code" class="scala" >
    * val myDiv = (<div>{...}</div>) % S.attrsToMetaData
    * </pre>
    *
@@ -1264,7 +1268,7 @@ object S extends HasParams {
    * Similar to S.attrsToMetaData, but lets you specify a predicate function that filters the
    * generated MetaData. For example, if you only wanted the "id" attribute, you could do:
    *
-   * <pre>
+   * <pre name="code" class="scala" >
    * val myDiv = (<div>{...}</div>) % S.attrsToMetaData(_.equalsIgnoreCase("id"))
    * </pre>
    *
@@ -1449,7 +1453,7 @@ object S extends HasParams {
    * behavior on based on query parameters, we could use mapSnippet to programmatically determine
    * which snippet function to use for a given snippet in the template. Our code would look like:
    *
-   * <pre>
+   * <pre name="code" class="scala" >
    import _root_.scala.xml.{NodeSeq,Text}
    class SnipMap {
    def topSnippet (xhtml : NodeSeq) : NodeSeq = {
@@ -1469,7 +1473,7 @@ object S extends HasParams {
    *
    * Then, your template would simply look like:
    *
-   * <pre>
+   * <pre name="code" class="scala" >
    &lt;lift:surround with="default" at="content"&gt;
    ...
    &lt;p&gt;&lt;lift:SnipMap.topSnippet /&gt;&lt;/p&gt;
