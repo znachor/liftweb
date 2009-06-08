@@ -78,7 +78,7 @@ object SiteMap {
         case x if x.text.length > 0 => x
         case _ => loc.linkText openOr Text(loc.name)
       }
-    }</a>).first
+    }</a>).firstOption getOrElse NodeSeq.Empty
 
   def buildLink(name: String): NodeSeq =
   buildLink(name, Nil)
