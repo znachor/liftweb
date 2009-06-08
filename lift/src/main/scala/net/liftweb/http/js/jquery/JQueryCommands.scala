@@ -278,6 +278,14 @@ object JqJsCmds {
     def toJsCmd = (Show(where) & JqSetHtml(where, msg) & After(duration, Hide(where, fadeTime))).toJsCmd
   }
 
+  case class FadeOut(id: String, duration: TimeSpan, fadeTime: TimeSpan) extends JsCmd {
+    def toJsCmd = (After(duration, JqJE.JqId(id) >> (new JsRaw("fadeOut(" + fadeTime.millis + ")") with JQueryRight))).toJsCmd
+  }
+
+  case class FadeIn(id: String, duration: TimeSpan, fadeTime: TimeSpan) extends JsCmd {
+    def toJsCmd = (After(duration, JqJE.JqId(id) >> (new JsRaw("fadeIn(" + fadeTime.millis + ")") with JQueryRight))).toJsCmd
+  }
+
   object ModalDialog {
     def apply(html: NodeSeq) = new ModalDialog(html, Empty)
     def apply(html: NodeSeq, css: String) = new ModalDialog(html, Full(css))

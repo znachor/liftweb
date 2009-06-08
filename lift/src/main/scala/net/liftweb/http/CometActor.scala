@@ -645,7 +645,7 @@ private [http] class XmlOrJsCmd(val id: String,
       }) & JsCmds.JsTry(JsCmds.Run("destroy_"+id+" = function() {"+(destroy.openOr(JsCmds.Noop).toJsCmd)+"};"), false)
 
     S.messagesFromList(notices toList)
-    ret = ret & S.noticesToJsCmd
+    ret = S.noticesToJsCmd & ret
     ret
   }
 

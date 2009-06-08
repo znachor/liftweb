@@ -21,7 +21,9 @@ import _root_.net.liftweb.http.SHtml._
 import _root_.net.liftweb.util._
 import _root_.net.liftweb.util.Helpers._
 import _root_.net.liftweb.http.js._
+import _root_.net.liftweb.http.js.jquery._
 import JE._
+import JqJsCmds._
 import _root_.scala.xml._
 
 /**
@@ -113,4 +115,18 @@ object JqSHtml {
     }
   }
   }
+
+  def fadeOutErrors(duration: TimeSpan, fadeTime: TimeSpan): JsCmd = {
+    FadeOut(LiftRules.noticesContainerId + "_error", duration, fadeTime)
+  }
+
+  def fadeOutWarnings(duration: TimeSpan, fadeTime: TimeSpan): JsCmd = {
+    FadeOut(LiftRules.noticesContainerId + "_warn", duration, fadeTime)
+  }
+
+  def fadeOutNotices(duration: TimeSpan, fadeTime: TimeSpan): JsCmd = {
+    FadeOut(LiftRules.noticesContainerId + "_notice", duration, fadeTime)
+  }
+
+
 }
