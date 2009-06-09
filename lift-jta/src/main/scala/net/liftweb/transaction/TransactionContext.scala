@@ -118,7 +118,7 @@ trait TransactionMonad {
  */
 object TransactionContext extends TransactionProtocol {
   // FIXME: make configurable
-  private implicit val defaultTransactionService = new AtomikosTransactionService
+  private implicit val defaultTransactionService = atomikos.AtomikosTransactionService
   
   private[TransactionContext] val stack = new scala.util.DynamicVariable(new TransactionContext)
   
@@ -169,8 +169,6 @@ object TransactionContext extends TransactionProtocol {
 
   private[transaction] def getEntityManager: EntityManager = current.getEntityManager
 
-  //private[transaction] def hasEntityManager: Boolean = current.getEntityManager
-
   private[transaction] def closeEntityManager = current.closeEntityManager
 
   private[this] def current = stack.value
@@ -178,8 +176,22 @@ object TransactionContext extends TransactionProtocol {
   /**
    * Continues with the invocation defined in 'body' with the brand new context define in 'newCtx', the old
    * one is put on the stack and will automatically come back in scope when the method exits.
+   * <p/>
+   * Suspends and resumes the current JTA transaction.
    */
-  private[liftweb] def withContext[T](body: => T): T = stack.withValue(new TransactionContext) { body }
+  private[transaction] def withNewContext[T](body: => T): T = {
+    val suspendedTx: Option[Transaction] =
+      if (isInExistingTransaction(getTransactionManager)) {
+        Log.debug("Suspending TX")
+        Some(getTransactionManager.suspend)
+      } else None
+    val result = stack.withValue(new TransactionContext) { body }
+    if (suspendedTx.isDefined) {
+      Log.debug("Resuming TX")
+      getTransactionManager.resume(suspendedTx.get)
+    }
+    result
+  }
 }
 
 /**

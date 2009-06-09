@@ -28,11 +28,16 @@ import org.scalatest.matchers._
 @RunWith(classOf[JUnit4Runner])
 class TransactionMonadSpec extends Spec with ShouldMatchers {
   describe("A TransactionMonad") {
-    it("should support map") {
-      for {
-        ctx <- TransactionContext.Required
-      } {
+    it("should support foreach") {
+      for (ctx <- TransactionContext.Required) {
         println("Context: " + ctx)
+      }
+    }
+
+    it("should support map") {
+      for (ctx <- TransactionContext.Required) {
+        println("Context: " + ctx)
+        ctx
       }
     }
 

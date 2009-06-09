@@ -56,36 +56,6 @@ trait EntityManagerService {
 }
 
 /**
- * Atomikos implementation of the transaction service trait.
- */
-class AtomikosTransactionService extends
-  TransactionService with
-  EntityManagerService with
-  TransactionProtocol {
-
-  import com.atomikos.icatch.jta.{J2eeTransactionManager, J2eeUserTransaction}
-  import com.atomikos.icatch.config.{TSInitInfo, UserTransactionService, UserTransactionServiceImp}
-
-  // FIXME: make configurable
-  val JTA_TRANSACTION_TIMEOUT = 60
-  private val txService: UserTransactionService = new UserTransactionServiceImp
-  private val info: TSInitInfo = txService.createTSInitInfo
-
-  val transactionManager =
-    try {
-      txService.init(info)
-      val tm: TransactionManager = new J2eeTransactionManager
-      tm.setTransactionTimeout(JTA_TRANSACTION_TIMEOUT)
-      tm
-    } catch {
-      case e => throw new SystemException("Could not create a new Atomikos J2EE Transaction Manager, due to: " + e.toString)
-    }
-
-  // TODO: gracefully shutdown of the TM
-  //txService.shutdown(false)
-}
-
-/**
  * <p>
  * Trait that implements a JTA transaction service that obeys the transaction semantics defined
  * in the transaction attribute types for the transacted methods according to the EJB 3 draft specification.
@@ -130,55 +100,56 @@ trait TransactionProtocol {
 
   /**
    * Wraps body in a transaction with REQUIRED semantics.
+   * <p/>
+   * Creates a new transaction if no transaction is active in scope, else joins the outer transaction. 
    */
   def withTxRequired[T](body: => T): T = {
     val tm = TransactionContext.getTransactionManager
-    if (!isExistingTransaction(tm)) {
+    if (!isInExistingTransaction(tm)) {
       tm.begin
-      joinTransaction
       try {
+        joinTransaction
         body
       } catch {
-        case e: RuntimeException => handleException(tm, e)
+        case e: Exception => handleException(tm, e)
       } finally {
         commitOrRollBack(tm)
       }
     } else body
   }
 
-  // FIXME: FIX THE CONTEXT STACK MANAGEMENT FOR REQUIRES_NEW (use withContext(newContext) {...}) !!!!!!!!!!!!!!!!!!!!!!!!!!
   /**
    * Wraps body in a transaction with REQUIRES_NEW semantics.
+   * <p/>
+   * Suspends existing transaction, starts a new transaction, invokes body,
+   * commits or rollbacks new transaction, finally resumes previous transaction.
    */
-  def withTxRequiresNew[T](body: => T): T = {
+  def withTxRequiresNew[T](body: => T): T = TransactionContext.withNewContext {
     val tm = TransactionContext.getTransactionManager
-    if (isExistingTransaction(tm)) {
-      Log.debug("Suspend TX")
-      storeInThreadLocal(tm.suspend)
-      // FIXME: suspend the current EntityManager and create a new one + reset at the end of the method???
-    } else {
-      TransactionContext.getEntityManager
-    }
     tm.begin
-    joinTransaction
     try {
+      joinTransaction
       body
     } catch {
-      case e: RuntimeException => handleException(tm, e)
+      case e: Exception => handleException(tm, e)
     } finally {
       commitOrRollBack(tm)
-      fetchFromThreadLocal match {
-        case None => throw new IllegalStateException("Expected a suspended transaction")
-        case Some(suspendedTx) =>
-          Log.debug("Resuming TX")
-          tm.resume(suspendedTx)
-          storeInThreadLocal(null)
-      }
     }
   }
 
   /**
+   * Wraps body in a transaction with NOT_SUPPORTED semantics.
+   * <p/>
+   * Suspends existing transaction, invokes body, resumes transaction.
+   */
+  def withTxNotSupported[T](body: => T): T = TransactionContext.withNewContext {
+    body
+  }
+
+  /**
    * Wraps body in a transaction with SUPPORTS semantics.
+   * <p/>
+   * Basicalla a No-op.
    */
   def withTxSupports[T](body: => T): T = {
     // attach to current if exists else skip -> do nothing
@@ -187,50 +158,30 @@ trait TransactionProtocol {
 
   /**
    * Wraps body in a transaction with MANDATORY semantics.
+   * <p/>
+   * Throws a TransactionRequiredException if there is no transaction active in scope.
    */
   def withTxMandatory[T](body: => T): T = {
-    if (!isExistingTransaction(TransactionContext.getTransactionManager)) throw new TransactionRequiredException("No active TX at method with TX type set to MANDATORY")
+    if (!isInExistingTransaction(TransactionContext.getTransactionManager)) throw new TransactionRequiredException("No active TX at method with TX type set to MANDATORY")
     body
   }
 
   /**
    * Wraps body in a transaction with NEVER semantics.
+   * <p/>
+   * Throws a SystemException in case of an existing transaction in scope.
    */
   def withTxNever[T](body: => T): T = {
-    if (isExistingTransaction(TransactionContext.getTransactionManager)) throw new SystemException("Detected active TX at method with TX type set to NEVER")
+    if (isInExistingTransaction(TransactionContext.getTransactionManager)) throw new SystemException("Detected active TX at method with TX type set to NEVER")
     body
   }
 
-  /**
-   * Wraps body in a transaction with NOT_SUPPORTED semantics.
-   */
-  def withTxNotSupported[T](body: => T): T = {
-    val tm = TransactionContext.getTransactionManager
-    if (isExistingTransaction(tm)) {
-      Log.debug("Suspend TX")
-      storeInThreadLocal(tm.suspend)
-    }
-    try {
-      body
-    } catch {
-      case e: RuntimeException => handleException(tm, e)
-    } finally {
-      fetchFromThreadLocal match {
-        case None => throw new IllegalStateException("Expected a suspended transaction")
-        case Some(suspendedTx) =>
-          Log.debug("Resuming TX")
-          tm.resume(suspendedTx)
-          storeInThreadLocal(null)
-      }
-    }
-  }
-
   protected def handleException(tm: TransactionManager, e: Exception) = {
-    if (isExistingTransaction(tm)) {
+    if (isInExistingTransaction(tm)) {
       // Do not roll back in case of NoResultException or NonUniqueResultException
       if (!e.isInstanceOf[NoResultException] &&
           !e.isInstanceOf[NonUniqueResultException]) {
-        Log.debug("Setting TX to ROLLBACK_ONLY, due to: %s", e)
+        Log.debug("Setting TX to ROLLBACK_ONLY, due to: " + e)
         tm.setRollbackOnly
       }
     }
@@ -238,7 +189,7 @@ trait TransactionProtocol {
   }
 
   protected def commitOrRollBack(tm: TransactionManager) = {
-    if (isExistingTransaction(tm)) {
+    if (isInExistingTransaction(tm)) {
       if (isRollbackOnly(tm)) {
         Log.debug("Rolling back TX marked as ROLLBACK_ONLY")
         tm.rollback
@@ -259,7 +210,7 @@ trait TransactionProtocol {
    * @param tm the transaction manager
    * @return boolean
    */
-  protected def isExistingTransaction(tm: TransactionManager): Boolean = tm.getStatus != Status.STATUS_NO_TRANSACTION
+  protected def isInExistingTransaction(tm: TransactionManager): Boolean = tm.getStatus != Status.STATUS_NO_TRANSACTION
 
   /**
    * Checks if current transaction is set to rollback only.
