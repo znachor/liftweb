@@ -50,6 +50,8 @@ import com.atomikos.icatch.config.{
  * EntityManager JTA synchronization class.
  * <p>
  * Registered in method: [joinTransaction].
+ *
+ * @author <a href="http://jonasboner.com">Jonas Bon&#233;r</a>
  */
 class EntityManagerSynchronization(
   val em: EntityManager,
@@ -83,13 +85,3 @@ class EntityManagerSynchronization(
      }
   }
 }
-
-/**
- * Hibernate TransactionManager lookup class.
- */
-class LiftTransactionManagerLookup extends org.hibernate.transaction.TransactionManagerLookup {
-  def getTransactionManager(props: java.util.Properties): TransactionManager = TransactionContext.getTransactionManager
-  def getUserTransactionName: String = "java:comp/UserTransaction"
-  def getTransactionIdentifier(tx: Transaction) = tx
-}
-

@@ -40,6 +40,8 @@ import org.scala_libs.jpa.{ScalaEMFactory, ScalaEntityManager}
 
 /**
  * JTA Transaction service.
+ *
+ * @author <a href="http://jonasboner.com">Jonas Bon&#233;r</a>
  */
 trait TransactionService {
   def transactionManager: TransactionManager  
@@ -48,9 +50,11 @@ trait TransactionService {
 
 /**
  * JPA Entity Manager service.
+ *
+ * @author <a href="http://jonasboner.com">Jonas Bon&#233;r</a>
  */
 trait EntityManagerService {
-  // FIXME: make configurable
+  // TODO: make configurable?
   val JPA_PERSISTENT_UNIT = "LiftPersistenceUnit"
   lazy val entityManagerFactory = Persistence.createEntityManagerFactory(JPA_PERSISTENT_UNIT)
 }
@@ -95,6 +99,8 @@ trait EntityManagerService {
  * <h4>Never</h4>
  * The 'NotSupported'' attribute will ensure that the EJB method is never called by a transactional caller. Any attempt to do so will result in a <code>RemoteException</code> being thrown. This attribute is probably less useful than `NotSupported', in that NotSupported will assure that the caller's transaction is never affected by the EJB method (just as `Never' does), but will allow a call from a transactional caller if necessary.
  * </p>
+ *
+ * @author <a href="http://jonasboner.com">Jonas Bon&#233;r</a>
  */
 trait TransactionProtocol {
 

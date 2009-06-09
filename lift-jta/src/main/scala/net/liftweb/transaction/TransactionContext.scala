@@ -22,6 +22,8 @@ import net.liftweb.util.Log
 import org.scala_libs.jpa.{ScalaEntityManager, ScalaEMFactory}
 /**
  * Base monad for the transaction monad implementations.
+ *
+ * @author <a href="http://jonasboner.com">Jonas Bon&#233;r</a>
  */
 trait TransactionMonad {
 
@@ -115,6 +117,8 @@ trait TransactionMonad {
  *   query.getSingleResult
  * }
  * </pre>
+ *
+ * @author <a href="http://jonasboner.com">Jonas Bon&#233;r</a>
  */
 object TransactionContext extends TransactionProtocol {
   // FIXME: make configurable
@@ -196,6 +200,8 @@ object TransactionContext extends TransactionProtocol {
 
 /**
  * Transaction context, holds the EntityManager and the TransactionManager.
+ *
+ * @author <a href="http://jonasboner.com">Jonas Bon&#233;r</a>
  */
 class TransactionContext(private implicit val transactionService: TransactionService)
     extends ScalaEntityManager with ScalaEMFactory { 

@@ -5,6 +5,8 @@ import javax.transaction.{TransactionManager, SystemException}
 
 /**
  * Atomikos implementation of the transaction service trait.
+ *
+ * @author <a href="http://jonasboner.com">Jonas Bon&#233;r</a>
  */
 object AtomikosTransactionService extends
   TransactionService with
