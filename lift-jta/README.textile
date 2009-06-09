@@ -5,7 +5,7 @@ The semantics are the same as used in the EJB spec. E.g. Required, RequiresNew, 
 The implementation is hooked into the Lift's JPA implementation.
 Check the ScalaDoc (or the source) for the documentation on usage, semantics etc.
 
-h2. There are two versions of the API, one monadic and one using high-order functions.
+There are two versions of the API, one monadic and one using high-order functions.
 
 h3. Monadic API
 
@@ -69,6 +69,7 @@ Here are the essential configuration options in the JPA persistence.xml file:
 </pre>
 
 h2. TODOs
+
 Currently it is hard-coded to use the Atomikos Transaction library and the Hibernate JPA implementation.
 This will have to be configurable + some other options as well. See the TODOs in the code.
 
