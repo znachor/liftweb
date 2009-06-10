@@ -445,6 +445,7 @@ object LiftRules {
    */
   def checkContinuations(req: HttpServletRequest): Option[Any] = {
     if (!hasContinuations_?) None
+    else if (Props.inGAE) None
     else {
       val cont = getContinuation.invoke(contSupport, req, LiftRules)
       val ret = getObject.invoke(cont)
