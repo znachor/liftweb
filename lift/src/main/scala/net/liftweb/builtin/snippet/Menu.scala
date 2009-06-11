@@ -87,7 +87,26 @@ object Menu extends DispatchSnippet {
     val outerTag: String = S.attr("outer_tag") openOr "ul"
     val innerTag: String = S.attr("inner_tag") openOr "li"
     val expandAll = S.attr("expandAll").isDefined
-    val toRender = renderWhat(expandAll)
+
+    def buildItemMenu [A] (loc : Loc[A]) : List[MenuItem] = {
+      val kids : List[MenuItem] = if (expandAll) loc.buildKidMenuItems(loc.menu.kids) else Nil
+      loc.buildItem(kids, false, false).map(List(_)) openOr Nil
+    }
+
+    val toRender : Seq[MenuItem] = (S.attr("item"), S.attr("group")) match {
+      case (Full(item),_) => 
+	(for (sm <- LiftRules.siteMap;
+	      loc <- sm.findLoc(item)) yield { buildItemMenu(loc) }) openOr Nil
+      case (_,Full(group)) =>
+	LiftRules.siteMap.map({ 
+	  sm => sm.locForGroup(group).flatMap({
+	    loc => buildItemMenu(loc)
+	  })
+	}) openOr Nil
+      case _ => renderWhat(expandAll)
+    }
+
+    println(S.attr("item").toString + ":" + toRender)
 
     toRender.toList match {
       case Nil => Text("No Navigation Defined.")

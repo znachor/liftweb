@@ -262,7 +262,7 @@ trait Loc[ParamType] {
     CompleteMenu(_menu.buildUpperLines(_menu, _menu, theKids))
   }
 
-  private[sitemap] def buildItem(kids: List[MenuItem], current: Boolean, path: Boolean): Box[MenuItem] =
+  private[liftweb] def buildItem(kids: List[MenuItem], current: Boolean, path: Boolean): Box[MenuItem] =
   (calcHidden(kids), testAccess) match {
     case (false, Left(true)) =>
       for {p <- (forceParam or foundParam.is or defaultParams)
