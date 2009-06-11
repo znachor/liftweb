@@ -40,7 +40,7 @@ trait ControlHelpers extends ClassHelpers {
       Full(f)
     } catch {
       case c if ignore.exists(_.isAssignableFrom(c.getClass)) => onError.foreach(_(c)); Empty
-      case c if (ignore == null || ignore.isEmpty) => onError.foreach(_(c)); Failure("tryo", Full(c), Empty)
+      case c if (ignore == null || ignore.isEmpty) => onError.foreach(_(c)); Failure(c.getMessage, Full(c), Empty)
     }
   }
 

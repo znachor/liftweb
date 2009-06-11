@@ -178,7 +178,8 @@ object PCDataXmlParser {
       source <- tryo{Source.fromInputStream(in)}
       p <- tryo{new PCDataXmlParser(source)}
       val _ = while (p.ch != '<' && p.curInput.hasNext) p.nextch
-      doc <- Box !! p.document
+      bd <- tryo(p.document)
+      doc <- Box !! bd
     } yield doc
   }
 
