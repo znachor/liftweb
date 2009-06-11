@@ -518,6 +518,37 @@ object SHtml {
                   func: List[String] => Any, attrs: (String, String)*): Elem =
   multiSelect_*(opts, deflt, LFuncHolder(func), attrs :_*)
 
+  /**
+   * Create a select box based on the list with a default value and the function
+   * to be executed on form submission
+   *
+   * @param options  -- a list of value and text pairs (value, text to display)
+   * @param default  -- the default value (or Empty if no default value)
+   * @param onSubmit -- the function to execute on form submission
+   */
+  def multiSelectObj[T](options: Seq[(T, String)], default: Seq[T],
+                        onSubmit: List[T] => Unit, attrs: (String, String)*): Elem = {
+    val (nonces, defaultNonce, secureOnSubmit) =
+    secureMultiOptions(options, default, onSubmit)
+
+    multiSelect_*(nonces, defaultNonce, secureOnSubmit, attrs:_*)
+  }
+
+  private[http] def secureMultiOptions[T](options: Seq[(T, String)], default: Seq[T],
+                                          onSubmit: List[T] => Unit): (Seq[(String, String)],
+                                                                       Seq[String], AFuncHolder) =
+  {
+   val o2 = options.toList
+
+    val secure: List[(T, String, String)] = o2.map{case (obj, txt) => (obj, randomString(20), txt)}
+    val sm: Map[String, T] = Map(secure.map(v => (v._2, v._1)) :_*)
+    val defaultNonce: Seq[String] = default.flatMap(d => secure.find(_._1 == d).map(_._2))
+    val nonces: List[(String, String)] = secure.map{case (obj, nonce, txt) => (nonce, txt)}.toList
+    def process(info: List[String]): Unit = onSubmit(info.flatMap(sm.get) )
+
+    (nonces, defaultNonce, LFuncHolder(process))
+  }
+
   def multiSelect_*(opts: Seq[(String, String)],
                     deflt: Seq[String],
                     func: AFuncHolder, attrs: (String, String)*): Elem =
