@@ -66,7 +66,7 @@ private[http] object liftGCAppend extends DomAppenders {
       import JE._
 
       Elem(node.prefix, node.label, node.attributes, node.scope,
-          (node.child ++ JsCmds.Script(OnLoad(JsRaw("lift_successRegisterGC()")) &
+          (node.child ++ JsCmds.Script(OnLoad(JsRaw("liftAjax.lift_successRegisterGC()")) &
                                                 JsCrVar("lift_page", RenderVersion.get)) :_*))
     } else node
 }

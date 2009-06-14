@@ -114,7 +114,7 @@ object SHtml {
   }
 
   def makeAjaxCall(in: JsExp): JsExp = new JsExp {
-    def toJsCmd = "lift_ajaxHandler("+ in.toJsCmd+", null, null)"
+    def toJsCmd = "liftAjax.lift_ajaxHandler("+ in.toJsCmd+", null, null)"
   }
 
   /**
@@ -199,7 +199,7 @@ object SHtml {
    */
   def jsonText(value: String, json: JsExp => JsCmd, attrs: (String, String)*): Elem = {
     (attrs.foldLeft(<input type="text" value={value}/>)(_ % _)) %
-    ("onkeypress" -> """lift_blurIfReturn(event)""") %
+    ("onkeypress" -> """liftUtils.lift_blurIfReturn(event)""") %
     ("onblur" -> (json(JE.JsRaw("this.value"))))
   }
 
@@ -226,7 +226,7 @@ object SHtml {
     fmapFunc(func){
       funcName =>
       (attrs.foldLeft(<input type="text" value={value}/>)(_ % _)) %
-      ("onkeypress" -> """lift_blurIfReturn(event)""") %
+      ("onkeypress" -> """liftUtils.lift_blurIfReturn(event)""") %
       ("onblur" -> (jsFunc match {
             case Full(f) => JsCrVar(key, JsRaw("this")) & deferCall(raw(funcName, key), f)
             case _ => makeAjaxCall(raw(funcName, "this"))

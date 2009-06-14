@@ -1566,7 +1566,7 @@ object S extends HasParams {
 
       (JsonCall(key), JsCmds.Run(name.map(n => onErrorFunc +
                                           "/* JSON Func "+n+" $$ "+key+" */").openOr("") +
-                                 "function "+key+"(obj) {lift_ajaxHandler(" +
+                                 "function "+key+"(obj) {liftAjax.lift_ajaxHandler(" +
                                  "'" + key + "='+ encodeURIComponent(" +
                                  LiftRules.jsArtifacts.
                                  jsonStringify(JE.JsRaw("obj")).
