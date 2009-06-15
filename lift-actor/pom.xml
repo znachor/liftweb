@@ -64,8 +64,7 @@
         <artifactId>maven-bundle-plugin</artifactId>
         <configuration>
           <instructions>
-            <Export-Package>net.liftweb.util.*;version="${pom.version}"</Export-Package>
-            <DynamicImport-Package>*</DynamicImport-Package>
+            <Export-Package>net.liftweb.actor.*;version="${pom.version}"</Export-Package>
           </instructions>
         </configuration>
       </plugin>
