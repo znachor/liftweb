@@ -427,7 +427,7 @@ object SHtml {
     </form>
   }
 
-  private[http] def secureOptions[T](options: Seq[(T, String)], default: Box[T],
+  private def secureOptions[T](options: Seq[(T, String)], default: Box[T],
                                      onSubmit: T => Unit): (Seq[(String, String)], Box[String], AFuncHolder) = {
     val secure = options.map{case (obj, txt) => (obj, randomString(20), txt)}
     val defaultNonce = default.flatMap(d => secure.find(_._1 == d).map(_._2))
