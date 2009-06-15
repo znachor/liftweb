@@ -22,6 +22,7 @@ import _root_.net.liftweb.util._
 import Helpers._
 import _root_.java.util.Date
 import _root_.net.liftweb.http._
+import _root_.net.liftweb.widgets.autocomplete._
 import _root_.net.liftweb.http.jquery.{JqSHtml}
 import _root_.scala.xml.NodeSeq
 import js._
@@ -126,7 +127,7 @@ class MappedEnum[T<:Mapper[T], ENUM <: Enumeration](val fieldOwner: T, val enum:
    */
   override def _toForm: Box[NodeSeq] =
     if (autocomplete_?)
-      Full(JqSHtml.autocompleteObj[Int](buildDisplayList, Full(toInt),
+      Full(AutoComplete.autocompleteObj[Int](buildDisplayList, Full(toInt),
                                       v => this.set(fromInt(v))))
     else
       Full(SHtml.selectObj[Int](buildDisplayList, Full(toInt),
