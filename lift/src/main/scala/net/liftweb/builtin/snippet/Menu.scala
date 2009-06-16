@@ -88,19 +88,14 @@ object Menu extends DispatchSnippet {
     val innerTag: String = S.attr("inner_tag") openOr "li"
     val expandAll = S.attr("expandAll").isDefined
 
-    def buildItemMenu [A] (loc : Loc[A]) : List[MenuItem] = {
-      val kids : List[MenuItem] = if (expandAll) loc.buildKidMenuItems(loc.menu.kids) else Nil
-      loc.buildItem(kids, false, false).map(List(_)) openOr Nil
-    }
-
     val toRender : Seq[MenuItem] = (S.attr("item"), S.attr("group")) match {
       case (Full(item),_) => 
 	(for (sm <- LiftRules.siteMap;
-	      loc <- sm.findLoc(item)) yield { buildItemMenu(loc) }) openOr Nil
+	      loc <- sm.findLoc(item)) yield { buildItemMenu(loc, expandAll) }) openOr Nil
       case (_,Full(group)) =>
 	LiftRules.siteMap.map({ 
 	  sm => sm.locForGroup(group).flatMap({
-	    loc => buildItemMenu(loc)
+	    loc => buildItemMenu(loc, expandAll)
 	  })
 	}) openOr Nil
       case _ => renderWhat(expandAll)
@@ -157,6 +152,12 @@ object Menu extends DispatchSnippet {
           case other => other
         }
     }
+  }
+
+  // This is used to build a MenuItem for a single Loc
+  private def buildItemMenu [A] (loc : Loc[A], expandAll : Boolean) : List[MenuItem] = {
+    val kids : List[MenuItem] = if (expandAll) loc.buildKidMenuItems(loc.menu.kids) else Nil
+    loc.buildItem(kids, false, false).map(List(_)) openOr Nil
   }
 
   private def renderWhat(expandAll: Boolean): Seq[MenuItem] =
