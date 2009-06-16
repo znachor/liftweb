@@ -40,6 +40,8 @@ trait RequestVarEM extends ScalaEntityManager with ScalaEMFactory {
    */
   object emVar extends RequestVar[EntityManager](openEM()) {
     this.registerGlobalCleanupFunc(ignore => closeEM(this.is))
+
+    override def __nameSalt = getUnitName
   }
 
   // Must be provided to properly implement ScalaEntityManager
