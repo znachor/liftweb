@@ -21,7 +21,11 @@
       <artifactId>lift-webkit</artifactId>
       <version>${project.version}</version>
     </dependency>
-
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>lift-widgets</artifactId>
+      <version>${project.version}</version>
+    </dependency>
     <dependency>
       <groupId>mysql</groupId>
       <artifactId>mysql-connector-java</artifactId>
@@ -131,6 +135,9 @@
       <artifactId>servlet-api</artifactId>
       <scope>provided</scope>
     </dependency>
+
+
+
 
   </dependencies>
 </project>

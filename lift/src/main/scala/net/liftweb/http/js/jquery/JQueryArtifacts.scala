@@ -71,7 +71,7 @@ object JQueryArtifacts extends JSArtifacts {
   }
 
   private def toJson(info: AjaxInfo, server: String, path: String => JsExp): String =
-  (("url : addPageName(" + path(server).toJsCmd + ")" ) ::
+  (("url : liftAjax.addPageName(" + path(server).toJsCmd + ")" ) ::
    "data : " + info.data.toJsCmd ::
    ("type : " + info.action.encJs) ::
    ("dataType : " + info.dataType.encJs) ::

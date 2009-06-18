@@ -183,7 +183,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
   def countDb(dbId: ConnectionIdentifier, by: QueryParam[A]*): Long = {
     DB.use(dbId) {
       conn =>
-      val bl = by.toList
+      val bl = by.toList ::: addlQueryParams.is
       val (query, start, max) = addEndStuffs(addFields("SELECT COUNT(*) FROM "+dbTableName+"  ", false, bl), bl, conn)
 
       DB.prepareStatement(query, conn) {
@@ -267,7 +267,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
   def bulkDelete_!!(dbId: ConnectionIdentifier, by: QueryParam[A]*): Boolean = {
     DB.use(dbId) {
       conn =>
-      val bl = by.toList
+      val bl = by.toList ::: addlQueryParams.is
       val (query, start, max) = addEndStuffs(addFields("DELETE FROM "+dbTableName+" ", false, bl), bl, conn)
 
       DB.prepareStatement(query, conn) {
@@ -296,7 +296,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
                         by: QueryParam[A]*)(f: A => Box[T]): List[T] = {
     DB.use(dbId) {
       conn =>
-      val bl = by.toList
+      val bl = by.toList ::: addlQueryParams.is
       val (query, start, max) = addEndStuffs(addFields("SELECT "+
                                                         distinct(by)+
                                                        fields.map(_.dbSelectString).
@@ -313,6 +313,9 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
 
   def create: A = createInstance
 
+  object addlQueryParams extends net.liftweb.http.RequestVar[List[QueryParam[A]]](Nil) {
+    override val __nameSalt = randomString(10)
+  }
 
   private[mapper] def addFields(what: String, whereAdded: Boolean, by: List[QueryParam[A]]): String = {
 
@@ -1413,7 +1416,7 @@ trait KeyedMetaMapper[Type, A<:KeyedMapper[Type, A]] extends MetaMapper[A] with 
              by: QueryParam[A]*): Box[A] = {
     DB.use(dbId) {
       conn =>
-      val bl = by.toList
+      val bl = by.toList  ::: addlQueryParams.is
       val (query, start, max) = addEndStuffs(addFields("SELECT "+
                                                        fields.map(_.dbSelectString).
                                                        mkString(", ")+

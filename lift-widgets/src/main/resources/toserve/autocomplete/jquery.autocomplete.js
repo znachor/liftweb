@@ -570,7 +570,7 @@ $.Autocompleter.Select = function (options, input, select, config) {
 		.addClass(options.resultsClass)
 		.css("position", "absolute")
 		.appendTo(document.body);
-	
+		
 		list = $("<ul/>").appendTo(element).mouseover( function(event) {
 			if(target(event).nodeName && target(event).nodeName.toUpperCase() == 'LI') {
 	            active = $("li", list).removeClass(CLASSES.ACTIVE).index(target(event));
@@ -596,7 +596,7 @@ $.Autocompleter.Select = function (options, input, select, config) {
 	
 	function target(event) {
 		var element = event.target;
-		while(element && element.tagName != "LI")
+		while(element && element.tagName.toUpperCase() != "LI")
 			element = element.parentNode;
 		// more fun with IE, sometimes event.target is empty, just ignore it then
 		if(!element)

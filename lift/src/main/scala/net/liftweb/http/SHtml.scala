@@ -114,7 +114,7 @@ object SHtml {
   }
 
   def makeAjaxCall(in: JsExp): JsExp = new JsExp {
-    def toJsCmd = "lift_ajaxHandler("+ in.toJsCmd+", null, null)"
+    def toJsCmd = "liftAjax.lift_ajaxHandler("+ in.toJsCmd+", null, null)"
   }
 
   /**
@@ -199,7 +199,7 @@ object SHtml {
    */
   def jsonText(value: String, json: JsExp => JsCmd, attrs: (String, String)*): Elem = {
     (attrs.foldLeft(<input type="text" value={value}/>)(_ % _)) %
-    ("onkeypress" -> """lift_blurIfReturn(event)""") %
+    ("onkeypress" -> """liftUtils.lift_blurIfReturn(event)""") %
     ("onblur" -> (json(JE.JsRaw("this.value"))))
   }
 
@@ -226,7 +226,7 @@ object SHtml {
     fmapFunc(func){
       funcName =>
       (attrs.foldLeft(<input type="text" value={value}/>)(_ % _)) %
-      ("onkeypress" -> """lift_blurIfReturn(event)""") %
+      ("onkeypress" -> """liftUtils.lift_blurIfReturn(event)""") %
       ("onblur" -> (jsFunc match {
             case Full(f) => JsCrVar(key, JsRaw("this")) & deferCall(raw(funcName, key), f)
             case _ => makeAjaxCall(raw(funcName, "this"))
@@ -427,7 +427,7 @@ object SHtml {
     </form>
   }
 
-  private[http] def secureOptions[T](options: Seq[(T, String)], default: Box[T],
+  private def secureOptions[T](options: Seq[(T, String)], default: Box[T],
                                      onSubmit: T => Unit): (Seq[(String, String)], Box[String], AFuncHolder) = {
     val secure = options.map{case (obj, txt) => (obj, randomString(20), txt)}
     val defaultNonce = default.flatMap(d => secure.find(_._1 == d).map(_._2))
@@ -517,6 +517,37 @@ object SHtml {
   def multiSelect(opts: Seq[(String, String)], deflt: Seq[String],
                   func: List[String] => Any, attrs: (String, String)*): Elem =
   multiSelect_*(opts, deflt, LFuncHolder(func), attrs :_*)
+
+  /**
+   * Create a select box based on the list with a default value and the function
+   * to be executed on form submission
+   *
+   * @param options  -- a list of value and text pairs (value, text to display)
+   * @param default  -- the default value (or Empty if no default value)
+   * @param onSubmit -- the function to execute on form submission
+   */
+  def multiSelectObj[T](options: Seq[(T, String)], default: Seq[T],
+                        onSubmit: List[T] => Unit, attrs: (String, String)*): Elem = {
+    val (nonces, defaultNonce, secureOnSubmit) =
+    secureMultiOptions(options, default, onSubmit)
+
+    multiSelect_*(nonces, defaultNonce, secureOnSubmit, attrs:_*)
+  }
+
+  private[http] def secureMultiOptions[T](options: Seq[(T, String)], default: Seq[T],
+                                          onSubmit: List[T] => Unit): (Seq[(String, String)],
+                                                                       Seq[String], AFuncHolder) =
+  {
+   val o2 = options.toList
+
+    val secure: List[(T, String, String)] = o2.map{case (obj, txt) => (obj, randomString(20), txt)}
+    val sm: Map[String, T] = Map(secure.map(v => (v._2, v._1)) :_*)
+    val defaultNonce: Seq[String] = default.flatMap(d => secure.find(_._1 == d).map(_._2))
+    val nonces: List[(String, String)] = secure.map{case (obj, nonce, txt) => (nonce, txt)}.toList
+    def process(info: List[String]): Unit = onSubmit(info.flatMap(sm.get) )
+
+    (nonces, defaultNonce, LFuncHolder(process))
+  }
 
   def multiSelect_*(opts: Seq[(String, String)],
                     deflt: Seq[String],

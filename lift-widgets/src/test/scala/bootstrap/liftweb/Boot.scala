@@ -21,6 +21,7 @@ import _root_.net.liftweb.sitemap._
 import _root_.net.liftweb.sitemap.Loc._
 import Helpers._
 import _root_.net.liftweb.widgets.calendars._
+import _root_.net.liftweb.widgets.autocomplete._
 import _root_.net.liftweb.widgets.tree.TreeView
 import _root_.net.liftweb.widgets.menu.MenuWidget
 import _root_.net.liftweb.widgets.sparklines.Sparklines
@@ -51,6 +52,7 @@ class Boot {
       Menu(Loc("gravatear", List("gravatar"), "Gravatar")) ::
       Menu(Loc("tree", List("tree"), "Tree")) ::
       Menu(Loc("sparklines", List("sparklines"), "SparkLines")) ::
+      Menu(Loc("autocomplete", List("autocomplete"), "autocomplete")) ::
       Nil
 
     LiftRules.setSiteMap(SiteMap(entries:_*))
@@ -62,7 +64,7 @@ class Boot {
     Sparklines init;
     TableSorter init;
     MenuWidget init;
-
+    AutoComplete init
   }
 }
 

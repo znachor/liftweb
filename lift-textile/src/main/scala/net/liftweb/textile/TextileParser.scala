@@ -89,7 +89,7 @@ object TextileParser {
     }
 
     val parser = new TextileParsers(urlRewrite, disableLinks)
-    val lst = parser.document(new _root_.scala.util.parsing.input.CharArrayReader(toParse.toCharArray()))
+    val lst = parser.document(new MyReader(toParse.toCharArray(), 0))
 
     lst map { it =>
       val tr = findRefs(List(it))
@@ -100,6 +100,106 @@ object TextileParser {
 
       Some(it)
     } getOrElse None
+  }
+  
+  import _root_.scala.util.parsing.input._
+  import collection.mutable.ArrayBuffer
+
+  private class MyReader(source: Array[Char], offset: Int, index: Array[Int]) extends CharArrayReader(source, offset) {
+
+    // private def calcIndex(source: Array[Char]): Array[Int] = 
+      
+
+    def this(source: Array[Char], offset: Int) =
+      this(source, offset, {
+	var lineStarts = new ArrayBuffer[Int]
+	lineStarts += 0
+	for (i <- 0 until source.length)
+	  if (source.charAt(i) == '\n') lineStarts += (i + 1)
+	lineStarts += source.length
+	lineStarts.toArray
+      })
+
+
+
+    override def rest: CharSequenceReader =
+      if (offset < source.length) new MyReader(source, offset + 1, index)
+      else this
+    
+    /** The position of the first element in the reader
+     */
+    override lazy val pos: Position = new MyOffsetPosition(source, offset, index)
+	
+    /** Returns an abstract reader consisting of all elements except the first
+     *  <code>n</code> elements.
+     */
+    override def drop(n: Int): CharSequenceReader =
+      new MyReader(source, offset + n, index)
+
+  }
+
+  
+  /** <p>
+     *    <code>OffsetPosition</code> is a standard class for positions
+     *    represented as offsets into a source ``document''.
+     *    @param source   The source document
+     *    @param offset   The offset indicating the position
+       *
+       * @author Martin Odersky
+       */
+  private case class MyOffsetPosition(source: java.lang.CharSequence, offset: Int, index: Array[Int]) extends Position {
+	
+/*	  /** An index that contains all line starts, including first line, and eof */
+	  private lazy val index: Array[Int] = {
+	    var lineStarts = new ArrayBuffer[Int]
+	    lineStarts += 0
+	    for (i <- 0 until source.length)
+	      if (source.charAt(i) == '\n') lineStarts += (i + 1)
+	    lineStarts += source.length
+	    lineStarts.toArray
+	  }
+	  */
+
+    /** The line number referred to by the position; line numbers start at 1 */
+    lazy val line: Int = {
+      var lo = 0
+      var hi = index.length - 1
+      while (lo + 1 < hi) {
+	val mid = (hi + lo) / 2
+	if (offset < index(mid)) hi = mid
+	else lo = mid
+      }
+      lo + 1
+    }
+    
+    /** The column number referred to by the position; column numbers start at 1 */
+    lazy val column: Int = offset - index(line - 1) + 1
+    
+    /** The contents of the line numbered `lnum' (must not contain a new-line character).
+     *
+     * @param lnum a 1-based integer index into the `document'
+     * @return the line at `lnum' (not including a newline)
+     */
+    def lineContents: String =
+      source.subSequence(index(line - 1), index(line)).toString
+    
+    /** Returns a string representation of the `Position', of the form `line.column' */
+    override def toString = line+"."+column
+    
+    /** Compare this position to another, by first comparing their line numbers,
+     * and then -- if necessary -- using the columns to break a tie.
+     *
+     * @param `that' a `Position' to compare to this `Position'
+     * @return true if this position's line or (in case of a tie wrt. line numbers)
+     *         its column is smaller than the corresponding components of `that'
+     */
+    override def <(that: Position) = that match {
+      case OffsetPosition(_, that_offset) =>
+	this.offset < that_offset
+      case _ =>
+	this.line < that.line ||
+      this.line == that.line && this.column < that.column
+    }
   }
 
   def toHtml(toParse: String, wikiUrlFunc: Option[RewriteFunc], disableLinks: Boolean): NodeSeq = {
@@ -153,7 +253,7 @@ object TextileParser {
 
 
     lazy val beginl = Parser[Unit]{ in =>
-      if(in.pos.column==1) Success((), in) else Failure("at column "+in.pos.column+", not beginning of line", in)
+      if(in.pos.column==1) Success((), in) else Failure("", in)
     }
 
     lazy val beginlS = beginl ~ rep(' ')
@@ -475,7 +575,7 @@ object TextileParser {
     Parser[List[Textile] ~ List[Textile] ~ List[Attribute] ~ List[Textile]] =
     formattedLineElem(m, rep(attribute))
 
-    lazy val begOrSpace: Parser[Int] = beginl ^^^ 0 | rep1(' ') ^^ {case lst => lst.length}
+    lazy val begOrSpace: Parser[Int] = rep1(' ') ^^ {case lst => lst.length} | beginl ^^^ 0
     lazy val spaceOrEnd: Parser[Int] = endOfLine ^^^ 0 | rep1(' ') ^^ {case lst => lst.length}
 
     def formattedLineElem[Q <% Parser[Any]](m: Q, p: Parser[List[Attribute]]):
