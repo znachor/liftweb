@@ -9,28 +9,29 @@ import JE._
 import _root_.net.liftweb.util._
 import Helpers._
 
+/**
+ * Defines the three superfish menu styles: Horizontal, Vertical, and Navbar. See
+ * the superfish docs at http://users.tpg.com.au/j_birch/plugins/superfish/ for examples.
+ */
 object MenuStyle extends Enumeration("sf-menu", "sf-menu sf-vertical", "sf-menu sf-navbar") {
   val HORIZONTAL, VERTICAL, NAVBAR = Value
 }
 
 object MenuWidget {
 
-  def apply() = new MenuWidget(LiftRules.siteMap open_!, MenuStyle.HORIZONTAL, JsObj()) render
+  // TODO: This whole set of methods would benefit from default parameters when 2.8 comes out
+  def apply() : NodeSeq = apply(MenuStyle.HORIZONTAL)
 
-  def apply(style: MenuStyle.Value) = new MenuWidget(LiftRules.siteMap open_!, style, JsObj()) render
+  def apply(groups : List[String]) : NodeSeq = apply(groups, MenuStyle.HORIZONTAL)
 
-  def apply(siteMap: SiteMap) = new MenuWidget(siteMap, MenuStyle.HORIZONTAL, JsObj()) render
+  def apply(style: MenuStyle.Value) = new MenuWidget(style, JsObj()) render
 
-  def apply(siteMap: SiteMap, style: MenuStyle.Value) = new MenuWidget(siteMap, style, JsObj()) render
+  def apply(groups : List[String], style : MenuStyle.Value) : NodeSeq = 
+    new MenuWidget(style, JsObj(), groups) render
 
-  def apply(jsObj: JsObj) = new MenuWidget(LiftRules.siteMap open_!, MenuStyle.HORIZONTAL, jsObj) render
+  def apply(jsObj: JsObj) = new MenuWidget(MenuStyle.HORIZONTAL, jsObj) render
 
-  def apply(style: MenuStyle.Value, jsObj: JsObj) = new MenuWidget(LiftRules.siteMap open_!, style, jsObj) render
-
-  def apply(siteMap: SiteMap, jsObj: JsObj) = new MenuWidget(siteMap, MenuStyle.HORIZONTAL, jsObj) render
-
-  def apply(siteMap: SiteMap, style: MenuStyle.Value, jsObj: JsObj) = new MenuWidget(siteMap, style, jsObj) render
-
+  def apply(style: MenuStyle.Value, jsObj: JsObj) = new MenuWidget(style, jsObj) render
 
    /**
     * register the resources with lift (typically in boot)
@@ -46,9 +47,37 @@ object MenuWidget {
 }
 
 /**
- * Builds a Menu widget based on a give SiteMap
+ * Builds a Menu widget based on the specified style, groups and JavaScript parameters.
+ *
+ * <p>Typical usage involves two parts:</p>
+ *
+ * <ol>
+ *   <li>Call MenuWidget.init() in boot to set up resources, etc.</li>
+ *   <li>Use the MenuWidget companion object to render a menu.</li>
+ * </ol>
+ * 
+ * <p>For example, if we want a VERTICAL styled menu in our pages (HORIZONTAL is default),
+ * we can define a "menubar" snippet method:</p>
+ *
+ * <pre name="code" class="scala">
+ * import _root_.scala.xml.NodeSeq
+ * import _root_.net.liftweb.widgets.menu.MenuWidget
+ * 
+ * class Menubar {
+ *   def render (xhtml : NodeSeq) = MenuWidget()
+ * }
+ * </pre>
+ *
+ * <p>And then in our template(s), we simply use the following code wherever we want a menu:</p>
+ *
+ * <pre name="code" class="html">
+ *   &lt;lift:Menubar /&gt;
+ * </pre>
  */
-class MenuWidget(siteMap: SiteMap, style: MenuStyle.Value, jsObj: JsObj) {
+class MenuWidget(style: MenuStyle.Value, jsObj: JsObj, groups : List[String]) {
+
+  def this(style: MenuStyle.Value, jsObj: JsObj) = this(style, jsObj, Nil)
+
   def head: NodeSeq = <head>
       <link rel="stylesheet" href={"/" + LiftRules.resourceServerPath + "/menu/superfish.css"} type="text/css"/>{
         style match {
@@ -71,7 +100,11 @@ class MenuWidget(siteMap: SiteMap, style: MenuStyle.Value, jsObj: JsObj) {
 
 
   def render : NodeSeq = {
-    head ++ <lift:Menu.builder expandAll="true" top:class={style.toString} />
+    
+    head ++ <div>{groups match {
+      case Nil => <lift:Menu.builder expandAll="true" top:class={style.toString} />
+      case xs => groups.flatMap(group => <lift:Menu.builder expandAll="true" top:class={style.toString} group={group} />)
+    }}</div>
   }
 
 }
