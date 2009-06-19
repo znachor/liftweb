@@ -18,7 +18,7 @@ import util._
 import scala.collection.mutable.{ListBuffer}
 import scala.xml._
 import net.liftweb.http.js.{JsExp, JE, JsObj}
-import net.liftweb.http.{FieldError, SHtml}
+import net.liftweb.http.{FieldError, SHtml, Req, LiftResponse, LiftRules}
 import java.lang.reflect.Method
 import field._
 import Box._
@@ -92,7 +92,7 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] {
 
   def introspect(rec: BaseRecord, methods: Array[Method])(f: (Method, OwnedField[_]) => Any) = {
     for (v <- methods  if isField(v)) {
-      v.invoke(rec, null) match {
+      v.invoke(rec) match {
         case mf: OwnedField[_] if !mf.ignoreField_? =>
           mf.setName_!(v.getName)
           f(v, mf)
@@ -243,7 +243,7 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] {
   }
 
   private[record] def foreachCallback(inst: BaseRecord, f: LifecycleCallbacks => Any) {
-    lifecycleCallbacks.foreach(m => f(m._2.invoke(inst, null).asInstanceOf[LifecycleCallbacks]))
+    lifecycleCallbacks.foreach(m => f(m._2.invoke(inst).asInstanceOf[LifecycleCallbacks]))
   }
 
   /**
@@ -301,7 +301,7 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] {
     }
   }
 
-  private def ??(meth: Method, inst: BaseRecord) = meth.invoke(inst, null).asInstanceOf[OwnedField[BaseRecord]]
+  private def ??(meth: Method, inst: BaseRecord) = meth.invoke(inst).asInstanceOf[OwnedField[BaseRecord]]
 
   /**
    * Get a field by the field name
@@ -313,6 +313,49 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] {
   def fieldByName(fieldName: String, inst: BaseRecord): Box[OwnedField[BaseRecord]] = {
     Box(fieldList.find(f => f.name == fieldName)).
     map(holder => ??(holder.method, inst).asInstanceOf[OwnedField[BaseRecord]])
+  }
+
+  /**
+   * Prepend a DispatchPF function to LiftRules.dispatch. If the partial function id defined for a give Req
+   * it will construct a new Record based on the HTTP query string parameters
+   * and will pass this Record to the function returned by func parameter.
+   * 
+   * @param func - a PartialFunction for associating a request with a user provided function and the proper Record
+   */
+  def prependDispatch(func: PartialFunction[Req, BaseRecord => Box[LiftResponse]])= {
+    LiftRules.dispatch.prepend (makeFunc(func))
+  }
+
+  /**
+   * Append a DispatchPF function to LiftRules.dispatch. If the partial function id defined for a give Req
+   * it will construct a new Record based on the HTTP query string parameters
+   * and will pass this Record to the function returned by func parameter.
+   * 
+   * @param func - a PartialFunction for associating a request with a user provided function and the proper Record
+   */
+  def appendDispatch(func: PartialFunction[Req, BaseRecord => Box[LiftResponse]])= {
+    LiftRules.dispatch.append (makeFunc(func))
+  }
+
+
+  private def makeFunc(func: PartialFunction[Req, BaseRecord => Box[LiftResponse]]) = new PartialFunction[Req, () => Box[LiftResponse]] {
+
+      def isDefinedAt(r: Req): Boolean = func.isDefinedAt(r)
+      
+      def apply(r: Req): () => Box[LiftResponse] = {
+        val rec = fromReq(r)
+        () => func(r)(rec)
+      }
+    }
+
+  def fromReq(r: Req): BaseRecord = {
+    val rec = createRecord
+    for(fieldHolder <- fieldList;
+        field <- rec.fieldByName(fieldHolder.name)
+    ) yield {
+      field.setFromAny(r.param(field.name))
+    }
+    rec
   }
 
   /**
