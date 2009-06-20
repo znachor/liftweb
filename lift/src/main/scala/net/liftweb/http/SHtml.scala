@@ -93,7 +93,7 @@ object SHtml {
    * @param attrs - the anchor node attributes
    */
   def a(func: () => JsCmd, body: NodeSeq, attrs: (String, String)*): Elem = {
-    val key = Helpers.nextFuncName
+    val key = formFuncName
     addFunctionMap(key, (a: List[String]) => func())
     attrs.foldLeft(<lift:a key={key}>{body}</lift:a>)(_ % _)
   }
@@ -221,7 +221,7 @@ object SHtml {
 
   private def ajaxText_*(value: String, jsFunc: Box[Call], func: AFuncHolder, attrs: (String, String)*): Elem = {
     val raw = (funcName: String, value:String) => JsRaw("'" +funcName + "=' + encodeURIComponent(" + value + ".value)")
-    val key = Helpers.nextFuncName
+    val key = formFuncName
 
     fmapFunc(func){
       funcName =>
@@ -243,7 +243,7 @@ object SHtml {
 
   private def ajaxCheckbox_*(value: Boolean, jsFunc: Box[Call], func: AFuncHolder, attrs: (String, String)*): Elem = {
     val raw = (funcName: String, value:String) => JsRaw("'" +funcName + "=' + " + value + ".checked")
-    val key = Helpers.nextFuncName
+    val key = formFuncName
 
     fmapFunc(func) {
       funcName =>
@@ -319,7 +319,7 @@ object SHtml {
   private def ajaxSelect_*(opts: Seq[(String, String)], deflt: Box[String],
                            jsFunc: Box[Call], func: AFuncHolder, attrs: (String, String)*): Elem = {
     val raw = (funcName: String, value:String) => JsRaw("'" +funcName + "=' + this.options[" + value+ ".selectedIndex].value")
-    val key = Helpers.nextFuncName
+    val key = formFuncName
 
     val vals = opts.map(_._1)
     val testFunc = LFuncHolder(in => in.filter(v => vals.contains(v)) match {case Nil => false case xs => func(xs)}, func.owner)
@@ -354,7 +354,7 @@ object SHtml {
 
   def swappable(shown: Elem, hidden: String => Elem): Elem = {
     val (rs, sid) = findOrAddId(shown)
-    val hid = Helpers.nextFuncName
+    val hid = formFuncName
     val ui = LiftRules.jsArtifacts
 
     val rh = <span id={hid}>{hidden(ui.show(sid).toJsCmd + ";" + ui.hide(hid).toJsCmd + ";")}</span>
@@ -397,7 +397,14 @@ object SHtml {
   makeFormElement("hidden", func, attrs :_*) % ("value" -> "true")
 
   def submit_*(value: String, func: AFuncHolder, attrs: (String, String)*): Elem =
-  makeFormElement("submit", func, attrs :_*) % ("value" -> value)
+  {
+    def doit = makeFormElement("submit", func, attrs :_*) % ("value" -> value)
+
+    _formGroup.is match {
+      case Empty => formGroup(1)(doit)
+      case _ => doit
+    }
+  }
 
   def text(value: String, func: String => Any, attrs: (String, String)*): Elem =
   makeFormElement("text", SFuncHolder(func), attrs :_*) % new UnprefixedAttribute("value", Text(value), Null)
@@ -411,9 +418,18 @@ object SHtml {
   def hidden(func: (String) => Any, defaultlValue: String, attrs: (String, String)*): Elem =
   makeFormElement("hidden", SFuncHolder(func), attrs :_*) % ("value" -> defaultlValue)
 
-  def submit(value: String, func: () => Any, attrs: (String, String)*): Elem =
-  makeFormElement("submit", NFuncHolder(func), attrs :_*) %
-  new UnprefixedAttribute("value", Text(value), Null)
+  def submit(value: String, func: () => Any, attrs: (String, String)*): Elem = {
+
+    def doit = {
+      makeFormElement("submit", NFuncHolder(func), attrs :_*) %
+      new UnprefixedAttribute("value", Text(value), Null)
+    }
+
+    _formGroup.is match {
+      case Empty => formGroup(1)(doit)
+      case _ => doit
+    }
+  }
 
   def ajaxForm(body: NodeSeq) = (<lift:form>{body}</lift:form>)
   def ajaxForm(onSubmit: JsCmd, body: NodeSeq) = (<lift:form onsubmit={onSubmit.toJsCmd}>{body}</lift:form>)
@@ -421,14 +437,14 @@ object SHtml {
 
   def jsonForm(jsonHandler: JsonHandler, body: NodeSeq): NodeSeq = jsonForm(jsonHandler, Noop, body)
   def jsonForm(jsonHandler: JsonHandler, onSubmit: JsCmd, body: NodeSeq): NodeSeq = {
-    val id = Helpers.nextFuncName
+    val id = formFuncName
     <form onsubmit={(onSubmit & jsonHandler.call("processForm", FormToJSON(id)) & JsReturn(false)).toJsCmd} id={id}>
       {body}
     </form>
   }
 
   private def secureOptions[T](options: Seq[(T, String)], default: Box[T],
-                                     onSubmit: T => Unit): (Seq[(String, String)], Box[String], AFuncHolder) = {
+                               onSubmit: T => Unit): (Seq[(String, String)], Box[String], AFuncHolder) = {
     val secure = options.map{case (obj, txt) => (obj, randomString(20), txt)}
     val defaultNonce = default.flatMap(d => secure.find(_._1 == d).map(_._2))
     val nonces = secure.map{case (obj, nonce, txt) => (nonce, txt)}
@@ -538,7 +554,7 @@ object SHtml {
                                           onSubmit: List[T] => Unit): (Seq[(String, String)],
                                                                        Seq[String], AFuncHolder) =
   {
-   val o2 = options.toList
+    val o2 = options.toList
 
     val secure: List[(T, String, String)] = o2.map{case (obj, txt) => (obj, randomString(20), txt)}
     val sm: Map[String, T] = Map(secure.map(v => (v._2, v._1)) :_*)
