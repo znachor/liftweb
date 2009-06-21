@@ -71,7 +71,7 @@ class AutoComplete {
       jQuery(document).ready(function(){
         var data = """+data.toJsCmd+""";
         jQuery("#"""+id+"""").autocomplete(data, """+autocompleteOptions.toJsCmd+""").result(function(event, dt, formatted) {
-          jQuery("#"""+hidden+"""").val(dt.nonce);
+          jQuery("#"""+hidden+"""").val(formatted);
         });
       });""")
 
@@ -128,7 +128,7 @@ class AutoComplete {
       jQuery(document).ready(function(){
         var data = """+what.encJs+""";
         jQuery("#"""+id+"""").autocomplete(data, """+autocompleteOptions.toJsCmd+""").result(function(event, dt, formatted) {
-          jQuery("#"""+hidden+"""").val(dt.nonce);
+          jQuery("#"""+hidden+"""").val(formatted);
         });
       });""")
 
