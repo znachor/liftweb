@@ -207,7 +207,7 @@ UK:
 	toHtml(s)
       }
       
-      time must be < 1000L
+      time must be < 3000L
     }
 
     "Fast 2" in {
@@ -438,7 +438,7 @@ We use CSS(Cascading Style Sheets).
 	toHtml(s)
       }
 
-      time must be < 1000L
+      time must be < 3000L
     }
 
 
