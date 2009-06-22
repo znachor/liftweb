@@ -12,7 +12,7 @@
   <packaging>pom</packaging>
   <modules>
     <module>example</module>
-    <module>examples-osgi</module>
+    <!-- <module>examples-osgi</module> -->
     <module>skittr</module>
     <module>hellolift</module>
     <module>hellodarwin</module>
