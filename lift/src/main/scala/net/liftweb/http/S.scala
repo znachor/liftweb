@@ -1518,6 +1518,23 @@ object S extends HasParams {
   def buildJsonFunc(onError: JsCmd, f: Any => JsCmd): (JsonCall, JsCmd) =
   buildJsonFunc(Empty, Full(onError), f)
 
+  private[http] object _formGroup extends RequestVar[Box[Int]](Empty)
+
+  def formFuncName: String = _formGroup.is match {
+    case Full(x) => Helpers.nextFuncName(x.toLong * 10000L)
+    case _ => Helpers.nextFuncName
+  }
+
+  def formGroup[T](group: Int)(f: => T): T = {
+    val x = _formGroup.is
+    _formGroup.set(Full(group))
+    try {
+      f
+    } finally {
+      _formGroup.set(x)
+    }
+  }
+
   /**
    * Build a handler for incoming JSON commands
    *
@@ -1528,7 +1545,7 @@ object S extends HasParams {
    */
   def buildJsonFunc(name: Box[String], onError: Box[JsCmd], f: Any => JsCmd): (JsonCall, JsCmd) = {
     functionLifespan(true){
-      val key = Helpers.nextFuncName
+      val key = formFuncName
 
       def checkCmd(in: Any) = in match {
         case v2: _root_.scala.collection.Map[Any, _] if v2.isDefinedAt("command") =>
@@ -1701,7 +1718,7 @@ object S extends HasParams {
    */
   def fmapFunc[T](in: AFuncHolder)(f: String => T): T = //
   {
-    val name = Helpers.nextFuncName
+    val name = formFuncName
     addFunctionMap(name, in)
     f(name)
   }
@@ -1739,7 +1756,7 @@ object S extends HasParams {
    */
   @deprecated
   def mapFunc(in: AFuncHolder): String = {
-    mapFunc(Helpers.nextFuncName, in)
+    mapFunc(formFuncName, in)
   }
 
   /**

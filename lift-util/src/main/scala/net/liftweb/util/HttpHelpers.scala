@@ -151,7 +151,7 @@ trait HttpHelpers { self: ListHelpers with StringHelpers  =>
     case x :: xs => (in, x.text)
   }
 
-  private val serial = new AtomicLong(Math.abs(Helpers.randomLong(Helpers.millis)))
+  private val serial = new AtomicLong(Math.abs(Helpers.randomLong(Helpers.millis)) + 1000000L)
 
   /**
    * Get a monotonically increasing number that's guaranteed to be unique for the
@@ -213,10 +213,16 @@ trait HttpHelpers { self: ListHelpers with StringHelpers  =>
    * Get a guaranteed unique field name
    * (16 or 17 letters and numbers, starting with a letter)
    */
-  def nextFuncName = {
+  def nextFuncName: String = nextFuncName(0)
+
+    /**
+   * Get a guaranteed unique field name
+   * (16 or 17 letters and numbers, starting with a letter)
+   */
+  def nextFuncName(seed: Long): String = {
     val sb = new StringBuilder(20)
     sb.append('F')
-    sb.append(nextNum)
+    sb.append(nextNum + seed)
     // sb.append('_')
     sb.append(randomString(3))
     sb.toString

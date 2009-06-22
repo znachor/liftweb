@@ -1,7 +1,11 @@
 package webapptest.snippet
 
-import _root_.scala.xml.NodeSeq
+import _root_.scala.xml.{NodeSeq, Text}
+import _root_.net.liftweb.http._
+import _root_.net.liftweb.util._
 import _root_.net.liftweb.widgets.autocomplete._
+
+object posted extends RequestVar[Box[String]](Empty)
 
 class AutoCompleteDemo {
 
@@ -9,7 +13,7 @@ class AutoCompleteDemo {
     AutoComplete("", (current, limit) => {
       println("current = " + current)
       (1 to limit).map(v => "Value_" + v)
-    }, s => println("submit " + s))
+    }, s =>  posted(Full(s))) ++ (posted.map(t => <p>{"Submitted " + t}</p>) openOr Text(""))
   }
 
 }

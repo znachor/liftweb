@@ -61,16 +61,11 @@
           <instructions>
             <Private-Package>net.liftweb.osgi.internal.*</Private-Package>
             <Bundle-Activator>net.liftweb.osgi.internal.Activator</Bundle-Activator>
-            <Import-Package>javax.servlet.*;version="[2.5,2.6)",*</Import-Package>
+            <Import-Package>
+              javax.servlet.*;version="[2.5,2.6)",
+              *
+            </Import-Package>
           </instructions>
-        </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-jar-plugin</artifactId>
-        <configuration>
-          <archive>
-            <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
-          </archive>
         </configuration>
       </plugin>
     </plugins>

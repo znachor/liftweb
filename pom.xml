@@ -367,11 +367,18 @@ Lift is a scala web framework.
           </configuration>
           <executions>
             <execution>
-              <id>bundle-manifest</id>
-              <phase>process-classes</phase>
-              <goals>    
-                <goal>manifest</goal>
-              </goals>   
+              <id>create-bundle</id>
+              <phase>package</phase>
+              <goals>
+                <goal>bundle</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>bundle-install</id>
+              <phase>install</phase>
+              <goals>
+                <goal>install</goal>
+              </goals>
             </execution>
           </executions>
         </plugin>
