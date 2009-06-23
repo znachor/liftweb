@@ -1231,7 +1231,24 @@ object TemplateFinder {
                 if (xmlb.isDefined) {
                   found = true
                   ret = (cache(key) = xmlb.open_!)
-                } else if (xmlb.isInstanceOf[Failure] && Props.devMode) return xmlb
+                } else if (xmlb.isInstanceOf[Failure] && Props.devMode) {
+                  val msg = xmlb.asInstanceOf[Failure].msg  
+                  val e = xmlb.asInstanceOf[Failure].exception
+                return(Full(<div style="border: 1px red solid">Error locating template {name}.<br/>  Message: {msg} <br/>
+              {
+                {e match {
+                    case Full(e) =>
+                <pre>
+{e.toString}
+{e.getStackTrace.map(_.toString).mkString("\n")}
+                            </pre>
+                            case _ => NodeSeq.Empty
+                }
+                }
+              }
+                  This message is displayed because you are in Development mode.
+                  </div>))
+                }
               }
             }
           }

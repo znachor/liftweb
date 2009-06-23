@@ -175,7 +175,7 @@ object PCDataXmlParser {
 
   def apply(in: InputStream): Box[NodeSeq] = {
     for {
-      source <- tryo{Source.fromInputStream(in)}
+      source <- (tryo{Source.fromInputStream(in)} match {case Full(x) => Full(x) case _ => Empty})
       p <- tryo{new PCDataXmlParser(source)}
       val _ = while (p.ch != '<' && p.curInput.hasNext) p.nextch
       bd <- tryo(p.document)
