@@ -1231,7 +1231,7 @@ object TemplateFinder {
                 if (xmlb.isDefined) {
                   found = true
                   ret = (cache(key) = xmlb.open_!)
-                }
+                } else if (xmlb.isInstanceOf[Failure] && Props.devMode) return xmlb
               }
             }
           }
