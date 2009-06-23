@@ -49,11 +49,15 @@ trait Loc[ParamType] {
 
   def placeHolder_? : Boolean = _placeHolder_?
 
-  private lazy val _placeHolder_? = params.contains(Loc.PlaceHolder)
+  private lazy val _placeHolder_? = allParams.contains(Loc.PlaceHolder)
 
   def hideIfNoKids_? = placeHolder_? || _hideIfNoKids_?
 
-  private lazy val _hideIfNoKids_? = params.contains(Loc.HideIfNoKids)
+  private lazy val _hideIfNoKids_? = allParams.contains(Loc.HideIfNoKids)
+
+  def allParams: List[Loc.LocParam] = params ::: siteMap.globalParams
+
+  def siteMap: SiteMap = _menu.siteMap
 
   def createDefaultLink: Option[NodeSeq] = (foundParam.is or defaultParams).flatMap(p => link.createLink(p)).toOption
 
@@ -93,9 +97,9 @@ trait Loc[ParamType] {
       else throw new MatchError()
     }
 
-    val singles = params.flatMap{case v: Loc.Snippet => Some(v)
+    val singles = allParams.flatMap{case v: Loc.Snippet => Some(v)
       case _ => None}.toList.map(buildPF) :::
-    params.flatMap{case v: Loc.LocSnippets => Some(v)
+    allParams.flatMap{case v: Loc.LocSnippets => Some(v)
       case _ => None}.toList
 
     if (singles.isEmpty) Map.empty
@@ -144,7 +148,7 @@ trait Loc[ParamType] {
 
       case x :: xs => testParams(xs)
     }
-    testParams(params) match {
+    testParams(allParams) match {
       case Left(true) => _menu.testParentAccess
       case x => x
     }
@@ -167,7 +171,7 @@ trait Loc[ParamType] {
 
       case x :: xs => early(xs)
     }
-    early(params)
+    early(allParams)
   }
 
   /**
@@ -185,7 +189,7 @@ trait Loc[ParamType] {
    * Look for the Loc.Template in the param list
    */
   lazy val paramTemplate: Box[Loc.Template] =
-  params.flatMap{case v: Loc.Template => Some(v) case _ => None}.firstOption
+  allParams.flatMap{case v: Loc.Template => Some(v) case _ => None}.firstOption
 
 
   private def findTitle(lst: List[Loc.LocParam]): Box[Loc.Title[ParamType]] = lst match {
@@ -234,7 +238,7 @@ trait Loc[ParamType] {
   def doesMatch_?(req: Req): Boolean =
   if (link.isDefinedAt( req ) ) {
     link(req) match {
-      case Full(x) if testAllParams(params, req) => x
+      case Full(x) if testAllParams(allParams, req) => x
       case Full(x) => false
       case x => x.openOr(false)
     }
@@ -248,7 +252,7 @@ trait Loc[ParamType] {
   def supplimentalKidMenuItems: List[MenuItem] =
   for {p <- additionalKidParams
        l <- link.createLink(p)} yield
-  MenuItem(text.text(p), l, Nil, false, false,  params.flatMap {
+  MenuItem(text.text(p), l, Nil, false, false,  allParams.flatMap {
       case v: Loc.LocInfo[_] =>
         // ugly code to avoid type erasure warning
         v.asInstanceOf[Loc.LocInfo[(T forSome {type T})]].apply()
@@ -268,7 +272,7 @@ trait Loc[ParamType] {
       for {p <- (forceParam or foundParam.is or defaultParams)
            t <- link.createLink(p)}
       yield  new MenuItem(text.text(p),t, kids, current, path,
-                          params.flatMap {
+                          allParams.flatMap {
           case v: Loc.LocInfo[_] =>
             // ugly code to avoid type erasure warning
             v.asInstanceOf[Loc.LocInfo[(T forSome {type T})]].apply()
@@ -283,10 +287,10 @@ trait Loc[ParamType] {
 
   def hidden = _hidden
 
-  private lazy val _hidden = params.contains(Loc.Hidden)
+  private lazy val _hidden = allParams.contains(Loc.Hidden)
 
   private lazy val groupSet: Set[String] =
-  Set(params.flatMap{case s: Loc.LocGroup => s.group case _ => Nil} :_*)
+  Set(allParams.flatMap{case s: Loc.LocGroup => s.group case _ => Nil} :_*)
 
   def inGroup_?(group: String): Boolean = groupSet.contains(group)
 }

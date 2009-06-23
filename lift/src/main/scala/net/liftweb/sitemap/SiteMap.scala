@@ -23,7 +23,7 @@ import _root_.scala.xml.{NodeSeq, Text}
 
 class SiteMapException(msg: String) extends Exception(msg)
 
-case class SiteMap(kids: Menu*) extends HasKids  {
+case class SiteMap(globalParamFuncs: List[PartialFunction[Box[Req], Loc.LocParam]], kids: Menu*) extends HasKids  {
   import SiteMap._
   private var locs: Map[String, Loc[_]] = Map.empty
 
@@ -36,6 +36,12 @@ case class SiteMap(kids: Menu*) extends HasKids  {
     throw new SiteMapException("Location "+name+" defined twice "+
                                locs(name)+" and "+in)
     else locs = locs + (name -> in.asInstanceOf[Loc[_]])
+  }
+
+  def globalParams: List[Loc.LocParam] = {
+    val r = S.request
+
+    globalParamFuncs.flatMap(f => if (f.isDefinedAt(r)) List(f(r)) else Nil)
   }
 
   def findLoc(name: String): Box[Loc[_]] =
@@ -82,6 +88,8 @@ object SiteMap {
 
   def buildLink(name: String): NodeSeq =
   buildLink(name, Nil)
+
+  def apply(kids: Menu *) = new SiteMap(Nil, kids :_*) 
 }
 
 trait HasKids {
