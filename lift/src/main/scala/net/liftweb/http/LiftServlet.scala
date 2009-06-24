@@ -55,7 +55,7 @@ class LiftServlet extends HttpServlet {
     try {
       LiftRules.ending = true
       LiftRules.runUnloadHooks()
-      Scheduler.snapshot // pause the Actor scheduler so we don't have threading issues
+      tryo(Scheduler.snapshot) // pause the Actor scheduler so we don't have threading issues
       Scheduler.shutdown
       ActorPing.shutdown
       LAScheduler.shutdown
