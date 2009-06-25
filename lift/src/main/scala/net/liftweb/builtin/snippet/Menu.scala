@@ -101,8 +101,6 @@ object Menu extends DispatchSnippet {
       case _ => renderWhat(expandAll)
     }
 
-    println(S.attr("item").toString + ":" + toRender)
-
     toRender.toList match {
       case Nil => Text("No Navigation Defined.")
       case xs =>
