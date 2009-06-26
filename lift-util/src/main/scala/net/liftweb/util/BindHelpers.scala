@@ -465,11 +465,28 @@ trait BindHelpers {
       node => node match {
         case s : Elem if (isBind(s)) => {
             node.attributes.get("name") match {
-              case None => bind(vals, node.child)
+              case None => {
+		if (Props.devMode) {
+		  Log.warn("<lift:bind> tag encountered without name attribute!")
+		}
+		bind(vals, node.child)
+	      }
               case Some(ns) => {
+		  def warnOnUnused() = Log.warn("Unused binding values for <lift:bind>: " + vals.keySet.filter(key => key != ns.text).mkString(", "))
                   vals.get(ns.text) match {
-                    case None => bind(vals, node.child)
-                    case Some(nodes) => nodes
+                    case None => {
+		      if (Props.devMode) {
+			Log.warn("No binding values match the <lift:bind> name attribute: " + ns.text)
+			warnOnUnused()
+		      }
+		      bind(vals, node.child)
+		    }
+                    case Some(nodes) => {
+		      if (Props.devMode && vals.size > 1) {
+			warnOnUnused()
+		      }
+		      nodes
+		    }
                   }
                 }
             }
