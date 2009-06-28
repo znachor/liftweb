@@ -21,6 +21,11 @@ import _root_.net.liftweb.http.{LiftRules}
 import _root_.net.liftweb.http.js._
 import JsCmds._
 import JE._
+// jQuery specific
+import _root_.net.liftweb.http.js.jquery._
+import JsCmds._
+import JE._
+import JqJE._
 import _root_.net.liftweb.util._
 import Helpers._
 
@@ -40,6 +45,7 @@ object Flot
     import net.liftweb.http.ResourceServer
 
     ResourceServer.allow({
+        case "flot" :: "jquery.flot.css" :: Nil => true
         case "flot" :: "jquery.flot.js" :: Nil => true
         case "flot" :: "excanvas.pack.js" :: Nil => true
       })
@@ -65,14 +71,26 @@ object Flot
                                     net.liftweb.http.S.contextPath + "/" +
                                     LiftRules.resourceServerPath + "/flot/excanvas.pack.js\"></script><![endif]-->")
 
+    // 27/06/2009 add style tag )See http://groups.google.com/group/liftweb/browse_thread/thread/5e0335583e2a248b?hl=en&pli=1)
+
     <head>
       <script type="text/javascript" src={"/" + LiftRules.resourceServerPath + "/flot/jquery.flot.js"}></script>
       {ieExcanvasPackJs}
       {
         Script(_renderJs(idPlaceholder, datas, options, script, caps :_*))
       }
+      <link rel="stylesheet" href={"/" + LiftRules.resourceServerPath + "/flot/jquery.flot.css"} type="text/css"/>
     </head>
+
   }
+
+
+  def renderCss (idPlaceholder : String) = {
+      JqId(idPlaceholder) >> new JsExp with JQueryRight {
+           def toJsCmd = "addClass(\"flot_lww\")"
+         }
+  }
+
   /*
    *
    */
@@ -116,6 +134,7 @@ object Flot
 
     val main = FlotInfo (idPlaceholder, datas, options)
 
+    renderCss (idPlaceholder) &
     JsShowId(idPlaceholder) &
     renderCapability (c => c.renderShow (), caps :_*) &
     JsRaw(
