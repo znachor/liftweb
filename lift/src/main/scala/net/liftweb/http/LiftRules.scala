@@ -331,7 +331,11 @@ object LiftRules {
           "tail" -> Tail,
           "with-param" -> WithParam,
           "VersionInfo" -> VersionInfo,
-          "version_info" -> VersionInfo
+          "version_info" -> VersionInfo,
+          "SkipDocType" -> SkipDocType,
+          "skip_doc_type" -> SkipDocType,
+          "xml_group" -> XmlGroup,
+          "XmlGroup" -> XmlGroup
       ))
   }
   setupSnippetDispatch()

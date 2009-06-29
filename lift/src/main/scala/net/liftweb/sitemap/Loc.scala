@@ -217,7 +217,7 @@ trait Loc[ParamType] {
     p.siteMap.addLoc(this)
   }
 
-  protected object foundParam extends RequestVar[Box[ParamType]](Empty) {
+  object foundParam extends RequestVar[Box[ParamType]](Empty) {
     override val __nameSalt = randomString(10)
   }
 
