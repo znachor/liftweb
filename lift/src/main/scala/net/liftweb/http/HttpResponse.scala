@@ -29,8 +29,8 @@ case class OkResponse() extends LiftResponse with HeaderStuff {
 }
 
 trait HeaderStuff {
-   val headers = S.getHeaders(Nil)
-   val cookies = S.responseCookies
+  val headers = S.getHeaders(Nil)
+  val cookies = S.responseCookies
 }
 
 /**
@@ -276,7 +276,7 @@ final case class InMemoryResponse(data: Array[Byte], headers: List[(String, Stri
 final case class StreamingResponse(data: {def read(buf: Array[Byte]): Int}, onEnd: () => Unit, size: Long, headers: List[(String, String)], cookies: List[Cookie], code: Int) extends BasicResponse {
   def toResponse = this
 
-    override def toString="StreamingResponse( steaming_data , "+headers+", "+cookies+", "+code+")"
+  override def toString="StreamingResponse( steaming_data , "+headers+", "+cookies+", "+code+")"
 }
 
 case class RedirectResponse(uri: String, cookies: Cookie*) extends LiftResponse {
@@ -358,6 +358,10 @@ trait NodeResponse extends LiftResponse {
   def renderInIEMode: Boolean = false
   def includeXmlVersion = true
 
+  val isIE6 = LiftRules.calcIE6ForResponse()
+
+  def flipDocTypeForIE6 = false
+
   def toResponse = {
     val encoding: String = if (!includeXmlVersion) "" else
     (out, headers.ciGet("Content-Type")) match {
@@ -382,8 +386,13 @@ trait NodeResponse extends LiftResponse {
 
     val sb = new StringBuilder(64000)
 
-    sb.append(encoding)
-    sb.append(doc)
+    if (flipDocTypeForIE6 && isIE6) {
+      sb.append(doc)
+      sb.append(encoding)
+    } else {
+      sb.append(encoding)
+      sb.append(doc)
+    }
     AltXML.toXML(out, _root_.scala.xml.TopScope,
                  sb, false, false, renderInIEMode)
 
@@ -402,7 +411,9 @@ case class XhtmlResponse(out: Node, docType: Box[String],
                          override val renderInIEMode: Boolean) extends NodeResponse {
   private[http] var _includeXmlVersion = true
   override def includeXmlVersion = _includeXmlVersion
-                         }
+
+  override def flipDocTypeForIE6 = LiftRules.flipDocTypeForIE6
+}
 
 
 /**
