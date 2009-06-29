@@ -219,7 +219,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
     val precache = by.flatMap{case j: PreCache[A] => List(j) case _ => Nil}
     for (j <- precache) {
       type FT = j.field.FieldType
-    type MT = T forSome {type T <: KeyedMapper[FT, T]}
+      type MT = T forSome {type T <: KeyedMapper[FT, T]}
 
 
       val ol: List[MT] = j.field.dbKeyToTable.
@@ -246,7 +246,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
 
         map.get(field.is) match {
           case Some(v) => field.primeObj(Full(v))
-            case _ => field.primeObj(Empty)
+          case _ => field.primeObj(Empty)
         }
         //field.primeObj(Box(map.get(field.is).map(_.asInstanceOf[QQ])))
       }
@@ -257,7 +257,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
 
   def findAll(by: QueryParam[A]*): List[A] =
   dealWithPrecache(findMapDb(dbDefaultConnectionIdentifier, by :_*)
-                (v => Full(v)), by)
+                   (v => Full(v)), by)
 
 
   def findAllDb(dbId: ConnectionIdentifier,by: QueryParam[A]*): List[A] =
@@ -282,7 +282,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
   private def distinct(in: Seq[QueryParam[A]]): String =
   in.filter{case Distinct() => true case _ => false} match {
     case Nil => ""
-      case _ => " DISTINCT "
+    case _ => " DISTINCT "
   }
 
   def findMap[T](by: QueryParam[A]*)(f: A => Box[T]) =
@@ -298,7 +298,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
       conn =>
       val bl = by.toList ::: addlQueryParams.is
       val (query, start, max) = addEndStuffs(addFields("SELECT "+
-                                                        distinct(by)+
+                                                       distinct(by)+
                                                        fields.map(_.dbSelectString).
                                                        mkString(", ")+
                                                        " FROM "+dbTableName+
@@ -421,7 +421,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
             case List(s: String) =>
               st.setString(curPos, s)
               setStatementFields(st, xs, curPos + 1)
-	    // Allow specialization of time-related values based on the input parameter
+              // Allow specialization of time-related values based on the input parameter
             case List(t: _root_.java.sql.Timestamp) =>
               st.setTimestamp(curPos, t)
               setStatementFields(st, xs, curPos + 1)
@@ -431,7 +431,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
             case List(t: _root_.java.sql.Time) =>
               st.setTime(curPos, t)
               setStatementFields(st, xs, curPos + 1)
-	    // java.util.Date goes last, since it's a superclass of java.sql.{Date,Time,Timestamp}
+              // java.util.Date goes last, since it's a superclass of java.sql.{Date,Time,Timestamp}
             case List(d: Date) =>
               st.setTimestamp(curPos, new _root_.java.sql.Timestamp(d.getTime))
               setStatementFields(st, xs, curPos + 1)
@@ -506,9 +506,12 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
   )
 
   def indexedField(toSave: A): Box[MappedField[Any, A]] =
-    indexMap.map(im => ??(mappedColumns(im), toSave))
+  indexMap.map(im => ??(mappedColumns(im), toSave))
 
-  def saved_?(toSave: A): Boolean = (for (im <- indexMap; indF <- indexedField(toSave)) yield (indF.dbIndexFieldIndicatesSaved_?)).openOr(true)
+  def saved_?(toSave: A): Boolean = indexMap match {
+    case Full(im) => (for (indF <- indexedField(toSave)) yield (indF.dbIndexFieldIndicatesSaved_?)).openOr(true)
+    case _ => false
+  }
 
   def whatToSet(toSave : A) : String = {
     mappedColumns.filter{c => ??(c._2, toSave).dirty_?}.map{c => c._1 + " = ?"}.toList.mkString("", ",", "")
@@ -820,7 +823,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
    * @return Box[The Field] (Empty if the field is not found)
    */
   def fieldByName[T](fieldName: String, actual: A): Box[MappedField[T, A]] =
-    Box(_mappedFields.get(fieldName)).
+  Box(_mappedFields.get(fieldName)).
   map(meth => ??(meth, actual).asInstanceOf[MappedField[T,A]])
 
   /**
@@ -1150,7 +1153,7 @@ case object Descending extends AscOrDesc {
 case class Distinct[O <: Mapper[O]]() extends QueryParam[O]
 
 case class OrderBySql[O <: Mapper[O]](sql: String,
-                                     checkedBy: IHaveValidatedThisSQL) extends QueryParam[O]
+                                      checkedBy: IHaveValidatedThisSQL) extends QueryParam[O]
 
 case class ByList[O<:Mapper[O], T](field: MappedField[T,O], vals: List[T]) extends QueryParam[O]
 /**
@@ -1160,8 +1163,8 @@ case class ByList[O<:Mapper[O], T](field: MappedField[T,O], vals: List[T]) exten
  * java.sql.Date, java.sql.Time, or java.sql.Timestamp classes.
  */
 case class BySql[O<:Mapper[O]](query: String,
-                                     checkedBy: IHaveValidatedThisSQL,
-                                     params: Any*) extends QueryParam[O]
+                               checkedBy: IHaveValidatedThisSQL,
+                               params: Any*) extends QueryParam[O]
 case class MaxRows[O<:Mapper[O]](max: Long) extends QueryParam[O]
 case class StartAt[O<:Mapper[O]](start: Long) extends QueryParam[O]
 case class Ignore[O <: Mapper[O]]() extends QueryParam[O]
@@ -1178,7 +1181,7 @@ abstract class InThing[OuterType <: Mapper[OuterType]] extends QueryParam[OuterT
   def distinct: String =
   queryParams.filter{case Distinct() => true case _ => false} match {
     case Nil => ""
-      case _ => " DISTINCT "
+    case _ => " DISTINCT "
   }
 }
 
@@ -1407,7 +1410,7 @@ trait KeyedMetaMapper[Type, A<:KeyedMapper[Type, A]] extends MetaMapper[A] with 
   }
 
   def find(by: QueryParam[A]*): Box[A] =
-    findDb(dbDefaultConnectionIdentifier, by :_*)
+  findDb(dbDefaultConnectionIdentifier, by :_*)
 
   def findDb(dbId: ConnectionIdentifier, by: QueryParam[A]*): Box[A] =
   findDb(dbId, mappedFields, by :_*)
