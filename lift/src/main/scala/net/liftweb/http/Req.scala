@@ -17,15 +17,18 @@ package net.liftweb.http
 
 import _root_.javax.servlet.http._
 import _root_.javax.servlet.ServletContext
-import _root_.net.liftweb.util.Helpers._
+import _root_.net.liftweb.util.Helpers
+import Helpers._
 import _root_.net.liftweb.util.{Log, Box, Full, Empty,
                                 EmptyBox,
                                 Failure, ThreadGlobal,
                                 NamedPF, NamedPartialFunction}
 import _root_.net.liftweb.sitemap._
-import _root_.java.io.InputStream
+import _root_.java.io.{InputStream, ByteArrayInputStream, File, FileInputStream,
+                       FileOutputStream}
 import _root_.scala.xml._
 import _root_.org.apache.commons.fileupload.servlet._
+import _root_.org.apache.commons.fileupload.ProgressListener
 
 @serializable
 sealed trait ParamHolder {
@@ -34,9 +37,64 @@ sealed trait ParamHolder {
 @serializable
 case class NormalParamHolder(name: String, value: String) extends ParamHolder
 @serializable
-case class FileParamHolder(name: String, mimeType: String,
-                           fileName: String,
-                           file: Array[Byte]) extends ParamHolder
+abstract class FileParamHolder(val name: String,val mimeType: String,
+                               val fileName: String) extends ParamHolder
+{
+  def file: Array[Byte]
+  def fileStream: InputStream
+}
+
+class InMemFileParamHolder(override val name: String,override val mimeType: String,
+                           override val fileName: String, val file: Array[Byte]) extends
+FileParamHolder(name, mimeType, fileName)
+{
+  def fileStream: InputStream = new ByteArrayInputStream(file)
+}
+
+class OnDiskFileParamHolder(override val name: String,override val mimeType: String,
+                            override val fileName: String, val localFile: File) extends
+FileParamHolder(name, mimeType, fileName)
+{
+  def fileStream: InputStream = new FileInputStream(localFile)
+
+  def file: Array[Byte] = Helpers.readWholeStream(fileStream)
+
+  protected override def finalize {
+    tryo(localFile.delete)
+  }
+}
+
+object OnDiskFileParamHolder {
+  def apply(n: String, mt: String, fn: String, inputStream: InputStream): OnDiskFileParamHolder =
+  {
+    val file: File = File.createTempFile("lift_mime", "upload")
+    val fos = new FileOutputStream(file)
+    val ba = new Array[Byte](8192)
+    def doUpload() {
+      inputStream.read(ba) match {
+        case x if x < 0 =>
+        case 0 => doUpload()
+        case x => fos.write(ba, 0, x); doUpload()
+      }
+
+    }
+
+    doUpload()
+    inputStream.close
+    fos.close
+    new OnDiskFileParamHolder(n, mt, fn, file)
+  }
+}
+
+object FileParamHolder {
+  def apply(n: String, mt: String, fn: String, file: Array[Byte]): FileParamHolder =
+  new InMemFileParamHolder(n, mt, fn, file)
+
+  def unapply(in: Any): Option[(String, String, String, Array[Byte])] = in match {
+    case f: FileParamHolder => Some((f.name, f.mimeType, f.fileName, f.file))
+    case _ => None
+  }
+}
 
 /**
  * Helper object for constructing Req instances
@@ -85,13 +143,18 @@ object Req {
     } else if (ServletFileUpload.isMultipartContent(request)) {
       val allInfo = (new Iterator[ParamHolder] {
           val mimeUpload = (new ServletFileUpload)
+          mimeUpload.setProgressListener(new ProgressListener{
+              lazy val progList: (Long, Long, Int) => Unit = S.session.flatMap(_.progessListener) openOr LiftRules.progessListener
+
+              def update(a: Long, b: Long, c: Int) {progList(a,b,c)}
+            })
           mimeUpload.setSizeMax(LiftRules.maxMimeSize)
           mimeUpload.setFileSizeMax(LiftRules.maxMimeFileSize)
           val what = mimeUpload.getItemIterator(request)
           def hasNext = what.hasNext
           def next = what.next match {
             case f if (f.isFormField) => NormalParamHolder(f.getFieldName, new String(readWholeStream(f.openStream), "UTF-8"))
-            case f => FileParamHolder(f.getFieldName, f.getContentType, f.getName, readWholeStream(f.openStream))
+            case f => LiftRules.handleMimeFile(f.getFieldName, f.getContentType, f.getName, f.openStream)
           }
         }).toList
 

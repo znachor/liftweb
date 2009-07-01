@@ -94,7 +94,7 @@ object LiftRules {
   var getLiftSession: (Req, HttpServletRequest) => LiftSession =
   (req, httpReq) => _getLiftSession(req, httpReq)
 
-   /**
+  /**
    * Returns a LiftSession instance.
    */
   private def _getLiftSession(request: Req, httpReq: HttpServletRequest): LiftSession = {
@@ -398,7 +398,7 @@ object LiftRules {
   var localeCalculator: Box[HttpServletRequest] => Locale = defaultLocaleCalculator _
 
   def defaultLocaleCalculator(request: Box[HttpServletRequest]) =
-    request.flatMap(_.getLocale() match {
+  request.flatMap(_.getLocale() match {
       case null => Empty
       case l: Locale => Full(l)}).openOr(Locale.getDefault())
 
@@ -680,12 +680,12 @@ object LiftRules {
    */
   private def cvt(ns: Node, headers: List[(String, String)], cookies: List[Cookie], session: Req) =
   convertResponse({val ret = XhtmlResponse(Group(session.fixHtml(ns)),
-                                 ResponseInfo.docType(session),
-                                 headers, cookies, 200,
-                                 S.ieMode)
-         ret._includeXmlVersion = !S.skipDocType
-         ret
-  }, headers, cookies, session)
+                                           ResponseInfo.docType(session),
+                                           headers, cookies, 200,
+                                           S.ieMode)
+                   ret._includeXmlVersion = !S.skipDocType
+                   ret
+    }, headers, cookies, session)
 
   var defaultHeaders: PartialFunction[(NodeSeq, Req), List[(String, String)]] = {
     case _ => List("Expires" -> Helpers.nowAsInternetDate,
@@ -932,6 +932,23 @@ object LiftRules {
     object when extends SessionVar[Long](millis)
     when.is
   }
+
+  /**
+   * The global multipart progress listener:
+   *     pBytesRead - The total number of bytes, which have been read so far.
+   *    pContentLength - The total number of bytes, which are being read. May be -1, if this number is unknown.
+   *    pItems - The number of the field, which is currently being read. (0 = no item so far, 1 = first item is being read, ...)
+   */
+  var progessListener: (Long, Long, Int) => Unit = (_, _, _) => ()
+
+  /**
+   * The function that converts a fieldName, contentType, fileName and an InputStream into
+   * a FileParamHolder.  By default, create an in-memory instance.  Use OnDiskFileParamHolder
+   * to create an on-disk version
+   */
+  var handleMimeFile: (String, String, String, InputStream) => FileParamHolder =
+  (fieldName, contentType, fileName, inputStream) =>
+  new InMemFileParamHolder(fieldName, contentType, fileName, Helpers.readWholeStream(inputStream))
 
   /**
    * Hods the last update time of the Comet request. Based on this server mayreturn HTTP 304 status

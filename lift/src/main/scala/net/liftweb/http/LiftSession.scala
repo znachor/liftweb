@@ -287,7 +287,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   private[http] def startSession(): Unit = {
     _running_? = true
     for (sess <- httpSession) {
-    inactivityLength = sess.getMaxInactiveInterval.toLong * 1000L
+      inactivityLength = sess.getMaxInactiveInterval.toLong * 1000L
     }
 
     lastServiceTime = millis
@@ -377,6 +377,14 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   }
 
   /**
+   * Set your session-specific progess listener for mime uploads
+   *     pBytesRead - The total number of bytes, which have been read so far.
+   *    pContentLength - The total number of bytes, which are being read. May be -1, if this number is unknown.
+   *    pItems - The number of the field, which is currently being read. (0 = no item so far, 1 = first item is being read, ...)
+   */
+  var progessListener: Box[(Long, Long, Int) => Unit] = Empty
+
+  /**
    * Called just before the session exits.  If there's clean-up work, override this method
    */
   private[http] def cleanUpSession() {
@@ -392,16 +400,16 @@ class LiftSession(val contextPath: String, val uniqueId: String,
 
   private [http] def fixSessionTime(): Unit = synchronized {
     for (httpSession <- this.httpSession) {
-    lastServiceTime = millis // DO NOT REMOVE THIS LINE!!!!!
-    val diff = lastServiceTime - httpSession.getLastAccessedTime
-    val maxInactive = httpSession.getMaxInactiveInterval()
-    val togo: Int = maxInactive - (diff / 1000L).toInt
-    // if we're within 2 minutes of session timeout and
-    // the Servlet session doesn't seem to have been updated,
-    // extends the lifespan of the HttpSession
-    if (diff > 1000L && togo < 120) {
-      httpSession.setMaxInactiveInterval(maxInactive + 120)
-    }
+      lastServiceTime = millis // DO NOT REMOVE THIS LINE!!!!!
+      val diff = lastServiceTime - httpSession.getLastAccessedTime
+      val maxInactive = httpSession.getMaxInactiveInterval()
+      val togo: Int = maxInactive - (diff / 1000L).toInt
+      // if we're within 2 minutes of session timeout and
+      // the Servlet session doesn't seem to have been updated,
+      // extends the lifespan of the HttpSession
+      if (diff > 1000L && togo < 120) {
+        httpSession.setMaxInactiveInterval(maxInactive + 120)
+      }
     }
   }
 
@@ -488,40 +496,40 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     val headInBody: NodeSeq =
     (for (body <- xhtml \ "body";
           head <- findElems(body)(_.label == "head")) yield head.child).
-      flatMap {e => e}
+    flatMap {e => e}
 
-      /**
-       * Document walkthrough
-       */
-      def xform(in: NodeSeq, inBody: Boolean)
-      			(headAppenders : Node => Node)
-      			(bodyAppenders : Node => Node): NodeSeq = in flatMap {
-        case e: Elem if !inBody && e.label == "body" =>
-          val n = Elem(e.prefix, e.label, e.attributes, e.scope,
-                       xform(e.child, true)(headAppenders)(bodyAppenders) :_*)
-          bodyAppenders(n)
+    /**
+     * Document walkthrough
+     */
+    def xform(in: NodeSeq, inBody: Boolean)
+    (headAppenders : Node => Node)
+    (bodyAppenders : Node => Node): NodeSeq = in flatMap {
+      case e: Elem if !inBody && e.label == "body" =>
+        val n = Elem(e.prefix, e.label, e.attributes, e.scope,
+                     xform(e.child, true)(headAppenders)(bodyAppenders) :_*)
+        bodyAppenders(n)
 
-        case e: Elem if inBody && e.label == "head" => NodeSeq.Empty
+      case e: Elem if inBody && e.label == "head" => NodeSeq.Empty
 
-        case e: Elem if e.label == "head" =>
-            val n = if (!headInBody.isEmpty) {
-              Elem(e.prefix, e.label, e.attributes,
-            				e.scope, HeadHelper.removeHtmlDuplicates(e.child ++ headInBody) :_*)
-            } else {
-              e
-            }
-            headAppenders(n)
+      case e: Elem if e.label == "head" =>
+        val n = if (!headInBody.isEmpty) {
+          Elem(e.prefix, e.label, e.attributes,
+               e.scope, HeadHelper.removeHtmlDuplicates(e.child ++ headInBody) :_*)
+        } else {
+          e
+        }
+        headAppenders(n)
 
-        case e: Elem =>
-          Elem(e.prefix, e.label, e.attributes, e.scope, xform(e.child, inBody)(headAppenders)(bodyAppenders) :_*)
+      case e: Elem =>
+        Elem(e.prefix, e.label, e.attributes, e.scope, xform(e.child, inBody)(headAppenders)(bodyAppenders) :_*)
 
-        case g: Group =>
-          xform(g.child, inBody)(headAppenders)(bodyAppenders)
+      case g: Group =>
+        xform(g.child, inBody)(headAppenders)(bodyAppenders)
 
-        case x => x
-      }
+      case x => x
+    }
 
-      xform(xhtml, false)(DomAppenders.headAppenders(this))(DomAppenders.bodyAppenders(this))
+    xform(xhtml, false)(DomAppenders.headAppenders(this))(DomAppenders.bodyAppenders(this))
   }
 
   private[http] def processRequest(request: Req): Box[LiftResponse] = {
@@ -559,33 +567,33 @@ class LiftSession(val contextPath: String, val uniqueId: String,
                 PageName(request.uri+" -> "+request.path)
 
                 (request.location.flatMap(_.earlyResponse) or
-                LiftRules.earlyResponse.firstFull(request)) or {
-                ((locTemplate or findVisibleTemplate(request.path, request)).
-                 // Phase 1: snippets & templates processing
-                 map(xml => processSurroundAndInclude(PageName get, xml)) match {
-                    case Full(rawXml: NodeSeq) => {
-                    	// Phase 2: Head & Tail merge, add additional elements to body & head
-                        val xml = merge(rawXml)
-                        this.synchronized {
-                          S.functionMap.foreach {mi =>
-                            // ensure the right owner
-                            messageCallback(mi._1) = mi._2.owner match {
-                              case Empty => mi._2.duplicate(RenderVersion.get)
-                              case _ => mi._2
+                 LiftRules.earlyResponse.firstFull(request)) or {
+                  ((locTemplate or findVisibleTemplate(request.path, request)).
+                   // Phase 1: snippets & templates processing
+                   map(xml => processSurroundAndInclude(PageName get, xml)) match {
+                      case Full(rawXml: NodeSeq) => {
+                          // Phase 2: Head & Tail merge, add additional elements to body & head
+                          val xml = merge(rawXml)
+                          this.synchronized {
+                            S.functionMap.foreach {mi =>
+                              // ensure the right owner
+                              messageCallback(mi._1) = mi._2.owner match {
+                                case Empty => mi._2.duplicate(RenderVersion.get)
+                                case _ => mi._2
+                              }
                             }
                           }
-                        }
 
-                        notices = Nil
-                        // Phase 3: Response conversion including fixHtml
-                        Full(LiftRules.convertResponse((xml,
-                                                        S.getHeaders(LiftRules.defaultHeaders((xml, request))),
-                                                        S.responseCookies,
-                                                        request)))
-                      }
-                    case _ => if (LiftRules.passNotFoundToChain) Empty else Full(request.createNotFound)
-                  })
-              }
+                          notices = Nil
+                          // Phase 3: Response conversion including fixHtml
+                          Full(LiftRules.convertResponse((xml,
+                                                          S.getHeaders(LiftRules.defaultHeaders((xml, request))),
+                                                          S.responseCookies,
+                                                          request)))
+                        }
+                      case _ => if (LiftRules.passNotFoundToChain) Empty else Full(request.createNotFound)
+                    })
+                }
 
               case Right(Full(resp)) => Full(resp)
               case _ if (LiftRules.passNotFoundToChain) => Empty
@@ -1076,13 +1084,13 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   private def failedFind(in: Failure): NodeSeq =
   <html  xmlns:lift="http://liftweb.net" xmlns="http://www.w3.org/1999/xhtml"><head/>
     <body><div style="border: 1px red solid">Error locating template.  Message: {in.msg} <br/>
-              {
-                in.exception.map(e => <pre>{e.toString}
-{e.getStackTrace.map(_.toString).mkString("\n")}
-                            </pre>).openOr(NodeSeq.Empty)
-              }
-                  This message is displayed because you are in Development mode.
-                  </div></body></html>
+        {
+          in.exception.map(e => <pre>{e.toString}
+              {e.getStackTrace.map(_.toString).mkString("\n")}
+                                </pre>).openOr(NodeSeq.Empty)
+        }
+        This message is displayed because you are in Development mode.
+          </div></body></html>
 
   private[liftweb] def findAndMerge(templateName: Box[Seq[Node]], atWhat: Map[String, NodeSeq]): NodeSeq = {
     val name = templateName.map(s => if (s.text.startsWith("/")) s.text else "/"+ s.text).openOr("/templates-hidden/default")
@@ -1224,14 +1232,14 @@ object TemplateFinder {
                 } catch {
                   case e: ValidationException if Props.devMode =>
                     return(Full(<div style="border: 1px red solid">Error locating template {name}.<br/>  Message: {e.getMessage} <br/>
-              {
-                <pre>
-{e.toString}
-{e.getStackTrace.map(_.toString).mkString("\n")}
+                          {
+                            <pre>
+                              {e.toString}
+                              {e.getStackTrace.map(_.toString).mkString("\n")}
                             </pre>
-              }
-                  This message is displayed because you are in Development mode.
-                  </div>))
+                          }
+                          This message is displayed because you are in Development mode.
+                                </div>))
 
                   case e: ValidationException => Empty
                 }
@@ -1241,20 +1249,20 @@ object TemplateFinder {
                 } else if (xmlb.isInstanceOf[Failure] && Props.devMode) {
                   val msg = xmlb.asInstanceOf[Failure].msg  
                   val e = xmlb.asInstanceOf[Failure].exception
-                return(Full(<div style="border: 1px red solid">Error locating template {name}.<br/>  Message: {msg} <br/>
-              {
-                {e match {
-                    case Full(e) =>
-                <pre>
-{e.toString}
-{e.getStackTrace.map(_.toString).mkString("\n")}
-                            </pre>
-                            case _ => NodeSeq.Empty
-                }
-                }
-              }
-                  This message is displayed because you are in Development mode.
-                  </div>))
+                  return(Full(<div style="border: 1px red solid">Error locating template {name}.<br/>  Message: {msg} <br/>
+                        {
+                          {e match {
+                              case Full(e) =>
+                                <pre>
+                                  {e.toString}
+                                  {e.getStackTrace.map(_.toString).mkString("\n")}
+                                </pre>
+                              case _ => NodeSeq.Empty
+                            }
+                          }
+                        }
+                        This message is displayed because you are in Development mode.
+                              </div>))
                 }
               }
             }
