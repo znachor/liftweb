@@ -33,12 +33,13 @@ object ScriptRenderer {
     lift_ajaxShowing: false,
     lift_ajaxRetryCount: """ + (LiftRules.ajaxRetryCount openOr 3) + """,
      
-    lift_ajaxHandler: function(theData, theSuccess, theFailure){
+    lift_ajaxHandler: function(theData, theSuccess, theFailure, responseType){
 	  var toSend = {retryCnt: 0};
 	  toSend.when = (new Date()).getTime();
 	  toSend.theData = theData;
 	  toSend.onSuccess = theSuccess;
 	  toSend.onFailure = theFailure;
+	  toSend.responseType = responseType; 
 
 	  liftAjax.lift_ajaxQueue.push(toSend);
 	  liftAjax.lift_ajaxQueueSort();
@@ -110,10 +111,10 @@ object ScriptRenderer {
 
           lift_ajaxInProcess = aboutToSend;
           
-          var successFunc = function() {
+          var successFunc = function(data) {
             liftAjax.lift_ajaxInProcess = null;
             if (aboutToSend.onSuccess) {
-              aboutToSend.onSuccess();
+              aboutToSend.onSuccess(data);
             }
             liftAjax.lift_doAjaxCycle();
           };
@@ -136,7 +137,12 @@ object ScriptRenderer {
             }
             liftAjax.lift_doAjaxCycle();
           };
-          liftAjax.lift_actualAjaxCall(aboutToSend.theData, successFunc, failureFunc);
+
+          if (aboutToSend.responseType.toLowerCase() === "json") {
+            liftAjax.lift_actualJSONCall(aboutToSend.theData, successFunc, failureFunc);
+          } else {
+            liftAjax.lift_actualAjaxCall(aboutToSend.theData, successFunc, failureFunc);
+          }
          }
       }
 
@@ -160,6 +166,16 @@ object ScriptRenderer {
                                                      "POST",
                                                      LiftRules.ajaxPostTimeout,
                                                      false, "script",
+                                                     Full("onSuccess"), Full("onFailure")))+
+    """
+    },
+
+    lift_actualJSONCall: function(data, onSuccess, onFailure) {
+      """ +
+        LiftRules.jsArtifacts.ajax(AjaxInfo(JE.JsRaw("data"),
+                                                     "POST",
+                                                     LiftRules.ajaxPostTimeout,
+                                                     false, "json",
                                                      Full("onSuccess"), Full("onFailure")))+
     """
     }

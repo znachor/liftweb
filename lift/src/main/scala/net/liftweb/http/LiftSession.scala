@@ -115,7 +115,6 @@ case class SessionToServletBridge(uniqueId: String) extends HttpSessionBindingLi
  * timing sessions out.
  */
 object SessionMaster extends Actor {
-  private case class LookupSession(uniqueId: String, when: Long)
 
   private var sessions: Map[String, LiftSession] = Map.empty
   private object CheckAndPurge
@@ -193,7 +192,7 @@ object SessionMaster extends Actor {
       val ses = synchronized{sessions}
       for ((id, session) <- ses.elements) {
         session.doCometActorCleanup()
-        if (now - session.lastServiceTime > session.inactivityLength) {
+        if (now - session.lastServiceTime > session.inactivityLength || session.markedForTermination) {
           Log.info(" Session "+id+" expired")
           this.sendMsg(RemoveSession(id))
         } else {
@@ -259,6 +258,9 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   type AnyActor = {def !(in: Any): Unit}
 
   @volatile
+  private[http] var markedForTermination = false
+
+  @volatile
   private var _running_? = false
 
   private var messageCallback: HashMap[String, S.AFuncHolder] = new HashMap
@@ -313,6 +315,11 @@ class LiftSession(val contextPath: String, val uniqueId: String,
 
   object ieMode extends SessionVar[Boolean](LiftRules.calcIEMode())
 
+  def terminateHint {
+    if (_running_?) {
+      markedForTermination = true;
+    }
+  }
   /**
    * Executes the user's functions based on the query parameters
    */

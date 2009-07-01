@@ -43,6 +43,12 @@ object SHtml {
                          "; return false;"}>{text}</button>))(_ % _)
   }
 
+  def jsonButton(text: NodeSeq, func: () => JsObj, success: Box[String], failure: Box[String], attrs: (String, String)*): Elem = {
+    attrs.foldLeft(fmapFunc(func)(name =>
+        <button onclick={makeAjaxCall(Str(name+"=true"), success, failure, AjaxType.JSON).toJsCmd+
+                         "; return false;"}>{text}</button>))(_ % _)
+  }
+
   /**
    * Create an Ajax button. When it's pressed, the function is executed
    *
@@ -114,8 +120,20 @@ object SHtml {
   }
 
   def makeAjaxCall(in: JsExp): JsExp = new JsExp {
-    def toJsCmd = "liftAjax.lift_ajaxHandler("+ in.toJsCmd+", null, null)"
+    def toJsCmd = "liftAjax.lift_ajaxHandler("+ in.toJsCmd+", null, null, null)"
   }
+
+  object AjaxType extends Enumeration("javascript", "json") {
+    val JavaScript, JSON = Value
+  }
+
+  def makeAjaxCall(in: JsExp, success: Box[String], failure: Box[String], dataType: AjaxType.Value): JsExp = new JsExp {
+    def toJsCmd = "liftAjax.lift_ajaxHandler("+ in.toJsCmd+", " + (success openOr "null") + 
+      ", " + (failure openOr "null") +
+      ", " + dataType.toString.encJs +
+      ")"
+  }
+
 
   /**
    * Create an anchor with a body and the function to be executed when the anchor is clicked

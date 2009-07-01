@@ -280,6 +280,7 @@ class LiftServlet extends HttpServlet {
           }
 
           val ret: LiftResponse = what2 match {
+            case (json: JsObj) :: Nil  => JsonResponse(json)
             case (js: JsCmd) :: xs  => (JsCommands(S.noticesToJsCmd::Nil) & ((js :: xs).flatMap{case js: JsCmd => List(js) case _ => Nil}.reverse)).toResponse
             case (n: Node) :: _ => XmlResponse(n)
             case (ns: NodeSeq) :: _ => XmlResponse(Group(ns))

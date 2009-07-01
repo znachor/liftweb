@@ -877,9 +877,9 @@ object LiftRules {
 
   var supplimentalHeaders: HttpServletResponse => Unit = s => s.setHeader("X-Lift-Version", liftVersion)
 
-var calcIE6ForResponse: () => Boolean = () => S.request.map(_.isIE6) openOr false
+  var calcIE6ForResponse: () => Boolean = () => S.request.map(_.isIE6) openOr false
 
-var flipDocTypeForIE6 = true
+  var flipDocTypeForIE6 = true
 
   /**
    * By default lift uses a garbage-collection mechanism of removing unused bound functions from LiftSesssion.
