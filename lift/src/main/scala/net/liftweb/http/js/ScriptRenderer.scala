@@ -138,7 +138,9 @@ object ScriptRenderer {
             liftAjax.lift_doAjaxCycle();
           };
 
-          if (aboutToSend.responseType.toLowerCase() === "json") {
+          if (aboutToSend.responseType != undefined && 
+              aboutToSend.responseType != null &&
+              aboutToSend.responseType.toLowerCase() === "json") {
             liftAjax.lift_actualJSONCall(aboutToSend.theData, successFunc, failureFunc);
           } else {
             liftAjax.lift_actualAjaxCall(aboutToSend.theData, successFunc, failureFunc);
