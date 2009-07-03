@@ -26,6 +26,78 @@ import _root_.scala.xml._
 
 object SHtml {
 
+  /**
+   * Invokes the Ajax request
+   * @param in -- the JsExp that returns the request data
+   */
+  def makeAjaxCall(in: JsExp): JsExp = new JsExp {
+    def toJsCmd = "liftAjax.lift_ajaxHandler("+ in.toJsCmd+", null, null, null)"
+  }
+
+  /**
+   * Invokes the Ajax request
+   * @param in -- the JsExp that returns the request data
+   * @context -- defined the response callback functions and the response type (JavaScript or JSON) 
+   */
+  def makeAjaxCall(in: JsExp, context: AjaxContext): JsExp = new JsExp {
+    def toJsCmd = "liftAjax.lift_ajaxHandler("+ in.toJsCmd+", " + (context.success openOr "null") + 
+      ", " + (context.failure openOr "null") +
+      ", " + context.responseType.toString.encJs +
+      ")"
+  }
+
+  /**
+   * Build a JavaScript function that will perform an AJAX call based on a value calculated in JavaScript
+   * @param jsCalcValue -- the JavaScript to calculate the value to be sent to the server
+   * @param func -- the function to call when the data is sent
+   *
+   * @return the JavaScript that makes the call
+   */
+  def ajaxCall(jsCalcValue: JsExp, func: String => JsCmd): (String, JsExp) = ajaxCall_*(jsCalcValue, SFuncHolder(func))
+
+  def ajaxCall(jsCalcValue: JsExp, jsContext: JsContext, func: String => JsCmd): (String, JsExp) = 
+    ajaxCall_*(jsCalcValue, jsContext, SFuncHolder(func))
+
+  def fajaxCall[T](jsCalcValue: JsExp, func: String => JsCmd)(f: (String, JsExp) => T): T = {
+    val (name, js) = ajaxCall(jsCalcValue, func)
+    f(name, js)
+  }
+
+  def jsonCall(jsCalcValue: JsExp, 
+               jsonContext: JsonContext, 
+               func: String => JsObj): (String, JsExp) = ajaxCall_*(jsCalcValue, jsonContext, SFuncHolder(func))
+
+  def fjsonCall[T](jsCalcValue: JsExp, jsonContext: JsonContext, func: String => JsObj)(f: (String, JsExp) => T): T = {
+    val (name, js) = jsonCall(jsCalcValue, jsonContext, func)
+    f(name, js)
+  }
+
+  /**
+   * Build a JavaScript function that will perform an AJAX call based on a value calculated in JavaScript
+   * @param jsCalcValue -- the JavaScript to calculate the value to be sent to the server
+   * @param func -- the function to call when the data is sent
+   *
+   * @return the JavaScript that makes the call
+   */
+  private def ajaxCall_*(jsCalcValue: JsExp, func: AFuncHolder): (String, JsExp) =
+  fmapFunc(func)(name =>
+    (name, makeAjaxCall(JsRaw("'"+name+"=' + "+jsCalcValue.toJsCmd))))
+
+  /**
+   * Build a JavaScript function that will perform an AJAX call based on a value calculated in JavaScript
+   * @param jsCalcValue -- the JavaScript to calculate the value to be sent to the server
+   * @param ajaxContext -- the context defining the javascript callback functions and the response type
+   * @param func -- the function to call when the data is sent
+   *
+   * @return the JavaScript that makes the call
+   */
+  private def ajaxCall_*(jsCalcValue: JsExp,
+                         ajaxContext: AjaxContext,
+                         func: AFuncHolder): (String, JsExp) =
+  fmapFunc(func)(name =>
+    (name, makeAjaxCall(JsRaw("'"+name+"=' + "+jsCalcValue.toJsCmd), ajaxContext)))
+
+
   private def deferCall(data: JsExp, jsFunc: Call): Call =
   Call(jsFunc.function, (jsFunc.params ++ List(AnonFunc(makeAjaxCall(data)))):_*)
 
@@ -34,6 +106,7 @@ object SHtml {
    *
    * @param text -- the name/text of the button
    * @param func -- the function to execute when the button is pushed.  Return Noop if nothing changes on the browser.
+   * @param attrs -- the list of node attributes
    *
    * @return a button to put on your page
    */
@@ -43,9 +116,21 @@ object SHtml {
                          "; return false;"}>{text}</button>))(_ % _)
   }
 
-  def jsonButton(text: NodeSeq, func: () => JsObj, success: Box[String], failure: Box[String], attrs: (String, String)*): Elem = {
+  /**
+   * Create an Ajax buttun that when it's pressed it submits an Ajax request and expects back a JSON
+   * construct which will be passed to the <i>success</i> function
+   * 
+   * @param text -- the name/text of the button
+   * @param func -- the function to execute when the button is pushed.  Return Noop if nothing changes on the browser.
+   * @param ajaxContext -- defines the callback functions and the JSON response type
+   * @param attrs -- the list of node attributes
+   *
+   * @return a button to put on your page
+   * 
+   */
+  def jsonButton(text: NodeSeq, func: () => JsObj, ajaxContext: JsonContext, attrs: (String, String)*): Elem = {
     attrs.foldLeft(fmapFunc(func)(name =>
-        <button onclick={makeAjaxCall(Str(name+"=true"), success, failure, AjaxType.JSON).toJsCmd+
+        <button onclick={makeAjaxCall(Str(name+"=true"), ajaxContext).toJsCmd+
                          "; return false;"}>{text}</button>))(_ % _)
   }
 
@@ -119,21 +204,14 @@ object SHtml {
         <a href="javascript://" onclick={deferCall(Str(name+"=true"), jsFunc).toJsCmd + "; return false;"}>{body}</a>))(_ % _)
   }
 
-  def makeAjaxCall(in: JsExp): JsExp = new JsExp {
-    def toJsCmd = "liftAjax.lift_ajaxHandler("+ in.toJsCmd+", null, null, null)"
+  def a(func: () => JsObj, 
+        jsonContext: JsonContext, 
+        body: NodeSeq, 
+        attrs: (String, String)*): Elem = {
+    
+    attrs.foldLeft(fmapFunc(func)(name =>
+        <a href="javascript://" onclick={makeAjaxCall(Str(name+"=true"), jsonContext).toJsCmd+"; return false;"}>{body}</a>))(_ % _)
   }
-
-  object AjaxType extends Enumeration("javascript", "json") {
-    val JavaScript, JSON = Value
-  }
-
-  def makeAjaxCall(in: JsExp, success: Box[String], failure: Box[String], dataType: AjaxType.Value): JsExp = new JsExp {
-    def toJsCmd = "liftAjax.lift_ajaxHandler("+ in.toJsCmd+", " + (success openOr "null") + 
-      ", " + (failure openOr "null") +
-      ", " + dataType.toString.encJs +
-      ")"
-  }
-
 
   /**
    * Create an anchor with a body and the function to be executed when the anchor is clicked
@@ -164,31 +242,6 @@ object SHtml {
    */
   def span(body: NodeSeq, cmd: JsCmd, attrs: (String, String)*): Elem =
   attrs.foldLeft(<span onclick={cmd.toJsCmd}>{body}</span>)(_ % _)
-
-  /**
-   * Build a JavaScript function that will perform an AJAX call based on a value calculated in JavaScript
-   * @param jsCalcValue -- the JavaScript to calculate the value to be sent to the server
-   * @param func -- the function to call when the data is sent
-   *
-   * @return the JavaScript that makes the call
-   */
-  def ajaxCall(jsCalcValue: JsExp, func: String => JsCmd): (String, JsExp) = ajaxCall_*(jsCalcValue, SFuncHolder(func))
-
-  def fajaxCall[T](jsCalcValue: JsExp, func: String => JsCmd)(f: (String, JsExp) => T): T = {
-    val (name, js) = ajaxCall(jsCalcValue, func)
-    f(name, js)
-  }
-
-  /**
-   * Build a JavaScript function that will perform an AJAX call based on a value calculated in JavaScript
-   * @param jsCalcValue -- the JavaScript to calculate the value to be sent to the server
-   * @param func -- the function to call when the data is sent
-   *
-   * @return the JavaScript that makes the call
-   */
-  private def ajaxCall_*(jsCalcValue: JsExp, func: AFuncHolder): (String, JsExp) =
-  fmapFunc(func)(name =>
-    (name, makeAjaxCall(JsRaw("'"+name+"=' + "+jsCalcValue.toJsCmd))))
 
 
   def toggleKids(head: Elem, visible: Boolean, func: () => Any, kids: Elem): NodeSeq = {
@@ -677,3 +730,23 @@ object SHtml {
   }
 
 }
+
+object AjaxType extends Enumeration("javascript", "json") {
+  val JavaScript, JSON = Value
+}
+
+object AjaxContext {
+  def js(success: Box[String], failure: Box[String]) = new JsContext(success, failure)
+  def js(success: Box[String]) = new JsContext(success, Empty)
+  
+  def json(success: Box[String], failure: Box[String]) = new JsonContext(success, failure)
+  def json(success: Box[String]) = new JsonContext(success, Empty)
+}
+
+
+case class AjaxContext(success: Box[String], failure: Box[String], responseType: AjaxType.Value)
+
+case class JsContext(override val success: Box[String], override val failure: Box[String]) extends AjaxContext(success, failure, AjaxType.JavaScript)
+
+case class JsonContext(override val success: Box[String], override val failure: Box[String]) extends AjaxContext(success, failure, AjaxType.JSON)
+
