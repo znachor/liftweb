@@ -22,7 +22,8 @@ import _root_.scala.xml.{NodeSeq, Elem, Text, UnprefixedAttribute, Null, MetaDat
                          Group, Node, HasKeyValue}
 import _root_.scala.collection.immutable.{ListMap, TreeMap}
 import _root_.net.liftweb.util.{Helpers, ThreadGlobal, LoanWrapper, Box, Empty, Full, Failure,
-                                Log, JSONParser, NamedPartialFunction, NamedPF, AttrHelper}
+                                Log, JSONParser, NamedPartialFunction, NamedPF,
+                                AttrHelper, Props}
 import Helpers._
 import js._
 import _root_.java.io.InputStream
@@ -1519,10 +1520,20 @@ object S extends HasParams {
   buildJsonFunc(Empty, Full(onError), f)
 
   private[http] object _formGroup extends RequestVar[Box[Int]](Empty)
+  private object formItemNumber extends RequestVar[Int](0)
 
-  def formFuncName: String = _formGroup.is match {
-    case Full(x) => Helpers.nextFuncName(x.toLong * 10000L)
-    case _ => Helpers.nextFuncName
+  def formFuncName: String = if (Props.testMode) {
+    val bump: Long = ((_formGroup.is openOr 0) + 1000L) * 10000L
+    val num: Int = formItemNumber.is
+    formItemNumber.set(num + 1)
+    import java.text._
+    val prefix: String = new DecimalFormat("00000000000000000").format(bump + num)
+    "f"+prefix+"_"+Helpers.hashHex((new Exception).getStackTrace.toList.take(10).map(_.toString).mkString(","))
+  } else {
+    _formGroup.is match {
+      case Full(x) => Helpers.nextFuncName(x.toLong * 10000L)
+      case _ => Helpers.nextFuncName
+    }
   }
 
   def formGroup[T](group: Int)(f: => T): T = {

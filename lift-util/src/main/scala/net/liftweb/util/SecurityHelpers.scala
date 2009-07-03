@@ -135,6 +135,11 @@ trait SecurityHelpers { self: StringHelpers with IoHelpers =>
     new String((new Base64) encode (MessageDigest.getInstance("SHA")).digest(in.getBytes("UTF-8")))
   }
 
+   /** create a SHA hash from a String */
+  def hashHex(in: String) : String = {
+    Helpers.hexEncode(MessageDigest.getInstance("SHA").digest(in.getBytes("UTF-8")))
+  }
+
   /** create a SHA-256 hash from a Byte array */
   def hash256(in : Array[Byte]) : Array[Byte] = {
     (MessageDigest.getInstance("SHA-256")).digest(in)
