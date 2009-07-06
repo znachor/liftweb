@@ -532,11 +532,13 @@ class LiftFilter extends Filter with LiftFilterTrait
     actualServlet = new LiftServlet(context)
     actualServlet.init
 
+    /*
     if (!Props.inGAE) {
       ActorSchedulerFixer.doActorSchedulerFix()
       // access the object to work around Scala actor memory retention problems
       PointlessActorToWorkAroundBug
     }
+    */
 
   }
 
@@ -609,6 +611,7 @@ class LiftFilter extends Filter with LiftFilterTrait
   }
 }
 
+/*
 object ActorSchedulerFixer {
   var performFix = true
   import java.util.concurrent.{Executors, Executor}
@@ -692,7 +695,9 @@ object ActorSchedulerFixer {
     fixDone = true
   }
 }
+*/
 
+/*
 object PointlessActorToWorkAroundBug extends Actor {
   import scala.collection.mutable.HashSet
   import java.lang.ref.Reference
@@ -767,4 +772,5 @@ object PointlessActorToWorkAroundBug extends Actor {
 
   ctor()
 }
+*/
 
