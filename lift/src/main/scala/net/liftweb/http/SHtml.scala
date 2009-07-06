@@ -502,6 +502,9 @@ object SHtml {
     }
   }
 
+  // support mixin of attribuites from xhtml
+  def submitButton(func: () => Any, attrs: (String, String)*): Elem = makeFormElement("submit", NFuncHolder(func), attrs :_*)
+
   def ajaxForm(body: NodeSeq) = (<lift:form>{body}</lift:form>)
   def ajaxForm(onSubmit: JsCmd, body: NodeSeq) = (<lift:form onsubmit={onSubmit.toJsCmd}>{body}</lift:form>)
   def ajaxForm(body: NodeSeq, onSubmit: JsCmd) = (<lift:form onsubmit={onSubmit.toJsCmd}>{body}</lift:form>)

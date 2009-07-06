@@ -98,5 +98,21 @@ object BindHelpersSpec extends Specification with BindHelpers {
       xmlParam(<t hello="">world</t>, "notfound") must_== Empty
     }
   }
+  "the bindByName bind(namespace, NodeSeq, BindParams*) function" should {
+        "mix in if the element if the type of the elements are the same" in {
+            bind("user", <t><input name="user:tag" id="cookie"/></t>, "tag" -> <input name="111222"/>) must ==/(<t><input name="111222" id="cookie"/></t>)
+        }
+        "replace the element if the replacement element type is not a bindByName type" in {
+            bind("user", <t><input name="user:tag" id="cookie"/></t>, "tag" -> "world") must ==/(<t>world</t>)
+        }
+        "replace the value is value is a null string" in {
+            bind("user", <t><input name="user:tag" type="submit" value="press me"/></t>, "tag" -> <input name="111222" type="submit"/>) must ==/(<t><input name="111222" type="submit" value="press me"></input></t>)
+        }
+        "handle a checkbox" in {
+            bind("user", <t><input id="acceptTerms" type="checkbox" name="user:tag"/></t>,
+                 "tag" -> (<input /> ++
+                 <input type="checkbox" name="F893599644556MN4" value="true"/>) ) must ==/(<t><input></input><input name="F893599644556MN4" type="checkbox" value="true" id="acceptTerms"></input></t>)
+        }
+  }
 }
 class BindHelpersTest extends JUnit4(BindHelpersSpec)

@@ -420,6 +420,13 @@ trait BindHelpers {
                   mergeBindAttrs(toRet, namespace, s.attributes)
               }
             }
+          case s : Elem if bindByNameType(s.label) && bindByNameTag(namespace, s) != "" => BindHelpers._currentNode.doWith(s) {
+                        val tag = bindByNameTag(namespace, s)
+                        map.get(tag) match {
+                            case None => nodeFailureXform.map(_(s)) openOr s
+                            case Some(bindParam) => bindByNameMixIn(bindParam, s)
+                        }
+                    }
           case Group(nodes) => Group(in_bind(nodes))
           case s : Elem => Elem(s.prefix, s.label, attrBind(s.attributes), s.scope, in_bind(s.child) : _*)
           case n => n
@@ -565,6 +572,36 @@ trait BindHelpers {
     case Seq(x: Elem, xs @_*)
       if x.label == in.label && x.prefix == in.prefix => Full(x)
     case Seq(x, xs @_*) => findNode(in, x.child) or findNode(in, xs)
+  }
+
+  // get the attribute string or blank string if it doesnt exist
+  private def attrStr(elem: Elem, attr: String): String = elem.attributes.get(attr) match {
+    case None => ""
+    case Some(Nil) => "" // why is a blank string converted to a List
+    case Some(x) => x.toString // get string on scala.xml.Text
+  }
+
+  // types that can be bindByName
+  private def bindByNameType(b: String) = b == "input" || b == "select" || b == "button" || b == "a"
+
+  // allow bind by name eg - <input name="namespace:tag"/>
+  private def bindByNameTag(namespace: String, elem: Elem) = attrStr(elem, "name").replaceAll(namespace+":","")
+
+  // mixin what comes from xhtml with what is programatically added
+  private def bindByNameMixIn(bindParam: BindParam, s: Elem): NodeSeq = {
+    def mix(nodeSeq: NodeSeq): NodeSeq = nodeSeq match {
+      case elem: Elem =>
+        // mix in undefined attributes
+        val attributes = s.attributes.filter(attr => !elem.attribute(attr.key).isDefined )
+        elem % attributes
+      case Seq(x1: Elem, x2: Elem) if attrStr(x2, "type") == "checkbox" =>
+        x1 ++ mix(x2)
+
+      case other =>
+        other
+    }
+    mix(bindParam.calcValue(s))
+
   }
 }
 
