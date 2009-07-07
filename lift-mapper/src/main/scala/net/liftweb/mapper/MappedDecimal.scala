@@ -140,16 +140,16 @@ class MappedDecimal[T <: Mapper[T]] (val fieldOwner : T, val context : MathConte
   def buildSetBooleanValue(accessor : Method, columnName : String) : (T, Boolean, Boolean) => Unit = null
 
   def buildSetDateValue(accessor : Method, columnName : String) : (T, Date) => Unit =
-    (inst, v) => doField(inst, accessor, {case f: MappedDecimal[T] => f.set(if (v == null) defaultValue else (coerce(BigDecimal(v.getTime))))})
+    (inst, v) => doField(inst, accessor, {case f: MappedDecimal[T] => f.set(if (v == null) defaultValue else coerce(BigDecimal(v.getTime)))})
 
   def buildSetStringValue(accessor: Method, columnName: String): (T, String) =>
-    Unit = (inst, v) => doField(inst, accessor, {case f: MappedDecimal[T] => f.set(coerce(BigDecimal(v)))})
+    Unit = (inst, v) => doField(inst, accessor, {case f: MappedDecimal[T] => f.set(if (v == null) defaultValue else coerce(BigDecimal(v)))})
 
   def buildSetLongValue(accessor: Method, columnName : String) : (T, Long, Boolean) =>
     Unit = (inst, v, isNull) => doField(inst, accessor, {case f: MappedDecimal[T] => f.set(if (isNull) defaultValue else coerce(BigDecimal(v)))})
 
   def buildSetActualValue(accessor: Method, data: AnyRef, columnName: String) : (T, AnyRef) =>
-    Unit = (inst, v) => doField(inst, accessor, {case f: MappedDecimal[T] => f.set(coerce(BigDecimal(v.toString)))})
+    Unit = (inst, v) => doField(inst, accessor, {case f: MappedDecimal[T] => f.set(if (v == null) defaultValue else coerce(BigDecimal(v.toString)))})
 
   /**
    * Returns the SQL creation string for this field. See the note at the
