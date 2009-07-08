@@ -316,6 +316,12 @@ class Req(val path: ParsePath,
        item <- enumToList[String](request.getHeaders(header).asInstanceOf[_root_.java.util.Enumeration[String]]))
   yield (header, item)
 
+  def headers(name: String): List[String] = headers.filter(_._1.equalsIgnoreCase(name)).map(_._2)
+  def header(name: String): Box[String] = headers(name) match {
+    case x :: _ => Full(x)
+    case _ => Empty
+  }
+
   lazy val (paramNames: List[String],
             params: Map[String, List[String]],
             uploadedFiles: List[FileParamHolder],
