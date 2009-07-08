@@ -162,6 +162,42 @@ trait SecurityHelpers { self: StringHelpers with IoHelpers =>
     hexEncode(binHash)
   }
 
+  def hexDecode(in: String): Array[Byte] = {
+    val max = in.length / 2
+    val ret = new Array[Byte](max)
+    var pos = 0
+
+    def byteOf(in: Char): Int = in match {
+      case '0' => 0
+      case '1' => 1
+      case '2' => 2
+      case '3' => 3
+      case '4' => 4
+      case '5' => 5
+      case '6' => 6
+      case '7' => 7
+      case '8' => 8
+      case '9' => 9
+      case 'a' | 'A' => 10
+      case 'b' | 'B' => 11
+      case 'c' | 'C' => 12
+      case 'd' | 'D' => 13
+      case 'e' | 'E' => 14
+      case 'f' | 'F' => 15
+        case _ => 0
+    }
+
+    while (pos < max) {
+      val two = pos * 2
+      val ch = in.charAt(two)
+      val cl = in.charAt(two + 1)
+      ret(pos) = (byteOf(ch) << 4 + byteOf(cl)).toByte
+      pos += 1
+    }
+
+    ret
+  }
+
   /** encode a Byte array as hexadecimal characters */
   def hexEncode(in: Array[Byte]): String = {
     val sb = new StringBuilder
