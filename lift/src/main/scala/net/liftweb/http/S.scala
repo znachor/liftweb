@@ -1089,16 +1089,6 @@ object S extends HasParams {
    */
   def referer: Box[String] = servletRequest.flatMap(r => Box.legacyNullTest(r.getHeader("Referer")))
 
-  /**
-   * The HTTP request that was made to get to the current page
-   */
-  def requestPath: Box[String] =
-  for {
-    req <- this.request
-    httpReq <- Box !! req.request
-  } yield httpReq.getRequestURI.substring(httpReq.getContextPath.length)
-
-
 
   /**
    * Functions that are mapped to HTML elements are, by default,
