@@ -36,7 +36,7 @@ trait BaseMetaMapper {
   def mappedFields: Seq[BaseMappedField];
   def dbAddTable: Box[() => Unit]
 
-  def dbIndexes: List[Index[RealType]]
+  def dbIndexes: List[BaseIndex[RealType]]
 }
 
 /**
@@ -1097,7 +1097,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
   def beforeSchemifier {}
   def afterSchemifier {}
 
-  def dbIndexes: List[Index[A]] = Nil
+  def dbIndexes: List[BaseIndex[A]] = Nil
 
   implicit def fieldToItem[T](in: MappedField[T, A]): IndexItem[A] = IndexField(in)
   implicit def boundedFieldToItem(in: (MappedField[String, A], Int)): BoundedIndexField[A] = BoundedIndexField(in._1, in._2)
@@ -1118,8 +1118,9 @@ object OprEnum extends Enumeration {
   val Like = Value(9, "LIKE")
 }
 
-
-case class Index[A <: Mapper[A]](columns: IndexItem[A]*)
+sealed abstract case class BaseIndex[A <: Mapper[A]](columns : IndexItem[A]*)
+case class Index[A <: Mapper[A]](indexColumns : IndexItem[A]*) extends BaseIndex[A](indexColumns : _*)
+case class UniqueIndex[A <: Mapper[A]](uniqueColumns : IndexItem[A]*) extends BaseIndex[A](uniqueColumns : _*)
 
 abstract class IndexItem[A <: Mapper[A]] {
   def field: BaseMappedField
