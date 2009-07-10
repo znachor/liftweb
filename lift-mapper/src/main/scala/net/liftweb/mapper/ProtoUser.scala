@@ -282,7 +282,7 @@ trait MetaMegaProtoUser[ModelType <: MegaProtoUser[ModelType]] extends KeyedMeta
 
   def currentUserId: Box[String] = curUserId.is
 
-  private object curUser extends RequestVar[Box[ModelType]](currentUserId.flatMap(id => getSingleton.find(id)))
+  private object curUser extends RequestVar[Box[ModelType]](currentUserId.flatMap(id => getSingleton.find(id)))  with CleanRequestVarOnSessionTransition
 
 
   def currentUser: Box[ModelType] = curUser.is

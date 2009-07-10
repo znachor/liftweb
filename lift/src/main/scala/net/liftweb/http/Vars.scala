@@ -149,12 +149,12 @@ abstract class SessionVar[T](dflt: => T) extends AnyVar[T, SessionVar[T]](dflt) 
 abstract class RequestVar[T](dflt: => T) extends AnyVar[T, RequestVar[T]](dflt) {
   type CleanUpParam = Box[LiftSession]
   override protected def findFunc(name: String): Box[T] = RequestVarHandler.get(name)
-  override protected def setFunc(name: String, value: T): Unit = RequestVarHandler.set(name, value)
+  override protected def setFunc(name: String, value: T): Unit = RequestVarHandler.set(name, this, value)
   override protected def clearFunc(name: String): Unit = RequestVarHandler.clear(name)
   override protected def wasInitialized(name: String): Boolean = {
     val bn = name+"_inited_?"
     val old: Boolean = RequestVarHandler.get(bn) openOr false
-    RequestVarHandler.set(bn, true)
+    RequestVarHandler.set(bn, this, true)
     old
   }
 
@@ -162,20 +162,24 @@ abstract class RequestVar[T](dflt: => T) extends AnyVar[T, RequestVar[T]](dflt) 
   RequestVarHandler.addCleanupFunc(in)
 }
 
+trait CleanRequestVarOnSessionTransition {
+  self: RequestVar[_] =>
+}
+
 private[http] object RequestVarHandler /* extends LoanWrapper */ {
-  private val vals: ThreadGlobal[HashMap[String, Any]] = new ThreadGlobal
+  private val vals: ThreadGlobal[HashMap[String, (RequestVar[_], Any)]] = new ThreadGlobal
   private val cleanup: ThreadGlobal[ListBuffer[Box[LiftSession] => Unit]] = new ThreadGlobal
   private val isIn: ThreadGlobal[String] = new ThreadGlobal
   private val sessionThing: ThreadGlobal[Box[LiftSession]] = new ThreadGlobal
 
   private[http] def get[T](name: String): Box[T] =
   for (ht <- Box.legacyNullTest(vals.value);
-       v <- ht.get(name).asInstanceOf[Option[T]]) yield v;
+       v <- ht.get(name).map(_._2).asInstanceOf[Option[T]]) yield v;
 
 
-  private[http] def set[T](name: String, value: T): Unit =
+  private[http] def set[T](name: String, from: RequestVar[_], value: T): Unit =
   for (ht <- Box.legacyNullTest(vals.value))
-  ht(name) = value
+  ht(name) = (from, value)
 
   private[http] def clear(name: String): Unit =
   for (ht <- Box.legacyNullTest(vals.value))
@@ -187,6 +191,17 @@ private[http] object RequestVarHandler /* extends LoanWrapper */ {
 
   def apply[T](session: Box[LiftSession], f: => T): T = {
     if ("in" == isIn.value) {
+      val tv = vals.value
+      
+      // remove all the session variables that are CleanRequestVarOnSessionTransition
+      val toRemove: Iterable[String] = tv.flatMap {
+        case (name, (it: CleanRequestVarOnSessionTransition, _)) => List(name)
+        case _ => Nil
+      }
+
+      toRemove.foreach(n => tv -= n)
+
+
       sessionThing.set(session)
       f
     } else
