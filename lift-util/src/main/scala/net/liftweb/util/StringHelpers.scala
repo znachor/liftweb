@@ -219,7 +219,7 @@ trait StringHelpers {
       else {
         val len = what.length
         val sb = new StringBuilder(len * 2)
-        sb.append('\'')
+        sb.append('"')
         var pos = 0
         while (pos < len) {
           what.charAt(pos) match {
@@ -230,7 +230,7 @@ trait StringHelpers {
           }
           pos += 1
         }
-        sb.append('\'')
+        sb.append('"')
         sb.toString
       }
     }

@@ -158,6 +158,7 @@ trait Mapper[A<:Mapper[A]] extends BaseMapper {
         case xs => S.error(xs)
       }})
 
+  /*
   /**
    * Append the JSON representation of this model object to the string builder
    * @param the string builder to append the JSON representation of this model to
@@ -169,11 +170,12 @@ trait Mapper[A<:Mapper[A]] extends BaseMapper {
     sb
   }
 
+
   /**
    * Create a JSON representation of this model object
    */
   def asJSON: String = asJSON(new StringBuilder).toString
-
+  */
 
   /**
    * Present the model as a form and execute the function on submission of the form
