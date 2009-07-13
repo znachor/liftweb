@@ -1120,7 +1120,17 @@ object OprEnum extends Enumeration {
 
 sealed abstract case class BaseIndex[A <: Mapper[A]](columns : IndexItem[A]*)
 case class Index[A <: Mapper[A]](indexColumns : IndexItem[A]*) extends BaseIndex[A](indexColumns : _*)
+/**
+ * Represents a unique index on the given columns
+ */
 case class UniqueIndex[A <: Mapper[A]](uniqueColumns : IndexItem[A]*) extends BaseIndex[A](uniqueColumns : _*)
+
+/**
+ * Represents a generic user-specified index on the given columns. The user provides a function to generate the SQL needed to create
+ * the index based on the table and columns. Validation is required since this is raw SQL being run on the database server.
+ */
+case class GenericIndex[A <: Mapper[A]](createFunc : (String,List[String]) => String, validated : IHaveValidatedThisSQL, indexColumns : IndexItem[A]*) extends BaseIndex[A](indexColumns : _*)
+
 
 abstract class IndexItem[A <: Mapper[A]] {
   def field: BaseMappedField

@@ -259,16 +259,20 @@ object Schemifier {
 
     table.dbIndexes.foreach {
       index =>
-	val prefix = index match {
+	val columns = index.columns.toList
+
+	val standardCreationStatement = (table.dbTableName+"_"+columns.map(_.field.dbColumnName).mkString("_"))+" ON "+table.dbTableName+" ( "+columns.map(_.indexDesc).comma+" )"
+
+	val createStatement = index match {
 	  case Index(_) => "CREATE INDEX "
 	  case UniqueIndex(_) => "CREATE UNIQUE INDEX "
+	  case GenericIndex(createFunc, _, _) => createFunc(table.dbTableName, columns.map(_.field.dbColumnName))
 	}
 
-	val columns = index.columns.toList
       val fn = columns.map(_.field.dbColumnName.toLowerCase).sort(_ < _)
       if (!indexedFields.contains(fn)) {
         cmds += maybeWrite(performWrite, logFunc, connection) {
-          () => prefix +(table.dbTableName+"_"+columns.map(_.field.dbColumnName).mkString("_"))+" ON "+table.dbTableName+" ( "+columns.map(_.indexDesc).comma+" )"
+          () => createStatement
         }
       }
     }
