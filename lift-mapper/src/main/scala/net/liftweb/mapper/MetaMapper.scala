@@ -952,6 +952,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
              actual.suplementalJs(Empty) :_*)
   }
 
+/*
   /**
    *
    */
@@ -967,6 +968,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
     sb.append('}')
     sb
   }
+  */
 
   def asHtml(toLine: A): NodeSeq =
   Text(internalTableName_$_$) :: Text("={ ") ::
