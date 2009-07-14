@@ -25,8 +25,10 @@ import _root_.net.liftweb.widgets.autocomplete._
 import _root_.net.liftweb.widgets.tree.TreeView
 import _root_.net.liftweb.widgets.menu.MenuWidget
 import _root_.net.liftweb.widgets.sparklines.Sparklines
-import net.liftweb.widgets.sparklines.Sparklines
-import net.liftweb.widgets.tablesorter.TableSorter
+import _root_.net.liftweb.widgets.tablesorter.TableSorter
+import _root_.net.liftweb.widgets.uploadprogress.UploadProgress
+
+import _root_.webapptest.snippet.UploadProgressDemo
 
 /**
   * A class that's instantiated early and run.  It allows the application
@@ -53,18 +55,29 @@ class Boot {
       Menu(Loc("tree", List("tree"), "Tree")) ::
       Menu(Loc("sparklines", List("sparklines"), "SparkLines")) ::
       Menu(Loc("autocomplete", List("autocomplete"), "autocomplete")) ::
+      Menu(Loc("uploadprogress", List("uploadprogress"), "Upload Progress")) ::
       Nil
 
     LiftRules.setSiteMap(SiteMap(entries:_*))
-
-    CalendarMonthView init;
-    CalendarWeekView init;
-    CalendarDayView init;
-    TreeView init;
-    Sparklines init;
-    TableSorter init;
-    MenuWidget init;
-    AutoComplete init
+    
+    /**
+     * Initiate all the widgets
+     */ 
+    CalendarMonthView.init
+    CalendarWeekView.init
+    CalendarDayView.init
+    TreeView.init
+    Sparklines.init
+    TableSorter.init
+    MenuWidget.init
+    AutoComplete.init
+    UploadProgress.init
+    
+    LiftRules.snippetDispatch.append(
+      Map("UploadExample" -> UploadProgressDemo)
+    )
+    
+    
   }
 }
 

@@ -217,7 +217,7 @@ object TestHelpers {
    * @return the name of the JSON function associated with the Comet actor
    */
   def jsonFuncForCometName(cometName: String, body: String): Box[String] = {
-    val p = Pattern.compile("""JSON Func """+cometName+""" \$\$ (F[^ ]*)""")
+    val p = Pattern.compile("""JSON Func """+cometName+""" \$\$ ([Ff][^ ]*)""")
     val m = p.matcher(body)
     if (m.find) Full(m.group(1))
     else Empty
@@ -277,7 +277,9 @@ Response with GetPoster
 {
 
   // override def assertSuccess = assert(code == 200, "Not an HTTP success")
-  override lazy val xml = XML.load(new _root_.java.io.ByteArrayInputStream(body))
+  override lazy val xml = {
+    XML.load("""\<\!DOCTYPE.*\>""".r.replaceAllIn(bodyAsString, ""))
+  }
 
   lazy val bodyAsString = new String(body, "UTF-8")
 
