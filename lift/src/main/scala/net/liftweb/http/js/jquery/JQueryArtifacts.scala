@@ -53,7 +53,7 @@ object JQueryArtifacts extends JSArtifacts {
   def onLoad(cmd: JsCmd): JsCmd = JqJsCmds.JqOnLoad(cmd)
 
   def ajax(data: AjaxInfo): String = {
-    "jQuery.ajax(" + toJson(data, S.contextPath,
+    "jQuery.ajax(" + toJson(data, S.contextPath openOr "",
                             prefix =>
                             JsRaw(S.encodeURL(prefix + "/" +LiftRules.ajaxPath + "/").encJs))+");"
   }

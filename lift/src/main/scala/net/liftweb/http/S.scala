@@ -1289,7 +1289,14 @@ object S extends HasParams {
   }
 
   /**
-   * Find and process a template
+   * Find and process a template. This can be used to load a template from within some other Lift processing,
+   * such as a snippet or view. If you just want to retrieve the XML contents of a template, use
+   * TemplateFinder.findAnyTemplate.
+   *
+   * @param path The path for the template that you want to process
+   * @return a Full Box containing the processed template, or a Failure if the template could not be found.
+   *
+   * @see TempalateFinder#findAnyTemplate
    */
   def runTemplate(path: List[String]): Box[NodeSeq] =
   for {
@@ -1298,7 +1305,22 @@ object S extends HasParams {
   } yield sess.processSurroundAndInclude(path.mkString("/", "/", ""), t)
 
   /**
-   * Used to get an attribute by its name
+   * Used to get an attribute by its name. There are several means to getting
+   * attributes:
+   *
+   * <pre name="code" class="scala">
+    // Get a Box for the attribute:
+    val myAttr = S.attr("test") openOr "Not found"
+   
+    // Get an attribute or return a default value:
+    val myAttr = S.attr("name", "Fred")
+   
+    // Apply a transform function on the attribute value, or return an Empty:
+    val pageSize = S.attr("count", _.toInt) openOr 20
+   
+    // There are also prefixed versions:
+    val prefixedAttr = S.attr("prefix", "name") openOr "Not found"
+   * </pre>
    */
   object attr extends AttrHelper[Box] {
     type Info = String
@@ -1331,9 +1353,10 @@ object S extends HasParams {
   }
 
   /**
-   * Concatenates the 'attr' attributes with the existent once and then executes the f
-   * function. The concatenation is not permanent, it will just exist for the duration of
-   * f execution.
+   * Temporarily adds the given attributes to the current set, then executes the given function. Note that
+   * this does not modify the current attributes available via S.attr.
+   *
+   * @param attr The attributes to set temporarily
    */
   def setVars[T](attr: MetaData)(f: => T): T = {
     _attrs.doWith(attr.toList.map{
@@ -1348,12 +1371,25 @@ object S extends HasParams {
   }
 
   /**
-   * Returns the LiftSession parameter denominated by 'what'
+   * Returns the LiftSession parameter denominated by 'what'.
+   *
+   * @see #getSessionAttribute
+   * @see #set
+   * @see #setSessionAttribute
+   * @see #unset
+   * @see #unsetSessionAttribute
    */
   def get(what: String): Box[String] = session.flatMap(_.get[String](what))
 
   /**
    * Returns the HttpSession parameter denominated by 'what'
+   *
+   * @see #get
+   * @see #set
+   * @see #setSessionAttribute
+   * @see #unset
+   * @see #unsetSessionAttribute
+   * 
    */
   def getSessionAttribute(what: String): Box[String] = servletSession.flatMap(_.getAttribute(what) match {case s: String => Full(s) case _ => Empty})
 
@@ -1363,27 +1399,61 @@ object S extends HasParams {
   def servletSession: Box[HttpSession] = session.flatMap(_.httpSession).or(servletRequest.map(_.getSession))
 
   /**
-   * Returns 'type' S attribute
+   * Returns the 'type' S attribute. This corresponds to the current Snippet's name. For example, the snippet:
+   *
+   * <pre name="code" class="xml">
+    &lt;lift:Hello.world /&gt;
+   * </pre>
+   *
+   * Will return "Hello.world".
    */
   def invokedAs: String = (currentSnippet or attr("type")) openOr ""
 
   /**
    * Sets a HttpSession attribute
+   *
+   * @see #get
+   * @see #getSessionAttribute
+   * @see #set
+   * @see #unset
+   * @see #unsetSessionAttribute
+   * 
    */
   def setSessionAttribute(name: String, value: String) = servletSession.foreach(_.setAttribute(name, value))
 
   /**
    * Sets a LiftSession attribute
+   *
+   * @see #get
+   * @see #getSessionAttribute
+   * @see #setSessionAttribute
+   * @see #unset
+   * @see #unsetSessionAttribute
+   * 
    */
   def set(name: String, value: String) = session.foreach(_.set(name,value))
 
   /**
    * Removes a HttpSession attribute
+   *
+   * @see #get
+   * @see #getSessionAttribute
+   * @see #set
+   * @see #setSessionAttribute
+   * @see #unset
+   * 
    */
   def unsetSessionAttribute(name: String) = servletSession.foreach(_.removeAttribute(name))
 
   /**
    * Removes a LiftSession attribute
+   *
+   * @see #get
+   * @see #getSessionAttribute
+   * @see #set
+   * @see #setSessionAttribute
+   * @see #unsetSessionAttribute
+   * 
    */
   def unset(name: String) = session.foreach(_.unset(name))
 
@@ -1394,39 +1464,44 @@ object S extends HasParams {
   request.flatMap(r => Box !! r.request)
 
   /**
-   * The host that the request was made on
+   * The hostname to which the request was sent. This is taken from the "Host" HTTP header, or if that
+   * does not exist, the DNS name or IP address of the server.
    */
-  def hostName: String = servletRequest.map(_.getServerName).openOr("nowhere_123.com")
+  def hostName: Box[String] = servletRequest.map(_.getServerName)
 
   /**
-   * The host and path of the quest
+   * The host and path of the request up to and including the context path. This does
+   * not include the template path or query string.
    */
-  def hostAndPath: String =
+  def hostAndPath: Box[String] =
   servletRequest.map(r => (r.getScheme, r.getServerPort) match {
       case ("http", 80) => "http://"+r.getServerName+contextPath
       case ("https", 443) => "https://"+r.getServerName+contextPath
       case (sch, port) => sch + "://"+r.getServerName+":"+port+contextPath
-    }).openOr("")
+    })
 
   /**
-   * Get a map of the name/functions
+   * Get a map of function name bindings that are used for form and other processing. Using these
+   * bindings is considered advanced functionality.
    */
   def functionMap: Map[String, AFuncHolder] =
   Box.legacyNullTest(_functionMap.value).
   map(s => Map(s.elements.toList :_*)).openOr(Map.empty)
 
   /**
-   * Clears the function map.  potentially very destuctive... use at own risk
+   * Clears the function map.  potentially very destuctive... use at your own risk!
    */
   def clearFunctionMap {Box.!!(_functionMap.value).foreach(_.clear)}
 
   /**
-   * The current context path
+   * The current context path for the deployment.
    */
-  def contextPath = session.map(_.contextPath).openOr("")
+  def contextPath : Box[String] = session.map(_.contextPath)
 
   /**
-   * Finds a snippet by namae
+   * Finds a snippet function by name. 
+   *
+   * @see LiftRules.snippets
    */
   def locateSnippet(name: String): Box[NodeSeq => NodeSeq] = {
     val snippet = if (name.indexOf(".") != -1) name.roboSplit("\\.") else name.roboSplit(":")
@@ -1500,7 +1575,7 @@ object S extends HasParams {
   def addFunctionMap(name: String, value: AFuncHolder) = _functionMap.value += (name -> value)
 
   private def booster(lst: List[String], func: String => Any): Unit = lst.foreach(v => func(v))
-
+  //TODO : continue documentation here
   /**
    * Decorates an URL with jsessionid parameter in case cookies are disabled from the container. Also
    * it appends general purpose parameters defined by LiftRules.urlDecorate

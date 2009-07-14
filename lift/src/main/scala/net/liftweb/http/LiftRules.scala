@@ -149,7 +149,7 @@ object LiftRules {
    * the request was made on, but can do the multi-server thing
    * as well)
    */
-  var cometServer: () => String = () => S.contextPath
+  var cometServer: () => String = () => S.contextPath openOr ""
 
   /**
    * The maximum concurrent requests.  If this number of
@@ -828,7 +828,7 @@ object LiftRules {
 
         () => {
           css.map(str => CSSHelpers.fixCSS(new BufferedReader(
-                new StringReader(str)), prefix openOr (S.contextPath)) match {
+                new StringReader(str)), prefix openOr (S.contextPath openOr "")) match {
               case (Full(c), _) => CSSResponse(c)
               case (_, input) => {
                   Log.warn("Fixing " + cssPath + " failed");
