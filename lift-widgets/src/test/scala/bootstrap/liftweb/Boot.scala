@@ -55,7 +55,7 @@ class Boot {
       Menu(Loc("tree", List("tree"), "Tree")) ::
       Menu(Loc("sparklines", List("sparklines"), "SparkLines")) ::
       Menu(Loc("autocomplete", List("autocomplete"), "autocomplete")) ::
-      Menu(Loc("uploadprogress", List("uploadprogress"), "uploadprogress")) ::
+      Menu(Loc("uploadprogress", List("uploadprogress"), "Upload Progress")) ::
       Nil
 
     LiftRules.setSiteMap(SiteMap(entries:_*))

@@ -45,23 +45,27 @@ object UploadProgress {
   def sessionProgessListener =
     S.session.foreach(s => { 
       s.progessListener = Full((pBytesRead: Long, pBytesTotal: Long, pItem: Int) => {
-        //println(pBytesRead)
         StatusHolder(Full((pBytesRead, pBytesTotal))) 
-        //println(StatusHolder.is)
       })
     })
   
-  def head(xhtml: NodeSeq): NodeSeq = Script(Run(""" 
-  $(function() {
-    $('""" + S.attr("formId").openOr("form") + """').uploadProgress({
-      start:function(){ },
-      uploading: function(upload) {$('#percents').html(upload.percents+'%');},
-      progressBar: '#""" + S.attr("progressBar").openOr("progressbar") + """',
-      progressUrl: '""" + S.attr("progressUrl").openOr("/progress") + """',
-      interval: """ + S.attr("interval").openOr("200") + """
+  def head(xhtml: NodeSeq): NodeSeq = {
+    StatusHolder.is
+    Script(Run(""" 
+    $(function() {
+      $('""" + S.attr("formId").openOr("form") + """').uploadProgress({
+        start:function(){ },
+        uploading: function(upload) {$('#percents').html(upload.percents+'%');},
+        progressBar: '#""" + S.attr("progressBar").openOr("progressbar") + """',
+        progressUrl: '""" + S.attr("progressUrl").openOr("/progress") + """',
+        interval: """ + S.attr("interval").openOr("200") + """
+      });
     });
-  });
-  """))
+    """))
+  }
 }
 
-object StatusHolder extends SessionVar[Box[(Long, Long)]](Empty)
+object StatusHolder extends SessionVar[Box[(Long, Long)]]({
+  UploadProgress.sessionProgessListener
+  Empty
+})
