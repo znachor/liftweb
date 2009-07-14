@@ -90,18 +90,19 @@ object Menu extends DispatchSnippet {
 
     val toRender : Seq[MenuItem] = (S.attr("item"), S.attr("group")) match {
       case (Full(item),_) => 
-	(for (sm <- LiftRules.siteMap;
-	      loc <- sm.findLoc(item)) yield { buildItemMenu(loc, expandAll) }) openOr Nil
+        (for (sm <- LiftRules.siteMap;
+              loc <- sm.findLoc(item)) yield { buildItemMenu(loc, expandAll) }) openOr Nil
       case (_,Full(group)) =>
-	LiftRules.siteMap.map({ 
-	  sm => sm.locForGroup(group).flatMap({
-	    loc => buildItemMenu(loc, expandAll)
-	  })
-	}) openOr Nil
+        LiftRules.siteMap.map({
+            sm => sm.locForGroup(group).flatMap({
+                loc => buildItemMenu(loc, expandAll)
+              })
+          }) openOr Nil
       case _ => renderWhat(expandAll)
     }
 
     toRender.toList match {
+      case Nil if S.attr("group").isDefined => NodeSeq.Empty
       case Nil => Text("No Navigation Defined.")
       case xs =>
         val liMap = S.prefixedAttrsToMap("li")
@@ -109,7 +110,7 @@ object Menu extends DispatchSnippet {
 
         def buildANavItem(i: MenuItem) = {
           i match {
-             case m @ MenuItem(text, uri, kids, _, _, _) if m.placeholder_?  =>
+            case m @ MenuItem(text, uri, kids, _, _, _) if m.placeholder_?  =>
               Elem(null, innerTag, Null, TopScope,
                    <xml:group><span>{text}</span>{buildUlLine(kids)}</xml:group>) %
               S.prefixedAttrsToMetaData("li_item", liMap)
@@ -159,9 +160,9 @@ object Menu extends DispatchSnippet {
   }
 
   private def renderWhat(expandAll: Boolean): Seq[MenuItem] =
-      (if (expandAll) for {sm <- LiftRules.siteMap; req <- S.request} yield
-       sm.buildMenu(req.location).lines
-       else S.request.map(_.buildMenu.lines)) openOr Nil
+  (if (expandAll) for {sm <- LiftRules.siteMap; req <- S.request} yield
+   sm.buildMenu(req.location).lines
+   else S.request.map(_.buildMenu.lines)) openOr Nil
 
   def jsonMenu(ignore: NodeSeq): NodeSeq = {
     val toRender = renderWhat(true)
