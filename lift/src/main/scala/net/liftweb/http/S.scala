@@ -1467,18 +1467,21 @@ object S extends HasParams {
    * The hostname to which the request was sent. This is taken from the "Host" HTTP header, or if that
    * does not exist, the DNS name or IP address of the server.
    */
-  def hostName: Box[String] = servletRequest.map(_.getServerName)
+  def hostName: String = servletRequest.map(_.getServerName) openOr {
+    import java.net._
+    InetAddress.getLocalHost.getHostName
+  }
 
   /**
    * The host and path of the request up to and including the context path. This does
    * not include the template path or query string.
    */
-  def hostAndPath: Box[String] =
+  def hostAndPath: String =
   servletRequest.map(r => (r.getScheme, r.getServerPort) match {
       case ("http", 80) => "http://"+r.getServerName+contextPath
       case ("https", 443) => "https://"+r.getServerName+contextPath
       case (sch, port) => sch + "://"+r.getServerName+":"+port+contextPath
-    })
+    }) openOr ""
 
   /**
    * Get a map of function name bindings that are used for form and other processing. Using these
@@ -1496,7 +1499,7 @@ object S extends HasParams {
   /**
    * The current context path for the deployment.
    */
-  def contextPath : Box[String] = session.map(_.contextPath)
+  def contextPath: String = session.map(_.contextPath) openOr ""
 
   /**
    * Finds a snippet function by name. 
