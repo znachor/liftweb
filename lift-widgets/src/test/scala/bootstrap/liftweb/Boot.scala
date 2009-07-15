@@ -77,7 +77,6 @@ class Boot {
       Map("UploadExample" -> UploadProgressDemo)
     )
     
-    
   }
 }
 

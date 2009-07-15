@@ -25,16 +25,27 @@ object UploadProgress {
     LiftRules.handleMimeFile = (fieldName, contentType, fileName, inputStream) =>
       OnDiskFileParamHolder(fieldName, contentType, fileName, inputStream)
     
+    
+    LiftRules.maxMimeSize = 1024 * 1024 * 1024
+    LiftRules.maxMimeFileSize = LiftRules.maxMimeSize
+    
     ResourceServer.allow({
       case "uploadprogress" :: "uploadprogress.js" :: Nil => true
+      case "uploadprogress" :: "jquery.timers-1.1.2.js" :: Nil => true
     })
     
     LiftRules.dispatch.append {
       case Req("progress" :: Nil, "", GetRequest) => () => {
+        var recived: Double = StatusHolder.is.map(_._1.toDouble).openOr(0D)
+        var size: Double = StatusHolder.is.map(_._2.toDouble).openOr(0D)
+        
+        println(StatusHolder.is)
+        println(recived)
+        println(size)
+        
         Full(JsonResponse(
           JsObj("state" -> "uploading", 
-                "received" -> Str(StatusHolder.is.map(_._1.toString).openOr("0")),
-                "size" -> Str(StatusHolder.is.map(_._2.toString).openOr("0"))
+                "percentage" -> Str(Math.floor((recived.toDouble / size.toDouble)*100).toString)
           ))
         )
       }
@@ -45,7 +56,8 @@ object UploadProgress {
   def sessionProgessListener =
     S.session.foreach(s => { 
       s.progessListener = Full((pBytesRead: Long, pBytesTotal: Long, pItem: Int) => {
-        StatusHolder(Full((pBytesRead, pBytesTotal))) 
+        StatusHolder(Full((pBytesRead, pBytesTotal)))
+        println(StatusHolder.is)
       })
     })
   
@@ -65,7 +77,4 @@ object UploadProgress {
   }
 }
 
-object StatusHolder extends SessionVar[Box[(Long, Long)]]({
-  UploadProgress.sessionProgessListener
-  Empty
-})
+object StatusHolder extends SessionVar[Box[(Long, Long)]](Empty)

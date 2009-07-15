@@ -1467,7 +1467,10 @@ object S extends HasParams {
    * The hostname to which the request was sent. This is taken from the "Host" HTTP header, or if that
    * does not exist, the DNS name or IP address of the server.
    */
-  def hostName: String = servletRequest.map(_.getServerName) openOr ""
+  def hostName: String = servletRequest.map(_.getServerName) openOr {
+    import java.net._
+    InetAddress.getLocalHost.getHostName
+  }
 
   /**
    * The host and path of the request up to and including the context path. This does
