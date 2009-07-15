@@ -1,7 +1,42 @@
 <lift:surround with="default" at="content">
   <head>
-    <lift:UploadExample.script formId="#upload" />
-    <script type="text/javascript" src="/classpath/uploadprogress/uploadprogress.js"></script>
+    <!-- <lift:UploadExample.script formId="#upload" /> -->
+    <!-- // <script type="text/javascript" src="/classpath/uploadprogress/uploadprogress.js"></script> -->
+    <script type="text/javascript" src="/classpath/uploadprogress/jquery.timers-1.1.2.js"></script>
+    <script type="text/javascript">
+      // <![CDATA[
+      $(function(){
+        $("form").bind("submit", function(e){
+          $(this).everyTime(1500, "hide", function() {
+            //alert("ping...");
+            
+            $.ajax({
+              type: "GET",
+              async: true,
+              url:"/progress?" + new Date().getTime(),
+              dataType: "json",
+              success: function(upload) {
+                if (upload.state == 'uploading') {
+                  //upload.percents = Math.floor((upload.received / upload.size)*1000)/10;
+                  
+                  //var bar = $.browser.safari ? $('#progressbar', parent.document) : $('#progressbar');
+                  //bar.css({width: upload.percents+'%'});
+                  //options.uploading(upload);
+                  //$('#percents').text(upload.received + " | " + upload.size);
+                  $('#percents').text(upload.percentage);
+                }
+              }
+            });
+            
+            
+            
+            
+          },0,true);
+        });
+      });
+      // ]]>
+    </script>
+    
     <style type="text/css">
     .bar {
       width: 300px;
