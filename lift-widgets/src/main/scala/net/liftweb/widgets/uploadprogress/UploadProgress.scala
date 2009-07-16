@@ -7,6 +7,9 @@ import _root_.net.liftweb.http.js.JsCmds._
 import _root_.net.liftweb.http.js.JE._
 import _root_.net.liftweb.util.{Box,Empty,Failure,Full}
 
+import _root_.scala.actors.Actor
+import _root_.scala.actors.Actor._
+
 /**
  * A helper widget that makes it easy to do upload
  * progress bars using ajax polling.
@@ -53,11 +56,24 @@ object UploadProgress {
     
   }
   
+  // private object StautsActor extends Actor {
+  //   def act() {
+  //     loop {
+  //       react {
+  //         case StatusUpdate(read,total) => StatusHolder(Full((read, total)))
+  //       }
+  //     }
+  //   }
+  // }
+  
+  // private case class StatusUpdate(bytesRead: Long, bytesTotal: Long)
+  
   def sessionProgessListener =
     S.session.foreach(s => { 
       s.progessListener = Full((pBytesRead: Long, pBytesTotal: Long, pItem: Int) => {
+        //StautsActor ! StatusUpdate(pBytesRead,pBytesTotal)
         StatusHolder(Full((pBytesRead, pBytesTotal)))
-        println(StatusHolder.is)
+        //println(StatusHolder.is)
       })
     })
   
