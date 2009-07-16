@@ -141,6 +141,13 @@ object CurrentCometActor extends ThreadGlobal[Box[CometActor]] {
 case class AddAListener(who: Actor)
 case class RemoveAListener(who: Actor)
 
+/**
+ * This trait manages a set of Actors in a publish/subscribe pattern. When you extend your Actor with
+ * this trait, you automatically get handling for sending messages out to all subscribed Actors. Simply
+ * override the high-, medium-, or lowPriority handlers to do your message processing. When you want to update
+ * all subscribers, just call the updateListeners method. The createUpdate method is used to generate
+ * the message that you want sent to all subscribers.
+ */
 trait ListenerManager {
   self: Actor =>
   private var listeners: List[Actor] = Nil
@@ -166,6 +173,10 @@ trait ListenerManager {
     listeners.foreach(_ ! update)
   }
 
+  /**
+   * This method is called when the updateListeners method needs a message to send to subscribed
+   * Actors.
+   */
   protected def createUpdate: Any
 
   protected def highPriority: PartialFunction[Any, Unit] = Map.empty
