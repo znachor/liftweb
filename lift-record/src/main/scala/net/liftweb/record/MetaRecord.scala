@@ -90,10 +90,10 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] {
   private def isLifecycle(m: Method) = classOf[LifecycleCallbacks].isAssignableFrom(m.getReturnType)
   private def isField(m: Method) = classOf[Field[_, _]].isAssignableFrom(m.getReturnType)
 
-  def introspect(rec: BaseRecord, methods: Array[Method])(f: (Method, OwnedField[_]) => Any) = {
+  def introspect(rec: BaseRecord, methods: Array[Method])(f: (Method, OwnedField[BaseRecord]) => Any) = {
     for (v <- methods  if isField(v)) {
       v.invoke(rec) match {
-        case mf: OwnedField[_] if !mf.ignoreField_? =>
+        case mf: OwnedField[BaseRecord] if !mf.ignoreField_? =>
           mf.setName_!(v.getName)
           f(v, mf)
         case _ =>
@@ -365,7 +365,9 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] {
    */
   def fieldOrder: List[OwnedField[BaseRecord]] = Nil
 
-  case class FieldHolder(name: String, method: Method, field: OwnedField[_])
+  protected def fields() : List[OwnedField[BaseRecord]] = fieldList map (fh => fh.field)
+
+  case class FieldHolder(name: String, method: Method, field: OwnedField[BaseRecord])
 }
 
 trait LifecycleCallbacks {
