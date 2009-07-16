@@ -279,6 +279,39 @@ object LiftRules {
    */
   var resourceNames: List[String] = List("lift")
 
+  var noticesToJsCmd: () => JsCmd = () => {
+    import builtin.snippet._
+   
+    val func: (() => List[NodeSeq], String, MetaData) => NodeSeq = (f, title, attr) => f() map (e => <li>{e}</li>) match {
+      case Nil => Nil
+      case list => <div>{title}<ul>{list}</ul></div> % attr
+    }
+
+    val f = S.noIdMessages _
+    val xml = List((MsgsErrorMeta.get, f(S.errors), S.??("msg.error")),
+                   (MsgsWarningMeta.get, f(S.warnings), S.??("msg.warning")),
+                   (MsgsNoticeMeta.get, f(S.notices), S.??("msg.notice"))) flatMap {
+      msg => msg._1 match {
+        case Full(meta) => func(msg._2 _, meta.title openOr "", meta.cssClass.map(new UnprefixedAttribute("class", _, Null)) openOr Null)
+        case _ => func(msg._2 _, msg._3, Null)
+      }
+    }
+
+    val groupMessages = xml match {
+      case Nil => JsCmds.Noop
+      case _ => LiftRules.jsArtifacts.setHtml(LiftRules.noticesContainerId, xml)
+    }
+
+    val g = S.idMessages _
+    List((MsgErrorMeta.get, g(S.errors)),
+         (MsgWarningMeta.get, g(S.warnings)),
+         (MsgNoticeMeta.get, g(S.notices))).foldLeft(groupMessages)((car, cdr) => cdr match {
+        case (meta, m) => m.foldLeft(car)((left, r) =>
+            left & LiftRules.jsArtifacts.setHtml(r._1, <span>{r._2 flatMap(node => node)}</span> %
+                                                 (Box(meta.get(r._1)).map(new UnprefixedAttribute("class", _, Null)) openOr Null)))
+      })
+  }
+
   /**
    * The base name of the resource bundle of the lift core code
    */
