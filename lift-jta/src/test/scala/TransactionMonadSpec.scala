@@ -16,15 +16,15 @@
 
 package net.liftweb.transaction
 
-import com.jteigen.scalatest.JUnit4Runner
+//import com.jteigen.scalatest.JUnit4Runner
 
-import org.junit.runner.RunWith
-import org.scalatest._
-import org.scalatest.matchers._                                                                                      
+//import org.junit.runner.RunWith
+//import org.scalatest._
+//import org.scalatest.matchers._                                                                                      
 
 /**
  * @author <a href="http://jonasboner.com">Jonas Bon&#233;r</a>
- */
+ *
 @RunWith(classOf[JUnit4Runner])
 class TransactionMonadSpec extends Spec with ShouldMatchers {
   describe("A TransactionMonad") {
@@ -55,3 +55,4 @@ class TransactionMonadSpec extends Spec with ShouldMatchers {
     }
   }
 }
+*/

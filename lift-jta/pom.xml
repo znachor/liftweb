@@ -32,7 +32,7 @@
       <id>jboner</id>
       <name>Jonas Bon&#233;r</name>
       <timezone>+1</timezone>
-      <email>jonas AT jonas boner DOT com</email>
+      <email>jonas AT jonasboner DOT com</email>
       <roles>
         <role>hacker</role>
       </roles>
@@ -105,33 +105,11 @@
       <version>4.5</version>
       <scope>test</scope>
     </dependency>
-    <dependency>
+    <!--dependency>
       <groupId>com.jteigen.scalatest</groupId>
       <artifactId>junit4runner</artifactId>
       <version>1.0</version>
       <scope>test</scope>
-    </dependency>    
+    </dependency-->    
   </dependencies>
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.felix</groupId>
-        <artifactId>maven-bundle-plugin</artifactId>
-        <configuration>
-          <instructions>
-            <Export-Package>net.liftweb.util.*;version="${pom.version}"</Export-Package>
-            <DynamicImport-Package>*</DynamicImport-Package>
-          </instructions>
-        </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-jar-plugin</artifactId>
-        <configuration>
-          <archive>
-            <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
-          </archive>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
 </project>
