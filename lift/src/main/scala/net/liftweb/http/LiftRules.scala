@@ -972,7 +972,7 @@ object LiftRules {
    *    pContentLength - The total number of bytes, which are being read. May be -1, if this number is unknown.
    *    pItems - The number of the field, which is currently being read. (0 = no item so far, 1 = first item is being read, ...)
    */
-  var progessListener: (Long, Long, Int) => Unit = (_, _, _) => ()
+  var progressListener: (Long, Long, Int) => Unit = (_, _, _) => ()
 
   /**
    * The function that converts a fieldName, contentType, fileName and an InputStream into

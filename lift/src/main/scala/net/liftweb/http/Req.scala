@@ -144,7 +144,7 @@ object Req {
       val allInfo = (new Iterator[ParamHolder] {
           val mimeUpload = (new ServletFileUpload)
           mimeUpload.setProgressListener(new ProgressListener{
-              lazy val progList: (Long, Long, Int) => Unit = S.session.flatMap(_.progessListener) openOr LiftRules.progessListener
+              lazy val progList: (Long, Long, Int) => Unit = S.session.flatMap(_.progressListener) openOr LiftRules.progressListener
 
               def update(a: Long, b: Long, c: Int) {progList(a,b,c)}
             })

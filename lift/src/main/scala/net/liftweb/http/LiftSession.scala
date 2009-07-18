@@ -325,10 +325,10 @@ class LiftSession(val contextPath: String, val uniqueId: String,
    */
   def runParams(state: Req): List[Any] = {
 
-    val toRun = synchronized {
+    val toRun = {
       // get all the commands, sorted by owner,
       (state.uploadedFiles.map(_.name) ::: state.paramNames).
-      flatMap{n => messageCallback.get(n).map(mcb => RunnerHolder(n, mcb, mcb.owner))}.
+      flatMap{n => synchronized{messageCallback.get(n)}.map(mcb => RunnerHolder(n, mcb, mcb.owner))}.
       sort{
         case ( RunnerHolder(_, _, Full(a)), RunnerHolder(_, _, Full(b))) if a < b => true
         case (RunnerHolder(_, _, Full(a)), RunnerHolder(_, _, Full(b))) if a > b => false
@@ -377,12 +377,12 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   }
 
   /**
-   * Set your session-specific progess listener for mime uploads
+   * Set your session-specific progress listener for mime uploads
    *     pBytesRead - The total number of bytes, which have been read so far.
    *    pContentLength - The total number of bytes, which are being read. May be -1, if this number is unknown.
    *    pItems - The number of the field, which is currently being read. (0 = no item so far, 1 = first item is being read, ...)
    */
-  var progessListener: Box[(Long, Long, Int) => Unit] = Empty
+  var progressListener: Box[(Long, Long, Int) => Unit] = Empty
 
   /**
    * Called just before the session exits.  If there's clean-up work, override this method
@@ -907,7 +907,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     attrs.get("form").map(ft => (
         (<form action={S.uri} method={ft.text.trim.toLowerCase}>{ret}</form> %
          checkMultiPart(attrs)) %
-        checkAttr("class", attrs)) % checkAttr("id",attrs) ) getOrElse ret
+        checkAttr("class", attrs)) % checkAttr("id",attrs) % checkAttr("target",attrs) ) getOrElse ret
 
   }
 
