@@ -39,20 +39,18 @@ object UploadProgress {
     
     LiftRules.dispatch.append {
       case Req("progress" :: Nil, "", GetRequest) => () => {
-        //var recived: Double = StatusHolder.is.map(_._1.toDouble).openOr(0D)
-        //var size: Double = StatusHolder.is.map(_._2.toDouble).openOr(0D)
-        
-        println(StatusHolder.is)
-        //println(recived)
-        //println(size)
-        //Str(Math.floor((recived.toDouble / size.toDouble)*100).toString
+        val recived: Double = StatusHolder.is.map(_._1.toDouble).openOr(0D)
+        val size: Double = StatusHolder.is.map(_._2.toDouble).openOr(0D)
+        val state: String = if(recived == size){ "completed" } else { "uploading" }
+
         Log.info("DISPATCHING UPLOAD PROGRESS")
+        println(StatusHolder.is)
         
         Full(JsonResponse(
-          JsObj("state" -> "uploading", 
-                "percentage" -> "1234"
+          JsObj("state" -> state, 
+                "percentage" -> Str(Math.floor((recived.toDouble / size.toDouble)*100).toString
           ))
-        )
+        ))
       }
     }
     
@@ -60,12 +58,9 @@ object UploadProgress {
   
   def sessionProgessListener =
     S.session.foreach(s => { 
-      // s.progessListener = Full((pBytesRead: Long, pBytesTotal: Long, pItem: Int) => {
-      //   println(pBytesRead)
-      //   //StatusHolder(Full((pBytesRead, pBytesTotal)))
-      //   //println(StatusHolder.is)
-      //   Thread.sleep(200)
-      // })
+      s.progressListener = Full((pBytesRead: Long, pBytesTotal: Long, pItem: Int) => {
+        StatusHolder(Full((pBytesRead, pBytesTotal)))
+      })
     })
   
   def head(xhtml: NodeSeq): NodeSeq = {

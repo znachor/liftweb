@@ -24,7 +24,7 @@ object UploadProgressDemo extends DispatchSnippet {
   
   def upload(xhtml: NodeSeq): NodeSeq = {
     if (S.get_?){
-      //UploadProgress.sessionProgessListener
+      UploadProgress.sessionProgessListener
       
       bind("ul", chooseTemplate("choose", "get", xhtml),
            "file_upload" -> SHtml.fileUpload(ul => theUpload(Full(ul))))
