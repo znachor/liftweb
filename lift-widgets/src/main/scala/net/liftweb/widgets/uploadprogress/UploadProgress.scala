@@ -60,12 +60,12 @@ object UploadProgress {
   
   def sessionProgessListener =
     S.session.foreach(s => { 
-      s.progessListener = Full((pBytesRead: Long, pBytesTotal: Long, pItem: Int) => {
-        // println()
-        StatusHolder(Full((pBytesRead, pBytesTotal)))
-        println(StatusHolder.is)
-        Thread.sleep(500)
-      })
+      // s.progessListener = Full((pBytesRead: Long, pBytesTotal: Long, pItem: Int) => {
+      //   println(pBytesRead)
+      //   //StatusHolder(Full((pBytesRead, pBytesTotal)))
+      //   //println(StatusHolder.is)
+      //   Thread.sleep(200)
+      // })
     })
   
   def head(xhtml: NodeSeq): NodeSeq = {
