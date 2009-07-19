@@ -1,39 +1,12 @@
 <lift:surround with="default" at="content">
   <head>
-    <!-- <lift:UploadExample.script formId="#upload" /> -->
-    <script type="text/javascript" src="/classpath/uploadprogress/jquery.timers-1.1.2.js"></script>
-    <script type="text/javascript">
-      // <![CDATA[
-      $(function(){
-        $("form").bind("submit", function(e){
-          $(this).everyTime(1000, "hide", function() {
-            $.ajax({
-              type: "GET",
-              async: true,
-              url:"/progress?" + new Date().getTime(),
-              dataType: "json",
-              success: function(upload){
-                var bar = $.browser.safari ? $('#progressbar', parent.document) : $('#progressbar');
-                bar.css({width: Math.floor(upload.percentage)+'%'});
-                if (upload.state == 'uploading') {
-                  $('#percents').text(upload.percentage);
-                } else if(upload.state == 'completed'){
-                  $('#percents').text('Finishing...');
-                  $("form").stopTime("hide");
-                }
-              }
-            });
-          },0,true);
-        });
-      });
-      // ]]>
-    </script>
-    
+    <script type="text/javascript" src="/classpath/uploadprogress/uploadprogress.js"></script>
+    <lift:UploadExample.script />
+    <!-- // <script type="text/javascript" src="/classpath/uploadprogress/jquery.timers-1.1.2.js"></script> -->
     <style type="text/css">
     .bar {
       width: 300px;
     }
-
     #progress {
       background: #eee;
       border: 1px solid #222;
