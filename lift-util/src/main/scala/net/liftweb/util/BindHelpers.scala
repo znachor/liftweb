@@ -192,21 +192,21 @@ trait BindHelpers {
   /**
    * Constant BindParam always returning the same value
    */
-  case class TheBindParam(name: String, value: NodeSeq) extends Tuple2(name, value) with BindParam {
+  final case class TheBindParam(name: String, value: NodeSeq) extends Tuple2(name, value) with BindParam {
     def calcValue(in: NodeSeq): NodeSeq = value
   }
 
   /**
    * Constant BindParam always returning the same value
    */
-  case class TheStrBindParam(name: String, value: String) extends Tuple2(name, value) with BindParam {
+  final case class TheStrBindParam(name: String, value: String) extends Tuple2(name, value) with BindParam {
     def calcValue(in: NodeSeq): NodeSeq = Text(value)
   }
 
   /**
    * BindParam taking its value from an attribute
    */
-  case class AttrBindParam(name: String, myValue: NodeSeq,
+  final case class AttrBindParam(name: String, myValue: NodeSeq,
                            newAttr: String) extends BindParam with BindWithAttr {
     def calcValue(in: NodeSeq): NodeSeq = myValue
   }
@@ -214,18 +214,18 @@ trait BindHelpers {
   /**
    * BindParam using a function to calculate its value
    */
-  case class FuncBindParam(name: String, value: NodeSeq => NodeSeq) extends Tuple2(name, value) with BindParam {
+  final case class FuncBindParam(name: String, value: NodeSeq => NodeSeq) extends Tuple2(name, value) with BindParam {
     def calcValue(in: NodeSeq): NodeSeq = value(in)
   }
 
   /**
    * BindParam using a function to calculate its value
    */
-  case class FuncAttrBindParam(name: String, value: NodeSeq => NodeSeq, newAttr: String) extends BindParam with BindWithAttr {
+  final case class FuncAttrBindParam(name: String, value: NodeSeq => NodeSeq, newAttr: String) extends BindParam with BindWithAttr {
     def calcValue(in: NodeSeq): NodeSeq = value(in)
   }
 
-  case class OptionBindParam(name: String, value: Option[NodeSeq]) extends Tuple2(name, value) with BindParam {
+  final case class OptionBindParam(name: String, value: Option[NodeSeq]) extends Tuple2(name, value) with BindParam {
     def calcValue(in: NodeSeq): NodeSeq = value getOrElse NodeSeq.Empty
   }
 
