@@ -264,8 +264,8 @@ object Schemifier {
 	val standardCreationStatement = (table.dbTableName+"_"+columns.map(_.field.dbColumnName).mkString("_"))+" ON "+table.dbTableName+" ( "+columns.map(_.indexDesc).comma+" )"
 
 	val createStatement = index match {
-	  case Index(_) => "CREATE INDEX "
-	  case UniqueIndex(_) => "CREATE UNIQUE INDEX "
+	  case Index(_) => "CREATE INDEX " + standardCreationStatement
+	  case UniqueIndex(_) => "CREATE UNIQUE INDEX " + standardCreationStatement
 	  case GenericIndex(createFunc, _, _) => createFunc(table.dbTableName, columns.map(_.field.dbColumnName))
 	}
 
