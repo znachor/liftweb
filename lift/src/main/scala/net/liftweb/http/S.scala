@@ -914,7 +914,7 @@ object S extends HasParams {
   }
 
   /**
-   * Sets a HTTP header attribute. For example, you could set a "Warn" header in
+   * Sets a HTTP response header attribute. For example, you could set a "Warn" header in
    * your response:
    *
    * <pre name="code" class="scala" >
@@ -933,11 +933,13 @@ object S extends HasParams {
   }
 
   /**
-   * Returns the currently set HTTP headers as a List[(String, String)]. To retrieve
-   * a specific header, use S.getHeader.
+   * Returns the currently set HTTP response headers as a List[(String, String)]. To retrieve
+   * a specific response header, use S.getHeader. If you want to get request headers (those
+   * sent by the client), use Req.getHeaders or S.getRequestHeader.
    *
    * @see #setHeader(String,String)
    * @see #getHeader(String)
+   * @see #getRequestHeader(String)
    */
   def getHeaders(in: List[(String, String)]): List[(String, String)] = {
     Box.legacyNullTest(_responseHeaders.value).map(
@@ -948,19 +950,39 @@ object S extends HasParams {
   }
 
   /**
-   * Returns the current set value of the given HTTP header as a Box.
+   * Returns the current set value of the given HTTP response header as a Box. If
+   * you want a request header, use Req.getHeader or S.getRequestHeader.
    *
    * @param name The name of the HTTP header to retrieve
    * @return A Full(value) or Empty if the header isn't set
    *
    * @see #setHeader(String,String)
    * @see #getHeaders(List[(String,String)])
+   * @see #getRequestHeader(String)
    */
   def getHeader(name : String) : Box[String] = {
     Box.legacyNullTest(_responseHeaders.value).map(
       rh => Box(rh.headers.get(name))
     ).openOr(Empty)
   }
+
+  /**
+   * Returns the current value of the given HTTP request header as a Box. This is
+   * really just a thin wrapper on Req.header(String). For response headers, see
+   * S.getHeaders, S.setHeader, or S.getHeader.
+   *
+   * @param name The name of the HTTP header to retrieve
+   * @return A Full(value) or Empty if the header isn't set
+   *
+   * @see Req#header(String)
+   * @see #getHeader(String)
+   * @see #setHeader(String,String)
+   * @see #getHeaders(List[(String,String)])
+   */
+  def getRequestHeader(name : String) : Box[String] = 
+    for (req <- request;
+	 hdr <- req.header(name)) 
+      yield hdr
 
   /**
    * Sets the document type for the response. If this is not set, the DocType for Lift responses
