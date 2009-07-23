@@ -634,7 +634,7 @@ object LiftRules {
   /**
    * Obtain the resource InputStream by name
    */
-  def getResourceAsStream(name: String): Box[_root_.java.io.InputStream] =
+  def getResourceAsStream(name: String): Box[InputStream] =
   getResource(name).map(_.openStream)
 
   /**
@@ -668,7 +668,13 @@ object LiftRules {
   /**
    * Looks up a resource by name and returns an Empty Box if the resource was not found.
    */
-  def finder(name: String): Box[InputStream] = {
+  def finder(name: String): Box[InputStream] = 
+  (for {
+      ctx <- Box !! LiftRules.context
+      res <- Box !! ctx.getResourceAsStream(name)
+    } yield res) or getResourceAsStream(name)
+  /*
+  {
     LiftRules.context match {
       case null => Empty
       case c => c.getResourceAsStream(name) match {
@@ -676,7 +682,7 @@ object LiftRules {
           case s => Full(s)
         }
     }
-  }
+  }*/
 
   /**
    * Get the partial function that defines if a request should be handled by

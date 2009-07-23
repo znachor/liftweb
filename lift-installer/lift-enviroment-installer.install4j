@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<install4j version="4.1.5" transformSequenceNumber="2">
+<install4j version="4.2.3" transformSequenceNumber="2">
   <directoryPresets config="./src/javarebel-1.2.2/Install.html" />
-  <application name="Lift Framework" distributionSourceDir="" applicationId="5718-3659-1334-6595" mediaDir="./target" mediaFilePattern="${compiler:sys.shortName}_${compiler:sys.platform}_${compiler:sys.version}" compression="6" lzmaCompression="false" pack200Compression="true" excludeSignedFromPacking="true" keepModificationTimes="false" shortName="liftweb" publisher="The Lift Open Source Comunity" publisherWeb="http://www.liftweb.net/" version="1.0" allPathsRelative="true" backupOnSave="false" autoSave="true" convertDotsToUnderscores="true" macSignature="????" installerName="" javaMinVersion="1.5" javaMaxVersion="" allowBetaVM="true" jdkMode="runtimeJre" jdkName="">
-    <languages skipLanguageSelection="false">
+  <application name="Lift Framework" distributionSourceDir="" applicationId="5718-3659-1334-6595" mediaDir="./target" mediaFilePattern="${compiler:sys.shortName}_${compiler:sys.platform}_${compiler:sys.version}" compression="6" lzmaCompression="false" pack200Compression="true" excludeSignedFromPacking="true" keepModificationTimes="false" missingFilesStrategy="warn" shortName="liftweb" publisher="The Lift Open Source Comunity" publisherWeb="http://www.liftweb.net/" version="1.0.1" allPathsRelative="true" backupOnSave="false" autoSave="true" convertDotsToUnderscores="true" macSignature="????" installerName="" javaMinVersion="1.5" javaMaxVersion="" allowBetaVM="true" jdkMode="runtimeJre" jdkName="">
+    <languages skipLanguageSelection="false" languageSelectionInPrincipalLanguage="false">
       <principalLanguage id="en" customLocalizationFile="" />
       <additionalLanguages />
     </languages>
@@ -17,19 +17,11 @@
     <roots />
     <mountPoints>
       <mountPoint id="171" root="" location="apache-maven" mode="755" />
-      <mountPoint id="172" root="" location="java-rebel" mode="755" />
     </mountPoints>
     <entries>
-      <dirEntry mountPoint="171" file="./src/apache-maven-2.0.9" overwrite="0" shared="false" mode="755" uninstallMode="2" excludeSuffixes="" dirMode="755">
-        <exclude>
-          <entry location=".DS_Store" fileType="regular" />
-        </exclude>
+      <dirEntry mountPoint="171" file="./src/apache-maven-2.2.0" overwrite="0" shared="false" mode="755" uninstallMode="2" excludeSuffixes="" dirMode="755">
+        <exclude />
       </dirEntry>
-      <fileEntry mountPoint="172" file="./src/javarebel-1.2.2/javarebel.jar" overwrite="1" shared="false" mode="755" uninstallMode="2" />
-      <fileEntry mountPoint="172" file="./src/javarebel-1.2.2/javarebel.lic" overwrite="1" shared="false" mode="755" uninstallMode="2" />
-      <fileEntry mountPoint="172" file="./src/javarebel-1.2.2/License.txt" overwrite="1" shared="false" mode="755" uninstallMode="2" />
-      <fileEntry mountPoint="172" file="./src/javarebel-1.2.2/Notice.txt" overwrite="1" shared="false" mode="755" uninstallMode="2" />
-      <fileEntry mountPoint="172" file="./src/javarebel-1.2.2/Install.html" overwrite="1" shared="false" mode="755" uninstallMode="2" />
     </entries>
     <components>
       <component name="Apache Maven 2.0.8" id="123" displayDescription="false" selected="true" mandatory="false" downloadable="false">
@@ -249,14 +241,14 @@ if(Util.isMacOS() | Util.isLinux()){
     String installAbsolutePath = installLocation.getAbsolutePath();
     /* get the paths for jr and maven */
     String mavenHomePath = installAbsolutePath + "/apache-maven";
-    String javaRebelJarPath = installAbsolutePath + "/java-rebel/javarebel.jar";
+    //String javaRebelJarPath = installAbsolutePath + "/java-rebel/javarebel.jar";
     
     // get the user home directory 
     String homeDir = System.getProperty("user.home");
     File bashProfile = new File(homeDir + "/.bash_profile");
     
     // contents to be appended to the bash_profile
-    String appendToBash = "\n# liftweb path vars\nexport M2_HOME=" + mavenHomePath + "\nexport M2=$M2_HOME/bin\nexport MAVEN_OPTS=\"-noverify -javaagent:" + javaRebelJarPath + "\"\nexport PATH=$M2:$PATH\n";
+    String appendToBash = "\n# liftweb path vars\nexport M2_HOME=" + mavenHomePath + "\nexport M2=$M2_HOME/bin\nexport MAVEN_OPTS=\"-noverify\" \nexport PATH=$M2:$PATH\n";
     
     if(bashProfile.exists() == true){
       String backupBash = ".bash_profile.liftweb.old." + new Date().toString();

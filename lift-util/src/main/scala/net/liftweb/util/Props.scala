@@ -96,13 +96,20 @@ object Props {
    * Recognized modes are "development", "test", "profile", "pilot", "staging" and "production"
    * with the default run mode being development.
    */
-  lazy val mode = Box.legacyNullTest((System.getProperty("run.mode"))).map(_.toLowerCase) match {
-    case Full("test") => Test
-    case Full("production") => Production
-    case Full("staging") => Staging
-    case Full("pilot") => Pilot
-    case Full("profile") => Profile
-    case _ => Development
+  lazy val mode = {
+    Box.legacyNullTest((System.getProperty("run.mode"))).map(_.toLowerCase) match {
+      case Full("test") => Test
+      case Full("production") => Production
+      case Full("staging") => Staging
+      case Full("pilot") => Pilot
+      case Full("profile") => Profile
+      case Full("development") => Development
+      case _ =>
+        val exp = new Exception
+        exp.fillInStackTrace
+        if (exp.getStackTrace.find(st => st.getClassName.indexOf("SurefireBooter") >= 0).isDefined) Test
+        else Development
+    }
   }
 
   /**

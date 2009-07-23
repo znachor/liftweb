@@ -25,6 +25,9 @@ import _root_.net.liftweb.util._
 
 class TextileSpecTest extends Runner(TextileSpec) with JUnit with Console
 object TextileSpec extends Specification {
+
+  val shouldRelax = (java.lang.Boolean.getBoolean("textile.relax"))
+
   import TextileParser._
 
   "A Textile Parse" can {
@@ -207,7 +210,7 @@ UK:
 	toHtml(s)
       }
       
-      time must be < 3000L
+      time must be < (if (shouldRelax) 10000L else 3000L)
     }
 
     "Fast 2" in {
@@ -438,7 +441,7 @@ We use CSS(Cascading Style Sheets).
 	toHtml(s)
       }
 
-      time must be < 3000L
+      time must be < (if (shouldRelax) 10000L else 3000L)
     }
 
 
