@@ -162,8 +162,8 @@ trait SecurityHelpers { self: StringHelpers with IoHelpers =>
     hexEncode(binHash)
   }
 
-  def hexDecode(in: String): Array[Byte] = {
-    val max = in.length / 2
+  def hexDecode(str: String): Array[Byte] = {
+    val max = str.length / 2
     val ret = new Array[Byte](max)
     var pos = 0
 
@@ -189,9 +189,9 @@ trait SecurityHelpers { self: StringHelpers with IoHelpers =>
 
     while (pos < max) {
       val two = pos * 2
-      val ch = in.charAt(two)
-      val cl = in.charAt(two + 1)
-      ret(pos) = (byteOf(ch) << 4 + byteOf(cl)).toByte
+      val ch: Char = str.charAt(two)
+      val cl: Char = str.charAt(two + 1)
+      ret(pos) = (byteOf(ch) * 16 + byteOf(cl)).toByte
       pos += 1
     }
 
