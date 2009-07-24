@@ -65,6 +65,14 @@ abstract class DriverType(val name : String) {
    * equal the db user name.
    */
   def defaultSchemaName : Box[String] = Empty
+
+  /**
+   * Allow the driver to do specific remapping of column types for cases
+   * where not all types are supported.
+   */
+  def columTypeMap : PartialFunction[Int,Int] = {
+    case x => x
+  }
 }
 
 object DerbyDriver extends DriverType("Apache Derby") {
@@ -185,6 +193,11 @@ object OracleDriver extends DriverType("Oracle") {
   def enumListColumnType = "NUMBER"
   def longColumnType = "NUMBER"
   def doubleColumnType = "NUMBER"
+
+  import _root_.java.sql.Types
+  override def columTypeMap = {
+    case Types.BOOLEAN => Types.INTEGER
+  }
 }
 
 object MaxDbDriver extends DriverType("MaxDB") {
