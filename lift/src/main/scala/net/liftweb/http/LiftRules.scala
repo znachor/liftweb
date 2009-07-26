@@ -673,16 +673,7 @@ object LiftRules {
       ctx <- Box !! LiftRules.context
       res <- Box !! ctx.getResourceAsStream(name)
     } yield res) or getResourceAsStream(name)
-  /*
-  {
-    LiftRules.context match {
-      case null => Empty
-      case c => c.getResourceAsStream(name) match {
-          case null => Empty
-          case s => Full(s)
-        }
-    }
-  }*/
+
 
   /**
    * Get the partial function that defines if a request should be handled by
