@@ -196,7 +196,7 @@ object OracleDriver extends DriverType("Oracle") {
 
   import _root_.java.sql.Types
   override def columTypeMap = {
-    case Types.BOOLEAN => Types.INTEGER
+    case Types.BOOLEAN => { Log.debug("remapping boolean to Int"); Types.INTEGER}
   }
 }
 
