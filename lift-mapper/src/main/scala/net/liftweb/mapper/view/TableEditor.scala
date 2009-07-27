@@ -93,7 +93,7 @@ trait ItemsList[T <: Mapper[T]] {
  * Call TableEditor.registerTable(name_to_use_in_view, meta_mapper_for_the_table, display_title)
  * in Boot after DB.defineConnectionManager.
  * Referencing TableEditor triggers registering its snippet package and enabling
- * the provided template, /classpath/tableeditor/default.html.
+ * the provided template, /tableeditor/default.
  * @author nafg
  */
 object TableEditor {
@@ -107,6 +107,15 @@ object TableEditor {
 package snippet {
   /**
    * This is the snippet that the view references.
+   * It requires the following contents (for a default setup, use lift:embed what="/tableeditor/default"):
+   * table:title - the title registered in Boot
+   * header:fields - repeated for every field of the MetaMapper, for the header.
+   *  field:name - the displayName of the field, capified. Links to sort by the field.
+   * table:items - repeated for each record
+   * item:fields - repeated for each field of the current record
+   *  field:form - the result of toForm on the field
+   * item:removeBtn - a button to remove the current item
+   * table:insertBtn - a button to insert another item
    * @author nafg
    */
   class TableEditor extends DispatchSnippet {
@@ -120,7 +129,7 @@ package snippet {
 }
 
 /**
- * This class contains the actual view binding against a ItemsList.
+ * This class provides the actual view binding against a ItemsList.
  * @author nafg
  */
 protected class TableEditorImpl[T <: Mapper[T]](title: String, meta: T with MetaMapper[T]) {  
