@@ -88,6 +88,12 @@ A regular example.
       toHtml("a link http://yahoo.com inside") must ==/(<p>a link <a href="http://yahoo.com">http://yahoo.com</a> inside</p>)
     }
 
+    "deal with a very long line of text" in {
+      val sb = new StringBuilder()
+      (1 to 100000).foreach(i => sb.append(i.toString+" "))
+      toHtml(sb.toString)
+    }
+
     "h3" in {
       toHtml("h3. Dogs eat dogfood") must ==/(<h3>Dogs eat dogfood</h3>)
     }
