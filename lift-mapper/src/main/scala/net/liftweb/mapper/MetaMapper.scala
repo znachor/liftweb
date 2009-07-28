@@ -1120,7 +1120,7 @@ object OprEnum extends Enumeration {
   val Like = Value(9, "LIKE")
 }
 
-sealed abstract case class BaseIndex[A <: Mapper[A]](columns : IndexItem[A]*)
+sealed abstract class BaseIndex[A <: Mapper[A]](val columns : IndexItem[A]*)
 case class Index[A <: Mapper[A]](indexColumns : IndexItem[A]*) extends BaseIndex[A](indexColumns : _*)
 /**
  * Represents a unique index on the given columns
