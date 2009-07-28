@@ -525,9 +525,9 @@ object JsCmds {
     def toJsCmd = "alert("+text.encJs+");"
   }
 
-case class Confirm(text: String, yes: JsCmd) extends JsCmd {
-   def toJsCmd = "if (confirm("+text.encJs+")) {"+yes.toJsCmd+"}"
-}
+  case class Confirm(text: String, yes: JsCmd) extends JsCmd {
+    def toJsCmd = "if (confirm("+text.encJs+")) {"+yes.toJsCmd+"}"
+  }
 
   case class Run(text: String) extends JsCmd {
     def toJsCmd = text
