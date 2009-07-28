@@ -46,7 +46,7 @@ trait ItemsList[T <: Mapper[T]] {
           (a, b) => ((field.actualField(a).is: Any, field.actualField(b).is: Any) match {
             case (aval: String, bval: String) => aval.toLowerCase < bval.toLowerCase
             case (aval: Ordered[Any], bval: Ordered[Any]) => aval < bval
-            case (aval, bval) => println(aval.asInstanceOf[AnyRef].getClass);aval.toString < bval.toString
+            case (aval, bval) => aval.toString < bval.toString
           }) match {
             case cmp =>
               if(ascending) cmp else !cmp
@@ -107,7 +107,7 @@ object TableEditor {
 package snippet {
   /**
    * This is the snippet that the view references.
-   * It requires the following contents (for a default setup, use lift:embed what="/tableeditor/default"):
+   * It requires the following contents:
    * table:title - the title registered in Boot
    * header:fields - repeated for every field of the MetaMapper, for the header.
    *  field:name - the displayName of the field, capified. Links to sort by the field.
@@ -116,6 +116,7 @@ package snippet {
    *  field:form - the result of toForm on the field
    * item:removeBtn - a button to remove the current item
    * table:insertBtn - a button to insert another item
+   * For a default layout, use lift:embed what="/tableeditor/default", with
    * @author nafg
    */
   class TableEditor extends DispatchSnippet {
