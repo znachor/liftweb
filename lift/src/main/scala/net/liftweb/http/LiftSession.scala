@@ -978,7 +978,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
    * a Lift template
    *
    * @param pageName -- the name of the page being processed (for error reporting)
-   * @param tempalte -- the template to process using Lift's templating engine
+   * @param template -- the template to process using Lift's templating engine
    */
   def runTemplate(pageName: String, template: NodeSeq): NodeSeq =
   processSurroundAndInclude(pageName, template)
