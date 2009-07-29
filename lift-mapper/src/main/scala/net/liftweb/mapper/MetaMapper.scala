@@ -84,23 +84,23 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
 
   type RealType = A
 
-  def beforeValidation: List[A => Any] = Nil
-  def beforeValidationOnCreate: List[A => Any] = Nil
-  def beforeValidationOnUpdate: List[A => Any] = Nil
-  def afterValidation: List[A => Any] = Nil
-  def afterValidationOnCreate: List[A => Any] = Nil
-  def afterValidationOnUpdate: List[A => Any] = Nil
+  def beforeValidation: List[A => Unit] = Nil
+  def beforeValidationOnCreate: List[A => Unit] = Nil
+  def beforeValidationOnUpdate: List[A => Unit] = Nil
+  def afterValidation: List[A => Unit] = Nil
+  def afterValidationOnCreate: List[A => Unit] = Nil
+  def afterValidationOnUpdate: List[A => Unit] = Nil
 
-  def beforeSave: List[A => Any] = Nil
-  def beforeCreate: List[(A) => Any] = Nil
-  def beforeUpdate: List[(A) => Any] = Nil
+  def beforeSave: List[A => Unit] = Nil
+  def beforeCreate: List[(A) => Unit] = Nil
+  def beforeUpdate: List[(A) => Unit] = Nil
 
-  def afterSave: List[(A) => Any] = Nil
-  def afterCreate: List[(A) => Any] = Nil
-  def afterUpdate: List[(A) => Any] = Nil
+  def afterSave: List[(A) => Unit] = Nil
+  def afterCreate: List[(A) => Unit] = Nil
+  def afterUpdate: List[(A) => Unit] = Nil
 
-  def beforeDelete: List[(A) => Any] = Nil
-  def afterDelete: List[(A) => Any] = Nil
+  def beforeDelete: List[(A) => Unit] = Nil
+  def afterDelete: List[(A) => Unit] = Nil
 
   /**
    * If there are model-specific validations to perform, override this
