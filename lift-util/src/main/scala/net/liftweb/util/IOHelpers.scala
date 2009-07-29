@@ -1,7 +1,7 @@
 package net.liftweb.util
 
 /*
- * Copyright 2006-2008 WorldWide Conferencing, LLC
+ * Copyright 2006-2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -101,7 +101,7 @@ trait IoHelpers {
   /**
    * Executes by-name function f and then closes the Cloaseables parameters
    */
-  def doClose[T](is: java.io.Closeable*)(f : => T): T = {
+  def doClose[T](is: _root_.java.io.Closeable*)(f : => T): T = {
     try {
       f
     } finally {

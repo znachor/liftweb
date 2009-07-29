@@ -1,9 +1,9 @@
 package net.liftweb.util
 
-import java.lang.ref.{ReferenceQueue,SoftReference};
-import java.util._
-import java.util.concurrent.locks._
-import net.liftweb.util._
+import _root_.java.lang.ref.{ReferenceQueue,SoftReference};
+import _root_.java.util._
+import _root_.java.util.concurrent.locks._
+import _root_.net.liftweb.util._
 import Map._
 import Helpers._
 import ActorPing._

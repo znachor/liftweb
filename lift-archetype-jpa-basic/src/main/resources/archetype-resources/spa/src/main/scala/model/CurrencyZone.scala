@@ -15,9 +15,9 @@
  */
 package ${package}.model
 
-import java.util.Currency;
-import java.util.Locale;
-import java.text.NumberFormat;
+import _root_.java.util.Currency
+import _root_.java.util.Locale
+import _root_.java.text.NumberFormat
 
 /* currency factory*/
 abstract class CurrencyZone {
@@ -40,7 +40,7 @@ abstract class CurrencyZone {
     def -(that: Currency): Currency = this - that
 
     def /(that: Currency): Currency =
-    make(new BigDecimal(this.amount.bigDecimal.divide(that.amount.bigDecimal, scale, java.math.BigDecimal.ROUND_HALF_UP)) )
+    make(new BigDecimal(this.amount.bigDecimal.divide(that.amount.bigDecimal, scale, _root_.java.math.BigDecimal.ROUND_HALF_UP)) )
 
     override def toString = format("", numberOfFractionDigits)
 

@@ -1164,7 +1164,7 @@ object TemplateFinder {
       }
   }
 
-  import java.util.Locale
+  import _root_.java.util.Locale
 
   /**
    * Given a list of paths (e.g. List("foo", "index")),

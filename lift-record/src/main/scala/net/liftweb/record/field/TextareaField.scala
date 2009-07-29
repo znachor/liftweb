@@ -60,8 +60,8 @@ class TextareaField[OwnerType <: Record[OwnerType]](rec: OwnerType, maxLength: I
 
 }
 
-import java.sql.{ResultSet, Types}
-import net.liftweb.mapper.{DriverType}
+import _root_.java.sql.{ResultSet, Types}
+import _root_.net.liftweb.mapper.{DriverType}
 
 /**
  * A string field holding DB related logic

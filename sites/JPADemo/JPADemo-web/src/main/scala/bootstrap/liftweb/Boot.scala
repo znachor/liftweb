@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 WorldWide Conferencing, LLC
+ * Copyright 2008-2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,15 +15,15 @@
  */
 package bootstrap.liftweb
 
-import java.util.Locale
+import _root_.java.util.Locale
 
-import javax.servlet.http.HttpServletRequest
+import _root_.javax.servlet.http.HttpServletRequest
 
-import net.liftweb.util.{Box,Empty,Full,LoanWrapper,LogBoot}
-import net.liftweb.http._
-import net.liftweb.sitemap._
-import net.liftweb.sitemap.Loc._
-import net.liftweb.jpademo.model._
+import _root_.net.liftweb.util.{Box,Empty,Full,LoanWrapper,LogBoot}
+import _root_.net.liftweb.http._
+import _root_.net.liftweb.sitemap._
+import _root_.net.liftweb.sitemap.Loc._
+import _root_.net.liftweb.jpademo.model._
 import S.?
 
 /**

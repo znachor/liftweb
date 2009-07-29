@@ -13,9 +13,9 @@
 
 package net.liftweb.record.field
 
-import scala.xml._
-import net.liftweb.util._
-import net.liftweb.http.{S, SHtml, FieldError}
+import _root_.scala.xml._
+import _root_.net.liftweb.util._
+import _root_.net.liftweb.http.{S, SHtml, FieldError}
 import _root_.java.util.{Locale}
 import S._
 import Helpers._
@@ -56,8 +56,8 @@ class LocaleField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends String
   }
 }
 
-import java.sql.{ResultSet, Types}
-import net.liftweb.mapper.{DriverType}
+import _root_.java.sql.{ResultSet, Types}
+import _root_.net.liftweb.mapper.{DriverType}
 
 class DBLocaleField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends LocaleField(rec)
   with JDBCFieldFlavor[String] {

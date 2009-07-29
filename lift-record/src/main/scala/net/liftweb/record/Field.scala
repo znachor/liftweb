@@ -204,7 +204,7 @@ trait Field[ThisType, OwnerType <: Record[OwnerType]] extends OwnedField[OwnerTy
   }
 }
 
-import java.sql.{ResultSet, Types}
+import _root_.java.sql.{ResultSet, Types}
 import net.liftweb.mapper.{DriverType}
 
 /**

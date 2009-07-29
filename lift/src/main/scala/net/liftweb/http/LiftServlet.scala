@@ -466,13 +466,13 @@ class LiftServlet extends HttpServlet {
             val ba = new Array[Byte](8192)
             val os = response.getOutputStream
             stream match {
-              case jio: java.io.InputStream => len = jio.read(ba)
+              case jio: _root_.java.io.InputStream => len = jio.read(ba)
               case stream => len = stream.read(ba)
             }
             while (len >= 0) {
               if (len > 0) os.write(ba, 0, len)
               stream match {
-                case jio: java.io.InputStream => len = jio.read(ba)
+                case jio: _root_.java.io.InputStream => len = jio.read(ba)
                 case stream => len = stream.read(ba)
               }
             }
@@ -482,7 +482,7 @@ class LiftServlet extends HttpServlet {
           }
       }
     } catch {
-      case e: java.io.IOException => // ignore IO exceptions... they happen
+      case e: _root_.java.io.IOException => // ignore IO exceptions... they happen
     }
 
     LiftRules.afterSend.toList.foreach(f => tryo(f(resp, response, header, request)))

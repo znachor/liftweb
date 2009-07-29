@@ -81,7 +81,7 @@ object Mailer {
     case null => "localhost"
     case s => s
   }
-  import java.util.Properties
+  import _root_.java.util.Properties
 
   def buildProps: Properties = {
     val p = System.getProperties.clone.asInstanceOf[Properties]

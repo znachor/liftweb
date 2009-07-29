@@ -15,10 +15,10 @@
  */
 package ${package}.model
 
-import java.util.Date
+import _root_.java.util.Date
 
-import javax.persistence._
-import org.hibernate.annotations.Type
+import _root_.javax.persistence._
+import _root_.org.hibernate.annotations.Type
 
 
 /**

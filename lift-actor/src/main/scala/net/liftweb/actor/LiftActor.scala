@@ -31,7 +31,7 @@ object LAScheduler {
   @volatile
   var createExecutor: () => ILAExecute = () => {
     new ILAExecute {
-      import java.util.concurrent.{Executors, Executor}
+      import _root_.java.util.concurrent.{Executors, Executor}
 
       private val es: Executor = Executors.newCachedThreadPool()
 

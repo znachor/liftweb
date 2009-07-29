@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 WorldWide Conferencing, LLC
+ * Copyright 2008-2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package net.liftweb.jpademo.model
 
-import javax.persistence._
+import _root_.javax.persistence._
 
 /**
   An author is someone who writes books.
@@ -30,5 +30,5 @@ class Author {
   var name : String = ""
 
   @OneToMany(){val mappedBy = "author", val targetEntity = classOf[Book]}
-  var books : java.util.Set[Book] = new java.util.HashSet[Book]()
+  var books : _root_.java.util.Set[Book] = new _root_.java.util.HashSet[Book]()
 }

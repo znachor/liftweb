@@ -32,7 +32,7 @@ object XmlParseSpecs extends Specification {
         <lift:Menu.builder  li_path:class="p" li_item:class="i"/>
       </lift:surround>
 
-      import java.io.ByteArrayInputStream
+      import _root_.java.io.ByteArrayInputStream
       val bis = new ByteArrayInputStream(actual.toString.getBytes("UTF-8"))
       val parsed = PCDataXmlParser(bis).open_!
       parsed must ==/(expected)

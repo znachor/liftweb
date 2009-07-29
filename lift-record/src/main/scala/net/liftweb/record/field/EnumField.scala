@@ -91,8 +91,8 @@ class EnumField[OwnerType <: Record[OwnerType], ENUM <: Enumeration](rec: OwnerT
 
 }
 
-import java.sql.{ResultSet, Types}
-import net.liftweb.mapper.{DriverType}
+import _root_.java.sql.{ResultSet, Types}
+import _root_.net.liftweb.mapper.{DriverType}
 
 /**
  * An enum field holding DB related logic

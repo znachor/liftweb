@@ -16,10 +16,10 @@
 
 package net.liftweb.transaction
 
-import javax.persistence.{EntityManager, EntityManagerFactory}
-import javax.transaction.{Transaction, Status, TransactionManager}
-import net.liftweb.util.Log
-import org.scala_libs.jpa.{ScalaEntityManager, ScalaEMFactory}
+import _root_.javax.persistence.{EntityManager, EntityManagerFactory}
+import _root_.javax.transaction.{Transaction, Status, TransactionManager}
+import _root_.net.liftweb.util.Log
+import _root_.org.scala_libs.jpa.{ScalaEntityManager, ScalaEMFactory}
 /**
  * Base monad for the transaction monad implementations.
  *

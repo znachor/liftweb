@@ -15,14 +15,14 @@
  */
 package ${package}.model
 
-import java.io.Serializable
-import java.sql.PreparedStatement
-import java.sql.ResultSet
-import java.sql.SQLException
-import java.sql.Types
+import _root_.java.io.Serializable
+import _root_.java.sql.PreparedStatement
+import _root_.java.sql.ResultSet
+import _root_.java.sql.SQLException
+import _root_.java.sql.Types
 
-import org.hibernate.HibernateException
-import org.hibernate.usertype.UserType
+import _root_.org.hibernate.HibernateException
+import _root_.org.hibernate.usertype.UserType
 
 /**
  * Helper class to translate money amount for hibernate

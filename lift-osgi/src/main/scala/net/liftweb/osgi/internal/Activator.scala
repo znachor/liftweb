@@ -16,17 +16,17 @@
 
 package net.liftweb.osgi.internal
 
-import java.util.{List => JList}
-import java.util.concurrent.atomic.AtomicReference
-import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
-import net.liftweb.http.LiftFilter
-import net.liftweb.util.{Box, ClassHelpers, Log, Slf4jLogBoot}
-import org.ops4j.pax.swissbox.extender._
-import org.ops4j.pax.web.service.WebContainer
-import org.osgi.framework.{Bundle, BundleActivator, BundleContext}
-import org.osgi.service.http.HttpContext
-import org.scalamodules.core.{Adding, Modified, Removed}
-import org.scalamodules.core.RichBundleContext.toRichBundleContext
+import _root_.java.util.{List => JList}
+import _root_.java.util.concurrent.atomic.AtomicReference
+import _root_.javax.servlet.http.{HttpServletRequest, HttpServletResponse}
+import _root_.net.liftweb.http.LiftFilter
+import _root_.net.liftweb.util.{Box, ClassHelpers, Log, Slf4jLogBoot}
+import _root_.org.ops4j.pax.swissbox.extender._
+import _root_.org.ops4j.pax.web.service.WebContainer
+import _root_.org.osgi.framework.{Bundle, BundleActivator, BundleContext}
+import _root_.org.osgi.service.http.HttpContext
+import _root_.org.scalamodules.core.{Adding, Modified, Removed}
+import _root_.org.scalamodules.core.RichBundleContext.toRichBundleContext
 
 /**
  * <p>This activator enables OSGi support for Lift.</p>

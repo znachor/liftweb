@@ -175,8 +175,8 @@ object Props {
    * The map of key/value pairs retrieved from the property file.
    */
   lazy val props: Map[String, String] = {
-    import java.io.{ByteArrayInputStream}
-    import java.util.InvalidPropertiesFormatException
+    import _root_.java.io.{ByteArrayInputStream}
+    import _root_.java.util.InvalidPropertiesFormatException
     import _root_.java.util.{Map => JMap}
 
     // find the first property file that is available

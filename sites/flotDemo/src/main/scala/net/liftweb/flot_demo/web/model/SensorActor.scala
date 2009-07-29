@@ -104,7 +104,7 @@ class AcumSamplesActor (max : Int) extends Actor {
 
 // simulates a sensor sending every 2 seconds a sample with 3 measurements:
 
-object Sensor extends java.lang.Runnable {
+object Sensor extends _root_.java.lang.Runnable {
   val acum = new AcumSamplesActor (10)
 
   def start () = {
@@ -116,7 +116,7 @@ object Sensor extends java.lang.Runnable {
   override def run () : Unit = {
     while (true)
     {
-      val time = new java.util.Date ().getTime ()
+      val time = new _root_.java.util.Date ().getTime ()
 
       val sinus = Math.sin (time)
       val cosinus = Math.cos (time)

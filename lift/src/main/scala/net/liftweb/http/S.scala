@@ -1490,7 +1490,7 @@ object S extends HasParams {
    * does not exist, the DNS name or IP address of the server.
    */
   def hostName: String = servletRequest.map(_.getServerName) openOr {
-    import java.net._
+    import _root_.java.net._
     InetAddress.getLocalHost.getHostName
   }
 
@@ -1627,7 +1627,7 @@ object S extends HasParams {
     val bump: Long = ((_formGroup.is openOr 0) + 1000L) * 10000L
     val num: Int = formItemNumber.is
     formItemNumber.set(num + 1)
-    import java.text._
+    import _root_.java.text._
     val prefix: String = new DecimalFormat("00000000000000000").format(bump + num)
     "f"+prefix+"_"+Helpers.hashHex((new Exception).getStackTrace.toList.take(10).map(_.toString).mkString(","))
   } else {

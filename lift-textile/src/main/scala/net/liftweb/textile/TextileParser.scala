@@ -147,7 +147,7 @@ object TextileParser {
        *
        * @author Martin Odersky
        */
-  private case class MyOffsetPosition(source: java.lang.CharSequence, offset: Int, index: Array[Int]) extends Position {
+  private case class MyOffsetPosition(source: _root_.java.lang.CharSequence, offset: Int, index: Array[Int]) extends Position {
 	
 /*	  /** An index that contains all line starts, including first line, and eof */
 	  private lazy val index: Array[Int] = {

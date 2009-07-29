@@ -1,7 +1,7 @@
 package net.liftweb.transaction.atomikos
 
 
-import javax.transaction.{TransactionManager, SystemException}
+import _root_.javax.transaction.{TransactionManager, SystemException}
 
 /**
  * Atomikos implementation of the transaction service trait.

@@ -95,8 +95,8 @@ class DecimalField[OwnerType <: Record[OwnerType]](rec: OwnerType, val context :
   protected def setAll (in : BigDecimal) = this.set(new BigDecimal(in.bigDecimal.setScale(scale, context.getRoundingMode)))
 }
 
-import java.sql.{ResultSet, Types}
-import net.liftweb.mapper.{DriverType}
+import _root_.java.sql.{ResultSet, Types}
+import _root_.net.liftweb.mapper.{DriverType}
 
 /**
  * An Decimal field holding DB related logic

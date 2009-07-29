@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 WorldWide Conferencing, LLC
+ * Copyright 2008-2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ object BookOps {
 }
 
 class BookOps {
-  val formatter = new java.text.SimpleDateFormat("yyyyMMdd")
+  val formatter = new _root_.java.text.SimpleDateFormat("yyyyMMdd")
 
   def list (xhtml : NodeSeq) : NodeSeq = {
     val books = Model.createNamedQuery[Book]("findAllBooks").getResultList()

@@ -14,7 +14,7 @@ package net.liftweb.util
  */
 
 import _root_.scala.xml.{NodeSeq}
-import java.util.{Locale}
+import _root_.java.util.{Locale}
 
 trait TemplateCache[K, V] {
 
