@@ -66,14 +66,24 @@ abstract class DriverType(val name : String) {
    */
   def defaultSchemaName : Box[String] = Empty
 
+  type TypeMapFunc = PartialFunction[Int,Int]
   /**
    * Allow the driver to do specific remapping of column types for cases
-   * where not all types are supported. Classes that override this
-   * should remember to provide a default fall-through for columns types that
-   * don't need to be remapped.
+   * where not all types are supported. Classes that want to do custom type
+   * mapping for columns should override the customColumnTypeMap method.
    */
-  def columTypeMap : PartialFunction[Int,Int] = {
-    case x => x
+  def columTypeMap : TypeMapFunc = 
+    customColumnTypeMap orElse {
+      case x => x
+    }
+
+  /**
+   * Allows the Vendor-specific Driver to do custom type mapping for a particular
+   * column type.
+   */
+  protected def customColumnTypeMap : TypeMapFunc = new TypeMapFunc {
+    def apply (in : Int) = -1
+    def isDefinedAt (in : Int) = false
   }
 }
 
@@ -197,9 +207,8 @@ object OracleDriver extends DriverType("Oracle") {
   def doubleColumnType = "NUMBER"
 
   import _root_.java.sql.Types
-  override def columTypeMap = {
+  override def customColumnTypeMap = {
     case Types.BOOLEAN => { Log.debug("remapping boolean to Int"); Types.INTEGER}
-    case x => x
   }
 }
 
