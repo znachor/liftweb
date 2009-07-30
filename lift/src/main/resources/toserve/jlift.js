@@ -232,11 +232,13 @@
 
 		formToJSON : function(formId) {
 			qs = jQuery("#" + formId).serializeArray();
-			json = "";
-            lift$.foreach(qs, function(e){
-              json += "\"" + e.name + "\":\"" + e.value + "\",";
-            });
-			return JSON.parse("{" + json + "}");
+            ret = {};
+
+            for (var i in qs) {
+              var obj = qs[i];
+              ret[obj.name] = obj.value;
+            }
+			return ret;
 		}
 	};
 
