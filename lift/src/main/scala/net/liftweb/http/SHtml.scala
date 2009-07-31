@@ -58,6 +58,45 @@ object SHtml {
   def ajaxCall(jsCalcValue: JsExp, jsContext: JsContext, func: String => JsCmd): (String, JsExp) = 
     ajaxCall_*(jsCalcValue, jsContext, SFuncHolder(func))
 
+  /**
+   * Build a JavaScript function that will perform an AJAX call based on a value calculated in JavaScript
+   * @param jsCalcValue -- the JavaScript to calculate the value to be sent to the server
+   * @param func -- the function to call when the data is sent
+   *
+   * @return the JavaScript that makes the call
+   */
+  def jsonCall(jsCalcValue: JsExp, func: Any => JsCmd): (String, JsExp) =
+  jsonCall_*(jsCalcValue, SFuncHolder(s => JSONParser.parse(s).map(func) openOr Noop))
+
+  def jsonCall(jsCalcValue: JsExp, jsContext: JsContext, func: Any => JsCmd): (String, JsExp) =
+    jsonCall_*(jsCalcValue, jsContext, SFuncHolder(s => JSONParser.parse(s).map(func) openOr Noop))
+
+
+  /**
+   * Build a JavaScript function that will perform an AJAX call based on a value calculated in JavaScript
+   * @param jsCalcValue -- the JavaScript to calculate the value to be sent to the server
+   * @param func -- the function to call when the data is sent
+   *
+   * @return the JavaScript that makes the call
+   */
+  private def jsonCall_*(jsCalcValue: JsExp, func: AFuncHolder): (String, JsExp) =
+  fmapFunc(func)(name =>
+    (name, makeAjaxCall(JsRaw("'"+name+"=' + JSON.stringify("+jsCalcValue.toJsCmd+")")))) // FIXME
+
+  /**
+   * Build a JavaScript function that will perform an AJAX call based on a value calculated in JavaScript
+   * @param jsCalcValue -- the JavaScript to calculate the value to be sent to the server
+   * @param ajaxContext -- the context defining the javascript callback functions and the response type
+   * @param func -- the function to call when the data is sent
+   *
+   * @return the JavaScript that makes the call
+   */
+  private def jsonCall_*(jsCalcValue: JsExp,
+                         ajaxContext: AjaxContext,
+                         func: AFuncHolder): (String, JsExp) =
+  fmapFunc(func)(name =>
+    (name, makeAjaxCall(JsRaw("'"+name+"=' + JSON.stringify("+jsCalcValue.toJsCmd+")"), ajaxContext)))
+
   def fajaxCall[T](jsCalcValue: JsExp, func: String => JsCmd)(f: (String, JsExp) => T): T = {
     val (name, js) = ajaxCall(jsCalcValue, func)
     f(name, js)
@@ -459,7 +498,13 @@ object SHtml {
   fmapFunc(func)(funcName =>
     attrs.foldLeft(<input type={name} name={funcName}/>)(_ % _))
 
-  def text_*(value: String, func: AFuncHolder, attrs: (String, String)*): Elem =
+   def text_*(value: String, func: AFuncHolder, attrs: (String, String)*): Elem =
+     text_*(value, func, Empty, attrs :_*)
+
+  def text_*(value: String, func: AFuncHolder, ajaxTest: String => JsCmd, attrs: (String, String)*): Elem =
+     text_*(value, func, Full(ajaxTest), attrs :_*)
+
+  def text_*(value: String, func: AFuncHolder, ajaxTest: Box[String => JsCmd], attrs: (String, String)*): Elem =
   makeFormElement("text", func, attrs :_*) % new UnprefixedAttribute("value", Text(value), Null)
 
   def password_*(value: String, func: AFuncHolder, attrs: (String, String)*): Elem =
