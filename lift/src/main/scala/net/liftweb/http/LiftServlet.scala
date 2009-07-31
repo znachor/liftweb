@@ -263,9 +263,13 @@ class LiftServlet extends HttpServlet {
           liftSession.updateFuncByOwner(RenderVersion.get, now)
         }
 
+        /*
         import js.JsCmds._
         if (found == 0) Full(JavaScriptResponse(RedirectTo("/")))
         else Full(JavaScriptResponse(js.JsCmds.Noop))
+        */
+
+        JavaScriptResponse(js.JsCmds.Noop)
 
       case _ =>
         try {

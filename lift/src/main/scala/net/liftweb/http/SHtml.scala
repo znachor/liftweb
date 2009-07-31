@@ -41,9 +41,9 @@ object SHtml {
    */
   def makeAjaxCall(in: JsExp, context: AjaxContext): JsExp = new JsExp {
     def toJsCmd = "liftAjax.lift_ajaxHandler("+ in.toJsCmd+", " + (context.success openOr "null") + 
-      ", " + (context.failure openOr "null") +
-      ", " + context.responseType.toString.encJs +
-      ")"
+    ", " + (context.failure openOr "null") +
+    ", " + context.responseType.toString.encJs +
+    ")"
   }
 
   /**
@@ -56,7 +56,7 @@ object SHtml {
   def ajaxCall(jsCalcValue: JsExp, func: String => JsCmd): (String, JsExp) = ajaxCall_*(jsCalcValue, SFuncHolder(func))
 
   def ajaxCall(jsCalcValue: JsExp, jsContext: JsContext, func: String => JsCmd): (String, JsExp) = 
-    ajaxCall_*(jsCalcValue, jsContext, SFuncHolder(func))
+  ajaxCall_*(jsCalcValue, jsContext, SFuncHolder(func))
 
   /**
    * Build a JavaScript function that will perform an AJAX call based on a value calculated in JavaScript
@@ -69,7 +69,7 @@ object SHtml {
   jsonCall_*(jsCalcValue, SFuncHolder(s => JSONParser.parse(s).map(func) openOr Noop))
 
   def jsonCall(jsCalcValue: JsExp, jsContext: JsContext, func: Any => JsCmd): (String, JsExp) =
-    jsonCall_*(jsCalcValue, jsContext, SFuncHolder(s => JSONParser.parse(s).map(func) openOr Noop))
+  jsonCall_*(jsCalcValue, jsContext, SFuncHolder(s => JSONParser.parse(s).map(func) openOr Noop))
 
 
   /**
@@ -81,7 +81,7 @@ object SHtml {
    */
   private def jsonCall_*(jsCalcValue: JsExp, func: AFuncHolder): (String, JsExp) =
   fmapFunc(func)(name =>
-    (name, makeAjaxCall(JsRaw("'"+name+"=' + JSON.stringify("+jsCalcValue.toJsCmd+")")))) // FIXME
+    (name, makeAjaxCall(JsRaw("'"+name+"=' + JSON.stringify("+jsCalcValue.toJsCmd+")"))))
 
   /**
    * Build a JavaScript function that will perform an AJAX call based on a value calculated in JavaScript
@@ -498,14 +498,21 @@ object SHtml {
   fmapFunc(func)(funcName =>
     attrs.foldLeft(<input type={name} name={funcName}/>)(_ % _))
 
-   def text_*(value: String, func: AFuncHolder, attrs: (String, String)*): Elem =
-     text_*(value, func, Empty, attrs :_*)
+  def text_*(value: String, func: AFuncHolder, attrs: (String, String)*): Elem =
+  text_*(value, func, Empty, attrs :_*)
 
   def text_*(value: String, func: AFuncHolder, ajaxTest: String => JsCmd, attrs: (String, String)*): Elem =
-     text_*(value, func, Full(ajaxTest), attrs :_*)
+  text_*(value, func, Full(ajaxTest), attrs :_*)
 
+  private def buildOnBlur(bf: Box[String => JsCmd]): MetaData = bf match {
+    case Full(func) =>
+      new UnprefixedAttribute("onblur", Text(ajaxCall(JsRaw("this.value"),func)._2.toJsCmd), Null) // HERE
+
+    case _ => Null
+  }
+  
   def text_*(value: String, func: AFuncHolder, ajaxTest: Box[String => JsCmd], attrs: (String, String)*): Elem =
-  makeFormElement("text", func, attrs :_*) % new UnprefixedAttribute("value", Text(value), Null)
+  makeFormElement("text", func, attrs :_*) % new UnprefixedAttribute("value", Text(value), Null) % buildOnBlur(ajaxTest)
 
   def password_*(value: String, func: AFuncHolder, attrs: (String, String)*): Elem =
   makeFormElement("password", func, attrs :_*) % ("value" -> value)
@@ -523,7 +530,14 @@ object SHtml {
   }
 
   def text(value: String, func: String => Any, attrs: (String, String)*): Elem =
-  makeFormElement("text", SFuncHolder(func), attrs :_*) % new UnprefixedAttribute("value", Text(value), Null)
+  text_*(value, SFuncHolder(func), attrs :_*)
+
+  def text(value: String, func: String => Any, ajaxTest: String => JsCmd, attrs: (String, String)*): Elem =
+  text_*(value, SFuncHolder(func), ajaxTest, attrs :_*)
+
+  def text(value: String, func: String => Any, ajaxTest: Box[String => JsCmd], attrs: (String, String)*): Elem =
+  text_*(value, SFuncHolder(func), ajaxTest, attrs :_*)
+
 
   def password(value: String, func: String => Any, attrs: (String, String)*): Elem =
   makeFormElement("password", SFuncHolder(func), attrs :_*) % new UnprefixedAttribute("value", Text(value), Null)
