@@ -256,7 +256,7 @@ class LiftServlet extends HttpServlet {
 
     LiftRules.cometLogger.debug("AJAX Request: "+liftSession.uniqueId+" "+requestState.params)
     tryo{LiftSession.onBeginServicing.foreach(_(liftSession, requestState))}
-    val ret = requestState.param("__lift__GC") match {
+    val ret: Box[LiftResponse] = requestState.param("__lift__GC") match {
       case Full(_) =>
         val now = millis
         val found: Int = liftSession.synchronized {
@@ -269,7 +269,7 @@ class LiftServlet extends HttpServlet {
         else Full(JavaScriptResponse(js.JsCmds.Noop))
         */
 
-        JavaScriptResponse(js.JsCmds.Noop)
+        Full(JavaScriptResponse(js.JsCmds.Noop))
 
       case _ =>
         try {
