@@ -69,5 +69,32 @@ object JSONSpec extends Specification {
       val p2 = JSONParser.parse(longArray)
       p2.isDefined must be(true)
     }
+
+    "Parse doubles" in {
+      val p2 = JSONParser.parse("51.348484")
+      p2.isDefined must be(true)
+      p2.open_! must_== 51.348484
+    }
+
+    "Parse negative doubles" in {
+      val p2 = JSONParser.parse("-51.348484")
+      p2.isDefined must be(true)
+      p2.open_! must_== -51.348484
+    }
+
+     "Parse negative longs" in {
+      val p2 = JSONParser.parse("-517272833222")
+      p2.isDefined must be(true)
+      p2.open_! must_== -517272833222L
+    }
+
+
+    "complex JSON objects" in {
+      val p2 = JSONParser.parse(
+    """{"command":"setPoint","params":{"mf":
+51.3256123,"$a":-0.6379592,"x":-0.6379592,"y":51.3256123}}""")
+      p2.isDefined must be(true)
+      
+    }
   }
 }

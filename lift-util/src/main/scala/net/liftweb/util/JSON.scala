@@ -1,7 +1,7 @@
 package net.liftweb.util;
 
 /*
- * Copyright 2008 WorldWide Conferencing, LLC
+ * Copyright 2008-2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,7 +84,7 @@ object JSONParser extends SafeSeqParser with ImplicitConversions {
 
   lazy val number: Parser[Double] =  intFracExp | intFrac | intExp |  manyCharInt // (anInt ^^ {case n => n.doubleValue})
 
-  lazy val exp: Parser[Int] = e ~ digits ^^ {case x ~ d => d.mkString("").toInt * x}
+  lazy val exp: Parser[Int] = e ~ digits ^^ {case x ~ d => d.mkString.toInt * x}
 
   lazy val e = ('e' ~ '-' ^^ {case _ => -1}) | ('e' ~ '+' ^^ {case _ => 1}) | ('e' ^^ {case _ => 1}) |
   ('E' ~ '-' ^^ {case _ => -1}) | ('E' ~ '+' ^^ {case _ => 1}) | ('E' ^^ {case _ => 1})
@@ -95,15 +95,15 @@ object JSONParser extends SafeSeqParser with ImplicitConversions {
 
   lazy val intExp = anInt ~ exp ^^ {case i ~ e => ((i.toString+"e"+e).toDouble)}
 
-  lazy val anInt: Parser[Long] = (digit19 ~ digits ^^ {case x ~ xs => (x :: xs).mkString("").toLong}) |
+  lazy val anInt: Parser[Long] = (digit19 ~ digits ^? {case x ~ xs if xs.length < 12 => (x :: xs).mkString("").toLong}) |
   (digit ^^ {case x => x.toString.toLong}) |
-  ('-' ~ digit19 ~ digits ^^ {case _ ~ x ~ xs => ((x :: xs).mkString("").toLong * -1L)}) |
+  ('-' ~ digit19 ~ digits ^? {case _ ~ x ~ xs if xs.length < 12 => ((x :: xs).mkString("").toLong * -1L)}) |
   ('-' ~ digit ^^ {case _ ~ x => x.toString.toLong * -1L})
 
   lazy val manyCharInt: Parser[Double] = (digit19 ~ digits ^^ {case x ~ xs => (x :: xs).mkString.toDouble}) |
   (digit ^^ {case x => x.toString.toDouble}) |
-  ('-' ~ digit19 ~ digits ^^ {case x ~ xs => ((x :: xs).mkString.toDouble * -1d)}) |
-  ('-' ~ digit ^^ {case x => x.toString.toDouble * -1d})
+  ('-' ~ digit19 ~ digits ^^ {case  _ ~ x ~ xs => ((x :: xs).mkString.toDouble * -1d)}) |
+  ('-' ~ digit ^^ {case _ ~ x => x.toString.toDouble * -1d})
 
   lazy val digit19 = elem("digit", c => c >= '1' && c <= '9')
 
