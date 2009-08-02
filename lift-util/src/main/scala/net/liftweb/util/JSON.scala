@@ -82,7 +82,14 @@ object JSONParser extends SafeSeqParser with ImplicitConversions {
                              'u' ~> repN(4, hexDigit) ^^ {case dg => Integer.parseInt(dg.mkString, 16).toChar})) |
   (elem("any char", c => c != '\'' && c >= ' '))
 
-  lazy val number: Parser[Double] =  intFracExp | intFrac | intExp |  manyCharInt // (anInt ^^ {case n => n.doubleValue})
+  lazy val number: Parser[Double] =
+  ('-' ~> intFracExp ^^ (d => d * -1D)) |
+  intFracExp |
+  ('-' ~> intFrac ^^ (_ * -1D)) |
+  intFrac |
+  ('-' ~> intExp ^^ (_ * -1D)) |
+  intExp |
+  manyCharInt // (anInt ^^ {case n => n.doubleValue})
 
   lazy val exp: Parser[Int] = e ~ digits ^^ {case x ~ d => d.mkString.toInt * x}
 
@@ -97,13 +104,13 @@ object JSONParser extends SafeSeqParser with ImplicitConversions {
 
   lazy val anInt: Parser[Long] = (digit19 ~ digits ^? {case x ~ xs if xs.length < 12 => (x :: xs).mkString("").toLong}) |
   (digit ^^ {case x => x.toString.toLong}) |
-  ('-' ~ digit19 ~ digits ^? {case _ ~ x ~ xs if xs.length < 12 => ((x :: xs).mkString("").toLong * -1L)}) |
-  ('-' ~ digit ^^ {case _ ~ x => x.toString.toLong * -1L})
+  ('-' ~> digit19 ~ digits ^? {case x ~ xs if xs.length < 12 => ((x :: xs).mkString("").toLong * -1L)}) |
+  ('-' ~> digit ^^ {case x => x.toString.toLong * -1L})
 
   lazy val manyCharInt: Parser[Double] = (digit19 ~ digits ^^ {case x ~ xs => (x :: xs).mkString.toDouble}) |
   (digit ^^ {case x => x.toString.toDouble}) |
-  ('-' ~ digit19 ~ digits ^^ {case  _ ~ x ~ xs => ((x :: xs).mkString.toDouble * -1d)}) |
-  ('-' ~ digit ^^ {case _ ~ x => x.toString.toDouble * -1d})
+  ('-' ~> digit19 ~ digits ^^ {case  x ~ xs => ((x :: xs).mkString.toDouble * -1d)}) |
+  ('-' ~> digit ^^ {case x => x.toString.toDouble * -1d})
 
   lazy val digit19 = elem("digit", c => c >= '1' && c <= '9')
 
