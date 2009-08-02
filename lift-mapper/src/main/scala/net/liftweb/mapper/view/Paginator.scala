@@ -38,10 +38,13 @@ trait PaginatedSnippet[T <: Mapper[T]] extends ModelSnippet[T] {
  * @author nafg
  */
 class Paginator[T <: Mapper[T]](val meta: MetaMapper[T], val snippet: ModelSnippet[T],
-                                initialSort: OrderBy[T, _],
+                                initialSort: MappedField[_, T],
                                 val headers: (String, MappedField[_, T])*) {
-  @deprecated def this(meta: MetaMapper[T], snippet: ModelSnippet[T], headers: (String,MappedField[_,T])) =
+  @deprecated def this(meta: MetaMapper[T],
+		snippet: ModelSnippet[T],
+		headers: (String,MappedField[_, T])) = {
     this(meta, snippet, null, headers)
+  }
   /**
    * Override this to specify unchanging QueryParams to query the listing
    */
@@ -61,7 +64,7 @@ class Paginator[T <: Mapper[T]](val meta: MetaMapper[T], val snippet: ModelSnipp
   /**
    * 
    */
-  var sort: OrderBy[T, _] = initialSort
+  var sort: OrderBy[T, _] = OrderBy(initialSort, Ascending)
   
   /**
    * Returns the items on the current page. Use this in
