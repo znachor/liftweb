@@ -81,7 +81,7 @@ object SHtml {
    */
   private def jsonCall_*(jsCalcValue: JsExp, func: AFuncHolder): (String, JsExp) =
   fmapFunc(func)(name =>
-    (name, makeAjaxCall(JsRaw("'"+name+"=' + JSON.stringify("+jsCalcValue.toJsCmd+")"))))
+    (name, makeAjaxCall(JsRaw("'"+name+"=' + encodeURIComponent(JSON.stringify("+jsCalcValue.toJsCmd+"))"))))
 
   /**
    * Build a JavaScript function that will perform an AJAX call based on a value calculated in JavaScript
@@ -95,7 +95,7 @@ object SHtml {
                          ajaxContext: AjaxContext,
                          func: AFuncHolder): (String, JsExp) =
   fmapFunc(func)(name =>
-    (name, makeAjaxCall(JsRaw("'"+name+"=' + JSON.stringify("+jsCalcValue.toJsCmd+")"), ajaxContext)))
+    (name, makeAjaxCall(JsRaw("'"+name+"=' + encodeURIComponent(JSON.stringify("+jsCalcValue.toJsCmd+"))"), ajaxContext)))
 
   def fajaxCall[T](jsCalcValue: JsExp, func: String => JsCmd)(f: (String, JsExp) => T): T = {
     val (name, js) = ajaxCall(jsCalcValue, func)

@@ -97,8 +97,8 @@ object JSONParser extends SafeSeqParser with ImplicitConversions {
 
   lazy val anInt: Parser[Long] = (digit19 ~ digits ^^ {case x ~ xs => (x :: xs).mkString("").toLong}) |
   (digit ^^ {case x => x.toString.toLong}) |
-  ('-' ~ digit19 ~ digits ^^ {case x ~ xs => ((x :: xs).mkString("").toLong * -1L)}) |
-  ('-' ~ digit ^^ {case x => x.toString.toLong * -1L})
+  ('-' ~ digit19 ~ digits ^^ {case _ ~ x ~ xs => ((x :: xs).mkString("").toLong * -1L)}) |
+  ('-' ~ digit ^^ {case _ ~ x => x.toString.toLong * -1L})
 
   lazy val manyCharInt: Parser[Double] = (digit19 ~ digits ^^ {case x ~ xs => (x :: xs).mkString.toDouble}) |
   (digit ^^ {case x => x.toString.toDouble}) |
