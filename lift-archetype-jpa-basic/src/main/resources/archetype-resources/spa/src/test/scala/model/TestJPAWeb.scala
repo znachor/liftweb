@@ -62,7 +62,7 @@ class TestJPAWeb {
 
     val book = new Book
     book.title = "Huh?"
-    book.published = new java.util.Date
+    book.published = new _root_.java.util.Date
     book.author = author
     book.genre = Genre.Mystery
 

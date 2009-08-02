@@ -14,6 +14,7 @@
     <resource>src/main/webapp/WEB-INF/web.xml</resource>
     <resource>src/main/webapp/templates-hidden/default.html</resource>
     <resource>src/main/webapp/index.html</resource>
+    <resource>src/main/webapp/static/index.html</resource>
   </resources>
   <testSources>
     <source>src/test/scala/AppTest.scala</source>

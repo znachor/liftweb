@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 WorldWide Conferencing, LLC
+ * Copyright 2008-2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ class TestJPAWeb {
 
     val book = new Book
     book.title = "Huh?"
-    book.published = new java.util.Date
+    book.published = new _root_.java.util.Date
     book.author = author
     book.genre = Genre.Mystery
 

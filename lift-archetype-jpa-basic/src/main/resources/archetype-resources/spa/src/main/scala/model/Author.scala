@@ -15,7 +15,7 @@
  */
 package ${package}.model
 
-import javax.persistence._
+import _root_.javax.persistence._
 
 /**
   An author is someone who writes books.
@@ -30,5 +30,5 @@ class Author {
   var name : String = ""
 
   @OneToMany(){val mappedBy = "author", val targetEntity = classOf[Book]}
-  var books : java.util.Set[Book] = new java.util.HashSet[Book]()
+  var books : _root_.java.util.Set[Book] = new _root_.java.util.HashSet[Book]()
 }

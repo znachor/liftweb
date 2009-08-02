@@ -148,7 +148,7 @@ class MappedText[T<:Mapper[T]](val fieldOwner: T) extends MappedField[String, T]
       case null => null
       case s: String => s
       case ba: Array[Byte] => new String(ba, "UTF-8")
-      case clob: java.sql.Clob => clob.getSubString(1,clob.length.toInt)
+      case clob: _root_.java.sql.Clob => clob.getSubString(1,clob.length.toInt)
       case other => other.toString
     }
     f.data() = toSet
@@ -231,7 +231,7 @@ class MappedFakeClob[T<:Mapper[T]](val fieldOwner: T) extends MappedField[String
     val toSet = v match {
       case null => null
       case ba: Array[Byte] => new String(ba, "UTF-8")
-      case clob: java.sql.Clob => clob.getSubString(1,clob.length.toInt)
+      case clob: _root_.java.sql.Clob => clob.getSubString(1,clob.length.toInt)
       case other => other.toString
     }
     f.data() = toSet

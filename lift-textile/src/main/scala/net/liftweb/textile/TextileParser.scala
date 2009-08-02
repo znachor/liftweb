@@ -147,7 +147,7 @@ object TextileParser {
        *
        * @author Martin Odersky
        */
-  private case class MyOffsetPosition(source: java.lang.CharSequence, offset: Int, index: Array[Int]) extends Position {
+  private case class MyOffsetPosition(source: _root_.java.lang.CharSequence, offset: Int, index: Array[Int]) extends Position {
 	
 /*	  /** An index that contains all line starts, including first line, and eof */
 	  private lazy val index: Array[Int] = {
@@ -669,14 +669,42 @@ object TextileParser {
     lazy val quote : Parser[Textile] = formattedLineElem('"', success(Nil)) ^^ flatten4((f, x, y, lst) => Quoted(f, x, lst))
 
     def reduceCharBlocks(in : List[Textile]) : List[Textile] =
-    (in: @unchecked) match {
-      case Nil => Nil
-        // this is now done (hacked) in flattenAndDropLastEOL
-        //        case EOL() :: BOL() :: rest => EOL :: reduceCharBlocks(rest)
-        //        case EOL() :: rest => reduceCharBlocks(rest)
-      case CharBlock(s1) :: CharBlock(s2) :: rest => reduceCharBlocks(CharBlock(s1 + s2) :: rest)
-      case x :: xs => x :: reduceCharBlocks(xs)
-    }
+      {
+	val ret = new scala.collection.mutable.ListBuffer[Textile]
+
+	def dw[A](in: List[A])(f: A => Boolean): List[A] = in match {
+	  case Nil => Nil
+	  case x :: xs if !f(x) => in
+	  case x :: xs => dw(xs)(f)
+	}
+
+	def rcb(in: List[Textile]) {
+	  (in: @unchecked) match {
+	    case Nil => 
+            // this is now done (hacked) in flattenAndDropLastEOL
+            //        case EOL() :: BOL() :: rest => EOL :: reduceCharBlocks(rest)
+            //        case EOL() :: rest => reduceCharBlocks(rest)
+	    case CharBlock(s1) :: CharBlock(s2) :: _ =>
+	      val sb = new StringBuilder
+	    val rest = dw(in) {
+	      case CharBlock(s) =>
+		sb.append(s)
+		true
+	      case _ => false
+	    }
+	    ret += CharBlock(sb.toString)
+	    
+	      rcb(rest)
+	    
+	    case x :: xs => 
+	      ret += x; rcb(xs)
+	  }
+	}
+
+	rcb(in)
+
+	ret.toList
+      }
 
     lazy val charBlock : Parser[Textile] = chrExcept('\n') ^^ {c => CharBlock(c.toString)}
 
@@ -893,7 +921,7 @@ object TextileParser {
     def toHtml = Text("")
   }
 
-  case class CharBlock(s : String) extends Textile {
+  case class CharBlock(s: String) extends Textile {
     def toHtml = Text(s)
   }
 

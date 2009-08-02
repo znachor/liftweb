@@ -36,7 +36,7 @@ object BookOps {
 }
 
 class BookOps {
-  val formatter = new java.text.SimpleDateFormat("yyyyMMdd")
+  val formatter = new _root_.java.text.SimpleDateFormat("yyyyMMdd")
 
   def list (xhtml : NodeSeq) : NodeSeq = {
     val books = Model.createNamedQuery[Book]("findAllBooks").getResultList()

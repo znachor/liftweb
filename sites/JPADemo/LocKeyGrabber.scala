@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 WorldWide Conferencing, LLC
+ * Copyright 2008-2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
  It outputs a list of the localization keys found.
  */
 
-import java.io.{File,FileFilter,FilenameFilter}
+import _root_.java.io.{File,FileFilter,FilenameFilter}
 
 
 import scala.io.Source

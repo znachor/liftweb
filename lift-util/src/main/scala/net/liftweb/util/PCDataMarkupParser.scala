@@ -184,7 +184,7 @@ object PCDataXmlParser {
   }
 
   def apply(in: String): Box[NodeSeq] = {
-    import java.io.ByteArrayInputStream
+    import _root_.java.io.ByteArrayInputStream
     apply(new ByteArrayInputStream(in.getBytes("UTF-8")))
   }
 }

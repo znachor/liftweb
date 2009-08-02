@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 WorldWide Conferencing, LLC
+ * Copyright 2008-2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,14 @@
  */
 package net.liftweb.jpademo.model
 
-import java.io.Serializable
-import java.sql.PreparedStatement
-import java.sql.ResultSet
-import java.sql.SQLException
-import java.sql.Types
+import _root_.java.io.Serializable
+import _root_.java.sql.PreparedStatement
+import _root_.java.sql.ResultSet
+import _root_.java.sql.SQLException
+import _root_.java.sql.Types
 
-import org.hibernate.HibernateException
-import org.hibernate.usertype.UserType
+import _root_.org.hibernate.HibernateException
+import _root_.org.hibernate.usertype.UserType
 
 /**
  * Helper class to translate money amount for hibernate

@@ -129,7 +129,9 @@ object MenuInfo {
        Menu(Loc("ajax form", List("ajax-form"), "AJAX Form")),
        Menu(Loc("js confirm", List("rhodeisland"), "Modal Dialog")),
        Menu(Loc("json", List("json"), "JSON Messaging")),
-       Menu(Loc("json_more", List("json_more"), "More JSON"))) ::
+       Menu(Loc("json_more", List("json_more"), "More JSON")),
+  Menu(Loc("form_ajax", List("form_ajax"), "Ajax and Forms"))
+  ) ::
   Menu(Loc("Persistence", List("persistence"), "Persistence", Unless(() => Props.inGAE, "Disabled for GAE")),
        Menu(Loc("xml fun", List("xml_fun"), "XML Fun", Unless(() => Props.inGAE, "Disabled for GAE"))),
        Menu(Loc("database", List("database"), "Database", Unless(() => Props.inGAE, "Disabled for GAE"))),

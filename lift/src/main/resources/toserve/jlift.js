@@ -231,43 +231,15 @@
 		},
 
 		formToJSON : function(formId) {
-			qs = this.param(jQuery("#" + formId).serializeArray());
-			parts = qs.split("&");
-			json = "";
-			for (i = 0; i < parts.length; i++) {
-				nvp = parts[i].split("=");
-				json += (i > 0) ? "," : "";
-				json += "\"" + nvp[0] + "\": \"" + nvp[1] + "\"";
-			}
-			return JSON.parse("{" + json + "}");
-		},
+			qs = jQuery("#" + formId).serializeArray();
+            ret = {};
 
-		/**
-		 * Inspired from JQuery code but JQuery was deliberately replacing %20
-		 * sequences with + char making it inappropriate in this case.
-		 */
-		param : function(a) {
-			var s = [];
-
-			if (a.constructor == Array || a.jquery) {
-				jQuery.each(a, function() {
-					s.push(this.name + "=" + this.value);
-				});
-			} else {
-				for ( var j in a) {
-					if (a[j] && a[j].constructor == Array) {
-						jQuery.each(a[j], function() {
-							s.push(j + "=" + this);
-						});
-					} else {
-						s.push(j + "=" + jQuery.isFunction(a[j]) ? a[j]()
-								: a[j]);
-					}
-				}
-			}
-			return s.join("&");
+            for (var i in qs) {
+              var obj = qs[i];
+              ret[obj.name] = obj.value;
+            }
+			return ret;
 		}
-
 	};
 
 })();

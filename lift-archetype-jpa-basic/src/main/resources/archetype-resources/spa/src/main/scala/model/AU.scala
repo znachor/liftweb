@@ -15,9 +15,9 @@
  */
 package ${package}.model
 
-import java.util.Currency;
-import java.util.Locale;
-import java.text.NumberFormat;
+import _root_.java.util.Currency;
+import _root_.java.util.Locale;
+import _root_.java.text.NumberFormat;
 
 /* Australian Money */
 object AU extends CurrencyZone {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 WorldWide Conferencing, LLC
+ * Copyright 2008-2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
  */
 package net.liftweb.jpademo.model
 
-import java.util.Currency;
-import java.util.Locale;
-import java.text.NumberFormat;
+import _root_.java.util.Currency;
+import _root_.java.util.Locale;
+import _root_.java.text.NumberFormat;
 
 /* Australian Money */
 object AU extends CurrencyZone {

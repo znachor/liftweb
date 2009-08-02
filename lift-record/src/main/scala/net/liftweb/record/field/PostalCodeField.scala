@@ -46,8 +46,8 @@ class PostalCodeField[OwnerType <: Record[OwnerType]](rec: OwnerType, country: C
 
 }
 
-import java.sql.{ResultSet, Types}
-import net.liftweb.mapper.{DriverType}
+import _root_.java.sql.{ResultSet, Types}
+import _root_.net.liftweb.mapper.{DriverType}
 
 class DBPostalCodeField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType, country: CountryField[OwnerType]) extends
   PostalCodeField[OwnerType](rec, country) with JDBCFieldFlavor[String]{

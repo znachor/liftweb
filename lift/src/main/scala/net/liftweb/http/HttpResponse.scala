@@ -276,7 +276,7 @@ final case class InMemoryResponse(data: Array[Byte], headers: List[(String, Stri
 final case class StreamingResponse(data: {def read(buf: Array[Byte]): Int}, onEnd: () => Unit, size: Long, headers: List[(String, String)], cookies: List[Cookie], code: Int) extends BasicResponse {
   def toResponse = this
 
-  override def toString="StreamingResponse( steaming_data , "+headers+", "+cookies+", "+code+")"
+  override def toString="StreamingResponse( streaming_data , "+headers+", "+cookies+", "+code+")"
 }
 
 case class RedirectResponse(uri: String, cookies: Cookie*) extends LiftResponse {

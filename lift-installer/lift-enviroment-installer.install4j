@@ -24,17 +24,10 @@
       </dirEntry>
     </entries>
     <components>
-      <component name="Apache Maven 2.0.8" id="123" displayDescription="false" selected="true" mandatory="false" downloadable="false">
+      <component name="Apache Maven 2.2.0" id="123" displayDescription="false" selected="true" mandatory="false" downloadable="false">
         <description>Apache Maven</description>
         <include all="false">
           <entry location="apache-maven" fileType="regular" />
-        </include>
-        <dependencies />
-      </component>
-      <component name="Java Rebel 1.1.1 (for scala)" id="124" displayDescription="false" selected="true" mandatory="false" downloadable="false">
-        <description>Java Rebel... enough said. Check out the Zero Turnaround site for more information.</description>
-        <include all="false">
-          <entry location="java-rebel" fileType="regular" />
         </include>
         <dependencies />
       </component>

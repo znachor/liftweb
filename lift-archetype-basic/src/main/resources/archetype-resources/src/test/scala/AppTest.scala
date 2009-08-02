@@ -55,7 +55,7 @@ class AppTest extends TestCase("app") {
         }
       }
       if (file.isFile && handledXHtml(file.getName)) {
-        PCDataXmlParser(new java.io.FileInputStream(file.getAbsolutePath)) match {
+        PCDataXmlParser(new _root_.java.io.FileInputStream(file.getAbsolutePath)) match {
           case Full(_) => // file is ok
           case _ => failed = file :: failed
         }

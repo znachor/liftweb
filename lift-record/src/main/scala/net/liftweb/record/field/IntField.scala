@@ -58,8 +58,8 @@ class IntField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends NumericFi
 
 }
 
-import java.sql.{ResultSet, Types}
-import net.liftweb.mapper.{DriverType}
+import _root_.java.sql.{ResultSet, Types}
+import _root_.net.liftweb.mapper.{DriverType}
 
 /**
  * An int field holding DB related logic

@@ -16,8 +16,8 @@
 
 package net.liftweb.transaction
 
-import javax.naming.{NamingException, Context, InitialContext}
-import javax.transaction.{
+import _root_.javax.naming.{NamingException, Context, InitialContext}
+import _root_.javax.transaction.{
   Transaction,
   UserTransaction,
   TransactionManager,
@@ -27,7 +27,7 @@ import javax.transaction.{
   SystemException,
   TransactionRequiredException
 }
-import javax.persistence.{
+import _root_.javax.persistence.{
   Persistence,
   EntityManager,
   EntityManagerFactory,

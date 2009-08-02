@@ -173,7 +173,7 @@ object LiftRules {
     val ret: Box[String] =
     for {
       url <- Box !! LiftRules.getClass.getResource("/"+cn+".class")
-      val newUrl = new java.net.URL(url.toExternalForm.split("!")(0)+"!"+"/META-INF/MANIFEST.MF")
+      val newUrl = new _root_.java.net.URL(url.toExternalForm.split("!")(0)+"!"+"/META-INF/MANIFEST.MF")
       str <- tryo(new String(readWholeStream(newUrl.openConnection.getInputStream), "UTF-8"))
       ma <- """lift_version: (.*)""".r.findFirstMatchIn(str)
     } yield ma.group(1)
@@ -186,7 +186,7 @@ object LiftRules {
     val ret: Box[Date] =
     for {
       url <- Box !! LiftRules.getClass.getResource("/"+cn+".class")
-      val newUrl = new java.net.URL(url.toExternalForm.split("!")(0)+"!"+"/META-INF/MANIFEST.MF")
+      val newUrl = new _root_.java.net.URL(url.toExternalForm.split("!")(0)+"!"+"/META-INF/MANIFEST.MF")
       str <- tryo(new String(readWholeStream(newUrl.openConnection.getInputStream), "UTF-8"))
       ma <- """Bnd-LastModified: (.*)""".r.findFirstMatchIn(str)
       asLong <- asLong(ma.group(1))
