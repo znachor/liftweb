@@ -477,23 +477,30 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
     }
   }
 
-  def delete_!(toDelete : A): Boolean = indexMap.map(im =>
-    DB.use(toDelete.connectionIdentifier) {
-      conn =>
-      _beforeDelete(toDelete)
-      val ret = DB.prepareStatement("DELETE FROM "+dbTableName +" WHERE "+im+" = ?", conn) {
-        st =>
-        val indVal = indexedField(toDelete)
-        indVal.map{indVal =>
-          st.setObject(1, indVal.jdbcFriendly(im), indVal.targetSQLType(im))
+  def delete_!(toDelete : A): Boolean =
+  toDelete match {
+    case x: MetaMapper[_] => throw new MapperException("Cannot delete the MetaMapper singleton")
+        
+    case _ =>
+      indexMap.map(im =>
+        DB.use(toDelete.connectionIdentifier) {
+          conn =>
+          _beforeDelete(toDelete)
+          val ret = DB.prepareStatement("DELETE FROM "+dbTableName +" WHERE "+im+" = ?", conn) {
+            st =>
+            val indVal = indexedField(toDelete)
+            indVal.map{indVal =>
+              st.setObject(1, indVal.jdbcFriendly(im), indVal.targetSQLType(im))
 
-          st.executeUpdate == 1
-        } openOr false
-      }
-      _afterDelete(toDelete)
-      ret
-    }
-  ).openOr(false)
+              st.executeUpdate == 1
+            } openOr false
+          }
+          _afterDelete(toDelete)
+          ret
+        }
+      ).openOr(false)
+  }
+
 
 
   type AnyBound = T forSome {type T}
@@ -508,10 +515,17 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
   def indexedField(toSave: A): Box[MappedField[Any, A]] =
   indexMap.map(im => ??(mappedColumns(im), toSave))
 
-  def saved_?(toSave: A): Boolean = indexMap match {
-    case Full(im) => (for (indF <- indexedField(toSave)) yield (indF.dbIndexFieldIndicatesSaved_?)).openOr(true)
-    case _ => false
+  def saved_?(toSave: A): Boolean = 
+  toSave match {
+    case x: MetaMapper[_] => throw new MapperException("Cannot test the MetaMapper singleton for saved status")        
+
+    case _ =>
+      indexMap match {
+        case Full(im) => (for (indF <- indexedField(toSave)) yield (indF.dbIndexFieldIndicatesSaved_?)).openOr(true)
+        case _ => false
+      }
   }
+
 
   def whatToSet(toSave : A) : String = {
     mappedColumns.filter{c => ??(c._2, toSave).dirty_?}.map{c => c._1 + " = ?"}.toList.mkString("", ",", "")
@@ -558,143 +572,148 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
   def clean_?(toCheck: A): Boolean = mappedColumns.foldLeft(true)((bool, ptr) => bool && !(??(ptr._2, toCheck).dirty_?))
 
   def save(toSave: A): Boolean = {
-    /**
-     * @return true if there was exactly one row in the result set, false if not.
-     */
-    def runAppliers(rs: ResultSet) : Boolean = {
-      try {
-        if (rs.next) {
-          val meta = rs.getMetaData
-          toSave.runSafe {
-            findApplier(indexMap.open_!, rs.getObject(1)) match {
-              case Full(ap) => ap.apply(toSave, rs.getObject(1))
-              case _ =>
-            }
+    toSave match {
+      case x: MetaMapper[_] => throw new MapperException("Cannot save the MetaMapper singleton")
+
+      case _ =>
+        /**
+         * @return true if there was exactly one row in the result set, false if not.
+         */
+        def runAppliers(rs: ResultSet) : Boolean = {
+          try {
+            if (rs.next) {
+              val meta = rs.getMetaData
+              toSave.runSafe {
+                findApplier(indexMap.open_!, rs.getObject(1)) match {
+                  case Full(ap) => ap.apply(toSave, rs.getObject(1))
+                  case _ =>
+                }
+              }
+              !rs.next
+            } else false
+          } finally {
+            rs.close
           }
-          !rs.next
-        } else false
-      } finally {
-        rs.close
-      }
-    }
+        }
 
-    /**
-     * Checks whether the result set has exactly one row.
-     */
-    def hasOneRow(rs: ResultSet) : Boolean = {
-      try {
-        val firstRow = rs.next
-        (firstRow && !rs.next)
-      } finally {
-        rs.close
-      }
-    }
+        /**
+         * Checks whether the result set has exactly one row.
+         */
+        def hasOneRow(rs: ResultSet) : Boolean = {
+          try {
+            val firstRow = rs.next
+            (firstRow && !rs.next)
+          } finally {
+            rs.close
+          }
+        }
 
-    if (saved_?(toSave) && clean_?(toSave)) true else {
-      val ret = DB.use(toSave.connectionIdentifier) {
-        conn =>
-        _beforeSave(toSave)
-        val ret = if (saved_?(toSave)) {
-          _beforeUpdate(toSave)
-          val ret: Boolean = if (!dirty_?(toSave)) true else {
-            val ret: Boolean = DB.prepareStatement("UPDATE "+dbTableName+" SET "+whatToSet(toSave)+" WHERE "+indexMap.open_! +" = ?", conn) {
-              st =>
-              var colNum = 1
+        if (saved_?(toSave) && clean_?(toSave)) true else {
+          val ret = DB.use(toSave.connectionIdentifier) {
+            conn =>
+            _beforeSave(toSave)
+            val ret = if (saved_?(toSave)) {
+              _beforeUpdate(toSave)
+              val ret: Boolean = if (!dirty_?(toSave)) true else {
+                val ret: Boolean = DB.prepareStatement("UPDATE "+dbTableName+" SET "+whatToSet(toSave)+" WHERE "+indexMap.open_! +" = ?", conn) {
+                  st =>
+                  var colNum = 1
 
-              for (col <- mappedColumns) {
-                val colVal = ??(col._2, toSave)
-                if (!columnPrimaryKey_?(col._1) && colVal.dirty_?) {
-                  colVal.targetSQLType(col._1) match {
-                    case Types.VARCHAR => st.setString(colNum, colVal.jdbcFriendly(col._1).asInstanceOf[String])
+                  for (col <- mappedColumns) {
+                    val colVal = ??(col._2, toSave)
+                    if (!columnPrimaryKey_?(col._1) && colVal.dirty_?) {
+                      colVal.targetSQLType(col._1) match {
+                        case Types.VARCHAR => st.setString(colNum, colVal.jdbcFriendly(col._1).asInstanceOf[String])
 
-                    case _ => st.setObject(colNum, colVal.jdbcFriendly(col._1), colVal.targetSQLType(col._1))
+                        case _ => st.setObject(colNum, colVal.jdbcFriendly(col._1), colVal.targetSQLType(col._1))
+                      }
+                      colNum = colNum + 1
+                    }
                   }
-                  colNum = colNum + 1
+
+                  indexedField(toSave).foreach(indVal =>  st.setObject(colNum, indVal.jdbcFriendly(indexMap.open_!),
+                                                                       indVal.targetSQLType(indexMap.open_!)))
+                  st.executeUpdate
+                  true
+                }
+                ret
+              }
+              _afterUpdate(toSave)
+              ret
+            } else {
+              _beforeCreate(toSave)
+
+              val query = "INSERT INTO "+dbTableName+" ("+columnNamesForInsert+") VALUES ("+columnQueriesForInsert+")"
+
+              def prepStat(st : PreparedStatement, postQuery: Box[String]): Boolean = {
+                var colNum = 1
+
+                for (col <- mappedColumns) {
+                  if (!columnPrimaryKey_?(col._1)) {
+                    val colVal = col._2.invoke(toSave).asInstanceOf[MappedField[AnyRef, A]]
+                    colVal.targetSQLType(col._1) match {
+                      case Types.VARCHAR =>
+                        st.setString(colNum, colVal.jdbcFriendly(col._1).asInstanceOf[String])
+
+                      case _ => st.setObject(colNum, colVal.jdbcFriendly(col._1), colVal.targetSQLType(col._1))
+                    }
+
+                    // st.setObject(colNum, colVal.getJDBCFriendly(col._1), colVal.getTargetSQLType(col._1))
+                    colNum = colNum + 1
+                  }
+                }
+
+                val oneRowUpdated : Boolean = (conn.brokenAutogeneratedKeys_?, postQuery, indexMap) match {
+                  case (true, _, Empty)  => hasOneRow(st.executeQuery)
+
+                  case (true, Full(qry), _)     =>
+                    st.executeUpdate
+                    DB.prepareStatement(qry, conn)(st => runAppliers(st.executeQuery))
+
+                  case (true, _, _)     => runAppliers(st.executeQuery)
+
+                  case (false, _, Empty) => st.executeUpdate == 1
+
+                  case (false, _, _)    =>
+                    val uc = st.executeUpdate
+                    runAppliers(st.getGeneratedKeys)
+                }
+                oneRowUpdated
+              }
+
+              val ret = if (conn.wickedBrokenAutogeneratedKeys_?) {
+                DB.prepareStatement(query, conn) {
+                  st => prepStat(st, Full("SELECT lastval()"))
+                }
+              } else if (conn.brokenAutogeneratedKeys_?) {
+                val pkName = (mappedColumnInfo.filter(c => (c._2.dbPrimaryKey_? && c._2.dbAutogenerated_?)).map(_._1)).toList.mkString(",")
+                DB.prepareStatement(query + " RETURNING " + pkName, conn) {
+                  st => prepStat(st, Empty)
+                }
+              } else {
+                DB.prepareStatement(query, Statement.RETURN_GENERATED_KEYS, conn) {
+                  st => prepStat(st, Empty)
                 }
               }
 
-              indexedField(toSave).foreach(indVal =>  st.setObject(colNum, indVal.jdbcFriendly(indexMap.open_!),
-                                                                   indVal.targetSQLType(indexMap.open_!)))
-              st.executeUpdate
-              true
+              _afterCreate(toSave)
+              ret
             }
+            _afterSave(toSave)
             ret
           }
-          _afterUpdate(toSave)
-          ret
-        } else {
-          _beforeCreate(toSave)
 
-          val query = "INSERT INTO "+dbTableName+" ("+columnNamesForInsert+") VALUES ("+columnQueriesForInsert+")"
-
-          def prepStat(st : PreparedStatement, postQuery: Box[String]): Boolean = {
-            var colNum = 1
-
-            for (col <- mappedColumns) {
-              if (!columnPrimaryKey_?(col._1)) {
-                val colVal = col._2.invoke(toSave).asInstanceOf[MappedField[AnyRef, A]]
-                colVal.targetSQLType(col._1) match {
-                  case Types.VARCHAR =>
-                    st.setString(colNum, colVal.jdbcFriendly(col._1).asInstanceOf[String])
-
-                  case _ => st.setObject(colNum, colVal.jdbcFriendly(col._1), colVal.targetSQLType(col._1))
-                }
-
-                // st.setObject(colNum, colVal.getJDBCFriendly(col._1), colVal.getTargetSQLType(col._1))
-                colNum = colNum + 1
-              }
-            }
-
-            val oneRowUpdated : Boolean = (conn.brokenAutogeneratedKeys_?, postQuery, indexMap) match {
-              case (true, _, Empty)  => hasOneRow(st.executeQuery)
-
-              case (true, Full(qry), _)     =>
-                st.executeUpdate
-                DB.prepareStatement(qry, conn)(st => runAppliers(st.executeQuery))
-
-              case (true, _, _)     => runAppliers(st.executeQuery)
-
-              case (false, _, Empty) => st.executeUpdate == 1
-
-              case (false, _, _)    =>
-                val uc = st.executeUpdate
-                runAppliers(st.getGeneratedKeys)
-            }
-            oneRowUpdated
-          }
-
-          val ret = if (conn.wickedBrokenAutogeneratedKeys_?) {
-            DB.prepareStatement(query, conn) {
-              st => prepStat(st, Full("SELECT lastval()"))
-            }
-          } else if (conn.brokenAutogeneratedKeys_?) {
-            val pkName = (mappedColumnInfo.filter(c => (c._2.dbPrimaryKey_? && c._2.dbAutogenerated_?)).map(_._1)).toList.mkString(",")
-            DB.prepareStatement(query + " RETURNING " + pkName, conn) {
-              st => prepStat(st, Empty)
-            }
-          } else {
-            DB.prepareStatement(query, Statement.RETURN_GENERATED_KEYS, conn) {
-              st => prepStat(st, Empty)
+          // clear dirty and get rid of history
+          for (col <- mappedColumns) {
+            val colVal = ??(col._2, toSave)
+            if (!columnPrimaryKey_?(col._1) && colVal.dirty_?) {
+              colVal.resetDirty
+              colVal.doneWithSave
             }
           }
 
-          _afterCreate(toSave)
           ret
         }
-        _afterSave(toSave)
-        ret
-      }
-
-      // clear dirty and get rid of history
-      for (col <- mappedColumns) {
-        val colVal = ??(col._2, toSave)
-        if (!columnPrimaryKey_?(col._1) && colVal.dirty_?) {
-          colVal.resetDirty
-          colVal.doneWithSave
-        }
-      }
-
-      ret
     }
   }
 
@@ -953,23 +972,23 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
              actual.suplementalJs(Empty) :_*)
   }
 
-/*
-  /**
-   *
+  /*
+   /**
+    *
+    */
+   def asJSON(actual: A, sb: StringBuilder): StringBuilder = {
+   sb.append('{')
+   mappedFieldList.foreach{
+   f =>
+   sb.append(f.name)
+   sb.append(':')
+   ??(f.method, actual).is
+   // FIXME finish JSON
+   }
+   sb.append('}')
+   sb
+   }
    */
-  def asJSON(actual: A, sb: StringBuilder): StringBuilder = {
-    sb.append('{')
-    mappedFieldList.foreach{
-      f =>
-      sb.append(f.name)
-      sb.append(':')
-      ??(f.method, actual).is
-      // FIXME finish JSON
-    }
-    sb.append('}')
-    sb
-  }
-  */
 
   def asHtml(toLine: A): NodeSeq =
   Text(internalTableName_$_$) :: Text("={ ") ::
@@ -1643,3 +1662,5 @@ case class IHaveValidatedThisSQL(who: String, date: String)
 trait SelectableField {
   def dbSelectString: String
 }
+
+class MapperException(msg: String) extends Exception(msg)
