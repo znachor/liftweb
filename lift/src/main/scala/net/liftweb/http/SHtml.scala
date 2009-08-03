@@ -532,10 +532,10 @@ object SHtml {
   def text(value: String, func: String => Any, attrs: (String, String)*): Elem =
   text_*(value, SFuncHolder(func), attrs :_*)
 
-  def text(value: String, func: String => Any, ajaxTest: String => JsCmd, attrs: (String, String)*): Elem =
+  def textAjaxTest(value: String, func: String => Any, ajaxTest: String => JsCmd, attrs: (String, String)*): Elem =
   text_*(value, SFuncHolder(func), ajaxTest, attrs :_*)
 
-  def text(value: String, func: String => Any, ajaxTest: Box[String => JsCmd], attrs: (String, String)*): Elem =
+  def textAjaxTest(value: String, func: String => Any, ajaxTest: Box[String => JsCmd], attrs: (String, String)*): Elem =
   text_*(value, SFuncHolder(func), ajaxTest, attrs :_*)
 
 

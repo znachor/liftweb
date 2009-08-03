@@ -40,8 +40,8 @@ class FormWithAjax extends StatefulSnippet {
     }
 
     bind("form", xhtml,
-         "first" -> text(firstName, firstName = _, s => {S.notice("First name "+s); Noop}),
-         "last" -> text(lastName, lastName = _, s => {S.notice("Last name "+s); Noop}),
+         "first" -> textAjaxTest(firstName, firstName = _, s => {S.notice("First name "+s); Noop}),
+         "last" -> textAjaxTest(lastName, lastName = _, s => {S.notice("Last name "+s); Noop}),
          "submit" -> submit("Send", validate _)
     )
   }
