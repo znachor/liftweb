@@ -332,6 +332,21 @@ trait MetaMegaProtoUser[ModelType <: MegaProtoUser[ModelType]] extends KeyedMeta
 
   protected object signupFunc extends RequestVar[Box[() => NodeSeq]](Empty)
 
+  /**
+   * Override this method to do something else after the user signs up
+   */
+  protected def actionsAfterSignup(theUser: ModelType) {
+    theUser.validated(skipEmailValidation).uniqueId.reset()
+    theUser.save
+    if (!skipEmailValidation) {
+      sendValidationEmail(theUser)
+      S.notice(S.??("sign.up.message"))
+    } else {
+      S.notice(S.??("welcome"))
+      logUserIn(theUser)
+    }
+  }
+
   def signup = {
     val theUser: ModelType = create
     val theName = signUpPath.mkString("")
@@ -339,16 +354,7 @@ trait MetaMegaProtoUser[ModelType <: MegaProtoUser[ModelType]] extends KeyedMeta
     def testSignup() {
       theUser.validate match {
         case Nil =>
-          theUser.validated(skipEmailValidation).uniqueId.reset()
-          theUser.save
-          if (!skipEmailValidation) {
-            sendValidationEmail(theUser)
-            S.notice(S.??("sign.up.message"))
-          } else {
-            S.notice(S.??("welcome"))
-            logUserIn(theUser)
-          }
-
+          actionsAfterSignup(theUser)
           S.redirectTo(homePage)
 
         case xs => S.error(xs) ; signupFunc(Full(innerSignup _))
