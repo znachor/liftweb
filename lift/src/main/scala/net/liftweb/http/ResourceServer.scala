@@ -21,7 +21,7 @@ import _root_.javax.servlet.http.{HttpServletRequest , HttpServletResponse}
 import _root_.java.net.{URLConnection}
 
 object ResourceServer {
-  private var allowedPaths: PartialFunction[List[String], Boolean] = {
+  var allowedPaths: PartialFunction[List[String], Boolean] = {
     case "jquery.js" :: Nil => true
     case "yui" :: _ => true
     case "liftYUI.js" :: Nil => true
@@ -34,7 +34,7 @@ object ResourceServer {
     case "jquery-autocomplete" :: "indicator.gif" :: Nil => true
   }
 
-  private var pathRewriter: PartialFunction[List[String], List[String]] = {
+  var pathRewriter: PartialFunction[List[String], List[String]] = {
     //case "jquery.js" :: Nil =>  List("jquery-1.3.2.js") // List("jquery-1.3.2-min.js")
     //case "json.js" :: Nil => List( "json2.js") // List( "json2-min.js")
     //case "json2.js" :: Nil => List( "json2.js") // List( "json2-min.js")
@@ -57,11 +57,11 @@ object ResourceServer {
     url <- LiftRules.getResource(path)
     uc <- tryo(url.openConnection)
   } yield
-  request.testFor304(uc.getLastModified) openOr {
+  request.testFor304(uc.getLastModified, "Expires" -> toInternetDate(millis + 30.days)) openOr {
     val stream = url.openStream
     StreamingResponse(stream, () => stream.close, uc.getContentLength,
                       List(("Last-Modified", toInternetDate(uc.getLastModified)),
-                           ("Expires", toInternetDate(millis + 48.hours)),
+                           ("Expires", toInternetDate(millis + 30.days)),
                            ("Content-Type", detectContentType(rw.last))), Nil,
                       HttpServletResponse.SC_OK)
   }
