@@ -41,7 +41,7 @@ trait ModelSnippet[T <: Mapper[T]] extends StatefulSnippet {
  * A wrapper around a Mapper that provides view-related utilities. Belongs to a parent snippet.
  * @author nafg
  */
-abstract class ModelView[T <: Mapper[T]](var entity: T, val snippet: ModelSnippet[T]) {
+class ModelView[T <: Mapper[T]](var entity: T, val snippet: ModelSnippet[T]) {
   /**
    * If Some(string), will redirect to string on a successful save.
    * If None, will load the same page.
