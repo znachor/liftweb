@@ -275,6 +275,8 @@ class LiftSession(val contextPath: String, val uniqueId: String,
 
   private var onSessionEnd: List[LiftSession => Unit] = Nil
 
+  private val sessionVarSync = new Object
+
   @volatile
   private[http] var lastServiceTime = millis
 
@@ -638,7 +640,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
    * @param name -- the name of the variable
    * @param value -- the value of the variable
    */
-  private [liftweb] def set[T](name: String, value: T): Unit = synchronized {
+  private [liftweb] def set[T](name: String, value: T): Unit = sessionVarSync.synchronized {
     myVariables = myVariables + (name -> value)
   }
 
@@ -649,7 +651,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
    *
    * @return Full(value) if found, Empty otherwise
    */
-  private [liftweb] def get[T](name: String): Box[T] = synchronized {
+  private [liftweb] def get[T](name: String): Box[T] = sessionVarSync.synchronized {
     Box(myVariables.get(name)).asInstanceOf[Box[T]]
   }
 
@@ -658,7 +660,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
    *
    * @param name the variable to unset
    */
-  private [liftweb] def unset(name: String): Unit = synchronized {
+  private [liftweb] def unset(name: String): Unit = sessionVarSync.synchronized {
     myVariables -= name
   }
 
