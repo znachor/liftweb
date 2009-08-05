@@ -48,6 +48,13 @@ class ModelView[T <: Mapper[T]](var entity: T, val snippet: ModelSnippet[T]) {
    * Defaults to Some("list").
    */
   var redirectOnSave: Option[String] = Some("list")
+  
+  /**
+   * Action when save is successful. Defaults to using redirectOnSave
+   */
+  var onSave = ()=> {
+    redirectOnSave.foreach(snippet.redirectTo)
+  }
   /**
    * Loads this entity into the snippet so it can be edited 
    */
@@ -82,7 +89,7 @@ class ModelView[T <: Mapper[T]](var entity: T, val snippet: ModelSnippet[T]) {
     entity.validate match {
       case Nil =>
         if(entity.save)
-          redirectOnSave.foreach(snippet.redirectTo)
+          onSave()
         else
           S.error("Save failed")
       case errors =>
