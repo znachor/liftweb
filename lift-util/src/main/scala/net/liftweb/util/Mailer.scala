@@ -18,6 +18,8 @@ import _root_.scala.actors._
 import Actor._
 import _root_.javax.mail._
 import _root_.javax.mail.internet._
+import _root_.javax.naming.{Context, InitialContext}
+import _root_.java.util.Properties
 
 /**
  * Utilities for sending email.
@@ -67,6 +69,31 @@ object Mailer {
   var authenticator: Box[Authenticator] = Empty
 
   /**
+   * Use the mailer resource in your container by specifying the JNDI name
+   */
+  var jndiName: Box[String] = Empty
+
+  /**
+   * Custom properties for the JNDI session
+   */
+  var customProperties: Map[String, String] = Map()
+
+  lazy val jndiSession: Box[Session] =
+  for {
+    name <- jndiName
+    contextObj <- Helpers.tryo(new InitialContext().lookup("java:comp/env"))
+    context <- Box.asA[Context](contextObj)
+    sessionObj <- Helpers.tryo(context.lookup(name))
+    session <- Box.asA[Session](sessionObj)
+  } yield session
+
+  lazy val properties: Properties = {
+    val p = System.getProperties.clone.asInstanceOf[Properties]
+    customProperties.foreach{case (name, value) => p.put(name, value)}
+    p
+  }
+
+  /**
    * The host that should be used to send mail.
    */
   def host = hostFunc()
@@ -77,14 +104,13 @@ object Mailer {
    */
   var hostFunc: () => String = _host _
 
-  private def _host = System.getProperty("mail.smtp.host") match {
+  private def _host = properties.getProperty("mail.smtp.host") match {
     case null => "localhost"
     case s => s
   }
-  import _root_.java.util.Properties
 
   def buildProps: Properties = {
-    val p = System.getProperties.clone.asInstanceOf[Properties]
+    val p = properties.clone.asInstanceOf[Properties]
     p.getProperty("mail.smtp.host") match {
       case null => p.put("mail.smtp.host", host)
       case _ =>
@@ -102,8 +128,8 @@ object Mailer {
           case MessageInfo(from, subject, info) =>
             try {
               val session = authenticator match {
-                case Full(a) => Session.getInstance(buildProps, a)
-                case _ => Session.getInstance(buildProps)
+                case Full(a) => jndiSession openOr Session.getInstance(buildProps, a)
+                case _ => jndiSession openOr Session.getInstance(buildProps)
               }
 
               val message = new MimeMessage(session)
