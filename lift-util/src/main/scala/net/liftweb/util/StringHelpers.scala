@@ -165,7 +165,7 @@ trait StringHelpers {
   /**
    * Parse a string and return the Long value of that string.<p/>
    * The string can start with '-' if it is a negative number or '+' for a positive number
-   * @return an Empty can if the node seq is empty and a full can with the NodeSeq text otherwise
+   * @return the Long value of the input String
    */
   def parseNumber(tin: String): Long = {
     def cToL(in: Char) = in.toLong - '0'.toLong
