@@ -47,7 +47,7 @@ object Msgs extends DispatchSnippet {
   def render(styles: NodeSeq): NodeSeq = {
     val f = noIdMessages _
 
-    val makeTitle: (String) => String = {text => 
+    val makeTitle: (String) => String = {text =>
       Log.debug("Msgs: Default " + text + " is not rendered as the default title is now empty string")
       ""
     }

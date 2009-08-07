@@ -25,14 +25,12 @@ import _root_.org.openid4java.message._
 import _root_.org.openid4java.OpenIDException;
 import _root_.org.openid4java.consumer._
 
-import _root_.javax.servlet.http.HttpSession;
-import _root_.javax.servlet.http.HttpServletRequest;
-import _root_.javax.servlet.http.HttpServletResponse;
 import _root_.java.util.List;
 import _root_.java.io.IOException;
 
 import _root_.net.liftweb._
 import http._
+import provider._
 import util._
 
 import _root_.scala.xml.{NodeSeq, Text}
@@ -209,7 +207,7 @@ trait OpenIdConsumer[UserType]
     // and retrieve one service endpoint for authentication
     val discovered = manager.associate(discoveries)
 
-    S.servletSession.foreach(_.setAttribute("openid-disc", discovered))
+    S.containerSession.foreach(_.setAttribute("openid-disc", discovered))
 
     // obtain a AuthRequest message to be sent to the OpenID provider
     val authReq = manager.authenticate(discovered, returnToUrl)
@@ -259,23 +257,26 @@ trait OpenIdConsumer[UserType]
   }
 
   // --- processing the authentication response ---
-  def verifyResponse(httpReq: HttpServletRequest): (Box[Identifier], VerificationResult) =
+  def verifyResponse(httpReq: HTTPRequest): (Box[Identifier], VerificationResult) =
   {
     // extract the parameters from the authentication response
     // (which comes in as a HTTP request from the OpenID provider)
-    val response =	new ParameterList(httpReq.getParameterMap());
+    val paramMap = new java.util.HashMap[String, String]
+    httpReq.params.foreach(e => paramMap.put(e.name, e.values.firstOption getOrElse null))
+    val response =	new ParameterList(paramMap);
 
     // retrieve the previously stored discovery information
-    val discovered = httpReq.getSession().getAttribute("openid-disc") match {
-      case d: DiscoveryInformation => d
-      case null => throw ResponseShortcutException.redirect("/")
+    val discovered = httpReq.session.attribute("openid-disc") match {
+      case Full(d: DiscoveryInformation)=> d
+      case _ => throw ResponseShortcutException.redirect("/")
     }
 
     // extract the receiving URL from the HTTP request
-    val receivingURL = httpReq.getRequestURL()
-    val queryString = httpReq.getQueryString()
-    if (queryString != null && queryString.length() > 0)
-    receivingURL.append("?").append(httpReq.getQueryString());
+    var receivingURL = httpReq.url
+    val queryString = httpReq.queryString openOr ""
+    if (queryString != null && queryString.length() > 0) {
+      receivingURL += "?" + httpReq.queryString;
+    }
 
 
     // verify the response; ConsumerManager needs to be the same

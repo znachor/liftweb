@@ -15,7 +15,6 @@
  */
 package net.liftweb.http
 
-import _root_.javax.servlet.http.{HttpServlet, HttpServletRequest , HttpServletResponse, HttpSession, Cookie}
 import _root_.scala.collection.mutable.{HashMap, ListBuffer}
 import _root_.scala.xml.{NodeSeq, Elem, Text, UnprefixedAttribute, Null, MetaData,
                          PrefixedAttribute,
@@ -30,6 +29,7 @@ import _root_.java.io.InputStream
 import _root_.java.util.{Locale, TimeZone, ResourceBundle}
 import _root_.java.util.concurrent.atomic.AtomicLong
 import _root_.net.liftweb.builtin.snippet._
+import provider._
 
 trait HasParams {
   def param(name: String): Box[String]
@@ -87,15 +87,13 @@ object S extends HasParams {
    * @see #responseCookies
    * @see #findCookie
    */
-  case class CookieHolder(inCookies: List[Cookie], outCookies: List[Cookie]) {
-    def add(in: Cookie) = CookieHolder(inCookies, in :: outCookies.filter(_.getName != in.getName))
+  case class CookieHolder(inCookies: List[HTTPCookie], outCookies: List[HTTPCookie]) {
+    def add(in: HTTPCookie) = CookieHolder(inCookies, in :: outCookies.filter(_.name != in.name))
     def delete(name: String) = {
-      val c = new Cookie(name, "")
-      c.setMaxAge(0)
-      add(c)
+      add(HTTPCookie(name, "").setMaxAge(0))
     }
-    def delete(old: Cookie) = {
-      val c = old.clone().asInstanceOf[Cookie]
+    def delete(old: HTTPCookie) = {
+      val c = old.clone().asInstanceOf[HTTPCookie]
       c.setMaxAge(0)
       c.setValue("")
       add(c)
@@ -194,15 +192,15 @@ object S extends HasParams {
    * @return a List of any Cookies that have been set for this Response. If you want
    * a specific cookie, use findCookie.
    *
-   * @see javax.servlet.http.Cookie
+   * @see net.liftweb.http.provider.HTTPCookie
    * @see #findCookie(String)
    * @see #addCookie(Cookie)
    * @see #deleteCookie(Cookie)
    * @see #deleteCookie(String)
    */
-  def receivedCookies: List[Cookie] =
+  def receivedCookies: List[HTTPCookie] =
   for (rc <- Box.legacyNullTest(_responseCookies.value).toList; c <- rc.inCookies)
-  yield c.clone().asInstanceOf[Cookie]
+  yield c.clone().asInstanceOf[HTTPCookie]
 
   /**
    * Finds a cookie with the given name that was sent in the request.
@@ -211,26 +209,26 @@ object S extends HasParams {
    *
    * @return Full(cookie) if the cookie exists, Empty otherwise
    *
-   * @see javax.servlet.http.Cookie
+   * @see net.liftweb.http.provider.HTTPCookie
    * @see #receivedCookies
    * @see #addCookie(Cookie)
    * @see #deleteCookie(Cookie)
    * @see #deleteCookie(String)
    */
-  def findCookie(name: String): Box[Cookie] =
+  def findCookie(name: String): Box[HTTPCookie] =
   Box.legacyNullTest(_responseCookies.value).flatMap(
-    rc => Box(rc.inCookies.filter(_.getName == name)).
-    map(_.clone().asInstanceOf[Cookie]))
+    rc => Box(rc.inCookies.filter(_.name == name)).
+    map(_.clone().asInstanceOf[HTTPCookie]))
 
   /**
    * @return a List of any Cookies that have been added to the response to be sent
    * back to the user. If you want the cookies that were sent with the request, see
    * receivedCookies.
    *
-   * @see javax.servlet.http.Cookie
+   * @see net.liftweb.http.provider.HTTPCookie
    * @see #receivedCookies
    */
-  def responseCookies: List[Cookie] = Box.legacyNullTest(_responseCookies.value).
+  def responseCookies: List[HTTPCookie] = Box.legacyNullTest(_responseCookies.value).
   toList.flatMap(_.outCookies)
 
   /**
@@ -242,7 +240,7 @@ object S extends HasParams {
    * An example of adding and removing a Cookie is:
    *
    * <pre name="code" class="scala" >
-   * import javax.servlet.http.Cookie
+   * import net.liftweb.http.provider.HTTPCookie
    *
    * class MySnippet {
    *   final val cookieName = "Fred"
@@ -251,8 +249,7 @@ object S extends HasParams {
    *     var cookieVal = S.findCookie(cookieName).map(_.getvalue) openOr ""
    *
    *     def setCookie() {
-   *       val cookie = new Cookie(cookieName, cookieVal)
-   *       cookie.setMaxAge(3600) // 3600 seconds, or one hour
+   *       val cookie = HTTPCookie(cookieName, cookieVal).setMaxAge(3600) // 3600 seconds, or one hour
    *       S.addCookie(cookie)
    *     }
    *
@@ -265,12 +262,12 @@ object S extends HasParams {
    * }
    * </pre>
    *
-   * @see javax.servlet.http.Cookie
+   * @see net.liftweb.http.provider.HTTPCookie
    * @see #deleteCookie(Cookie)
    * @see #deleteCookie(String)
    * @see #responseCookies
    */
-  def addCookie(cookie: Cookie) {
+  def addCookie(cookie: HTTPCookie) {
     Box.legacyNullTest(_responseCookies.value).foreach(rc =>
       _responseCookies.set(rc.add(cookie))
     )
@@ -281,11 +278,11 @@ object S extends HasParams {
    *
    * @param cookie the Cookie to delete
    *
-   * @see javax.servlet.http.Cookie
+   * @see net.liftweb.http.provider.HTTPCookie
    * @see #addCookie(Cookie)
    * @see #deleteCookie(String)
    */
-  def deleteCookie(cookie: Cookie) {
+  def deleteCookie(cookie: HTTPCookie) {
     Box.legacyNullTest(_responseCookies.value).foreach(rc =>
       _responseCookies.set(rc.delete(cookie))
     )
@@ -296,7 +293,7 @@ object S extends HasParams {
    *
    * @param name the name of the cookie to delete
    *
-   * @see javax.servlet.http.Cookie
+   * @see net.liftweb.http.provider.HTTPCookie
    * @see #addCookie(Cookie)
    * @see #deleteCookie(Cookie)
    */
@@ -322,20 +319,20 @@ object S extends HasParams {
    * Returns the Locale for this request based on the LiftRules.localeCalculator
    * method.
    *
-   * @see LiftRules.localeCalculator(HttpServletRequest)
+   * @see LiftRules.localeCalculator(HTTPRequest)
    * @see java.util.Locale
    */
-  def locale: Locale = LiftRules.localeCalculator(servletRequest)
+  def locale: Locale = LiftRules.localeCalculator(containerRequest)
 
   /**
    * Return the current timezone based on the LiftRules.timeZoneCalculator
    * method.
    *
-   * @see LiftRules.timeZoneCalculator(HttpServletRequest)
+   * @see LiftRules.timeZoneCalculator(HTTPRequest)
    * @see java.util.TimeZone
    */
   def timeZone: TimeZone =
-  LiftRules.timeZoneCalculator(servletRequest)
+  LiftRules.timeZoneCalculator(containerRequest)
 
   /**
    * @return <code>true</code> if this response should be rendered in
@@ -675,7 +672,7 @@ object S extends HasParams {
 
   /**
    * The URI of the current request (not re-written). The URI is the portion of the request
-   * URL after the servlet context path. For example, with a servlet context path of "myApp",
+   * URL after the context path. For example, with a context path of "myApp",
    * Lift would return the following URIs for the given requests:
    *
    * <table>
@@ -693,8 +690,8 @@ object S extends HasParams {
    * </tr>
    * </table>
    *
-   * If you want the full URI, including the servlet context path, you should retrieve it
-   * from the underlying HttpServletRequest. You could do something like:
+   * If you want the full URI, including the context path, you should retrieve it
+   * from the underlying HTTPRequest. You could do something like:
    *
    * <pre name="code" class="scala" >
    *   val fullURI = S.request.map(_.request.getRequestURI) openOr ("Undefined")
@@ -709,7 +706,7 @@ object S extends HasParams {
    * </pre>
    *
    * @see Req.uri
-   * @see javax.servlet.http.HttpServletRequest.getRequestURI
+   * @see net.liftweb.http.provider.HTTPRequest.uri
    */
   def uri: String = request.map(_.uri).openOr("/")
 
@@ -773,7 +770,7 @@ object S extends HasParams {
    *
    * @param request The Req instance for this request
    * @param session the LiftSession for this request
-   * @param f 
+   * @param f
    */
   // TODO: what is f?
   def init[B](request: Req, session: LiftSession)(f: => B) : B = {
@@ -871,7 +868,7 @@ object S extends HasParams {
    *
    * // Where "ResourceType" is defined by you
    * object myResource extends ResourceVar[ResourceType](...)
-   * 
+   *
    * class Boot {
    *   def boot {
    *     ...
@@ -888,9 +885,9 @@ object S extends HasParams {
    *   }
    * }
    * </pre>
-   * 
+   *
    * @see #addAround(LoanWrapper)
-   * @see LoanWrapper 
+   * @see LoanWrapper
    */
   def addAround(lw: LoanWrapper): Unit = aroundRequest = lw :: aroundRequest
 
@@ -979,9 +976,9 @@ object S extends HasParams {
    * @see #setHeader(String,String)
    * @see #getHeaders(List[(String,String)])
    */
-  def getRequestHeader(name : String) : Box[String] = 
+  def getRequestHeader(name : String) : Box[String] =
     for (req <- request;
-	 hdr <- req.header(name)) 
+	 hdr <- req.header(name))
       yield hdr
 
   /**
@@ -1077,9 +1074,9 @@ object S extends HasParams {
   /**
    * @return a List[Cookie] even if the underlying request's Cookies are null.
    */
-  private def getCookies(request: Box[HttpServletRequest]): List[Cookie] =
+  private def getCookies(request: Box[HTTPRequest]): List[HTTPCookie] =
   for (r <- (request).toList;
-       ca <- Box.legacyNullTest(r.getCookies).toList;
+       ca <- Box.legacyNullTest(r.cookies).toList;
        c <- ca) yield c
 
   private def _init[B](request: Req, session: LiftSession)(f: () => B): B =
@@ -1087,7 +1084,7 @@ object S extends HasParams {
     _sessionInfo.doWith(session) {
       _responseHeaders.doWith(new ResponseInfoHolder) {
         RequestVarHandler(Full(session),
-                          _responseCookies.doWith(CookieHolder(getCookies(servletRequest), Nil)) {
+                          _responseCookies.doWith(CookieHolder(getCookies(containerRequest), Nil)) {
             _innerInit(f)
           }
         )
@@ -1107,9 +1104,9 @@ object S extends HasParams {
   def loggedIn_? : Boolean = LiftRules.loggedInTest.map(_.apply()) openOr false
 
   /**
-   * Returns the 'Referer' HTTP header attribute. 
+   * Returns the 'Referer' HTTP header attribute.
    */
-  def referer: Box[String] = servletRequest.flatMap(r => Box.legacyNullTest(r.getHeader("Referer")))
+  def referer: Box[String] = containerRequest.flatMap(_.header("Referer"))
 
 
   /**
@@ -1177,11 +1174,11 @@ object S extends HasParams {
    * @param start the initial Map
    *
    * @return Map[String, String]
-   * 
+   *
    * @see #prefixedAttrsToMap(String)
    * @see #prefixedAttrsToMetaData(String)
    * @see #prefixedAttrsToMetaData(String,Map)
-   * 
+   *
    */
   def prefixedAttrsToMap(prefix: String, start: Map[String, String]): Map[String, String] =
   attrs.reverse.flatMap {
@@ -1201,7 +1198,7 @@ object S extends HasParams {
    * @see #prefixedAttrsToMap(String,Map)
    * @see #prefixedAttrsToMetaData(String)
    * @see #prefixedAttrsToMetaData(String,Map)
-   * 
+   *
    */
   def prefixedAttrsToMap(prefix: String): Map[String, String] =
   prefixedAttrsToMap(prefix: String, Map.empty)
@@ -1226,7 +1223,7 @@ object S extends HasParams {
    * @see #prefixedAttrsToMap(String)
    * @see #prefixedAttrsToMap(String,Map)
    * @see #prefixedAttrsToMetaData(String)
-   * 
+   *
    */
   def prefixedAttrsToMetaData(prefix: String, start: Map[String, String]): MetaData =
   mapToAttrs(prefixedAttrsToMap(prefix, start))
@@ -1243,11 +1240,11 @@ object S extends HasParams {
    * prefixedAttrsToMetaData(String,Map) for an example.
    *
    * @param in The map of attributes
-   * 
+   *
    * @return MetaData representing the Map of attributes as unprefixed attributes.
    *
    * @see #prefixedAttrsToMetaData(String,Map)
-   * 
+   *
    */
   def mapToAttrs(in: Map[String, String]): MetaData =
   in.foldLeft[MetaData](Null) {
@@ -1298,9 +1295,9 @@ object S extends HasParams {
    *
    * @param predicate The predicate function which is executed for each attribute name. If the function
    * returns <code>true</code>, then the attribute is included in the MetaData.
-   * 
+   *
    * @see #attrsToMetaData
-   * 
+   *
    */
   def attrsToMetaData(predicate: String => Boolean): MetaData = {
     attrs.foldLeft[MetaData](Null) {
@@ -1333,13 +1330,13 @@ object S extends HasParams {
    * <pre name="code" class="scala">
     // Get a Box for the attribute:
     val myAttr = S.attr("test") openOr "Not found"
-   
+
     // Get an attribute or return a default value:
     val myAttr = S.attr("name", "Fred")
-   
+
     // Apply a transform function on the attribute value, or return an Empty:
     val pageSize = S.attr("count", _.toInt) openOr 20
-   
+
     // There are also prefixed versions:
     val prefixedAttr = S.attr("prefix", "name") openOr "Not found"
    * </pre>
@@ -1411,14 +1408,14 @@ object S extends HasParams {
    * @see #setSessionAttribute
    * @see #unset
    * @see #unsetSessionAttribute
-   * 
+   *
    */
-  def getSessionAttribute(what: String): Box[String] = servletSession.flatMap(_.getAttribute(what) match {case s: String => Full(s) case _ => Empty})
+  def getSessionAttribute(what: String): Box[String] = containerSession.flatMap(_.attribute(what) match {case s: String => Full(s) case _ => Empty})
 
   /**
    * Returns the HttpSession
    */
-  def servletSession: Box[HttpSession] = session.flatMap(_.httpSession).or(servletRequest.map(_.getSession))
+  def containerSession: Box[HTTPSession] = session.flatMap(_.httpSession).or(containerRequest.map(_.session))
 
   /**
    * Returns the 'type' S attribute. This corresponds to the current Snippet's name. For example, the snippet:
@@ -1439,9 +1436,9 @@ object S extends HasParams {
    * @see #set
    * @see #unset
    * @see #unsetSessionAttribute
-   * 
+   *
    */
-  def setSessionAttribute(name: String, value: String) = servletSession.foreach(_.setAttribute(name, value))
+  def setSessionAttribute(name: String, value: String) = containerSession.foreach(_.setAttribute(name, value))
 
   /**
    * Sets a LiftSession attribute
@@ -1451,7 +1448,7 @@ object S extends HasParams {
    * @see #setSessionAttribute
    * @see #unset
    * @see #unsetSessionAttribute
-   * 
+   *
    */
   def set(name: String, value: String) = session.foreach(_.set(name,value))
 
@@ -1463,9 +1460,9 @@ object S extends HasParams {
    * @see #set
    * @see #setSessionAttribute
    * @see #unset
-   * 
+   *
    */
-  def unsetSessionAttribute(name: String) = servletSession.foreach(_.removeAttribute(name))
+  def unsetSessionAttribute(name: String) = containerSession.foreach(_.removeAttribute(name))
 
   /**
    * Removes a LiftSession attribute
@@ -1475,21 +1472,21 @@ object S extends HasParams {
    * @see #set
    * @see #setSessionAttribute
    * @see #unsetSessionAttribute
-   * 
+   *
    */
   def unset(name: String) = session.foreach(_.unset(name))
 
   /**
-   * The current servlet request
+   * The current container request
    */
-  def servletRequest: Box[HttpServletRequest] =
+  def containerRequest: Box[HTTPRequest] =
   request.flatMap(r => Box !! r.request)
 
   /**
    * The hostname to which the request was sent. This is taken from the "Host" HTTP header, or if that
    * does not exist, the DNS name or IP address of the server.
    */
-  def hostName: String = servletRequest.map(_.getServerName) openOr {
+  def hostName: String = containerRequest.map(_.serverName) openOr {
     import _root_.java.net._
     InetAddress.getLocalHost.getHostName
   }
@@ -1499,10 +1496,10 @@ object S extends HasParams {
    * not include the template path or query string.
    */
   def hostAndPath: String =
-  servletRequest.map(r => (r.getScheme, r.getServerPort) match {
-      case ("http", 80) => "http://"+r.getServerName+contextPath
-      case ("https", 443) => "https://"+r.getServerName+contextPath
-      case (sch, port) => sch + "://"+r.getServerName+":"+port+contextPath
+  containerRequest.map(r => (r.scheme, r.serverPort) match {
+      case ("http", 80) => "http://"+r.serverName+contextPath
+      case ("https", 443) => "https://"+r.serverName+contextPath
+      case (sch, port) => sch + "://"+r.serverName+":"+port+contextPath
     }) openOr ""
 
   /**
@@ -1524,7 +1521,7 @@ object S extends HasParams {
   def contextPath : String = session.map(_.contextPath) openOr ""
 
   /**
-   * Finds a snippet function by name. 
+   * Finds a snippet function by name.
    *
    * @see LiftRules.snippets
    */
@@ -1805,7 +1802,7 @@ object S extends HasParams {
     f(name)
   }
 
-  def render(xhtml:NodeSeq, httpRequest: HttpServletRequest): NodeSeq = {
+  def render(xhtml:NodeSeq, httpRequest: HTTPRequest): NodeSeq = {
     def doRender(session: LiftSession): NodeSeq =
     session.processSurroundAndInclude("external render", xhtml)
 
@@ -1818,8 +1815,7 @@ object S extends HasParams {
           ret
 
         case _ =>
-          val ret = LiftSession(httpRequest.getSession, req.contextPath,
-                                req.headers)
+          val ret = LiftSession(httpRequest.session, req.contextPath)
           ret.fixSessionTime()
           SessionMaster.addSession(ret)
           ret

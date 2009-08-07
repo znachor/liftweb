@@ -16,8 +16,8 @@
 package net.liftweb.http
 
 import _root_.scala.collection.immutable.TreeMap
-import _root_.javax.servlet.http.{HttpServlet, HttpServletRequest , HttpServletResponse, HttpSession}
 import _root_.net.liftweb.util._
+import provider._
 
 /**
  * The base trait of Controllers that handle pre-view requests
@@ -25,7 +25,7 @@ import _root_.net.liftweb.util._
 trait SimpleController
 {
   def request: Req
-  def httpRequest: HttpServletRequest
+  def httpRequest: HTTPRequest
 
   def param(name: String): Box[String] = {
     request.params.get(name) match {
@@ -40,18 +40,18 @@ trait SimpleController
   def post_? : Boolean = request.post_?
 
   def get(name: String): Box[String] =
-    httpRequest.getSession.getAttribute(name) match {
+    httpRequest.session.attribute(name) match {
       case null => Empty
       case n: String => Full(n)
       case _ => Empty
     }
 
   def set(name: String, value: String) {
-    httpRequest.getSession.setAttribute(name, value)
+    httpRequest.session.setAttribute(name, value)
   }
 
   def unset(name: String) {
-    httpRequest.getSession.removeAttribute(name)
+    httpRequest.session.removeAttribute(name)
   }
 }
 

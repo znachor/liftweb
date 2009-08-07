@@ -15,7 +15,7 @@
  */
 package net.liftweb.http
 
-import _root_.javax.servlet.http.{HttpServletRequest}
+import provider._
 
 @serializable
 abstract class RequestType {
@@ -50,8 +50,8 @@ case object DeleteRequest extends RequestType {
 case class UnknownRequest(method: String) extends RequestType
 
 object RequestType {
-  def apply(req: HttpServletRequest): RequestType = {
-    req.getMethod.toUpperCase match {
+  def apply(req: HTTPRequest): RequestType = {
+    req.method.toUpperCase match {
       case "GET" => GetRequest
       case "POST" => PostRequest
       case "HEAD" => HeadRequest

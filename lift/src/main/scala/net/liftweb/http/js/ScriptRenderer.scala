@@ -32,20 +32,20 @@ object ScriptRenderer {
     lift_ajaxInProcess: null,
     lift_ajaxShowing: false,
     lift_ajaxRetryCount: """ + (LiftRules.ajaxRetryCount openOr 3) + """,
-     
+
     lift_ajaxHandler: function(theData, theSuccess, theFailure, responseType){
 	  var toSend = {retryCnt: 0};
 	  toSend.when = (new Date()).getTime();
 	  toSend.theData = theData;
 	  toSend.onSuccess = theSuccess;
 	  toSend.onFailure = theFailure;
-	  toSend.responseType = responseType; 
+	  toSend.responseType = responseType;
 
 	  liftAjax.lift_ajaxQueue.push(toSend);
 	  liftAjax.lift_ajaxQueueSort();
 	  liftAjax.lift_doAjaxCycle();
 	  return false; // buttons in forms don't trigger the form
-           
+
     },
 
     lift_ajaxQueueSort: function() {
@@ -53,7 +53,7 @@ object ScriptRenderer {
     },
 
     lift_defaultFailure: function() {
-      """ + (LiftRules.ajaxDefaultFailure.map(_().toJsCmd) openOr "") + """                   
+      """ + (LiftRules.ajaxDefaultFailure.map(_().toJsCmd) openOr "") + """
     },
 
     lift_startAjax: function() {
@@ -64,7 +64,7 @@ object ScriptRenderer {
     lift_endAjax: function() {
       liftAjax.lift_ajaxShowing = false;
       """ + (LiftRules.ajaxEnd.map(_().toJsCmd) openOr "") + """
-    },                      
+    },
 
     lift_testAndShowAjax: function() {
       if (liftAjax.lift_ajaxShowing && liftAjax.lift_ajaxQueue.length == 0 && liftAjax.lift_ajaxInProcess == null) {
@@ -110,7 +110,7 @@ object ScriptRenderer {
           var aboutToSend = queue.shift();
 
           lift_ajaxInProcess = aboutToSend;
-          
+
           var successFunc = function(data) {
             liftAjax.lift_ajaxInProcess = null;
             if (aboutToSend.onSuccess) {
@@ -138,7 +138,7 @@ object ScriptRenderer {
             liftAjax.lift_doAjaxCycle();
           };
 
-          if (aboutToSend.responseType != undefined && 
+          if (aboutToSend.responseType != undefined &&
               aboutToSend.responseType != null &&
               aboutToSend.responseType.toLowerCase() === "json") {
             liftAjax.lift_actualJSONCall(aboutToSend.theData, successFunc, failureFunc);
@@ -201,7 +201,7 @@ object ScriptRenderer {
   };
 
 
-})(); 
+})();
 """ + LiftRules.jsArtifacts.onLoad(new JsCmd() {def toJsCmd = "liftAjax.lift_doAjaxCycle()"}).toJsCmd)
 
 
@@ -214,12 +214,12 @@ object ScriptRenderer {
     window.liftComet = {
       lift_handlerSuccessFunc: function() {
         setTimeout("liftComet.lift_cometEntry();",100);
-      }, 
-      
+      },
+
       lift_handlerFailureFunc: function() {
         setTimeout("liftComet.lift_cometEntry();",""" + LiftRules.cometFailureRetryTimeout + """);
       },
-      
+
       lift_cometEntry: function() {
         """ +
             LiftRules.jsArtifacts.comet(AjaxInfo(JE.JsRaw("lift_toWatch"),
@@ -228,7 +228,7 @@ object ScriptRenderer {
                                                            false,
                                                            "script",
                                                            Full("liftComet.lift_handlerSuccessFunc"),
-                                                           Full("liftComet.lift_handlerFailureFunc"))) + 
+                                                           Full("liftComet.lift_handlerFailureFunc"))) +
         """
       }
     }

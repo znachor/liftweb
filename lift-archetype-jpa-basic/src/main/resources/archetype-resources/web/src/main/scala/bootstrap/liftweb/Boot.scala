@@ -17,10 +17,9 @@ package bootstrap.liftweb
 
 import _root_.java.util.Locale
 
-import _root_.javax.servlet.http.HttpServletRequest
-
 import _root_.net.liftweb.util.{Box,Empty,Full,LoanWrapper,LogBoot}
 import _root_.net.liftweb.http._
+import _root_.net.liftweb.http.provider._
 import _root_.net.liftweb.sitemap._
 import _root_.net.liftweb.sitemap.Loc._
 import ${package}.model._
@@ -64,12 +63,12 @@ class Boot {
 
     object swedishOn extends SessionVar(false)
 
-    def localeCalculator (request : Box[HttpServletRequest]) : Locale =
-      request.flatMap(_.getParameter("swedish") match {
-	case null if swedishOn.is == true => Full(swedishChef)
-	case null => Full(LiftRules.defaultLocaleCalculator(request))
-        case "true" => { swedishOn(true); Full(swedishChef) }
-        case "false" => { swedishOn(false); Full(LiftRules.defaultLocaleCalculator(request)) }
+    def localeCalculator (request : Box[HTTPRequest]) : Locale =
+      request.flatMap(_.param("swedish") match {
+	case Nil if swedishOn.is == true => Full(swedishChef)
+	case Nil => Full(LiftRules.defaultLocaleCalculator(request))
+        case "true" :: _ => { swedishOn(true); Full(swedishChef) }
+        case "false" :: _ => { swedishOn(false); Full(LiftRules.defaultLocaleCalculator(request)) }
       }).openOr(Locale.getDefault())
 
     LiftRules.localeCalculator = localeCalculator _
