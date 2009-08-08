@@ -17,7 +17,6 @@ package net.liftweb.http
 
 import _root_.net.liftweb.util.{Box, Full, Empty, Helpers}
 import Helpers._
-import _root_.javax.servlet.http.{HttpServletRequest , HttpServletResponse}
 import _root_.java.net.{URLConnection}
 
 object ResourceServer {
@@ -63,24 +62,24 @@ object ResourceServer {
                       List(("Last-Modified", toInternetDate(uc.getLastModified)),
                            ("Expires", toInternetDate(millis + 30.days)),
                            ("Content-Type", detectContentType(rw.last))), Nil,
-                      HttpServletResponse.SC_OK)
+                      200)
   }
 
 
   /**
-   * detect the Content-Type of file (path) with servlet-context-defined content-types
-   * (application's web.xml or servlet container's configuration), and fall
+   * detect the Content-Type of file (path) with context-defined content-types
+   * (application's web.xml or container's configuration), and fall
    * back to system or JVM-defined (FileNameMap) content types.
    * if no content-type found, then return "application/octet-stream"
    *
    * @param path Resource name to be analyzed to detect MIME type
    *
-   * @see ServletContext#getMimeType(String)
+   * @see HTTPContext#mimeType(String)
    * @see URLConnection#getFileNameMap()
    */
   def detectContentType(path: String) : String = {
     // Configure response with content type of resource
-    ((Box !! LiftRules.context.getMimeType(path)) or
+    (LiftRules.context.mimeType(path) or
      (Box !! URLConnection.getFileNameMap().getContentTypeFor(path))) openOr
     "application/octet-stream"
   }

@@ -972,23 +972,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
              actual.suplementalJs(Empty) :_*)
   }
 
-  /*
-   /**
-    *
-    */
-   def asJSON(actual: A, sb: StringBuilder): StringBuilder = {
-   sb.append('{')
-   mappedFieldList.foreach{
-   f =>
-   sb.append(f.name)
-   sb.append(':')
-   ??(f.method, actual).is
-   // FIXME finish JSON
-   }
-   sb.append('}')
-   sb
-   }
-   */
+
 
   def asHtml(toLine: A): NodeSeq =
   Text(internalTableName_$_$) :: Text("={ ") ::

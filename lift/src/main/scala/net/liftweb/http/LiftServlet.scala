@@ -15,8 +15,6 @@
  */
 package net.liftweb.http
 
-import _root_.javax.servlet.http.{HttpServlet, HttpServletRequest , HttpServletResponse, HttpSession, Cookie}
-import _root_.javax.servlet.{ServletContext}
 import _root_.java.net.URLDecoder
 import _root_.scala.xml.{Node, NodeSeq,Group, Elem, MetaData, Null, XML, Comment, Text}
 import _root_.scala.collection.immutable.HashMap
@@ -30,28 +28,23 @@ import _root_.net.liftweb.util.ActorPing
 import _root_.java.util.{Locale, ResourceBundle}
 import _root_.java.net.URL
 import js._
-import _root_.javax.servlet._
 import auth._
+import provider._
 
 import _root_.net.liftweb.actor._
 
-/**
- * An implementation of HttpServlet.  Just drop this puppy into
- * your Java web container, do a little magic in web.xml, and
- * ta-da, you've got a scala-powered Servlet
- *
- */
-class LiftServlet extends HttpServlet {
-  private var servletContext: ServletContext = null
 
-  def this(ctx: ServletContext) = {
+class LiftServlet {
+  private var servletContext: HTTPContext = null
+
+  def this(ctx: HTTPContext) = {
     this()
     this.servletContext = ctx
   }
 
-  override def getServletContext: ServletContext = servletContext
+  def getContext: HTTPContext = servletContext
 
-  override def destroy = {
+  def destroy = {
     try {
       LiftRules.ending = true
       LiftRules.runUnloadHooks()
@@ -59,40 +52,38 @@ class LiftServlet extends HttpServlet {
       Scheduler.shutdown
       ActorPing.shutdown
       LAScheduler.shutdown
-      Log.debug("Destroyed servlet")
+      Log.debug("Destroyed Lift handler.")
       // super.destroy
     } catch {
-      case e => Log.error("Servlet destruction failure",e)
+      case e => Log.error("Destruction failure",e)
     }
   }
 
-  override def init = {
+  def init = {
     LiftRules.ending = false
   }
 
-  def getLiftSession(request: Req, httpRequest: HttpServletRequest): LiftSession =
-  LiftRules.getLiftSession(request, httpRequest)
+  def getLiftSession(request: Req): LiftSession = LiftRules.getLiftSession(request)
 
   /**
    * Processes the HTTP requests
    */
-  def service(req: HttpServletRequest,resp: HttpServletResponse, requestState: Req): Boolean = {
+  def service(req: Req,resp: HTTPResponse): Boolean = {
     try {
       def doIt: Boolean = {
-        logTime("Service request ("+req.getMethod+") "+req.getRequestURI) {
-          doService(req, resp, requestState)
+        logTime("Service request ("+req.request.method+") "+req.request.uri) {
+          doService(req, resp)
         }
       }
-      LiftRules.checkContinuations(req) match {
+      LiftRules.checkContinuations(req request) match {
         case None => doIt
         case r if r eq null => doIt
-          //case (req: Request, r: LiftResponse) => sendResponse(r.toResponse, resp, Empty) ; true
-        case Some((or: Req, r: LiftResponse)) if (requestState.path == or.path) => sendResponse(r.toResponse, resp, Empty); true
+        case Some((or: Req, r: LiftResponse)) if (req.path == or.path) => sendResponse(r.toResponse, resp, Empty); true
         case _ => doIt
       }
     } catch {
       case e if e.getClass.getName.endsWith("RetryRequest") => throw e
-      case e => Log.warn("Request for "+req.getRequestURI+" failed "+e.getMessage, e); throw e
+      case e => Log.warn("Request for "+req.request.uri+" failed "+e.getMessage, e); throw e
     }
   }
 
@@ -125,118 +116,117 @@ class LiftServlet extends HttpServlet {
   /**
    * Service the HTTP request
    */
-  def doService(request: HttpServletRequest, response: HttpServletResponse, requestState: Req): Boolean = {
+  def doService(req: Req, response: HTTPResponse): Boolean = {
     var tmpStatelessHolder: Box[() => Box[LiftResponse]] = null
 
-    tryo { LiftRules.onBeginServicing.toList.foreach(_(requestState)) }
+    tryo { LiftRules.onBeginServicing.toList.foreach(_(req)) }
 
     val resp =
-    // if the servlet is shutting down, return a 404
+    // if the application is shutting down, return a 404
     if (LiftRules.ending) {
-      LiftRules.notFoundOrIgnore(requestState, Empty)
-    } else if (!authPassed_?(requestState)) {
+      LiftRules.notFoundOrIgnore(req, Empty)
+    } else if (!authPassed_?(req)) {
       Full(LiftRules.authentication.unauthorizedResponse)
     } else
     // if the request is matched is defined in the stateless table, dispatch
-    if ({tmpStatelessHolder = NamedPF.applyBox(requestState,
+    if ({tmpStatelessHolder = NamedPF.applyBox(req,
                                                LiftRules.statelessDispatchTable.toList);
          tmpStatelessHolder.isDefined})
     {
       val f = tmpStatelessHolder.open_!
       f() match {
-        case Full(v) => Full(LiftRules.convertResponse( (v, Nil, S.responseCookies, requestState) ))
-        case Empty => LiftRules.notFoundOrIgnore(requestState, Empty)
-        case f: Failure => Full(requestState.createNotFound(f))
+        case Full(v) => Full(LiftRules.convertResponse( (v, Nil, S.responseCookies, req) ))
+        case Empty => LiftRules.notFoundOrIgnore(req, Empty)
+        case f: Failure => Full(req.createNotFound(f))
       }
     } else {
 	    // otherwise do a stateful response
-      val liftSession = getLiftSession(requestState, request)
-      S.init(requestState, liftSession) {
-        dispatchStatefulRequest(request, liftSession, requestState)
+      val liftSession = getLiftSession(req)
+      S.init(req, liftSession) {
+        dispatchStatefulRequest(req, liftSession)
       }
     }
 
-    tryo { LiftRules.onEndServicing.toList.foreach(_(requestState, resp)) }
+    tryo { LiftRules.onEndServicing.toList.foreach(_(req, resp)) }
 
     resp match {
       case Full(cresp) =>
         val resp = cresp.toResponse
 
-        logIfDump(requestState, resp)
+        logIfDump(req, resp)
 
-        sendResponse(resp, response, Full(requestState))
+        sendResponse(resp, response, Full(req))
         true
 
       case _ => false
     }
   }
 
-  private def dispatchStatefulRequest(request: HttpServletRequest,
-                                      liftSession: LiftSession,
-                                      requestState: Req):
+  private def dispatchStatefulRequest(req: Req,
+                                      liftSession: LiftSession):
   Box[LiftResponse] =
   {
-    val toMatch = requestState
+    val toMatch = req
 
     val dispatch: (Boolean, Box[LiftResponse]) =
-    NamedPF.find(toMatch, LiftRules.dispatchTable(request)) match {
+    NamedPF.find(toMatch, LiftRules.dispatchTable(req.request)) match {
       case Full(pf) =>
-        LiftSession.onBeginServicing.foreach(_(liftSession, requestState))
+        LiftSession.onBeginServicing.foreach(_(liftSession, req))
         val ret: (Boolean, Box[LiftResponse]) =
         try {
           try {
-            liftSession.runParams(requestState)
+            liftSession.runParams(req)
             pf(toMatch)() match {
               case Full(v) =>
                 (true, Full(LiftRules.convertResponse( (liftSession.checkRedirect(v), Nil,
-                                                        S.responseCookies, requestState) )))
+                                                        S.responseCookies, req) )))
 
               case Empty =>
-                (true, LiftRules.notFoundOrIgnore(requestState, Full(liftSession)))
+                (true, LiftRules.notFoundOrIgnore(req, Full(liftSession)))
 
               case f: Failure =>
-                (true, Full(liftSession.checkRedirect(requestState.createNotFound(f))))
+                (true, Full(liftSession.checkRedirect(req.createNotFound(f))))
             }
           } catch {
             case ite: _root_.java.lang.reflect.InvocationTargetException if (ite.getCause.isInstanceOf[ResponseShortcutException]) =>
-              (true, Full(liftSession.handleRedirect(ite.getCause.asInstanceOf[ResponseShortcutException], requestState)))
+              (true, Full(liftSession.handleRedirect(ite.getCause.asInstanceOf[ResponseShortcutException], req)))
 
-            case rd: _root_.net.liftweb.http.ResponseShortcutException => (true, Full(liftSession.handleRedirect(rd, requestState)))
+            case rd: _root_.net.liftweb.http.ResponseShortcutException => (true, Full(liftSession.handleRedirect(rd, req)))
 
-            case e => (true, NamedPF.applyBox((Props.mode, requestState, e), LiftRules.exceptionHandler.toList))
+            case e => (true, NamedPF.applyBox((Props.mode, req, e), LiftRules.exceptionHandler.toList))
 
           }
         } finally {
           liftSession.notices = S.getNotices
         }
 
-        LiftSession.onEndServicing.foreach(_(liftSession, requestState,
+        LiftSession.onEndServicing.foreach(_(liftSession, req,
                                              ret._2))
         ret
 
       case _ => (false, Empty)
     }
 
-    val wp = requestState.path.wholePath
+    val wp = req.path.wholePath
 
-    if (LiftRules.enableServletSessions) requestState.request.getSession
+    if (LiftRules.enableContainerSessions) req.request.session
 
     val toTransform: Box[LiftResponse] =
-    if (dispatch._1) 
+    if (dispatch._1)
     {
       dispatch._2
     } else if (wp.length == 3 && wp.head == LiftRules.cometPath &&
                wp(2) == LiftRules.cometScriptName()) {
-      LiftRules.serveCometScript(liftSession, requestState)
+      LiftRules.serveCometScript(liftSession, req)
     } else if ((wp.length >= 1) && wp.head == LiftRules.cometPath) {
-      handleComet(requestState, liftSession)
+      handleComet(req, liftSession)
     } else if (wp.length == 2 && wp.head == LiftRules.ajaxPath &&
                wp(1) == LiftRules.ajaxScriptName()) {
-      LiftRules.serveAjaxScript(liftSession, requestState)
+      LiftRules.serveAjaxScript(liftSession, req)
     } else if (wp.length >= 1 && wp.head == LiftRules.ajaxPath){
-      handleAjax(liftSession, requestState)
+      handleAjax(liftSession, req)
     } else {
-      liftSession.processRequest(requestState)
+      liftSession.processRequest(req)
     }
 
     toTransform.map(LiftRules.performTransform)
@@ -256,18 +246,12 @@ class LiftServlet extends HttpServlet {
 
     LiftRules.cometLogger.debug("AJAX Request: "+liftSession.uniqueId+" "+requestState.params)
     tryo{LiftSession.onBeginServicing.foreach(_(liftSession, requestState))}
-    val ret: Box[LiftResponse] = requestState.param("__lift__GC") match {
+    val ret = requestState.param("__lift__GC") match {
       case Full(_) =>
         val now = millis
         val found: Int = liftSession.synchronized {
           liftSession.updateFuncByOwner(RenderVersion.get, now)
         }
-
-        /*
-        import js.JsCmds._
-        if (found == 0) Full(JavaScriptResponse(RedirectTo("/")))
-        else Full(JavaScriptResponse(js.JsCmds.Noop))
-        */
 
         Full(JavaScriptResponse(js.JsCmds.Noop))
 
@@ -306,7 +290,7 @@ class LiftServlet extends HttpServlet {
   /**
    * An actor that manages continuations from container (Jetty style)
    */
-  class ContinuationActor(request: Req, session: LiftSession, 
+  class ContinuationActor(request: Req, session: LiftSession,
                           actors: List[(CometActor, Long)],
                           onBreakout: List[AnswerRender] => Unit) extends LiftActor {
     private var answers: List[AnswerRender] = Nil
@@ -364,7 +348,7 @@ class LiftServlet extends HttpServlet {
 
     if (actors.isEmpty) Full(new JsCommands(JsCmds.RedirectTo(LiftRules.noCometSessionPage) :: Nil).toResponse)
     else LiftRules.checkContinuations(requestState.request) match {
-      case Some(null) => 
+      case Some(null) =>
         setupContinuation(requestState, sessionActor, actors)
 
       case _ =>
@@ -420,10 +404,10 @@ class LiftServlet extends HttpServlet {
   }
 
   /**
-   * Sends the {@code HttpServletResponse} to the browser using data from the
+   * Sends the {@code HTTPResponse} to the browser using data from the
    * {@link Response} and {@link Req}.
    */
-  def sendResponse(resp: BasicResponse, response: HttpServletResponse, request: Box[Req]) {
+  def sendResponse(resp: BasicResponse, response: HTTPResponse, request: Box[Req]) {
     def fixHeaders(headers : List[(String, String)]) = headers map ((v) => v match {
         case ("Location", uri) => (v._1, (
               (for(u <- request;
@@ -436,7 +420,7 @@ class LiftServlet extends HttpServlet {
     def pairFromRequest(in: Box[Req]): (Box[Req], Box[String]) = {
       val acceptHeader = for (req <- in;
                               innerReq <- Box.legacyNullTest(req.request);
-                              accept <- Box.legacyNullTest(innerReq.getHeader("Accept"))) yield accept
+                              accept <- innerReq.header("Accept")) yield accept
 
       (in, acceptHeader)
     }
@@ -450,10 +434,10 @@ class LiftServlet extends HttpServlet {
 
     LiftRules.beforeSend.toList.foreach(f => tryo(f(resp, response, header, request)))
     // set the cookies
-    resp.cookies.foreach(cookie => response.addCookie(cookie))
+    response.addCookies(resp.cookies)
 
     // send the response
-    header.elements.foreach {case (name, value) => response.setHeader(name, value)}
+    response.addHeaders(header.map {case (name, value) => HTTPParam(name, value)})
     LiftRules.supplimentalHeaders(response)
 
     response setStatus resp.code
@@ -461,14 +445,14 @@ class LiftServlet extends HttpServlet {
     try {
       resp match {
         case InMemoryResponse(bytes, _, _, _) =>
-          response.getOutputStream.write(bytes)
-          response.getOutputStream.flush()
+          response.outputStream.write(bytes)
+          response.outputStream.flush()
 
         case StreamingResponse(stream, endFunc, _, _, _, _) =>
           try {
             var len = 0
             val ba = new Array[Byte](8192)
-            val os = response.getOutputStream
+            val os = response.outputStream
             stream match {
               case jio: _root_.java.io.InputStream => len = jio.read(ba)
               case stream => len = stream.read(ba)
@@ -480,7 +464,7 @@ class LiftServlet extends HttpServlet {
                 case stream => len = stream.read(ba)
               }
             }
-            response.getOutputStream.flush()
+            response.outputStream.flush()
           } finally {
             endFunc()
           }
@@ -493,117 +477,6 @@ class LiftServlet extends HttpServlet {
   }
 }
 
-trait LiftFilterTrait {
-  def actualServlet: LiftServlet
-
-  /**
-   * Executes the Lift filter component.
-   */
-  def doFilter(req: ServletRequest, res: ServletResponse, chain: FilterChain) = {
-    RequestVarHandler(Empty,
-                      (req, res) match {
-        case (httpReq: HttpServletRequest, httpRes: HttpServletResponse) =>
-          tryo { LiftRules.early.toList.foreach(_(httpReq)) }
-
-          val session = Req(httpReq, LiftRules.rewriteTable(httpReq), System.nanoTime)
-
-          URLRewriter.doWith(url => NamedPF.applyBox(httpRes.encodeURL(url), LiftRules.urlDecorate.toList) openOr httpRes.encodeURL(url)) {
-            if (!(isLiftRequest_?(session) && actualServlet.service(httpReq, httpRes, session))) {
-              chain.doFilter(req, res)
-            }
-          }
-        case _ => chain.doFilter(req, res)
-      })
-  }
-
-  def isLiftRequest_?(session: Req): Boolean
-}
-
-class LiftFilter extends Filter with LiftFilterTrait
-{
-  //The variable holds the current ServletContext (we need it for request URI - handling
-  private var context: ServletContext = null
-  var actualServlet: LiftServlet = _
-
-  //We need to capture the ServletContext on init
-  def init(config:FilterConfig) {
-    context = config.getServletContext
-
-    LiftRules.setContext(context)
-
-    bootLift(Box.legacyNullTest(config.getInitParameter("bootloader")))
-
-    actualServlet = new LiftServlet(context)
-    actualServlet.init
-
-  }
-
-  //And throw it away on destruction
-  def destroy {
-    context = null
-    if (actualServlet != null) {
-      actualServlet.destroy
-      actualServlet = null
-    }
-  }
-
-  /**
-   * Executes Lift's Boot
-   */
-  def bootLift(loader : Box[String]) : Unit =
-  {
-    try
-    {
-      val b : Bootable = loader.map(b => Class.forName(b).newInstance.asInstanceOf[Bootable]) openOr DefaultBootstrap
-
-      preBoot
-      b.boot
-      postBoot
-    } catch {
-      case e => Log.error("Failed to Boot", e); None
-    }
-  }
-
-  private def preBoot() {
-    LiftRules.dispatch.prepend(NamedPF("Classpath service") {
-        case r @ Req(mainPath :: subPath, suffx, _)
-          if mainPath == LiftRules.resourceServerPath =>
-          ResourceServer.findResourceInClasspath(r, r.path.wholePath.drop(1))
-      })
-  }
-
-  private def postBoot {
-    try {
-      ResourceBundle getBundle (LiftRules.liftCoreResourceName)
-
-      if (Props.productionMode && LiftRules.templateCache.isEmpty) {
-        // Since we're in productin mode and user did not explicitely set any template caching, we're setting it
-        LiftRules.templateCache = Full(InMemoryCache(500))
-      }
-    } catch {
-      case _ => Log.error("LiftWeb core resource bundle for locale " + Locale.getDefault() + ", was not found ! ")
-    } finally {
-      LiftRules.doneBoot = true;
-    }
-  }
-
-
-  //This function tells you wether a resource exists or not, could probably be better
-  private def liftHandled(in: String): Boolean = (in.indexOf(".") == -1) || in.endsWith(".html") || in.endsWith(".xhtml") ||
-  in.endsWith(".htm") ||
-  in.endsWith(".xml") || in.endsWith(".liftjs") || in.endsWith(".liftcss")
-
-  /**
-   * Tests if a request should be handled by Lift or passed to the container to be executed by other potential filters or servlets.
-   */
-  def isLiftRequest_?(session: Req): Boolean = {
-    NamedPF.applyBox(session, LiftRules.liftRequest.toList) match {
-      case Full(b) => b
-      case _ =>  session.path.endSlash ||
-        (session.path.wholePath.takeRight(1) match
-         {case Nil => true case x :: xs => liftHandled(x)}) ||
-        context.getResource(session.uri) == null
-    }
-  }
-}
+import provider.servlet._
+class LiftFilter extends ServletFilterProvider
 

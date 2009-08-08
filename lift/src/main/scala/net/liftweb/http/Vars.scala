@@ -192,7 +192,7 @@ private[http] object RequestVarHandler /* extends LoanWrapper */ {
   def apply[T](session: Box[LiftSession], f: => T): T = {
     if ("in" == isIn.value) {
       val tv = vals.value
-      
+
       // remove all the session variables that are CleanRequestVarOnSessionTransition
       val toRemove: Iterable[String] = tv.flatMap {
         case (name, (it: CleanRequestVarOnSessionTransition, _)) => List(name)

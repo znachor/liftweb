@@ -89,7 +89,7 @@ object SiteMap {
   def buildLink(name: String): NodeSeq =
   buildLink(name, Nil)
 
-  def apply(kids: Menu *) = new SiteMap(Nil, kids :_*) 
+  def apply(kids: Menu *) = new SiteMap(Nil, kids :_*)
 }
 
 trait HasKids {

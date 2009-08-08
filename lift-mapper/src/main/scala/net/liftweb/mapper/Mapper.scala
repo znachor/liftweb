@@ -27,6 +27,8 @@ import _root_.net.liftweb.util.{Box, Empty, Full, Failure}
 
 trait BaseMapper {
   type MapperType <: Mapper[MapperType]
+
+  def save: Boolean
 }
 
 @serializable
@@ -289,13 +291,21 @@ trait LongKeyedMapper[OwnerType <: LongKeyedMapper[OwnerType]] extends KeyedMapp
 
 trait BaseKeyedMapper extends BaseMapper {
   type TheKeyType
+  type KeyedMapperType <: KeyedMapper[TheKeyType, MapperType]
+
+  def primaryKeyField: MappedField[TheKeyType, MapperType] with IndexedField[TheKeyType]
+  /**
+   * Delete the model from the RDBMS
+   */
+  def delete_! : Boolean 
 }
 
 trait BaseLongKeyedMapper extends BaseKeyedMapper {
   override type TheKeyType = Long
 }
 
-trait IdPK extends BaseLongKeyedMapper {
+trait IdPK /* extends BaseLongKeyedMapper */ {
+  self: BaseLongKeyedMapper =>
   def primaryKeyField = id
   object id extends MappedLongIndex[MapperType](this.asInstanceOf[MapperType])
 }
@@ -304,8 +314,9 @@ trait KeyedMapper[KeyType, OwnerType<:KeyedMapper[KeyType, OwnerType]] extends M
   self: OwnerType =>
 
   type TheKeyType = KeyType
+  type KeyedMapperType = OwnerType
 
-  def primaryKeyField: MappedField[KeyType, OwnerType] with IndexedField[KeyType];
+  def primaryKeyField: MappedField[KeyType, OwnerType] with IndexedField[KeyType]
   def getSingleton: KeyedMetaMapper[KeyType, OwnerType];
 
   override def comparePrimaryKeys(other: OwnerType) = primaryKeyField.is == other.primaryKeyField.is
