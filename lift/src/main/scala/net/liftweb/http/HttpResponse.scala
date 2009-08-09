@@ -17,7 +17,7 @@ package net.liftweb.http
 
 import _root_.scala.xml.{Node, Unparsed, Group, NodeSeq}
 import _root_.net.liftweb.util._
-import _root_.javax.servlet.http.Cookie
+import _root_.net.liftweb.http.provider._
 import js._
 import _root_.net.liftweb.util.Helpers._
 
@@ -71,14 +71,14 @@ case class ResetContentResponse() extends LiftResponse with HeaderStuff {
 /**
  * 301 Redirect.
  */
-case class PermRedirectResponse(uri: String, request: Req, cookies: Cookie*) extends LiftResponse {
+case class PermRedirectResponse(uri: String, request: Req, cookies: HTTPCookie*) extends LiftResponse {
   def toResponse = InMemoryResponse(Array(), List("Location" -> request.updateWithContextPath(uri)), cookies.toList, 301)
 }
 
 /**
  * 307 Redirect.
  */
-case class TemporaryRedirectResponse(uri: String, request: Req, cookies: Cookie*) extends LiftResponse {
+case class TemporaryRedirectResponse(uri: String, request: Req, cookies: HTTPCookie*) extends LiftResponse {
   def toResponse = InMemoryResponse(Array(), List("Location" -> request.updateWithContextPath(uri)), cookies.toList, 307)
 }
 
@@ -237,7 +237,7 @@ object JavaScriptResponse {
 /**
  * Impersonates a HTTP response having Content-Type = text/javascript
  */
-case class JavaScriptResponse(js: JsCmd, headers: List[(String, String)], cookies: List[Cookie], code: Int) extends LiftResponse {
+case class JavaScriptResponse(js: JsCmd, headers: List[(String, String)], cookies: List[HTTPCookie], code: Int) extends LiftResponse {
   def toResponse = {
     val bytes = js.toJsCmd.getBytes("UTF-8")
     InMemoryResponse(bytes, ("Content-Length", bytes.length.toString) :: ("Content-Type", "text/javascript") :: headers, cookies, code)
@@ -252,7 +252,7 @@ object JsonResponse extends HeaderStuff {
   def apply(json: JsExp): LiftResponse = JsonResponse(json, headers, cookies, 200)
 }
 
-case class JsonResponse(json: JsExp, headers: List[(String, String)], cookies: List[Cookie], code: Int) extends LiftResponse {
+case class JsonResponse(json: JsExp, headers: List[(String, String)], cookies: List[HTTPCookie], code: Int) extends LiftResponse {
 	def toResponse = {
 		val bytes = json.toJsCmd.getBytes("UTF-8")
 		InMemoryResponse(bytes, ("Content-Length", bytes.length.toString) :: ("Content-Type", "application/json") :: headers, cookies, code)
@@ -261,25 +261,25 @@ case class JsonResponse(json: JsExp, headers: List[(String, String)], cookies: L
 
 sealed trait BasicResponse extends LiftResponse {
   def headers: List[(String, String)]
-  def cookies: List[Cookie]
+  def cookies: List[HTTPCookie]
   def code: Int
   def size: Long
 }
 
-final case class InMemoryResponse(data: Array[Byte], headers: List[(String, String)], cookies: List[Cookie], code: Int) extends BasicResponse {
+final case class InMemoryResponse(data: Array[Byte], headers: List[(String, String)], cookies: List[HTTPCookie], code: Int) extends BasicResponse {
   def toResponse = this
   def size = data.length
 
   override def toString="InMemoryResponse("+(new String(data, "UTF-8"))+", "+headers+", "+cookies+", "+code+")"
 }
 
-final case class StreamingResponse(data: {def read(buf: Array[Byte]): Int}, onEnd: () => Unit, size: Long, headers: List[(String, String)], cookies: List[Cookie], code: Int) extends BasicResponse {
+final case class StreamingResponse(data: {def read(buf: Array[Byte]): Int}, onEnd: () => Unit, size: Long, headers: List[(String, String)], cookies: List[HTTPCookie], code: Int) extends BasicResponse {
   def toResponse = this
 
-  override def toString="StreamingResponse( streaming_data , "+headers+", "+cookies+", "+code+")"
+  override def toString="StreamingResponse( steaming_data , "+headers+", "+cookies+", "+code+")"
 }
 
-case class RedirectResponse(uri: String, cookies: Cookie*) extends LiftResponse {
+case class RedirectResponse(uri: String, cookies: HTTPCookie*) extends LiftResponse {
   // The Location URI is not resolved here, instead it is resolved with context path prior of sending the actual response
   def toResponse = InMemoryResponse(Array(0), List("Location" -> uri), cookies toList, 302)
 }
@@ -288,7 +288,7 @@ object DoRedirectResponse {
   def apply(url: String): LiftResponse = RedirectResponse(url, Nil :_*)
 }
 
-case class RedirectWithState(override val uri: String, state : RedirectState, override val cookies: Cookie*) extends  RedirectResponse(uri, cookies:_*)
+case class RedirectWithState(override val uri: String, state : RedirectState, override val cookies: HTTPCookie*) extends  RedirectResponse(uri, cookies:_*)
 
 object RedirectState {
   def apply(f: () => Unit, msgs: (String, NoticeType.Value)*): RedirectState = new RedirectState(Full(f), msgs :_*)
@@ -352,7 +352,7 @@ case class CSSResponse(text: String, headers: List[(String, String)], code: Int)
 trait NodeResponse extends LiftResponse {
   def out: Node
   def headers: List[(String, String)]
-  def cookies: List[Cookie]
+  def cookies: List[HTTPCookie]
   def code: Int
   def docType: Box[String]
   def renderInIEMode: Boolean = false
@@ -406,7 +406,7 @@ trait NodeResponse extends LiftResponse {
 
 case class XhtmlResponse(out: Node, docType: Box[String],
                          headers: List[(String, String)],
-                         cookies: List[Cookie],
+                         cookies: List[HTTPCookie],
                          code: Int,
                          override val renderInIEMode: Boolean) extends NodeResponse {
   private[http] var _includeXmlVersion = true

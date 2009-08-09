@@ -18,6 +18,7 @@ package bootstrap.liftweb
 import _root_.net.liftweb._
 import util.{Helpers, Box, Full, Empty, Failure, Log, NamedPF, Props}
 import http._
+import provider._
 import sitemap._
 import Helpers._
 
@@ -30,7 +31,6 @@ import snippet.{definedLocale, Template, AllJson, RuntimeStats}
 import _root_.net.liftweb.mapper.{DB, ConnectionManager, Schemifier, DefaultConnectionIdentifier, ConnectionIdentifier}
 
 import _root_.java.sql.{Connection, DriverManager}
-import _root_.javax.servlet.http.{HttpServlet, HttpServletRequest , HttpServletResponse, HttpSession}
 import _root_.scala.actors._
 import Actor._
 
@@ -99,7 +99,7 @@ class Boot {
 
   }
 
-  private def makeUtf8(req: HttpServletRequest): Unit = {req.setCharacterEncoding("UTF-8")}
+  private def makeUtf8(req: HTTPRequest): Unit = {req.setCharacterEncoding("UTF-8")}
 }
 
 object RequestLogger {
@@ -130,7 +130,7 @@ object MenuInfo {
        Menu(Loc("js confirm", List("rhodeisland"), "Modal Dialog")),
        Menu(Loc("json", List("json"), "JSON Messaging")),
        Menu(Loc("json_more", List("json_more"), "More JSON")),
-  Menu(Loc("form_ajax", List("form_ajax"), "Ajax and Forms"))
+       Menu(Loc("form_ajax", List("form_ajax"), "Ajax and Forms"))
   ) ::
   Menu(Loc("Persistence", List("persistence"), "Persistence", Unless(() => Props.inGAE, "Disabled for GAE")),
        Menu(Loc("xml fun", List("xml_fun"), "XML Fun", Unless(() => Props.inGAE, "Disabled for GAE"))),
@@ -248,7 +248,7 @@ object BrowserLogger {
 
   def haveSeenYou(session: LiftSession, request: Req) {
     if (!HaveSeenYou.is) {
-      Log.info("Created session "+session.uniqueId+" IP: {"+request.request.getRemoteAddr+"} UserAgent: {{"+request.userAgent.openOr("N/A")+"}}")
+      Log.info("Created session "+session.uniqueId+" IP: {"+request.request.remoteAddress+"} UserAgent: {{"+request.userAgent.openOr("N/A")+"}}")
       HaveSeenYou(true)
     }
   }

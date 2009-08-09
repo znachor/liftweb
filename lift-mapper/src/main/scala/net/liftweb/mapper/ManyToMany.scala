@@ -1,11 +1,18 @@
 package net.liftweb.mapper
 
 
+import _root_.net.liftweb.util._
+
 /**
  * Add this trait to a Mapper to add support for many-to-many relationships
  * @author nafg
  */
-trait ManyToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
+trait ManyToMany extends BaseKeyedMapper {
+  this: KeyedMapper[_, _] =>
+
+  type K = TheKeyType
+  type T = KeyedMapperType
+
   private var manyToManyFields: List[MappedManyToMany[_,_,_]] = Nil
   
   /**
@@ -14,7 +21,7 @@ trait ManyToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
    * Returns false as soon as the parent or a one-to-many field returns false.
    * If they are all successful returns true.
    */
-  override def save = {
+  abstract override def save = {
     super.save &&
       manyToManyFields.forall(_.save)
   }
@@ -25,7 +32,7 @@ trait ManyToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
    * Returns false as soon as the parent or a one-to-many field returns false.
    * If they are all successful returns true.
    */
-  override def delete_! = {
+  abstract override def delete_! = {
     super.delete_! && 
       manyToManyFields.forall( _.delete_!)
   }
@@ -43,12 +50,12 @@ trait ManyToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
    */
   class MappedManyToMany[O<:Mapper[O], K2, T2 <: KeyedMapper[K2,T2]](
     val joinMeta: MetaMapper[O],
-    thisField: MappedForeignKey[K,O,T],
+    thisField: MappedForeignKey[K,O,_ /* the compiler doesn't like the types this should be T*/],
     val otherField: MappedForeignKey[K2, O, T2],
     val otherMeta: MetaMapper[T2],
     val qp: QueryParam[O]*) extends scala.collection.mutable.Buffer[T2] {
     
-    def field(join: O) = thisField.actualField(join).asInstanceOf[MappedForeignKey[K,O,T]]
+    def field(join: O) = thisField.actualField(join).asInstanceOf[MappedForeignKey[K,O,_ /* T */]]
     
     protected def children: List[T2] =
       joins.map(otherField.actualField(_).asInstanceOf[MappedForeignKey[K2,O,T2]].obj.openOr(error("Broken join")))
@@ -138,7 +145,9 @@ trait ManyToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
     }
     
     def refresh = {
-      joins = joinMeta.findAll( (By(thisField, primaryKeyField) :: qp.toList): _*)
+      val by = new Cmp[O, TheKeyType](thisField, OprEnum.Eql, Full(primaryKeyField.is), Empty)
+
+      joins = joinMeta.findAll( (by :: qp.toList): _*)
       all
     }
     

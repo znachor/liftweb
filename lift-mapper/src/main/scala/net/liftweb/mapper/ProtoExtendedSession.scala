@@ -17,10 +17,11 @@ package net.liftweb.mapper
  */
 
 import _root_.net.liftweb._
+import _root_.net.liftweb.http.provider._
 import util._
 import http._
 import Helpers._
-import _root_.javax.servlet.http.{Cookie}
+
 
 trait ProtoExtendedSession[T <: ProtoExtendedSession[T]] extends
 KeyedMapper[Long, T] {
@@ -60,7 +61,7 @@ KeyedMetaMapper[Long, T] {
     def apply[N](f: => N): N = {
       (recoverUserId, S.findCookie(CookieName)) match {
         case (Empty, Full(c)) =>
-          find(By(cookieId, c.getValue)) match {
+          find(By(cookieId, c.value openOr "")) match {
             case Full(es) if es.experation.is < millis => es.delete_!
             case Full(es) => logUserIdIn(es.userId)
             case _ =>
@@ -79,16 +80,16 @@ KeyedMetaMapper[Long, T] {
   def userDidLogin(uid: UserType) {
     userDidLogout(Full(uid))
     val inst = create.userId(uid.userIdAsString).saveMe
-    val cookie = new Cookie(CookieName, inst.cookieId)
-    cookie.setMaxAge(((inst.experation.is - millis) / 1000L).toInt)
-    cookie.setPath("/")
+    val cookie = HTTPCookie(CookieName, inst.cookieId).
+      setMaxAge(((inst.experation.is - millis) / 1000L).toInt).
+      setPath("/")
     S.addCookie(cookie)
   }
 
   def userDidLogout(uid: Box[UserType]) {
     for (cook <- S.findCookie(CookieName)) {
       S.deleteCookie(cook)
-      find(By(cookieId, cook.getValue)).foreach(_.delete_!)
+      find(By(cookieId, cook.value openOr "")).foreach(_.delete_!)
     }
   }
 

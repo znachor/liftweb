@@ -88,6 +88,33 @@ object JSONSpec extends Specification {
       p2.open_! must_== -517272833222L
     }
 
+    "complex JSON objects #2" in {
+      val p2 = JSONParser.parse(
+    """{"command":"setPoint","params":{"mf":51.3256123,"$a":-0.6379592,"x":-0.6379592,"y":51.3256123}}""")
+      p2.isDefined must be(true)
+      val params = p2.open_!.asInstanceOf[Map[String, Map[String, Any]]].apply("params")
+      params("mf") must_== 51.3256123D
+      params("$a") must_== -0.6379592D
+      params("y") must_== 51.3256123D
+      params("x") must_== -0.6379592D
+    }
+
+    "-0" in {
+      val p2 = JSONParser.parse(
+    """-0""")
+      p2.isDefined must be(true)
+
+    }
+
+
+    "-0.5033" in {
+      val p2 = JSONParser.parse(
+    """-0.5033""")
+      p2.isDefined must be(true)
+      p2.open_! must_== -0.5033
+
+    }
+
 
     "complex JSON objects" in {
       val p2 = JSONParser.parse(

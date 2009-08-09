@@ -11,7 +11,7 @@ import Loc._
  * The contents of the text element is the menu display x(ht)ml,
  * and the contents of the link element is an array of
  * path components in JSON array syntax.
- * 
+ *
  * @author nafg
  */
 object XmlMenu {

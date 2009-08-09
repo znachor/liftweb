@@ -89,7 +89,7 @@ object Menu extends DispatchSnippet {
     val expandAll = S.attr("expandAll").isDefined
 
     val toRender : Seq[MenuItem] = (S.attr("item"), S.attr("group")) match {
-      case (Full(item),_) => 
+      case (Full(item),_) =>
         (for (sm <- LiftRules.siteMap;
               loc <- sm.findLoc(item)) yield { buildItemMenu(loc, expandAll) }) openOr Nil
       case (_,Full(group)) =>

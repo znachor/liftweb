@@ -21,11 +21,10 @@ import _root_.net.liftweb.util.Helpers._
 import _root_.net.liftweb.sitemap._
 import _root_.net.liftweb.http.js.JSArtifacts
 import _root_.net.liftweb.http.js.jquery._
+import _root_.net.liftweb.http.provider._
 import _root_.scala.xml._
 import _root_.scala.collection.mutable.{ListBuffer}
 import _root_.java.util.{Locale, TimeZone, ResourceBundle, Date}
-import _root_.javax.servlet.http.{HttpServlet, HttpServletRequest , HttpServletResponse, HttpSession, Cookie}
-import _root_.javax.servlet.{ServletContext}
 import _root_.java.io.{InputStream, ByteArrayOutputStream, BufferedReader, StringReader}
 import js._
 import JE._
@@ -48,7 +47,7 @@ object LiftRules {
 
   /**
    * A partial function that allows the application to define requests that should be
-   * handled by lift rather than the default servlet handler
+   * handled by lift rather than the default handler
    */
   type LiftRequestPF = PartialFunction[Req, Boolean]
 
@@ -56,13 +55,13 @@ object LiftRules {
    * Holds user functions that willbe executed very early in the request processing. The functions'
    * result will be ignored.
    */
-  val early = RulesSeq[(HttpServletRequest) => Any]
+  val early = RulesSeq[(HTTPRequest) => Any]
 
   /**
    * Holds user functions that are executed before sending the response to client. The functions'
    * result will be ignored.
    */
-  val beforeSend = RulesSeq[(BasicResponse, HttpServletResponse, List[(String, String)], Box[Req]) => Any]
+  val beforeSend = RulesSeq[(BasicResponse, HTTPResponse, List[(String, String)], Box[Req]) => Any]
 
   /**
    * Defines the resources that are protected by authentication and authorization. If this function
@@ -85,33 +84,32 @@ object LiftRules {
    * and returns a LiftSession reference. This can be used in cases subclassing
    * LiftSession is necessary.
    */
-  var sessionCreator: (HttpSession,  String, List[(String, String)]) => LiftSession = {
-    case (httpSession, contextPath, headers) => new LiftSession(contextPath, httpSession.getId, Full(httpSession), headers)
+  var sessionCreator: (HTTPSession,  String) => LiftSession = {
+    case (httpSession, contextPath) => new LiftSession(contextPath, httpSession.sessionId, Full(httpSession))
   }
 
-  var enableServletSessions = true
+  var enableContainerSessions = true
 
-  var getLiftSession: (Req, HttpServletRequest) => LiftSession =
-  (req, httpReq) => _getLiftSession(req, httpReq)
+  var getLiftSession: (Req) => LiftSession = (req) => _getLiftSession(req)
 
   /**
    * Returns a LiftSession instance.
    */
-  private def _getLiftSession(request: Req, httpReq: HttpServletRequest): LiftSession = {
-    val wp = request.path.wholePath
+  private def _getLiftSession(req: Req): LiftSession = {
+    val wp = req.path.wholePath
     val cometSessionId =
     if (wp.length >= 3 && wp.head == LiftRules.cometPath)
     Full(wp(2))
     else
     Empty
 
-    val ret = SessionMaster.getSession(httpReq, cometSessionId) match {
+    val ret = SessionMaster.getSession(req.request, cometSessionId) match {
       case Full(ret) =>
         ret.fixSessionTime()
         ret
 
       case _ =>
-        val ret = LiftSession(httpReq.getSession, request.contextPath, request.headers)
+        val ret = LiftSession(req.request.session, req.request.contextPath)
         ret.fixSessionTime()
         SessionMaster.addSession(ret)
         ret
@@ -142,7 +140,7 @@ object LiftRules {
    * Holds user functions that are executed after the response was sent to client. The functions' result
    * will be ignored.
    */
-  val afterSend = RulesSeq[(BasicResponse, HttpServletResponse, List[(String, String)], Box[Req]) => Any]
+  val afterSend = RulesSeq[(BasicResponse, HTTPResponse, List[(String, String)], Box[Req]) => Any]
 
   /**
    * Calculate the Comet Server (by default, the server that
@@ -214,8 +212,8 @@ object LiftRules {
   var maxMimeSize: Long = 8 * 1024 * 1024
 
   /**
-   * Should pages that are not found be passed along the servlet chain to the
-   * next handler?
+   * Should pages that are not found be passed along the request processing chain to the
+   * next handler outside Lift?
    */
   var passNotFoundToChain = false
 
@@ -281,7 +279,7 @@ object LiftRules {
 
   var noticesToJsCmd: () => JsCmd = () => {
     import builtin.snippet._
-   
+
     val func: (() => List[NodeSeq], String, MetaData) => NodeSeq = (f, title, attr) => f() map (e => <li>{e}</li>) match {
       case Nil => Nil
       case list => <div>{title}<ul>{list}</ul></div> % attr
@@ -390,9 +388,9 @@ object LiftRules {
   /**
    * A function that takes the current HTTP request and returns the current
    */
-  var timeZoneCalculator: Box[HttpServletRequest] => TimeZone = defaultTimeZoneCalculator _
+  var timeZoneCalculator: Box[HTTPRequest] => TimeZone = defaultTimeZoneCalculator _
 
-  def defaultTimeZoneCalculator(request: Box[HttpServletRequest]): TimeZone = TimeZone.getDefault
+  def defaultTimeZoneCalculator(request: Box[HTTPRequest]): TimeZone = TimeZone.getDefault
 
   /**
    * How many times do we retry an Ajax command before calling it a failure?
@@ -428,73 +426,28 @@ object LiftRules {
   /**
    * A function that takes the current HTTP request and returns the current
    */
-  var localeCalculator: Box[HttpServletRequest] => Locale = defaultLocaleCalculator _
+  var localeCalculator: Box[HTTPRequest] => Locale = defaultLocaleCalculator _
 
-  def defaultLocaleCalculator(request: Box[HttpServletRequest]) =
-  request.flatMap(_.getLocale() match {
-      case null => Empty
-      case l: Locale => Full(l)}).openOr(Locale.getDefault())
+  def defaultLocaleCalculator(request: Box[HTTPRequest]) =
+  request.flatMap(_.locale).openOr(Locale.getDefault())
 
   var resourceBundleFactories = RulesSeq[ResourceBundleFactoryPF]
-
-  private val (hasContinuations_?, contSupport, getContinuation, getObject, setObject, suspend, resume) = {
-    try {
-      val cc = Class.forName("org.mortbay.util.ajax.ContinuationSupport")
-      val meth = cc.getMethod("getContinuation", classOf[HttpServletRequest], classOf[AnyRef])
-      val cci = Class.forName("org.mortbay.util.ajax.Continuation")
-      val getObj = cci.getMethod("getObject")
-      val setObj = cci.getMethod("setObject", classOf[AnyRef])
-      val suspend = cci.getMethod("suspend", _root_.java.lang.Long.TYPE)
-      val resume = cci.getMethod("resume")
-      (true, (cc), (meth), (getObj), (setObj), (suspend), resume)
-    } catch {
-      case e => (false, null, null, null, null, null, null)
-    }
-  }
 
   /**
    * User for Comet handling to resume a continuation
    */
-  def resumeRequest(what: AnyRef, req: HttpServletRequest) {
-    val cont = getContinuation.invoke(contSupport, req, LiftRules)
-    setObject.invoke(cont, what)
-    resume.invoke(cont)
-  }
+  def resumeRequest(what: AnyRef, req: HTTPRequest) = req resume what
 
   /**
    * Execute a continuation. For Jetty the Jetty specific exception will be thrown
    * and the container will manage it.
    */
-  def doContinuation(req: HttpServletRequest, timeout: Long): Nothing = {
-    try {
-      val cont = getContinuation.invoke(contSupport, req, LiftRules)
-      Log.trace("About to suspend continuation")
-      suspend.invoke(cont, new _root_.java.lang.Long(timeout))
-      throw new Exception("Bail")
-    } catch {
-      case e: _root_.java.lang.reflect.InvocationTargetException if e.getCause.getClass.getName.endsWith("RetryRequest") =>
-        throw e.getCause
-    }
-  }
+  def doContinuation(req: HTTPRequest, timeout: Long): Nothing =  req suspend timeout
 
   /**
    * Check to see if continuations are supported
    */
-  def checkContinuations(req: HttpServletRequest): Option[Any] = {
-    if (!hasContinuations_?) None
-    else if (Props.inGAE) None
-    else {
-      val cont = getContinuation.invoke(contSupport, req, LiftRules)
-      val ret = getObject.invoke(cont)
-      try {
-        setObject.invoke(cont, null)
-        Some(ret)
-      }
-      catch {
-        case e: Exception => None
-      }
-    }
-  }
+  def checkContinuations(req: HTTPRequest): Option[Any] = req hasSuspendResumeSupport_?
 
   private var _sitemap: Box[SiteMap] = Empty
 
@@ -517,7 +470,7 @@ object LiftRules {
    */
   val statelessDispatchTable = RulesSeq[DispatchPF]
 
-  private[http] def dispatchTable(req: HttpServletRequest): List[DispatchPF] = {
+  private[http] def dispatchTable(req: HTTPRequest): List[DispatchPF] = {
     req match {
       case null => dispatch.toList
       case _ => SessionMaster.getSession(req, Empty) match {
@@ -530,7 +483,7 @@ object LiftRules {
     }
   }
 
-  private[http] def rewriteTable(req: HttpServletRequest): List[RewritePF] = {
+  private[http] def rewriteTable(req: HTTPRequest): List[RewritePF] = {
     req match {
       case null => rewrite.toList
       case _ => SessionMaster.getSession(req, Empty) match {
@@ -562,11 +515,10 @@ object LiftRules {
   /**
    * The default way of calculating the context path
    */
-  def defaultCalcContextPath(request: HttpServletRequest): Box[String] = {
-    request.getHeader("X-Lift-ContextPath") match {
-      case null => Empty
-      case s if s.trim == "/" => Full("")
-      case s => Full(s.trim)
+  def defaultCalcContextPath(request: HTTPRequest): Box[String] = {
+    request.header("X-Lift-ContextPath").map {
+      case s if s.trim == "/" => ""
+      case s => s.trim
     }
   }
 
@@ -574,20 +526,20 @@ object LiftRules {
    * If there is an alternative way of calculating the context path
    * (by default inspecting the X-Lift-ContextPath header)
    */
-  var calculateContextPath: HttpServletRequest => Box[String] =
+  var calculateContextPath: HTTPRequest => Box[String] =
   defaultCalcContextPath _
 
-  private var _context: ServletContext = _
+  private var _context: HTTPContext = _
 
   /**
-   * Returns the ServletContext
+   * Returns the HTTPContext
    */
-  def context: ServletContext = synchronized {_context}
+  def context: HTTPContext = synchronized {_context}
 
   /**
-   * Sets the ServletContext
+   * Sets the HTTPContext
    */
-  def setContext(in: ServletContext): Unit =  synchronized {
+  def setContext(in: HTTPContext): Unit =  synchronized {
     if (in ne _context) {
       _context = in
     }
@@ -615,7 +567,7 @@ object LiftRules {
   }
 
   private val defaultFinder = getClass.getResource _
-  private def resourceFinder(name: String): _root_.java.net.URL = _context.getResource(name)
+  private def resourceFinder(name: String): _root_.java.net.URL = _context.resource(name)
 
   /**
    * Obtain the resource URL by name
@@ -668,16 +620,15 @@ object LiftRules {
   /**
    * Looks up a resource by name and returns an Empty Box if the resource was not found.
    */
-  def finder(name: String): Box[InputStream] = 
+  def finder(name: String): Box[InputStream] =
   (for {
       ctx <- Box !! LiftRules.context
-      res <- Box !! ctx.getResourceAsStream(name)
+      res <- Box !! ctx.resourceAsStream(name)
     } yield res) or getResourceAsStream(name)
-
 
   /**
    * Get the partial function that defines if a request should be handled by
-   * the application (rather than the default servlet handler)
+   * the application (rather than the default container handler)
    */
   val liftRequest = RulesSeq[LiftRequestPF]
 
@@ -708,7 +659,7 @@ object LiftRules {
   /**
    * Takes a Node, headers, cookies, and a session and turns it into an XhtmlResponse.
    */
-  private def cvt(ns: Node, headers: List[(String, String)], cookies: List[Cookie], session: Req) =
+  private def cvt(ns: Node, headers: List[(String, String)], cookies: List[HTTPCookie], session: Req) =
   convertResponse({val ret = XhtmlResponse(Group(session.fixHtml(ns)),
                                            ResponseInfo.docType(session),
                                            headers, cookies, 200,
@@ -743,7 +694,7 @@ object LiftRules {
    * convertResponse is a PartialFunction that reduces a given Tuple4 into a
    * LiftResponse that can then be sent to the browser.
    */
-  var convertResponse: PartialFunction[(Any, List[(String, String)], List[Cookie], Req), LiftResponse] = {
+  var convertResponse: PartialFunction[(Any, List[(String, String)], List[HTTPCookie], Req), LiftResponse] = {
     case (r: LiftResponse, _, _, _) => r
     case (ns: Group, headers, cookies, session) => cvt(ns, headers, cookies, session)
     case (ns: Node, headers, cookies, session) => cvt(ns, headers, cookies, session)
@@ -905,7 +856,7 @@ object LiftRules {
 
   var cometGetTimeout = 140000
 
-  var supplimentalHeaders: HttpServletResponse => Unit = s => s.setHeader("X-Lift-Version", liftVersion)
+  var supplimentalHeaders: HTTPResponse => Unit = s => s.addHeaders(List(HTTPParam("X-Lift-Version", liftVersion)))
 
   var calcIE6ForResponse: () => Boolean = () => S.request.map(_.isIE6) openOr false
 
