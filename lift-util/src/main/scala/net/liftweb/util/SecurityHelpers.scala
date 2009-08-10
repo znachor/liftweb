@@ -1,7 +1,7 @@
 package net.liftweb.util
 
 /*
- * Copyright 2006-2008 WorldWide Conferencing, LLC
+ * Copyright 2006-2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -79,12 +79,52 @@ trait SecurityHelpers { self: StringHelpers with IoHelpers =>
   /** encrypt a String with a Blowfish key (as a SecretKey object)*/
   def blowfishEncrypt(plain: String, key: SecretKey): String = base64Encode(blowfishEncrypt(plain.getBytes("UTF-8"), key))
 
+    /** create a 3DES key as an array of bytes */
+  def makeTripleDESKey: Array[Byte] = KeyGenerator.getInstance("tripledes").generateKey.getEncoded
+
+  /** create a Blowfish key from an array of bytes*/
+  def tripleDESKeyFromBytes(key: Array[Byte]): SecretKey = new SecretKeySpec(key, "tripledes")
+
+  /** decrypt a Byte array with a Blowfish key (as a Byte array)*/
+  def tripleDESDecrypt(enc: Array[Byte], key: Array[Byte]): Array[Byte] = tripleDESDecrypt(enc, blowfishKeyFromBytes(key))
+
+  /** decrypt a Byte array with a Blowfish key (as a SecretKey object)*/
+  def tripleDESDecrypt(enc: Array[Byte], key: SecretKey): Array[Byte] = readWholeStream(tripleDESDecryptStream(new ByteArrayInputStream(enc), key))
+
+  /** decrypt a Byte array with a Blowfish key (as a SecretKey object)*/
+  def tripleDESDecrypt(enc: String, key: Array[Byte]): String = tripleDESDecrypt(enc, tripleDESKeyFromBytes(key))
+
+  /** decrypt a Byte array with a Blowfish key (as a SecretKey object)*/
+  def tripleDESDecrypt(enc: String, key: SecretKey): String = new String(tripleDESDecrypt(base64Decode(enc), key), "UTF-8")
+
+  /** encrypt a Byte array with a Blowfish key (as a Byte array)*/
+  def tripleDESEncrypt(plain: Array[Byte], key: Array[Byte]): Array[Byte] = tripleDESEncrypt(plain, tripleDESKeyFromBytes(key))
+
+  /** encrypt a Byte array with a Blowfish key (as a SecretKey object)*/
+  def tripleDESEncrypt(plain: Array[Byte], key: SecretKey): Array[Byte] = readWholeStream(tripleDESEncryptStream(new ByteArrayInputStream(plain), key))
+
+  /** encrypt a String with a Blowfish key (as a Byte array)*/
+  def tripleDESEncrypt(plain: String, key: Array[Byte]): String = tripleDESEncrypt(plain, tripleDESKeyFromBytes(key))
+
+  /** encrypt a String with a Blowfish key (as a SecretKey object)*/
+  def tripleDESEncrypt(plain: String, key: SecretKey): String = base64Encode(tripleDESEncrypt(plain.getBytes("UTF-8"), key))
+
   /** decrypt an InputStream with a Blowfish key (as a Byte array)*/
   def decryptStream(in: InputStream, key: Array[Byte]): InputStream = decryptStream(in, blowfishKeyFromBytes(key))
 
   /** decrypt an InputStream with a Blowfish key (as a SecretKey object)*/
   def decryptStream(in: InputStream, key: SecretKey): InputStream = {
     val cipher = Cipher.getInstance("blowfish")
+    cipher.init(Cipher.DECRYPT_MODE, key)
+    new CipherInputStream(in, cipher)
+  }
+
+   /** decrypt an InputStream with a Blowfish key (as a Byte array)*/
+  def tripleDESDDecryptStream(in: InputStream, key: Array[Byte]): InputStream = tripleDESDecryptStream(in, tripleDESKeyFromBytes(key))
+
+  /** decrypt an InputStream with a Blowfish key (as a SecretKey object)*/
+  def tripleDESDecryptStream(in: InputStream, key: SecretKey): InputStream = {
+    val cipher = Cipher.getInstance("tripledes")
     cipher.init(Cipher.DECRYPT_MODE, key)
     new CipherInputStream(in, cipher)
   }
@@ -109,6 +149,16 @@ trait SecurityHelpers { self: StringHelpers with IoHelpers =>
   /** encrypt an InputStream with a Blowfish key (as a SecretKey object)*/
   def encryptStream(in: InputStream, key: SecretKey): InputStream = {
     val cipher = Cipher.getInstance("blowfish")
+    cipher.init(Cipher.ENCRYPT_MODE, key)
+    new CipherInputStream(in, cipher)
+  }
+
+   /** encrypt an InputStream with a Blowfish key (as a Byte array)*/
+  def tripleDESEncryptStream(in: InputStream, key: Array[Byte]): InputStream= tripleDESEncryptStream(in, tripleDESKeyFromBytes(key))
+
+  /** encrypt an InputStream with a Blowfish key (as a SecretKey object)*/
+  def tripleDESEncryptStream(in: InputStream, key: SecretKey): InputStream = {
+    val cipher = Cipher.getInstance("tripledes")
     cipher.init(Cipher.ENCRYPT_MODE, key)
     new CipherInputStream(in, cipher)
   }
