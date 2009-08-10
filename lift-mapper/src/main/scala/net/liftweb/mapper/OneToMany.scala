@@ -205,7 +205,8 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
 trait LongMappedForeignMapper[T<:Mapper[T],O<:KeyedMapper[Long,O]]
                               extends MappedLongForeignKey[T,O] {
   import net.liftweb.util.{Box, Empty, Full}
-  private var _foreign: Box[O] = Empty
+  private var _foreign: Box[O] = obj
+  def foreign = _foreign
   
   override def apply(f: O) = {
     _foreign = Full(f)
@@ -220,8 +221,7 @@ trait LongMappedForeignMapper[T<:Mapper[T],O<:KeyedMapper[Long,O]]
   }
   
   override def i_is_! = {
-    if(_foreign != obj)
-      apply(_foreign)
+    apply(_foreign)
     super.i_is_!
   }
   
