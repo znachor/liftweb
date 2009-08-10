@@ -80,10 +80,10 @@ trait SecurityHelpers { self: StringHelpers with IoHelpers =>
   def blowfishEncrypt(plain: String, key: SecretKey): String = base64Encode(blowfishEncrypt(plain.getBytes("UTF-8"), key))
 
     /** create a 3DES key as an array of bytes */
-  def makeTripleDESKey: Array[Byte] = KeyGenerator.getInstance("tripledes").generateKey.getEncoded
+  def makeTripleDESKey: Array[Byte] = KeyGenerator.getInstance("DESede").generateKey.getEncoded
 
   /** create a Blowfish key from an array of bytes*/
-  def tripleDESKeyFromBytes(key: Array[Byte]): SecretKey = new SecretKeySpec(key, "tripledes")
+  def tripleDESKeyFromBytes(key: Array[Byte]): SecretKey = new SecretKeySpec(key, "DESede")
 
   /** decrypt a Byte array with a Blowfish key (as a Byte array)*/
   def tripleDESDecrypt(enc: Array[Byte], key: Array[Byte]): Array[Byte] = tripleDESDecrypt(enc, tripleDESKeyFromBytes(key))
@@ -124,8 +124,9 @@ trait SecurityHelpers { self: StringHelpers with IoHelpers =>
 
   /** decrypt an InputStream with a Blowfish key (as a SecretKey object)*/
   def tripleDESDecryptStream(in: InputStream, key: SecretKey): InputStream = {
-    val cipher = Cipher.getInstance("tripledes")
-    cipher.init(Cipher.DECRYPT_MODE, key)
+    val cipher = Cipher.getInstance("DESede/CBC/PKCS5Padding")
+    cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(new Array[Byte](8)))
+
     new CipherInputStream(in, cipher)
   }
 
@@ -158,8 +159,9 @@ trait SecurityHelpers { self: StringHelpers with IoHelpers =>
 
   /** encrypt an InputStream with a Blowfish key (as a SecretKey object)*/
   def tripleDESEncryptStream(in: InputStream, key: SecretKey): InputStream = {
-    val cipher = Cipher.getInstance("tripledes")
-    cipher.init(Cipher.ENCRYPT_MODE, key)
+    val cipher = Cipher.getInstance("DESede/CBC/PKCS5Padding")
+    cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(new Array[Byte](8)))
+
     new CipherInputStream(in, cipher)
   }
 
