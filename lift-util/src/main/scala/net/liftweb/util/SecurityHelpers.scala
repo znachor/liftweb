@@ -86,7 +86,7 @@ trait SecurityHelpers { self: StringHelpers with IoHelpers =>
   def tripleDESKeyFromBytes(key: Array[Byte]): SecretKey = new SecretKeySpec(key, "tripledes")
 
   /** decrypt a Byte array with a Blowfish key (as a Byte array)*/
-  def tripleDESDecrypt(enc: Array[Byte], key: Array[Byte]): Array[Byte] = tripleDESDecrypt(enc, blowfishKeyFromBytes(key))
+  def tripleDESDecrypt(enc: Array[Byte], key: Array[Byte]): Array[Byte] = tripleDESDecrypt(enc, tripleDESKeyFromBytes(key))
 
   /** decrypt a Byte array with a Blowfish key (as a SecretKey object)*/
   def tripleDESDecrypt(enc: Array[Byte], key: SecretKey): Array[Byte] = readWholeStream(tripleDESDecryptStream(new ByteArrayInputStream(enc), key))
