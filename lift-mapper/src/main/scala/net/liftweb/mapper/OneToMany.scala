@@ -6,7 +6,7 @@ package net.liftweb.mapper
  * @author nafg
  */
 trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
-  private var oneToManyFields: List[MappedOneToMany[_]] = Nil
+  private var oneToManyFields: List[MappedOneToManyBase[_]] = Nil
   /**
    * An override for save to propagate the save to all children
    * of this parent.
@@ -41,30 +41,28 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
 
   
   /**
+   * Simple OneToMany support for children from the same table
+   */
+  class MappedOneToMany[O <: Mapper[O]](meta: MetaMapper[O], foreign: MappedForeignKey[K,O,T], qp: QueryParam[O]*)
+    extends MappedOneToManyBase[O](
+      ()=> meta.findAll(By(foreign, primaryKeyField) :: qp.toList : _*),
+      _=>foreign
+    )
+  
+  /**
    * This is the base class to use for fields that represent one-to-many or parent-child relationships.
    * Maintains a list of children, tracking pending additions and deletions, and
    * keeping their foreign key pointed to this mapper.
    * Implements Buffer, so the children can be managed as one.
-   * Most users will use the secondary constructor.
+   * Most users will use MappedOneToMany, however to support children from multiple tables
+   * it is necessary to use MappedOneToManyBase.
    * @param reloadFunc A function that returns a sequence of children from storage.
    * @param foreign A function that gets the MappedForeignKey on the child that refers to this parent
    */
-  class MappedOneToMany[O<:Mapper[O]](val reloadFunc: ()=>Seq[O],
-                                      val foreign: O => MappedForeignKey[K,O,T]) extends scala.collection.mutable.Buffer[O] {
-    /**
-     * Most users will use this constructor.
-     * @param meta The singleton to query children from
-     * @param foreign The MappedForeignKey of the singleton (or an instance) that refers to this parent
-     * @param qp Any QueryParams to sort or filter children besides that their foreign key must match the parent's primary key.  
-     */
-    def this(meta: MetaMapper[O],
-             foreign: MappedForeignKey[K,O,T],
-             qp: QueryParam[O]*) =
-      this(
-        () => meta.findAll(By(foreign, primaryKeyField) :: qp.toList : _*),
-        foreign
-      )
+  class MappedOneToManyBase[O <: AnyRef{def save(): Boolean}](val reloadFunc: ()=>Seq[O],
+                                      val foreign: O => MappedForeignKey[K,_,T]) extends scala.collection.mutable.Buffer[O] {
 
+    
     protected var delegate: List[O] = _
     refresh
     oneToManyFields = this :: oneToManyFields
@@ -104,8 +102,8 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
       this
     }
 
-    def indexOf(e: O) =
-      delegate.findIndexOf(e eq)
+    override def indexOf[B >: O](e: B): Int =
+      delegate.findIndexOf(e.asInstanceOf[AnyRef].eq)
 
     def insertAll(n: Int, iter: Iterable[O]) {
       val (before, after) = delegate.splitAt(n)
@@ -158,7 +156,7 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
   /**
    * Adds behavior to delete orphaned fields before save.
    */
-  trait Owned[O<:Mapper[O]] extends MappedOneToMany[O] {
+  trait Owned[O<: {def save(): Boolean; def delete_! : Boolean}] extends MappedOneToManyBase[O] {
     var removed: List[O] = Nil
     override def unown(e: O) = {
       removed = e :: removed
@@ -182,7 +180,7 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
    * Trait that indicates that the children represented
    * by this field should be deleted when the parent is deleted.
    */
-  trait Cascade[O<:Mapper[O]] extends MappedOneToMany[O] {
+  trait Cascade[O<: {def save(): Boolean; def delete_! : Boolean}] extends MappedOneToManyBase[O] {
     def delete_! = {
       delegate.forall { e =>
           if(foreign(e).is ==
@@ -197,6 +195,8 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
 }
 
 
+
+
 /**
  * A subtype of MappedLongForeignKey whose value can be
  * get and set as the target parent mapper instead of its primary key.
@@ -204,21 +204,25 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
  */
 trait LongMappedForeignMapper[T<:Mapper[T],O<:KeyedMapper[Long,O]]
                               extends MappedLongForeignKey[T,O] {
-  private var foreign: O = _
+  import net.liftweb.util.{Box, Empty, Full}
+  private var _foreign: Box[O] = Empty
+  
   override def apply(f: O) = {
-    foreign = f
+    _foreign = Full(f)
     super.apply(f.primaryKeyField.is)
   }
-  override def apply(f: net.liftweb.util.Box[O]) = {
-    f.foreach{f =>
-      foreign = f
-      super.apply(f.primaryKeyField.is)
-    }
-    fieldOwner
+  override def apply(f: Box[O]) = f match {
+    case Full(f) =>
+      apply(f)
+    case _ =>
+      _foreign = Empty
+      super.apply(defaultValue);
   }
+  
   override def i_is_! = {
-    if(foreign ne null)
-      super.set(foreign.primaryKeyField.is)
+    if(_foreign != obj)
+      apply(_foreign)
     super.i_is_!
   }
+  
 }
