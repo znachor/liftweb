@@ -147,15 +147,15 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
      * Returns true if all children were saved successfully.
      */
     def save = {
-      println("Saving " + this)
-      println(delegate)
+//      println("Saving " + this)
+//      println(delegate)
       import net.liftweb.util.Full
       delegate = delegate.filter {e =>
-          println(foreign(e).is + " <-> " + OneToMany.this.primaryKeyField.is)
+//          println(foreign(e).is + " <-> " + OneToMany.this.primaryKeyField.is)
           foreign(e).is == OneToMany.this.primaryKeyField.is ||
             foreign(e).obj == Full(OneToMany.this)
       }
-      println(delegate)
+//      println(delegate)
       delegate.forall(_.save)
     }
   }
