@@ -75,7 +75,7 @@ trait ManyToMany extends BaseKeyedMapper {
               removedJoin // well, noLongerRemovedJoin...
             case None =>
               val newJoin = joinMeta.create
-              field(newJoin).set(ManyToMany.this.primaryKeyField)
+              field(newJoin).set(ManyToMany.this.primaryKeyField.is)
               otherField.actualField(newJoin).set(e.primaryKeyField)
               newJoin
           }

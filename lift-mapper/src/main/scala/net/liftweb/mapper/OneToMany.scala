@@ -70,9 +70,9 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
     /**
      * Takes ownership of e. Sets e's foreign key to our primary key
      */
-    protected def own(e: O) = {
-      foreign(e).set(OneToMany.this.primaryKeyField)
-      e
+    protected def own(e: O) = foreign(e) match {
+      case f: MappedLongForeignKey[O,T] with MappedForeignKey[_,_,T] => f.apply(OneToMany.this); e
+      case f => f.set(OneToMany.this.primaryKeyField); e
     }
     /**
      * Relinquishes ownership of e. Resets e's foreign key to its default value.
@@ -205,24 +205,45 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
 trait LongMappedForeignMapper[T<:Mapper[T],O<:KeyedMapper[Long,O]]
                               extends MappedLongForeignKey[T,O] {
   import net.liftweb.util.{Box, Empty, Full}
-  private var _foreign: Box[O] = obj
-  def foreign = _foreign
+  //private var inited = false
+  //private var _foreign: Box[O] = Empty
+  def foreign = obj //_foreign
   
   override def apply(f: O) = {
-    _foreign = Full(f)
-    super.apply(f.primaryKeyField.is)
+    //inited = true
+    //_foreign = Full(f)
+    //primeObj(
+    //super.apply(f/*.primaryKeyField.is*/)
+    this(Full(f))
   }
-  override def apply(f: Box[O]) = f match {
+  override def apply(f: Box[O]) = {
+    val ret = super.apply(f)
+    primeObj(f)
+    ret
+  }
+  /* f match {
     case Full(f) =>
-      apply(f)
+      //apply(f)
+      super.apply(f)
+      pr
     case _ =>
+      inited = true
       _foreign = Empty
       super.apply(defaultValue);
-  }
+  }*/
   
-  override def i_is_! = {
-    apply(_foreign)
+  /*override def set(v: Long) = {
+    val ret = super.set(v)
+    _foreign = obj
+    ret
+  }*/
+  
+  /*override def i_is_! = {
+    if(!inited) {
+      _foreign = obj
+      inited = true
+    }
     super.i_is_!
-  }
+  }*/
   
 }
