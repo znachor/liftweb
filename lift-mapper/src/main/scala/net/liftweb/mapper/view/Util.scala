@@ -9,7 +9,7 @@ import net.liftweb.util.{Full, Box, Helpers, BindHelpers}
 import Helpers._
 
 
-import scala.xml.NodeSeq
+import scala.xml.{NodeSeq, Elem}
 
 
 /**
@@ -92,4 +92,25 @@ object Util {
    * Just import this method, or Util._
    */
   implicit def nodeSeqToBindable(ns: NodeSeq): BindableNodeSeq = new BindableNodeSeq(ns)
+  
+  
+  /**
+   * If you want all your attributes specified in the view carried
+   * over to the result of bind without prefixing them, use keepAttrs.
+   * For example, say you bind &lt;my:text /&gt; to SHtml.text(...).
+   * You can either pass attributes to SHtml.text as tuples in you code,
+   * or put the attributes in the view, prefixed with lift:
+   * lift:id, lift:size, lift:maxlength...
+   * With keepAttrs, you can write the attributes as usual without the
+   * prefix. Just wrap the call to SHtml.text with keepAttrs(...)
+   * and all attributes in the view will be applied to the bound result.
+   */
+  def keepAttrs(elem: Elem) = (ns: NodeSeq) =>
+    BindHelpers.currentNode match {
+      case Full(inElem) =>
+        elem % inElem.attributes
+      case other =>
+        elem
+    }
 }
+

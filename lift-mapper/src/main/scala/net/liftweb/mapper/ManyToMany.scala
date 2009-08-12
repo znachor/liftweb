@@ -58,7 +58,7 @@ trait ManyToMany extends BaseKeyedMapper {
     def field(join: O) = thisField.actualField(join).asInstanceOf[MappedForeignKey[K,O,_ /* T */]]
     
     protected def children: List[T2] =
-      joins.map(otherField.actualField(_).asInstanceOf[MappedForeignKey[K2,O,T2]].obj.openOr(error("Broken join")))
+      joins.map(otherField.actualField(_).asInstanceOf[MappedForeignKey[K2,O,T2]].obj.openOr(error("Child cannot be found through join table")))
     protected var joins: List[O] = _
     protected var removedJoins: List[O] = Nil
     refresh
@@ -75,7 +75,7 @@ trait ManyToMany extends BaseKeyedMapper {
               removedJoin // well, noLongerRemovedJoin...
             case None =>
               val newJoin = joinMeta.create
-              field(newJoin).set(ManyToMany.this.primaryKeyField)
+              field(newJoin).set(ManyToMany.this.primaryKeyField.is)
               otherField.actualField(newJoin).set(e.primaryKeyField)
               newJoin
           }

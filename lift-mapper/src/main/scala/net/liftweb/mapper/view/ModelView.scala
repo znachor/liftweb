@@ -18,6 +18,14 @@ trait ModelSnippet[T <: Mapper[T]] extends StatefulSnippet {
    * The instance of ModelView that wraps the currently loaded entity
    */
   val view: ModelView[T]
+
+  /**
+   * Action when save is successful. Defaults to using the ModelView's redirectOnSave
+   */
+  var onSave = (view: ModelView[T])=> {
+    view.redirectOnSave.foreach(redirectTo)
+  }
+
   /**
    * The list snippet
    */
@@ -46,15 +54,10 @@ class ModelView[T <: Mapper[T]](var entity: T, val snippet: ModelSnippet[T]) {
    * If Some(string), will redirect to string on a successful save.
    * If None, will load the same page.
    * Defaults to Some("list").
+   * This var is used by ModelSnippet.onSave, which is a ModelView=>Unit
    */
   var redirectOnSave: Option[String] = Some("list")
   
-  /**
-   * Action when save is successful. Defaults to using redirectOnSave
-   */
-  var onSave = ()=> {
-    redirectOnSave.foreach(snippet.redirectTo)
-  }
   /**
    * Loads this entity into the snippet so it can be edited 
    */
@@ -89,7 +92,7 @@ class ModelView[T <: Mapper[T]](var entity: T, val snippet: ModelSnippet[T]) {
     entity.validate match {
       case Nil =>
         if(entity.save)
-          onSave()
+          snippet.onSave(this)
         else
           S.error("Save failed")
       case errors =>
