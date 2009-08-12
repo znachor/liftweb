@@ -10,57 +10,40 @@ object Examples extends Specification {
   import JsonParser._
 
   "Lotto example" in {
-    parse(lotto) match {
-      case Right(json) =>
-        val renderedLotto = compact(render(json))
-        json mustEqual parse(renderedLotto).right.get
-      case Left(err) => fail(err.message)
-    }
+    val json = parse(lotto)
+    val renderedLotto = compact(render(json))
+    json mustEqual parse(renderedLotto)
   }
 
   "Person example" in {
-    parse(person) match {
-      case Right(json) =>
-        val renderedPerson = JsonDSL.pretty(render(json))
-        json mustEqual parse(renderedPerson).right.get
-        render(json) mustEqual render(personDSL)
-        compact(render(json \\ "name")) mustEqual """{"name":"Joe","name":"Marilyn"}"""
-        compact(render(json \ "person" \ "name")) mustEqual "\"name\":\"Joe\""
-      case Left(err) => fail(err.message)
-    }
+    val json = parse(person)
+    val renderedPerson = JsonDSL.pretty(render(json))
+    json mustEqual parse(renderedPerson)
+    render(json) mustEqual render(personDSL)
+    compact(render(json \\ "name")) mustEqual """{"name":"Joe","name":"Marilyn"}"""
+    compact(render(json \ "person" \ "name")) mustEqual "\"name\":\"Joe\""
   }
 
   "Object array example" in {
-    parse(objArray) match {
-      case Right(json) =>
-        compact(render(json \ "children" \ "name")) mustEqual """["name":"Mary","name":"Mazy"]"""
-        compact(render((json \ "children")(0) \ "name")) mustEqual "\"name\":\"Mary\""
-        compact(render((json \ "children")(1) \ "name")) mustEqual "\"name\":\"Mazy\""
-      case Left(err) => fail(err.message)
-    }
+    val json = parse(objArray)
+    compact(render(json \ "children" \ "name")) mustEqual """["name":"Mary","name":"Mazy"]"""
+    compact(render((json \ "children")(0) \ "name")) mustEqual "\"name\":\"Mary\""
+    compact(render((json \ "children")(1) \ "name")) mustEqual "\"name\":\"Mazy\""
   }
 
   "Quoted example" in {
-    parse(quoted) match {
-      case Right(json) => List("foo \" \n \t \r bar") mustEqual json.values
-      case Left(err) => fail(err.message)
-    }
+    val json = parse(quoted)
+    List("foo \" \n \t \r bar") mustEqual json.values
   }
 
   "Extraction example" in {
-    parse(objArray) match {
-      case Right(json) =>
-        json.extract[Person] mustEqual Person("joe", Address("Bulevard", "Helsinki"), List(Child("Mary", BigInt(5)), Child("Mazy", BigInt(3))))
-      case Left(err) => fail(err.message)
-    }
+    val json = parse(objArray)
+    json.extract[Person] mustEqual Person("joe", Address("Bulevard", "Helsinki"), List(Child("Mary", BigInt(5)), Child("Mazy", BigInt(3))))
   }
 
   "Partial extraction example" in {
-    parse(objArray) match {
-      case Right(json) =>
-        json.extract[SimplePerson] mustEqual SimplePerson("joe", Address("Bulevard", "Helsinki"))
-      case Left(err) => fail(err.message)
-    }
+    val json = parse(objArray)
+    json.extract[SimplePerson] mustEqual SimplePerson("joe", Address("Bulevard", "Helsinki"))
   }
 
   val lotto = """

@@ -97,8 +97,8 @@ Any valid json can be parsed into internal AST format.
 
     scala> import net.liftweb.json.JsonParser._
     scala> parse(""" { "numbers" : [1, 2, 3, 4] } """)
-    res0: Either[net.liftweb.json.JsonParser.ParseError,net.liftweb.json.JsonAST.JValue] = 
-          Right(JObject(List(JField(numbers,JArray(List(JInt(1), JInt(2), JInt(3), JInt(4)))))))
+    res0: net.liftweb.json.JsonAST.JValue = 
+          JObject(List(JField(numbers,JArray(List(JInt(1), JInt(2), JInt(3), JInt(4))))))
 
 Queries
 -------
@@ -183,7 +183,7 @@ Indexed path expressions work too.
                  }
                ]
              }
-           """).right.get
+           """)
 
     scala> (json \ "children")(0)
     res0: net.liftweb.json.JsonAST.JValue = JObject(List(JField(name,JString(Mary)), JField(age,JInt(5))))

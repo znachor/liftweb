@@ -12,7 +12,7 @@ object ParserSpec extends Specification with JValueGen with ScalaCheck {
   import JsonParser._
 
   "Any valid json can be parsed" in {
-    val parsing = (json: JValue) => parse(JsonDSL.pretty(render(json))).isRight
+    val parsing = (json: JValue) => { parse(JsonDSL.pretty(render(json))); true }
     forAll(parsing) must pass
   }
 

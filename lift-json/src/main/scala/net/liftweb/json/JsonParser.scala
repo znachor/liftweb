@@ -5,7 +5,7 @@ package net.liftweb.json
 object JsonParser {
   import JsonAST._
 
-  case class ParseError(message: String)
+  class ParseException(message: String) extends Exception
 
   sealed abstract class Token
   case object OpenObj extends Token
@@ -61,11 +61,11 @@ object JsonParser {
     def toJValue = JArray(elems.map(_.toJValue).reverse)
   }
   
-  def parse(s: String): Either[ParseError, JValue] = 
+  def parse(s: String): JValue = 
     try {
-      Right(parse0(s))
+      parse0(s)
     } catch {
-      case e: Exception => Left(ParseError(e.getMessage))
+      case e: Exception => throw new ParseException(e.getMessage)
     }
 
   private def parse0(s: String): JValue = {
