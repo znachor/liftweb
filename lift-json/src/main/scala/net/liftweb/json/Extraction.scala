@@ -31,9 +31,11 @@ object Extraction {
   case class Constructor(path: Option[String], classname: String, args: List[Mapping]) extends Mapping
   case class ListConstructor(path: String, classname: String, args: List[Mapping]) extends Mapping
 
+  val memo = new Memo[Class[_], Mapping]
+
   // FIXME; should the return type be Either[MappingError, A] ?
   def extract[A](json: JValue)(implicit mf: Manifest[A]) = {
-    val mapping = memoize(mf.erasure)
+    val mapping = mappingOf(mf.erasure)
 
     def newInstance(classname: String, args: List[Any]) = {
       val clazz = Class.forName(classname)
@@ -62,8 +64,7 @@ object Extraction {
     build(json, mapping, Nil).head
   }
 
-  // FIXME memoize
-  private def memoize(clazz: Class[_]) = {
+  private def mappingOf(clazz: Class[_]) = {
     def makeMapping(path: Option[String], clazz: Class[_], isList: Boolean): Mapping = isList match {
       case false => Constructor(path, clazz.getName, constructorArgs(clazz))
       case true  => ListConstructor(path.get, clazz.getName, constructorArgs(clazz))
@@ -76,8 +77,32 @@ object Extraction {
       else if (x.getType == classOf[List[_]]) makeMapping(Some(x.getName), Util.parametrizedType(x), true)
       else makeMapping(Some(x.getName), x.getType, false)
     }.toList.reverse // FIXME Java6 returns these in reverse order, verify that and check other vms
+
+    object Memo {
+      var cache = Map[Class[_], Mapping]()
+      def memoize[A](clazz: Class[A]) = {
+        println(cache)
+        if (cache contains clazz) cache(clazz) else {
+          val mapping = makeMapping(None, clazz, false)
+          cache += (clazz -> mapping)
+          mapping
+        }
+      }
+    }
     
-    makeMapping(None, clazz, false)
+    memo.memoize(clazz, (x: Class[_]) => makeMapping(None, x, false))
+  }
+}
+
+class Memo[A, R] {
+  var cache = Map[A, R]()
+
+  def memoize(x: A, f: A => R): R = {
+    if (cache contains x) cache(x) else {
+      val ret = f(x)
+      cache += (x -> ret)
+      ret
+    }
   }
 }
 
