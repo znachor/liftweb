@@ -30,7 +30,21 @@ object TextileSpec extends Specification {
 
   import TextileParser._
 
-  "A Textile Parse" can {
+  "A Textile Parser" can {
+     "deal with italic" in {
+      toHtml("foo __bar__") must ==/(<p>foo <i>bar</i></p> )
+    }
+
+
+    "deal with bold and italic foo dog" in {
+      toHtml("*foo* dog __bar__") must ==/(<p><strong>foo</strong> dog <i>bar</i></p> )
+    }
+
+    "deal with bold and italic" in {
+      toHtml("*foo* __bar__") must ==/(<p><strong>foo</strong> <i>bar</i></p> )
+    }
+
+
     "Be a single line of text" in {
       toHtml("Hello World") must ==/(<p>Hello World</p>)
     }
@@ -162,55 +176,33 @@ A regular example.
 
     "Fast" in {
       val s =   """VF-DE:
-        IFC.ksh: 04/10/08 03:26:52: * * * * * * * * * * * * * * * start of IFC.ksh * * * * * * * * * * * * * * *
-        IFC.ksh: 04/10/08 15:34:30: * * * * * * * * * * * * * * * end of IFC.ksh * * * * * * * * * * * * * * *
+        IFC.ksh: 04/10/08 03:26:52: *************** start of IFC.ksh ***************
+        IFC.ksh: 04/10/08 15:34:30: *************** end of IFC.ksh ***************
 VF-ES:
-        IFC.ksh: 04/11/08 03:11:48: * * * * * * * * * * * * * * * start of IFC.ksh * * * * * * * * * * * * * * *
-        IFC.ksh: 04/11/08 04:48:24: * * * * * * * * * * * * * * * end of IFC.ksh * * * * * * * * * * * * * * *
+        IFC.ksh: 04/11/08 03:11:48: *************** start of IFC.ksh ***************
+        IFC.ksh: 04/11/08 04:48:24: *************** end of IFC.ksh ***************
 VF-GR:
-        IFC.ksh: 04/11/08 03:11:59: * * * * * * * * * * * * * * * start of IFC.ksh * * * * * * * * * * * * * * *
-        IFC.ksh: 04/11/08 03:46:47: * * * * * * * * * * * * * * * end of IFC.ksh * * * * * * * * * * * * * * *
+        IFC.ksh: 04/11/08 03:11:59: *************** start of IFC.ksh ***************
+        IFC.ksh: 04/11/08 03:46:47: *************** end of IFC.ksh ***************
 VF-IE:
-        IFC.ksh: 04/11/08 03:15:07: * * * * * * * * * * * * * * * start of IFC.ksh * * * * * * * * * * * * * * *
-        IFC.ksh: 04/11/08 05:36:57: * * * * * * * * * * * * * * * end of IFC.ksh * * * * * * * * * * * * * * *
+        IFC.ksh: 04/11/08 03:15:07: *************** start of IFC.ksh ***************
+        IFC.ksh: 04/11/08 05:36:57: *************** end of IFC.ksh ***************
 VF-IT:
-        IFC.ksh: 04/11/08 03:05:07: * * * * * * * * * * * * * * * start of IFC.ksh * * * * * * * * * * * * * * *
-        IFC.ksh: 04/11/08 05:06:09: * * * * * * * * * * * * * * * end of IFC.ksh * * * * * * * * * * * * * * *
+        IFC.ksh: 04/11/08 03:05:07: *************** start of IFC.ksh ***************
+        IFC.ksh: 04/11/08 05:06:09: *************** end of IFC.ksh ***************
 VF-NL:
-        IFC.ksh: 04/11/08 03:55:05: * * * * * * * * * * * * * * * start of IFC.ksh * * * * * * * * * * * * * * *
-        IFC.ksh: 04/11/08 04:28:57: * * * * * * * * * * * * * * * end of IFC.ksh * * * * * * * * * * * * * * *
+        IFC.ksh: 04/11/08 03:55:05: *************** start of IFC.ksh ***************
+        IFC.ksh: 04/11/08 04:28:57: *************** end of IFC.ksh ***************
 VF-PT:
-        IFC.ksh: 04/11/08 03:00:09: * * * * * * * * * * * * * * * start of IFC.ksh * * * * * * * * * * * * * * *
-        IFC.ksh: 04/11/08 03:32:05: * * * * * * * * * * * * * * * end of IFC.ksh * * * * * * * * * * * * * * *
+        IFC.ksh: 04/11/08 03:00:09: *************** start of IFC.ksh ***************
+        IFC.ksh: 04/11/08 03:32:05: *************** end of IFC.ksh ***************
 VF-UK:
-        IFC.ksh: 04/11/08 03:38:41: * * * * * * * * * * * * * * * start of IFC.ksh * * * * * * * * * * * * * * *
-        IFC.ksh: 04/11/08 05:26:49: * * * * * * * * * * * * * * * end of IFC.ksh * * * * * * * * * * * * * * *
+        IFC.ksh: 04/11/08 03:38:41: *************** start of IFC.ksh ***************
+        IFC.ksh: 04/11/08 05:26:49: *************** end of IFC.ksh ***************
 
 I saved the entry by pressing "Yep" button, but because the symbol "-" caused the subsequent letters to be crossed out I've edited the text like this:
 DE:
-        IFC.ksh: 04/10/08 03:26:52: * * * * * * * * * * * * * * * start of IFC.ksh * * * * * * * * * * * * * * *
-        IFC.ksh: 04/10/08 15:34:30: * * * * * * * * * * * * * * * end of IFC.ksh * * * * * * * * * * * * * * *
-ES:
-        IFC.ksh: 04/11/08 03:11:48: * * * * * * * * * * * * * * * start of IFC.ksh * * * * * * * * * * * * * * *
-        IFC.ksh: 04/11/08 04:48:24: * * * * * * * * * * * * * * * end of IFC.ksh * * * * * * * * * * * * * * *
-GR:
-        IFC.ksh: 04/11/08 03:11:59: * * * * * * * * * * * * * * * start of IFC.ksh * * * * * * * * * * * * * * *
-        IFC.ksh: 04/11/08 03:46:47: * * * * * * * * * * * * * * * end of IFC.ksh * * * * * * * * * * * * * * *
-IE:
-        IFC.ksh: 04/11/08 03:15:07: * * * * * * * * * * * * * * * start of IFC.ksh * * * * * * * * * * * * * * *
-        IFC.ksh: 04/11/08 05:36:57: * * * * * * * * * * * * * * * end of IFC.ksh * * * * * * * * * * * * * * *
-IT:
-        IFC.ksh: 04/11/08 03:05:07: * * * * * * * * * * * * * * * start of IFC.ksh * * * * * * * * * * * * * * *
-        IFC.ksh: 04/11/08 05:06:09: * * * * * * * * * * * * * * * end of IFC.ksh * * * * * * * * * * * * * * *
-NL:
-        IFC.ksh: 04/11/08 03:55:05: * * * * * * * * * * * * * * * start of IFC.ksh * * * * * * * * * * * * * * *
-        IFC.ksh: 04/11/08 04:28:57: * * * * * * * * * * * * * * * end of IFC.ksh * * * * * * * * * * * * * * *
-PT:
-        IFC.ksh: 04/11/08 03:00:09: * * * * * * * * * * * * * * * start of IFC.ksh * * * * * * * * * * * * * * *
-        IFC.ksh: 04/11/08 03:32:05: * * * * * * * * * * * * * * * end of IFC.ksh * * * * * * * * * * * * * * *
-UK:
-        IFC.ksh: 04/11/08 03:38:41: * * * * * * * * * * * * * * * start of IFC.ksh * * * * * * * * * * * * * * *
-        IFC.ksh: 04/11/08 05:26:49: * * * * * * * * * * * * * * * end of IFC.ksh * * * * * * * * * * * * * * *"""
+        IFC.ksh: 04/10/08 03:26:52: *************** start of """
 
       val (time, res) = Helpers.calcTime{
 	toHtml(s)
