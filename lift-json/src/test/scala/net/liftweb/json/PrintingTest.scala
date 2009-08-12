@@ -11,11 +11,9 @@ object PrintingSpec extends Specification with JValueGen with ScalaCheck {
   import JsonAST._
   import scala.text.Document
 
-  "rendering" should {
-    "not change semantics" in {
-      val rendering = (json: Document) => parse(JsonDSL.pretty(json)) == parse(JsonDSL.compact(json))
-      forAll(rendering) must pass
-    }
+  "rendering does not change semantics" in {
+    val rendering = (json: Document) => parse(JsonDSL.pretty(json)) == parse(JsonDSL.compact(json))
+    forAll(rendering) must pass
   }
 
   private def parse(json: String) = scala.util.parsing.json.JSON.parse(json)

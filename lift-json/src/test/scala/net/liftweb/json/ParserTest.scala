@@ -11,11 +11,9 @@ object ParserSpec extends Specification with JValueGen with ScalaCheck {
   import JsonAST._
   import JsonParser._
 
-  "Any valid json" should {
-    "be parseable" in {
-      val parsing = (json: JValue) => parse(JsonDSL.pretty(render(json))).isRight
-      forAll(parsing) must pass
-    }
+  "Any valid json can be parsed" in {
+    val parsing = (json: JValue) => parse(JsonDSL.pretty(render(json))).isRight
+    forAll(parsing) must pass
   }
 
   implicit def arbJValue: Arbitrary[JValue] = Arbitrary(genObject)
