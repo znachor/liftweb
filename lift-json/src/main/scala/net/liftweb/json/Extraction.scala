@@ -33,8 +33,14 @@ object Extraction {
 
   val memo = new Memo[Class[_], Mapping]
 
-  // FIXME; should the return type be Either[MappingError, A] ?
-  def extract[A](json: JValue)(implicit mf: Manifest[A]) = {
+  def extract[A](json: JValue)(implicit mf: Manifest[A]): A = 
+    try {
+      extract0(json, mf)
+    } catch {
+      case e: Exception => throw new MappingException(e)
+    }
+
+  private def extract0[A](json: JValue, mf: Manifest[A]): A = {
     val mapping = mappingOf(mf.erasure)
 
     def newInstance(classname: String, args: List[Any]) = {
@@ -58,7 +64,7 @@ object Extraction {
 
     def fieldValue(json: JValue, path: String) = (json \ path).asInstanceOf[JField].value
 
-    build(json, mapping, Nil).head
+    build(json, mapping, Nil).head.asInstanceOf[A]
   }
 
   private def mappingOf(clazz: Class[_]) = {
@@ -128,3 +134,6 @@ object Extraction {
     }
   }
 }
+
+class MappingException(cause: Exception) extends Exception(cause)
+
