@@ -39,17 +39,7 @@ object Extraction {
 
     def newInstance(classname: String, args: List[Any]) = {
       val clazz = Class.forName(classname)
-      val argTypes = args.map {
-        case x: List[_] => classOf[List[_]]
-        case x: Int => classOf[Int]
-        case x: Long => classOf[Long]
-        case x: Short => classOf[Short]
-        case x: Byte => classOf[Byte]
-        case x: Double => classOf[Double]
-        case x: Float => classOf[Float]
-        case x: Boolean => classOf[Boolean]
-        case x => x.asInstanceOf[AnyRef].getClass
-      }
+      val argTypes = Reflection.types(args)
       clazz.getConstructor(argTypes.toArray: _*).newInstance(args.map(_.asInstanceOf[AnyRef]).toArray: _*)
     }
 
@@ -78,9 +68,9 @@ object Extraction {
     }
 
     def constructorArgs(clazz: Class[_]) = clazz.getDeclaredFields.map { x =>
-      if (Util.primitive_?(x.getType)) Value(x.getName, x.getType)
+      if (Reflection.primitive_?(x.getType)) Value(x.getName, x.getType)
       else if (x.getType == classOf[BigInt]) Value(x.getName, x.getType)
-      else if (x.getType == classOf[List[_]]) makeMapping(Some(x.getName), Util.parametrizedType(x), true)
+      else if (x.getType == classOf[List[_]]) makeMapping(Some(x.getName), Reflection.parametrizedType(x), true)
       else makeMapping(Some(x.getName), x.getType, false)
     }.toList.reverse // FIXME Java6 returns these in reverse order, verify that and check other vms
 
@@ -111,7 +101,7 @@ object Extraction {
     }
   }
 
-  object Util {
+  object Reflection {
     import java.lang.reflect._
 
     def parametrizedType(f: Field): Class[_] = {
@@ -123,6 +113,18 @@ object Extraction {
       clazz == classOf[String] || clazz == classOf[Int] || clazz == classOf[Long] ||
       clazz == classOf[Double] || clazz == classOf[Float] || clazz == classOf[Byte] ||
       clazz == classOf[Boolean] || clazz == classOf[Short]
+    }
+
+    def types(xs: List[Any]) = xs.map {
+      case x: List[_] => classOf[List[_]]
+      case x: Int => classOf[Int]
+      case x: Long => classOf[Long]
+      case x: Short => classOf[Short]
+      case x: Byte => classOf[Byte]
+      case x: Double => classOf[Double]
+      case x: Float => classOf[Float]
+      case x: Boolean => classOf[Boolean]
+      case x => x.asInstanceOf[AnyRef].getClass
     }
   }
 }
