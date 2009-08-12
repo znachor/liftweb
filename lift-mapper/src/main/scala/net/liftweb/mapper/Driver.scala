@@ -72,7 +72,7 @@ abstract class DriverType(val name : String) {
    * where not all types are supported. Classes that want to do custom type
    * mapping for columns should override the customColumnTypeMap method.
    */
-  def columTypeMap : TypeMapFunc = 
+  def columnTypeMap : TypeMapFunc = 
     customColumnTypeMap orElse {
       case x => x
     }
@@ -84,6 +84,15 @@ abstract class DriverType(val name : String) {
   protected def customColumnTypeMap : TypeMapFunc = new TypeMapFunc {
     def apply (in : Int) = -1
     def isDefinedAt (in : Int) = false
+  }
+
+  /**
+   * This method can be overriden by DriverType impls to allow for custom setup
+   * of Primary Key Columns (creating sequeneces or special indices, for example).
+   * The List of commands will be executed in order.
+   */
+  def primaryKeySetup(tableName : String, columnName : String) : List[String] = {
+      List("ALTER TABLE "+tableName+" ADD CONSTRAINT "+tableName+"_PK PRIMARY KEY("+columnName+")")
   }
 }
 
@@ -198,17 +207,31 @@ object OracleDriver extends DriverType("Oracle") {
   def clobColumnType = "CLOB"
   def dateTimeColumnType = "TIMESTAMP"
   def integerColumnType = "NUMBER"
-  def integerIndexColumnType = "ROWID"
+  def integerIndexColumnType = "NUMBER NOT NULL"
   def enumColumnType = "NUMBER"
   def longForeignKeyColumnType = "NUMBER"
-  def longIndexColumnType = "ROWID"
+  def longIndexColumnType = "NUMBER NOT NULL"
   def enumListColumnType = "NUMBER"
   def longColumnType = "NUMBER"
   def doubleColumnType = "NUMBER"
 
   import _root_.java.sql.Types
   override def customColumnTypeMap = {
-    case Types.BOOLEAN => { Log.debug("remapping boolean to Int"); Types.INTEGER}
+    case Types.BOOLEAN => Types.INTEGER
+  }
+
+  override def primaryKeySetup(tableName : String, columnName : String) : List[String] = {
+    /*
+     * This trigger and sequence setup is taken from http://www.databaseanswers.org/sql_scripts/ora_sequence.htm
+     */
+    super.primaryKeySetup(tableName, columnName) :::
+    List("CREATE SEQUENCE " + tableName + "_sequence START WITH 1 INCREMENT BY 1",
+         "CREATE OR REPLACE TRIGGER " + tableName + "_trigger BEFORE INSERT ON " + tableName + " " +
+         "FOR EACH ROW " +
+         "WHEN (new." + columnName + " is null) " +
+         "BEGIN " +
+         "SELECT " + tableName + "_sequence.nextval INTO :new." + columnName + " FROM DUAL; " +
+         "END;")
   }
 }
 

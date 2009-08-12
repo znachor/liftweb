@@ -590,7 +590,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
                   colVal.targetSQLType(col._1) match {
                     case Types.VARCHAR => st.setString(colNum, colVal.jdbcFriendly(col._1).asInstanceOf[String])
 
-                    case _ => st.setObject(colNum, colVal.jdbcFriendly(col._1), conn.driverType.columTypeMap(colVal.targetSQLType(col._1)))
+                    case _ => st.setObject(colNum, colVal.jdbcFriendly(col._1), conn.driverType.columnTypeMap(colVal.targetSQLType(col._1)))
                   }
                   colNum = colNum + 1
                 }
@@ -619,7 +619,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
                 colVal.targetSQLType(col._1) match {
                   case Types.VARCHAR => st.setString(colNum, colVal.jdbcFriendly(col._1).asInstanceOf[String])
 
-                  case _ => st.setObject(colNum, colVal.jdbcFriendly(col._1), conn.driverType.columTypeMap(colVal.targetSQLType(col._1)))
+                  case _ => st.setObject(colNum, colVal.jdbcFriendly(col._1), conn.driverType.columnTypeMap(colVal.targetSQLType(col._1)))
                 }
 
                 // st.setObject(colNum, colVal.getJDBCFriendly(col._1), colVal.getTargetSQLType(col._1))

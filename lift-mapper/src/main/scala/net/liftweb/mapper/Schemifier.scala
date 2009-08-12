@@ -164,8 +164,10 @@ object Schemifier {
         // Add primary key only when it has not been created by the index field itself.
         table.mappedFields.filter{f => f.dbPrimaryKey_?}.foreach {
           pkField =>
-            cmds += maybeWrite(performWrite, logFunc, connection) {
-              () => "ALTER TABLE "+table.dbTableName+" ADD CONSTRAINT "+table.dbTableName+"_PK PRIMARY KEY("+pkField.dbColumnName+")"
+            connection.driverType.primaryKeySetup(table.dbTableName, pkField.dbColumnName) foreach { command =>
+              cmds += maybeWrite(performWrite, logFunc, connection) {
+                () => command
+              }
             }
         }
       }
