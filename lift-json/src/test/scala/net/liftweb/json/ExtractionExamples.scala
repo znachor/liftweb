@@ -23,6 +23,12 @@ object ExtractionExamples extends Specification {
     json.extract[SimplePerson] mustEqual SimplePerson("joe", Address("Bulevard", "Helsinki"))
   }
 
+  "Simple value extraction example" in {
+    val json = parse(testJson)
+    json.extract[Name] mustEqual Name("joe")
+    (json \ "children")(0).extract[Name] mustEqual Name("Mary")
+  }
+
   "Primitive extraction example" in {
     val json = parse(primitives)
     json.extract[Primitives] mustEqual Primitives(124, 123L, 126.5, 127.5.floatValue, "128", 125, 129.byteValue, true)
@@ -68,5 +74,7 @@ case class Address(street: String, city: String)
 case class Child(name: String, age: Int)
 
 case class SimplePerson(name: String, address: Address)
+
+case class Name(name: String)
 
 case class Primitives(i: Int, l: Long, d: Double, f: Float, s: String, sh: Short, b: Byte, bool: Boolean)
