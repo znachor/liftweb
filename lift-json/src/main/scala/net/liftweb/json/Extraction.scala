@@ -27,7 +27,7 @@ object Extraction {
    *    ListConstructor("children", "xx.Child", List(Value("name"), Value("age")))))
    */
   sealed abstract class Mapping
-  case class Value(path: String) extends Mapping
+  case class Value(path: String, targetType: Class[_]) extends Mapping
   case class Constructor(path: Option[String], classname: String, args: List[Mapping]) extends Mapping
   case class ListConstructor(path: String, classname: String, args: List[Mapping]) extends Mapping
 
@@ -41,13 +41,20 @@ object Extraction {
       val clazz = Class.forName(classname)
       val argTypes = args.map {
         case x: List[_] => classOf[List[_]]
+        case x: Int => classOf[Int]
+        case x: Long => classOf[Long]
+        case x: Short => classOf[Short]
+        case x: Byte => classOf[Byte]
+        case x: Double => classOf[Double]
+        case x: Float => classOf[Float]
+        case x: Boolean => classOf[Boolean]
         case x => x.asInstanceOf[AnyRef].getClass
       }
       clazz.getConstructor(argTypes.toArray: _*).newInstance(args.map(_.asInstanceOf[AnyRef]).toArray: _*)
     }
 
     def build(root: JValue, mapping: Mapping, argStack: List[Any]): List[Any] = mapping match {
-      case Value(path) => fieldValue(root, path).values :: argStack
+      case Value(path, targetType) => convert(fieldValue(root, path), targetType) :: argStack
       case Constructor(path, classname, args) => 
         val newRoot = path match {
           case Some(p) => root \ p
@@ -70,35 +77,52 @@ object Extraction {
       case true  => ListConstructor(path.get, clazz.getName, constructorArgs(clazz))
     }
 
-    // FIXME add rest of the primitives
     def constructorArgs(clazz: Class[_]) = clazz.getDeclaredFields.map { x =>
-      if (x.getType == classOf[String]) Value(x.getName)
-      else if (x.getType == classOf[BigInt]) Value(x.getName)
+      if (Util.primitive_?(x.getType)) Value(x.getName, x.getType)
+      else if (x.getType == classOf[BigInt]) Value(x.getName, x.getType)
       else if (x.getType == classOf[List[_]]) makeMapping(Some(x.getName), Util.parametrizedType(x), true)
       else makeMapping(Some(x.getName), x.getType, false)
     }.toList.reverse // FIXME Java6 returns these in reverse order, verify that and check other vms
 
     memo.memoize(clazz, (x: Class[_]) => makeMapping(None, x, false))
   }
-}
 
-class Memo[A, R] {
-  var cache = Map[A, R]()
+  // FIXME fails if x == null
+  private def convert(value: JValue, targetType: Class[_]): Any = value match {
+    case JInt(x) if (targetType == classOf[Int]) => x.intValue
+    case JInt(x) if (targetType == classOf[Long]) => x.longValue
+    case JInt(x) if (targetType == classOf[Short]) => x.shortValue
+    case JInt(x) if (targetType == classOf[Byte]) => x.byteValue
+    case JInt(x) if (targetType == classOf[String]) => x.toString
+    case JDouble(x) if (targetType == classOf[Float]) => x.floatValue
+    case JDouble(x) if (targetType == classOf[String]) => x.toString
+    case _ => value.values
+  }
 
-  def memoize(x: A, f: A => R): R = {
-    if (cache contains x) cache(x) else {
-      val ret = f(x)
-      cache += (x -> ret)
-      ret
+  class Memo[A, R] {
+    var cache = Map[A, R]()
+
+    def memoize(x: A, f: A => R): R = {
+      if (cache contains x) cache(x) else {
+        val ret = f(x)
+        cache += (x -> ret)
+        ret
+      }
     }
   }
-}
 
-object Util {
-  import java.lang.reflect._
+  object Util {
+    import java.lang.reflect._
 
-  def parametrizedType(f: Field): Class[_] = {
-    val ptype = f.getGenericType.asInstanceOf[ParameterizedType]
-    ptype.getActualTypeArguments()(0).asInstanceOf[Class[_]]
+    def parametrizedType(f: Field): Class[_] = {
+      val ptype = f.getGenericType.asInstanceOf[ParameterizedType]
+      ptype.getActualTypeArguments()(0).asInstanceOf[Class[_]]
+    }
+
+    def primitive_?(clazz: Class[_]) = {
+      clazz == classOf[String] || clazz == classOf[Int] || clazz == classOf[Long] ||
+      clazz == classOf[Double] || clazz == classOf[Float] || clazz == classOf[Byte] ||
+      clazz == classOf[Boolean] || clazz == classOf[Short]
+    }
   }
 }

@@ -46,6 +46,11 @@ object Examples extends Specification {
     json.extract[SimplePerson] mustEqual SimplePerson("joe", Address("Bulevard", "Helsinki"))
   }
 
+  "Primitive extraction example" in {
+    val json = parse(primitives)
+    json.extract[Primitives] mustEqual Primitives(124, 123L, 126.5, 127.5.floatValue, "128", 125, 129.byteValue, true)
+  }
+
   "Null example" in {
     compact(render(parse(""" {"name": null} """))) mustEqual """{"name":null}"""
   }
@@ -114,6 +119,20 @@ object Examples extends Specification {
 """
 
   val quoted = """["foo \" \n \t \r bar"]"""
+
+  val primitives = 
+"""
+{
+  "l": 123,
+  "i": 124,
+  "sh": 125,
+  "d": 126.5,
+  "f": 127.5,
+  "s": "128",
+  "b": 129,
+  "bool": true
+}
+"""
 }
 
 case class Person(name: String, address: Address, children: List[Child])
@@ -122,3 +141,5 @@ case class Child(name: String, age: BigInt)
 //  case class Child(name: String, age: Int)
 
 case class SimplePerson(name: String, address: Address)
+
+case class Primitives(i: Int, l: Long, d: Double, f: Float, s: String, sh: Short, b: Byte, bool: Boolean)
