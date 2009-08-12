@@ -78,18 +78,6 @@ object Extraction {
       else makeMapping(Some(x.getName), x.getType, false)
     }.toList.reverse // FIXME Java6 returns these in reverse order, verify that and check other vms
 
-    object Memo {
-      var cache = Map[Class[_], Mapping]()
-      def memoize[A](clazz: Class[A]) = {
-        println(cache)
-        if (cache contains clazz) cache(clazz) else {
-          val mapping = makeMapping(None, clazz, false)
-          cache += (clazz -> mapping)
-          mapping
-        }
-      }
-    }
-    
     memo.memoize(clazz, (x: Class[_]) => makeMapping(None, x, false))
   }
 }
