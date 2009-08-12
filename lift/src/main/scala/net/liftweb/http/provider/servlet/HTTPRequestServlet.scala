@@ -84,6 +84,16 @@ class HTTPRequestServlet(req: HttpServletRequest) extends HTTPRequest {
 
   def multipartContent_? = ServletFileUpload.isMultipartContent(req)
 
+  /**
+  * @return the sessionID (if there is one) for this request.  This will *NOT* create
+  * a new session if one does not already exist
+  */
+  def sessionId: Box[String] =
+  for {
+    httpSession <- Box !! req.getSession(false)
+    id <- Box !! httpSession.getId
+  } yield id
+
   def extractFiles: List[ParamHolder] = (new Iterator[ParamHolder] {
     val mimeUpload = (new ServletFileUpload)
     mimeUpload.setProgressListener(new ProgressListener{

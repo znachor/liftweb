@@ -106,6 +106,12 @@ trait HTTPRequest {
   def session: HTTPSession
 
   /**
+  * @return the sessionID (if there is one) for this request.  This will *NOT* create
+  * a new session if one does not already exist
+  */
+  def sessionId: Box[String]
+
+  /**
    * @return - the remote address of the client or the last seen proxy.
    */
   def remoteAddress: String
