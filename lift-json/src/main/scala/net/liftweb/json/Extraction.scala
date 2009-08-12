@@ -6,7 +6,7 @@ import JsonAST._
 /** Function to extract values from JSON AST using case classes.
  *  Note, this is experimental and not fully implemented yet.
  *
- *  See: example.scala "Extraction example", "Partial extraction example"
+ *  See: Example.scala "Extraction example", "Partial extraction example"
  */
 object Extraction {
   /** Intermediate format which describes the mapping.
