@@ -46,6 +46,10 @@ object Examples extends Specification {
     json.extract[SimplePerson] mustEqual SimplePerson("joe", Address("Bulevard", "Helsinki"))
   }
 
+  "Null example" in {
+    compact(render(parse(""" {"name": null} """))) mustEqual """{"name":null}"""
+  }
+
   val lotto = """
 {
   "lotto":{
@@ -69,7 +73,7 @@ object Examples extends Specification {
     "age": 35,
     "spouse": {
       "person": {
-        "name": "Marilyn"
+        "name": "Marilyn",
         "age": 33
       }
     }
