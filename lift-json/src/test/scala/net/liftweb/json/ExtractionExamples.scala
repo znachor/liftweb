@@ -6,12 +6,16 @@ import _root_.org.specs.runner.{Runner, JUnit}
 class ExtractionExampleTest extends Runner(ExtractionExamples) with JUnit
 object ExtractionExamples extends Specification {
   import JsonAST._
-  import JsonDSL._
   import JsonParser._
 
   "Extraction example" in {
     val json = parse(testJson)
     json.extract[Person] mustEqual Person("joe", Address("Bulevard", "Helsinki"), List(Child("Mary", 5), Child("Mazy", 3)))
+  }
+
+  "Extraction with path expression example" in {
+    val json = parse(testJson)
+    (json \ "address").extract[Address] mustEqual Address("Bulevard", "Helsinki")
   }
 
   "Partial extraction example" in {
