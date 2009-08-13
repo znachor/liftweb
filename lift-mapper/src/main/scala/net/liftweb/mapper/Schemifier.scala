@@ -114,7 +114,7 @@ object Schemifier {
    * Retrieves schema name where the unqualified db objects are searched.
    */
   def getDefaultSchemaName(connection: SuperConnection): String =
-  connection.driverType.defaultSchemaName.openOr(connection.getMetaData.getUserName)
+  (connection.schemaName or connection.driverType.defaultSchemaName or DB.globalDefaultSchemaName).openOr(connection.getMetaData.getUserName)
 
 
   private def hasTable_? (table: BaseMetaMapper, connection: SuperConnection, actualTableNames: HashMap[String, String]): Boolean = {
