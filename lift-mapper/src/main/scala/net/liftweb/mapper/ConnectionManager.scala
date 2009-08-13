@@ -27,4 +27,5 @@ import _root_.net.liftweb.util._
 trait ConnectionManager {
   def newConnection(name: ConnectionIdentifier): Box[Connection]
   def releaseConnection(conn: Connection)
+  def newSuperConnection(name: ConnectionIdentifier): Box[SuperConnection] = Empty
 }
