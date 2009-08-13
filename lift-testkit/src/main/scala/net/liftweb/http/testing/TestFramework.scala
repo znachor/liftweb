@@ -278,7 +278,9 @@ Response with GetPoster
 
   // override def assertSuccess = assert(code == 200, "Not an HTTP success")
   override lazy val xml = {
-    XML.load(new _root_.java.io.ByteArrayInputStream("""\<\!DOCTYPE.*\>""".r.replaceAllIn(bodyAsString, "").getBytes("UTF-8")))
+    PCDataXmlParser(new _root_.java.io.ByteArrayInputStream(body)) match {
+      case Full(e: Elem) => e
+    }
   }
 
   lazy val bodyAsString = new String(body, "UTF-8")
