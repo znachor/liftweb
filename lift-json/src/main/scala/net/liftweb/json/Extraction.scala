@@ -4,9 +4,10 @@ import scala.reflect.Manifest
 import JsonAST._
 
 /** Function to extract values from JSON AST using case classes.
- *  Note, this is experimental and not fully implemented yet.
  *
- *  See: ExtractionExamples.scala "Extraction example", "Partial extraction example"
+ *  FIXME: Add support to extract List of values too.
+ *
+ *  See: ExtractionExamples.scala
  */
 object Extraction {
   /** Intermediate format which describes the mapping.
@@ -78,12 +79,12 @@ object Extraction {
       else if (x.getType == classOf[BigInt]) Value(x.getName, x.getType)
       else if (x.getType == classOf[List[_]]) makeMapping(Some(x.getName), Reflection.parametrizedType(x), true)
       else makeMapping(Some(x.getName), x.getType, false)
-    }.toList.reverse // FIXME Java6 returns these in reverse order, verify that and check other vms
+    }.toList.reverse
 
     memo.memoize(clazz, (x: Class[_]) => makeMapping(None, x, false))
   }
 
-  // FIXME fails if x == null
+  // FIXME fails if value == JNull
   private def convert(value: JValue, targetType: Class[_]): Any = value match {
     case JInt(x) if (targetType == classOf[Int]) => x.intValue
     case JInt(x) if (targetType == classOf[Long]) => x.longValue

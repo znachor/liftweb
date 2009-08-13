@@ -192,6 +192,7 @@ object JsonDSL extends Printer {
   }
 }
 
+object Printer extends Printer
 trait Printer {
   import scala.text._
 

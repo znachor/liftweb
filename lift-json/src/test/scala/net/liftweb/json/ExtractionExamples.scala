@@ -27,12 +27,20 @@ object ExtractionExamples extends Specification {
     val json = parse(testJson)
     json.extract[Name] mustEqual Name("joe")
     (json \ "children")(0).extract[Name] mustEqual Name("Mary")
+    (json \ "children")(1).extract[Name] mustEqual Name("Mazy")
   }
 
   "Primitive extraction example" in {
     val json = parse(primitives)
     json.extract[Primitives] mustEqual Primitives(124, 123L, 126.5, 127.5.floatValue, "128", 125, 129.byteValue, true)
   }
+
+  /* Does not work yet.
+  "List extraction example" in {
+    val json = parse(testJson)
+    (json \ "children").extract[List[Name]] mustEqual List("Mary", "Mazy")
+  }
+  */
 
   val testJson = 
 """
