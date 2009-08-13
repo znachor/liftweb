@@ -365,7 +365,14 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] {
    */
   def fieldOrder: List[OwnedField[BaseRecord]] = Nil
 
-  protected def fields() : List[OwnedField[BaseRecord]] = fieldList map (fh => fh.field)
+  def fields() : List[OwnedField[BaseRecord]] = fieldList map (fh => fh.field)
+  
+  def fields(rec: BaseRecord) : List[OwnedField[BaseRecord]] = 
+    for(fieldHolder <- fieldList;
+      field <- rec.fieldByName(fieldHolder.name)
+    ) yield {
+      field
+    }
 
   case class FieldHolder(name: String, method: Method, field: OwnedField[BaseRecord])
 }
