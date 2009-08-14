@@ -7,6 +7,7 @@ import JsonAST._
  *
  *  FIXME: Add support to extract List of values too.
  *  FIXME: Add support for Optional values.
+ *  FIXME: Add annnotation to configure path
  *
  *  See: ExtractionExamples.scala
  */
@@ -52,10 +53,7 @@ object Extraction {
       clazz.getConstructor(argTypes.toArray: _*).newInstance(args.map(_.asInstanceOf[AnyRef]).toArray: _*)
     }
 
-    def newPrimitive(elementType: Class[_], elem: JValue) = elem match {
-      case JInt(x) => x
-      case x => error("Unknown primitive " + x)
-    }
+    def newPrimitive(elementType: Class[_], elem: JValue) = convert(elem, elementType)
 
     def build(root: JValue, mapping: Mapping, argStack: List[Any]): List[Any] = mapping match {
       case Value(path, targetType) => convert(fieldValue(root, path), targetType) :: argStack
