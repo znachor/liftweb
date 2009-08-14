@@ -191,6 +191,22 @@ Indexed path expressions work too.
     scala> (json \ "children")(1) \ "name"
     res1: net.liftweb.json.JsonAST.JValue = JField(name,JString(Mazy))
 
+Extracting values
+-----------------
+
+Case classes can be used to extract values from parsed JSON.
+Please see more examples in src/test/scala/net/liftweb/json/ExtractionExamples.scala
+
+    // Note, case classes can't be created in REPL because of classloader issues.
+    case class Person(name: String, address: Address, children: List[Child])
+    case class Address(street: String, city: String)
+    case class Child(name: String, age: Int)
+
+    scala> val json = parse(testJson)
+    scala> json.extract[Person] 
+    res0: Person = Person("joe", Address("Bulevard", "Helsinki"), List(Child("Mary", 5), Child("Mazy", 3)))
+
+
 Kudos
 -----
 
