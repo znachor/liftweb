@@ -6,6 +6,7 @@ import JsonAST._
 /** Function to extract values from JSON AST using case classes.
  *
  *  FIXME: Add support to extract List of values too.
+ *  FIXME: Add support for Optional values.
  *
  *  See: ExtractionExamples.scala
  */
@@ -31,6 +32,7 @@ object Extraction {
   case class Value(path: String, targetType: Class[_]) extends Mapping
   case class Constructor(path: Option[String], classname: String, args: List[Mapping]) extends Mapping
   case class ListConstructor(path: String, classname: String, args: List[Mapping]) extends Mapping
+  case class ListOfPrimitives(path: String, elementType: Class[_]) extends Mapping
 
   val memo = new Memo[Class[_], Mapping]
 
@@ -50,6 +52,11 @@ object Extraction {
       clazz.getConstructor(argTypes.toArray: _*).newInstance(args.map(_.asInstanceOf[AnyRef]).toArray: _*)
     }
 
+    def newPrimitive(elementType: Class[_], elem: JValue) = elem match {
+      case JInt(x) => x
+      case x => error("Unknown primitive " + x)
+    }
+
     def build(root: JValue, mapping: Mapping, argStack: List[Any]): List[Any] = mapping match {
       case Value(path, targetType) => convert(fieldValue(root, path), targetType) :: argStack
       case Constructor(path, classname, args) => 
@@ -61,6 +68,9 @@ object Extraction {
       case ListConstructor(path, classname, args) => 
         val arr = fieldValue(root, path).asInstanceOf[JArray]
         arr.arr.map(elem => newInstance(classname, args.flatMap(build(elem, _, argStack)))) :: argStack
+      case ListOfPrimitives(path, elementType) =>
+        val arr = fieldValue(root, path).asInstanceOf[JArray]
+        arr.arr.map(elem => newPrimitive(elementType, elem)) :: argStack
     }
 
     def fieldValue(json: JValue, path: String) = (json \ path) match {
@@ -74,7 +84,8 @@ object Extraction {
   private def mappingOf(clazz: Class[_]) = {
     def makeMapping(path: Option[String], clazz: Class[_], isList: Boolean): Mapping = isList match {
       case false => Constructor(path, clazz.getName, constructorArgs(clazz))
-      case true  => ListConstructor(path.get, clazz.getName, constructorArgs(clazz))
+      case true if Reflection.primitive_?(clazz) => ListOfPrimitives(path.get, clazz)
+      case true => ListConstructor(path.get, clazz.getName, constructorArgs(clazz))
     }
 
     def constructorArgs(clazz: Class[_]) = clazz.getDeclaredFields.filter(!Reflection.static_?(_)).map { x =>      
@@ -122,7 +133,10 @@ object Extraction {
     def primitive_?(clazz: Class[_]) = {
       clazz == classOf[String] || clazz == classOf[Int] || clazz == classOf[Long] ||
       clazz == classOf[Double] || clazz == classOf[Float] || clazz == classOf[Byte] ||
-      clazz == classOf[Boolean] || clazz == classOf[Short]
+      clazz == classOf[Boolean] || clazz == classOf[Short] || clazz == classOf[java.lang.Integer] ||
+      clazz == classOf[java.lang.Long] || clazz == classOf[java.lang.Double] ||
+      clazz == classOf[java.lang.Float] || clazz == classOf[java.lang.Byte] ||
+      clazz == classOf[java.lang.Boolean] || clazz == classOf[java.lang.Short]
     }
 
     def static_?(f: Field) = Modifier.isStatic(f.getModifiers)
