@@ -63,7 +63,10 @@ object Extraction {
         arr.arr.map(elem => newInstance(classname, args.flatMap(build(elem, _, argStack)))) :: argStack
     }
 
-    def fieldValue(json: JValue, path: String) = (json \ path).asInstanceOf[JField].value
+    def fieldValue(json: JValue, path: String) = (json \ path) match {
+      case f: JField => f.value
+      case x => error("Expected JField but got " + x + ", json='" + json + "', path='" + path + "'")
+    }
 
     build(json, mapping, Nil).head.asInstanceOf[A]
   }
@@ -74,7 +77,7 @@ object Extraction {
       case true  => ListConstructor(path.get, clazz.getName, constructorArgs(clazz))
     }
 
-    def constructorArgs(clazz: Class[_]) = clazz.getDeclaredFields.map { x =>
+    def constructorArgs(clazz: Class[_]) = clazz.getDeclaredFields.filter(!Reflection.static_?(_)).map { x =>      
       if (Reflection.primitive_?(x.getType)) Value(x.getName, x.getType)
       else if (x.getType == classOf[BigInt]) Value(x.getName, x.getType)
       else if (x.getType == classOf[List[_]]) makeMapping(Some(x.getName), Reflection.parametrizedType(x), true)
@@ -121,6 +124,8 @@ object Extraction {
       clazz == classOf[Double] || clazz == classOf[Float] || clazz == classOf[Byte] ||
       clazz == classOf[Boolean] || clazz == classOf[Short]
     }
+
+    def static_?(f: Field) = Modifier.isStatic(f.getModifiers)
 
     def types(xs: List[Any]) = xs.map {
       case x: List[_] => classOf[List[_]]
