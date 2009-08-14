@@ -120,7 +120,14 @@ object Req {
 
 
     // val (uri, path, localSingleParams) = processRewrite(tmpUri, tmpPath, TreeMap.empty)
-    val rewritten = processRewrite(tmpPath, Map.empty)
+    val rewritten = {
+      request.sessionId.flatMap(id => SessionMaster.getSession(id, Empty)) match {
+        case Full(session) =>  S.initIfUninitted(session) {
+            processRewrite(tmpPath, Map.empty)
+          }
+        case _ => processRewrite(tmpPath, Map.empty)
+      }
+    }
 
     val localParams: Map[String, List[String]] = Map(rewritten.params.toList.map{case (name, value) => name -> List(value)} :_*)
 
@@ -147,24 +154,24 @@ object Req {
       (normal.map(_.name).removeDuplicates, localParams ++ params, files, Empty)
     } else if (reqType.get_?) {
       (request.queryString map {
-        case s =>
-          val pairs = s.split("&").toList.map(_.trim).filter(_.length > 0).map(_.split("=").toList match {
-              case name :: value :: Nil => (true, urlDecode(name), urlDecode(value))
-              case name :: Nil => (true, urlDecode(name), "")
-              case _ => (false, "", "")
-            }).filter(_._1).map{case (_, name, value) => (name, value)}
-          val names = pairs.map(_._1).removeDuplicates
-          val params = pairs.foldLeft(eMap) (
-            (a,b) => a.get(b._1) match {
-              case None => a + (b._1 -> List(b._2))
-              case Some(xs) => a + (b._1 -> (xs ::: List(b._2)))
-            }
-          )
+          case s =>
+            val pairs = s.split("&").toList.map(_.trim).filter(_.length > 0).map(_.split("=").toList match {
+                case name :: value :: Nil => (true, urlDecode(name), urlDecode(value))
+                case name :: Nil => (true, urlDecode(name), "")
+                case _ => (false, "", "")
+              }).filter(_._1).map{case (_, name, value) => (name, value)}
+            val names = pairs.map(_._1).removeDuplicates
+            val params = pairs.foldLeft(eMap) (
+              (a,b) => a.get(b._1) match {
+                case None => a + (b._1 -> List(b._2))
+                case Some(xs) => a + (b._1 -> (xs ::: List(b._2)))
+              }
+            )
 
-          val hereParams = localParams ++ params
+            val hereParams = localParams ++ params
 
-          (names, hereParams, Nil, Empty)
-      }) openOr (Nil, localParams, Nil, Empty)
+            (names, hereParams, Nil, Empty)
+        }) openOr (Nil, localParams, Nil, Empty)
     } else if (contentType.dmap(false)(_.toLowerCase.startsWith("application/x-www-form-urlencoded"))) {
       // val tmp = paramNames.map{n => (n, xlateIfGet(request.getParameterValues(n).toList))}
       val params = localParams ++ (request.params.sort{(s1, s2) => s1.name < s2.name}).map(n => (n.name, n.values))
@@ -290,9 +297,9 @@ class Req(val path: ParsePath,
   }
 
   lazy val headers: List[(String, String)] =
-    for (h <- request.headers;
-         p <- h.values
-    ) yield (h name, p)
+  for (h <- request.headers;
+       p <- h.values
+  ) yield (h name, p)
 
 
   def headers(name: String): List[String] = headers.filter(_._1.equalsIgnoreCase(name)).map(_._2)

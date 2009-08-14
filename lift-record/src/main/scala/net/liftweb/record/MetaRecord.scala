@@ -364,9 +364,28 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] {
    * @return a List of Field
    */
   def fieldOrder: List[OwnedField[BaseRecord]] = Nil
-
-  protected def fields() : List[OwnedField[BaseRecord]] = fieldList map (fh => fh.field)
-
+  
+  /**
+   * Renamed from fields() due to a clash with fields() in Record. Use this method
+   * to obtain a list of fields defined in the meta companion objects. Possibly a 
+   * breaking change? (added 14th August 2009, Tim Perrett)
+   * 
+   * @see Record
+   */
+  def metaFields() : List[OwnedField[BaseRecord]] = fieldList.map(fh => fh.field)
+  
+  /**
+   * Obtain the fields for a particlar Record or subclass instance by passing
+   * the instance itself.
+   * (added 14th August 2009, Tim Perrett)
+   */
+  def fields(rec: BaseRecord) : List[OwnedField[BaseRecord]] = 
+    for(fieldHolder <- fieldList;
+      field <- rec.fieldByName(fieldHolder.name)
+    ) yield {
+      field
+    }
+    
   case class FieldHolder(name: String, method: Method, field: OwnedField[BaseRecord])
 }
 

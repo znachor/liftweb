@@ -14,8 +14,9 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
    * If they are all successful returns true.
    */
   override def save = {
-    super.save &&
+    val ret = super.save &&
       oneToManyFields.forall(_.save)
+    ret
   }
   
   /**
@@ -46,7 +47,8 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
   class MappedOneToMany[O <: Mapper[O]](meta: MetaMapper[O], foreign: MappedForeignKey[K,O,T], qp: QueryParam[O]*)
     extends MappedOneToManyBase[O](
       ()=> meta.findAll(By(foreign, primaryKeyField) :: qp.toList : _*),
-      _=>foreign
+//      e=>foreign.actualField(e).asInstanceOf[MappedFor]
+      foreign
     )
   
   /**
@@ -145,10 +147,15 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
      * Returns true if all children were saved successfully.
      */
     def save = {
-      delegate = delegate.filter {
-          foreign(_).is ==
-            OneToMany.this.primaryKeyField.is
+//      println("Saving " + this)
+//      println(delegate)
+      import net.liftweb.util.Full
+      delegate = delegate.filter {e =>
+//          println(foreign(e).is + " <-> " + OneToMany.this.primaryKeyField.is)
+          foreign(e).is == OneToMany.this.primaryKeyField.is ||
+            foreign(e).obj == Full(OneToMany.this)
       }
+//      println(delegate)
       delegate.forall(_.save)
     }
   }
