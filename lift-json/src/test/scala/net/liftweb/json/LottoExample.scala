@@ -26,5 +26,12 @@ object LottoExample extends Specification {
 
   compact(render(json)) mustEqual """{"lotto":{"id":5,"winningNumbers":[2,45,34,23,7,5,3],"winners":[{"id":23,"numbers":[2,45,34,23,3,5]},{"id":54,"numbers":[52,3,12,11,18,22]}]}}"""
 
-  ((json \ "lotto" \ "winners")(0)).extract[Winner] mustEqual Winner(23, List(2, 45, 34, 23, 3, 5))
+  (json \ "lotto" \ "winners")(0).extract[Winner] mustEqual Winner(23, List(2, 45, 34, 23, 3, 5))
+
+  // FIXME: needs Option support
+  //(json \ "lotto").extract[Lotto] mustEqual lotto
+
+  case class Lotto2(id: Long, winningNumbers: List[Int], winners: List[Winner])
+
+  (json \ "lotto").extract[Lotto2] mustEqual Lotto2(5, List(2, 45, 34, 23, 7, 5, 3), winners)
 }
