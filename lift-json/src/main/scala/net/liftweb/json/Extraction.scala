@@ -48,7 +48,7 @@ object Extraction {
     val mapping = mappingOf(mf.erasure)
 
     def newInstance(classname: String, args: List[Any]) = {
-      val clazz = Class.forName(classname)
+      val clazz = Thread.currentThread.getContextClassLoader.loadClass(classname)
       val argTypes = Reflection.types(args)
       clazz.getConstructor(argTypes.toArray: _*).newInstance(args.map(_.asInstanceOf[AnyRef]).toArray: _*)
     }
