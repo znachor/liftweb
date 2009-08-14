@@ -29,7 +29,10 @@ trait Record[MyType <: Record[MyType]] {
    */
   private val secure_# = Safe.next
   
-  def fields = meta.fields(this)
+  /**
+   * Get the fields defined on the meta object for this record instance
+   */ 
+  def fields() = meta.fields(this)
   
   /**
    * The meta record (the object that contains the meta result for this type)
