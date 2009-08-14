@@ -416,8 +416,9 @@ trait BindHelpers {
                   nodeFailureXform.map(_(s)) openOr s
 
                 case Some(ns) =>
-                  val toRet = ns.calcValue(s.child)
-                  mergeBindAttrs(toRet, namespace, s.attributes)
+                  //val toRet = ns.calcValue(s.child)
+                  //mergeBindAttrs(toRet, namespace, s.attributes)
+                  ns.calcValue(s.child)
               }
             }
           case s : Elem if bindByNameType(s.label) && bindByNameTag(namespace, s) != "" => BindHelpers._currentNode.doWith(s) {
@@ -443,12 +444,14 @@ trait BindHelpers {
     case v => v
   }
 
+/*
   private def mergeBindAttrs(in: NodeSeq, nameSpace: String, attrs: MetaData): NodeSeq = attrs match {
     case Null => in
     case p: PrefixedAttribute if p.pre == nameSpace =>
       mergeBindAttrs(setElemId(in, p.key, p.value), nameSpace, p.next)
     case m => mergeBindAttrs(in, nameSpace, m.next)
   }
+  */
 
   /**
    * Replace the content of lift:bind nodes with the corresponding nodes found in a map,

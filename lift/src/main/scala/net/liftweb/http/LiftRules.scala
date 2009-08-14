@@ -647,14 +647,21 @@ object LiftRules {
    */
   val snippets = RulesSeq[SnippetPF]
 
-  /**
-   * Holds the CometLogger that will be used to log comet activity
-   */
-  var cometLogger: LiftLogger = {
+  private val _cometLogger: FatLazy[LiftLogger] = FatLazy({
     val ret = LogBoot.loggerByName("comet_trace")
     ret.level = LiftLogLevels.Off
     ret
-  }
+  })
+
+   /**
+   * Holds the CometLogger that will be used to log comet activity
+   */
+  def cometLogger: LiftLogger = _cometLogger.get
+
+   /**
+   * Holds the CometLogger that will be used to log comet activity
+   */
+  def cometLogger_=(newLogger: LiftLogger): Unit = _cometLogger.set(newLogger)
 
   /**
    * Takes a Node, headers, cookies, and a session and turns it into an XhtmlResponse.
