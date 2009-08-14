@@ -373,7 +373,7 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] {
     ) yield {
       field
     }
-
+    
   case class FieldHolder(name: String, method: Method, field: OwnedField[BaseRecord])
 }
 
