@@ -126,11 +126,15 @@ object H2Driver extends DriverType("H2") {
   /**
    * Whether the primary key has been defined by the index column.
    * H2 creates primary key for a table, when AUTO_INCREMENT type
-   * is used.
+   * is used. <--- NOT TRUE
+   * I went into the H2 console, created a table with auto_increment
+   * and was able to insert duplicate ids. Then I created it with
+   * AUTO_INCREMENT PRIMARY KEY and it did not allow it.
    */
-  override def pkDefinedByIndexColumn_? : Boolean = true
+  override def pkDefinedByIndexColumn_? : Boolean = false  //changed to false by nafg
 
   override def maxSelectLimit = "0";
+  override def defaultSchemaName : Box[String] = Full("public")
 }
 
 object PostgreSqlDriver extends DriverType("PostgreSQL") {
