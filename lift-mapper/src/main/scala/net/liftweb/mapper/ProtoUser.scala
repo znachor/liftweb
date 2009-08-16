@@ -124,6 +124,8 @@ trait MetaMegaProtoUser[ModelType <: MegaProtoUser[ModelType]] extends KeyedMeta
 
   def homePage = "/"
 
+  object loginRedirect extends SessionVar[Box[String]](Empty)
+
 
 
   case class MenuItem(name: String, path: List[String],
@@ -148,6 +150,18 @@ trait MetaMegaProtoUser[ModelType <: MegaProtoUser[ModelType]] extends KeyedMeta
   lazy val testLogginIn = If(loggedIn_? _, S.??("must.be.logged.in")) ;
 
   lazy val testSuperUser = If(superUser_? _, S.??("must.be.super.user"))
+
+  def loginFirst = If(
+    loggedIn_? _,
+    () => {
+      import net.liftweb.http.{RedirectWithState, RedirectState}
+      val uri = S.uri
+      RedirectWithState(
+        loginPageURL,
+        RedirectState( ()=>{loginRedirect.set(Full(uri))})
+      )
+    }
+  )
 
   def superUser_? : Boolean = currentUser.map(_.superUser.is) openOr false
 
@@ -257,7 +271,18 @@ trait MetaMegaProtoUser[ModelType <: MegaProtoUser[ModelType]] extends KeyedMeta
 
   var onLogOut: List[Box[ModelType] => Unit] = Nil
 
-  def loggedIn_? : Boolean = currentUserId.isDefined
+  /**
+   * This function is given a chance to log in a user
+   * programmatically when needed
+   */
+  var autologinFunc: Box[()=>Unit] = Empty
+
+  //def loggedIn_? : Boolean = currentUserId.isDefined
+  def loggedIn_? = {
+    if(!currentUserId.isDefined)
+      for(f <- autologinFunc) f()
+    currentUserId.isDefined
+  }
 
   def logUserIdIn(id: String) {
     curUser.remove()
@@ -407,7 +432,15 @@ trait MetaMegaProtoUser[ModelType <: MegaProtoUser[ModelType]] extends KeyedMeta
           user.password.match_?(S.param("password").openOr("*")) =>
           S.notice(S.??("logged.in"))
           logUserIn(user)
-          S.redirectTo(homePage)
+          //S.redirectTo(homePage)
+          val redir = loginRedirect.is match {
+            case Full(url) =>
+              loginRedirect(Empty)
+              url
+            case _ =>
+              homePage
+          }
+          S.redirectTo(redir)
 
         case Full(user) if !user.validated =>
           S.error(S.??("account.validation.error"))
