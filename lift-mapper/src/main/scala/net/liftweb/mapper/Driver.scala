@@ -134,7 +134,7 @@ object H2Driver extends DriverType("H2") {
   override def pkDefinedByIndexColumn_? : Boolean = false  //changed to false by nafg
 
   override def maxSelectLimit = "0";
-  override def defaultSchemaName : Box[String] = Full("public")
+  override def defaultSchemaName : Box[String] = Full("PUBLIC")
 }
 
 object PostgreSqlDriver extends DriverType("PostgreSQL") {
