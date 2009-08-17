@@ -18,7 +18,7 @@ package net.liftweb.mapper
 
 import _root_.java.sql.{Connection, ResultSet, DatabaseMetaData}
 import _root_.scala.collection.mutable.{HashMap, ListBuffer}
-import _root_.net.liftweb.util.{Helpers, Full, Box}
+import _root_.net.liftweb.util.{Helpers, Full, Box, Log}
 import Helpers._
 
 /**
@@ -114,7 +114,7 @@ object Schemifier {
    * Retrieves schema name where the unqualified db objects are searched.
    */
   def getDefaultSchemaName(connection: SuperConnection): String =
-  connection.driverType.defaultSchemaName.openOr(connection.getMetaData.getUserName)
+  (connection.schemaName or connection.driverType.defaultSchemaName or DB.globalDefaultSchemaName).openOr(connection.getMetaData.getUserName)
 
 
   private def hasTable_? (table: BaseMetaMapper, connection: SuperConnection, actualTableNames: HashMap[String, String]): Boolean = {
@@ -268,6 +268,7 @@ object Schemifier {
         case i: net.liftweb.mapper.Index[_] => "CREATE INDEX " + standardCreationStatement
         case i: UniqueIndex[_] => "CREATE UNIQUE INDEX " + standardCreationStatement
         case GenericIndex(createFunc, _, _) => createFunc(table.dbTableName, columns.map(_.field.dbColumnName))
+        case _ => Log.error("Invalid index: " + index); ""
       }
 
       val fn = columns.map(_.field.dbColumnName.toLowerCase).sort(_ < _)

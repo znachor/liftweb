@@ -235,7 +235,15 @@ object TextileParser {
 
     type UnitParser=Parser[Unit]
 
-    implicit def discard[T](p: Parser[T]): Parser[Unit] = p ^^ {x => ()}
+    def discard[T](p: Parser[T]): Parser[Unit] = p ^^ {x => ()}
+
+  def peek[T](p: Parser[T]): Parser[T] = Parser { in =>
+    p(in) match {
+	      case s @ Success(v, _) => Success(v, in)
+	      case e @ Error(msg, _) => Error(msg, in)
+	      case f @ Failure(msg, _) => Failure(msg, in)
+	    }
+  }
 
     lazy val document : Parser[Lst] = rep(paragraph) ^^ Lst
     // final val  Ch = '\032'
@@ -268,7 +276,7 @@ object TextileParser {
      * Line elements make up paragraphs and block elements
      */
     lazy val lineElem : Parser[Textile] = {
-      not(discard(blankLine)) ~> (endOfLine | image | footnote_def |
+      not(blankLine) ~> (endOfLine | image | footnote_def |
                                   anchor | dimension | elipsis  |
                                   copyright | trademark | registered |
                                   emDash |
@@ -283,7 +291,7 @@ object TextileParser {
      * we exclude looking for _emph_
      */
     lazy val lineElem_notEmph : Parser[Textile] = {
-      not(discard(blankLine)) ~> (endOfLine | image | footnote_def | anchor |
+      not(blankLine) ~> (endOfLine | image | footnote_def | anchor |
                                   dimension | elipsis |
                                   copyright | trademark | registered | emDash | enDash | italic |
                                   bold  |
@@ -295,7 +303,7 @@ object TextileParser {
      * Don't look for *strong* if we're currently in a **bold** element
      */
     lazy val lineElem_notStrong : Parser[Textile] = {
-      not(discard(blankLine)) ~> (endOfLine | image | footnote_def | anchor |
+      not(blankLine) ~> (endOfLine | image | footnote_def | anchor |
                                   dimension | elipsis |
                                   copyright | trademark | registered | emDash | enDash | italic |
                                   emph |
@@ -309,7 +317,7 @@ object TextileParser {
      */
     lazy val acronym : Parser[Acronym] =
     ((chrsExcept(' ', '(', '\n') <~
-      not(discard(copyright | trademark | registered))) ~
+      not(copyright | trademark | registered)) ~
      ('(' ~> chrsExcept(')', '\n') <~ ')') ) ^^ flatten2(Acronym)
 
     /**
@@ -467,7 +475,7 @@ object TextileParser {
      */
     lazy val preBlock: Parser[Textile] =
     beginlS ~> accept("<pre") ~> rep(' ') ~> '>' ~>
-    rep(not(discard(accept("</pre"))) ~> (preEndOfLine | charBlock )) <~
+    rep(not(accept("</pre")) ~> (preEndOfLine | charBlock )) <~
     accept("</pre") <~ rep(' ') <~ '>' <~ rep(' ') <~ '\n' ^^ {
       case elms => Pre(reduceCharBlocks(elms), Nil)
     }
@@ -501,7 +509,7 @@ object TextileParser {
      */
     lazy val multi_html: Parser[Textile] = ('<' ~> validTag) >> { tag =>
       rep(tag_attr) ~
-      ('>' ~> rep(not(discard(closingTag(tag))) ~> (lineElem | paragraph)) <~ closingTag(tag)) ^^ {
+      ('>' ~> rep(not(closingTag(tag)) ~> (lineElem | paragraph)) <~ closingTag(tag)) ^^ {
         case attrs ~ body => HTML(tag, reduceCharBlocks(body), attrs)}}
 
     /**
@@ -562,7 +570,7 @@ object TextileParser {
       val oneBullet = if (numbered) accept('#') else accept('*')
 
       def bullet_line(depth : Int, numbered : Boolean): Parser[Textile] =
-      beginlS ~> repN(depth+1, oneBullet) ~> rep(not(discard('\n')) ~>
+      beginlS ~> repN(depth+1, oneBullet) ~> rep(not('\n') ~>
                                                  lineElem) <~ '\n' ^^
       {case elms => BulletLine(reduceCharBlocks(elms), Nil)}
 
@@ -580,12 +588,13 @@ object TextileParser {
 
     def formattedLineElem[Q <% Parser[Any]](m: Q, p: Parser[List[Attribute]]):
     Parser[List[Textile] ~ List[Textile] ~ List[Attribute] ~ List[Textile]] =
-    begOrSpace ~ (m ~> p) ~ (rep1(not(discard(endOfLine | (m ~ (endOfLine | rep1(' '))))) ~> lineElem) <~ m) ~ spaceOrEnd ^^
+    begOrSpace ~ (m ~> p) ~ (rep1(not(endOfLine | (m ~ (endOfLine | rep1(' ')))) ~> lineElem) <~ m) ~ peek(spaceOrEnd) ^^
     {case bg ~ attrs ~ ln ~ end =>
         val t1: List[Textile] ~ List[Textile] = new ~(List(CharBlock(" " * bg)),
                                                       reduceCharBlocks(ln))
         val t2 = new ~(t1, attrs)
-        new ~(t2, List(CharBlock(" " * end)))
+        new ~(t2, Nil)
+        
     }
     /*
      new ~(List[Textile](CharBlock(" " * bg)),
@@ -710,9 +719,9 @@ object TextileParser {
 
 
 
-    lazy val blankPara : Parser[Textile] = discard(rep1(blankLine)) ^^^ BlankLine
+    lazy val blankPara : Parser[Textile] = rep1(blankLine) ^^^ BlankLine
 
-    lazy val not_blank_line : Parser[Textile] = not(discard(blankLine)) ~> lineElem
+    lazy val not_blank_line : Parser[Textile] = not(blankLine) ~> lineElem
 
     lazy val head_line : Parser[Textile] = (beginl ~ rep(' ') ~> 'h' ~> elem("1, 2 or 3", {c => c == '1' | c == '2' | c == '3'})) ~
     rep(para_attribute) ~
@@ -752,7 +761,7 @@ object TextileParser {
     lazy val table_header : Parser[Textile] = (beginlS ~> opt(row_def)) ~ (rep(' ') ~> accept("|_.") ~> rep1sep(table_element(true), accept("_.")) <~ rep(' ') <~ '\n') ^^ {
       case td ~ re => TableRow(re, td.map(_.attrs) getOrElse Nil)}
 
-    def table_element(isHeader : Boolean) : Parser[Textile] = opt(row_def) ~ (rep(not(discard(accept('|') | '\n')) ~> lineElem) <~ '|') ^^ {
+    def table_element(isHeader : Boolean) : Parser[Textile] = opt(row_def) ~ (rep(not(accept('|') | '\n') ~> lineElem) <~ '|') ^^ {
       case td ~ el => TableElement(reduceCharBlocks(el), isHeader, td.map(_.attrs) getOrElse Nil)}
 
     lazy val paragraph : Parser[Textile] =

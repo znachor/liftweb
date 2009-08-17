@@ -28,7 +28,12 @@ trait Record[MyType <: Record[MyType]] {
    * A unique identifier for this record... used for access control
    */
   private val secure_# = Safe.next
-
+  
+  /**
+   * Get the fields defined on the meta object for this record instance
+   */ 
+  def fields() = meta.fields(this)
+  
   /**
    * The meta record (the object that contains the meta result for this type)
    */

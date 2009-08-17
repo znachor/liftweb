@@ -42,8 +42,16 @@ object BindHelpersSpec extends Specification with BindHelpers {
       val map = Map("hello" -> <h1></h1>, "world" -> <b></b>)
       val liftbind = <body>
         <lift:bind name="hello">changethis</lift:bind>
-     </body>
+                     </body>
+
       bind(map, liftbind) must ==/(<body><h1></h1></body>)
+    }
+
+    "bind should not peserve attrs on a bound element" in {
+
+      val res:NodeSeq = bind("ledger", <ledger:entry ledger:id="foo" ledger:class="bar" />, "entry" -> <foo/>)
+
+      res must ==/(<foo/>)
     }
   }
   "the bindlist function" should {
@@ -51,7 +59,7 @@ object BindHelpersSpec extends Specification with BindHelpers {
       val maps = List(Map("hello" -> <h1></h1>, "world" -> <b></b>))
       val liftbind = <body>
         <lift:bind name="hello">changethis</lift:bind>
-     </body>
+                     </body>
       bindlist(maps, liftbind).get must ==/(<body><h1></h1></body>)
     }
   }
@@ -98,21 +106,24 @@ object BindHelpersSpec extends Specification with BindHelpers {
       xmlParam(<t hello="">world</t>, "notfound") must_== Empty
     }
   }
+
+
+
   "the bindByName bind(namespace, NodeSeq, BindParams*) function" should {
-        "mix in if the element if the type of the elements are the same" in {
-            bind("user", <t><input name="user:tag" id="cookie"/></t>, "tag" -> <input name="111222"/>) must ==/(<t><input name="111222" id="cookie"/></t>)
-        }
-        "replace the element if the replacement element type is not a bindByName type" in {
-            bind("user", <t><input name="user:tag" id="cookie"/></t>, "tag" -> "world") must ==/(<t>world</t>)
-        }
-        "replace the value is value is a null string" in {
-            bind("user", <t><input name="user:tag" type="submit" value="press me"/></t>, "tag" -> <input name="111222" type="submit"/>) must ==/(<t><input name="111222" type="submit" value="press me"></input></t>)
-        }
-        "handle a checkbox" in {
-            bind("user", <t><input id="acceptTerms" type="checkbox" name="user:tag"/></t>,
-                 "tag" -> (<input /> ++
-                 <input type="checkbox" name="F893599644556MN4" value="true"/>) ) must ==/(<t><input></input><input name="F893599644556MN4" type="checkbox" value="true" id="acceptTerms"></input></t>)
-        }
+    "mix in if the element if the type of the elements are the same" in {
+      bind("user", <t><input name="user:tag" id="cookie"/></t>, "tag" -> <input name="111222"/>) must ==/(<t><input name="111222" id="cookie"/></t>)
+    }
+    "replace the element if the replacement element type is not a bindByName type" in {
+      bind("user", <t><input name="user:tag" id="cookie"/></t>, "tag" -> "world") must ==/(<t>world</t>)
+    }
+    "replace the value is value is a null string" in {
+      bind("user", <t><input name="user:tag" type="submit" value="press me"/></t>, "tag" -> <input name="111222" type="submit"/>) must ==/(<t><input name="111222" type="submit" value="press me"></input></t>)
+    }
+    "handle a checkbox" in {
+      bind("user", <t><input id="acceptTerms" type="checkbox" name="user:tag"/></t>,
+           "tag" -> (<input /> ++
+                     <input type="checkbox" name="F893599644556MN4" value="true"/>) ) must ==/(<t><input></input><input name="F893599644556MN4" type="checkbox" value="true" id="acceptTerms"></input></t>)
+    }
   }
 }
 class BindHelpersTest extends JUnit4(BindHelpersSpec)
