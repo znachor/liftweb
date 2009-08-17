@@ -37,11 +37,11 @@ trait ModelSnippet[T <: Mapper[T]] extends StatefulSnippet {
   
   def load(entity: T) = view.entity = entity
 
-  def dispatch = Map(
-    "list" ->       list _,
-    "edit" ->       edit _,
-    "newOrEdit" ->  view.newOrEdit _
-  )
+  def dispatch = {
+    case "list" =>       list _
+    case "edit" =>       edit _
+    case "newOrEdit" =>  view.newOrEdit _
+  }
 }
 
 
