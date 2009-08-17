@@ -59,7 +59,8 @@ trait ManyToMany extends BaseKeyedMapper {
     
     protected def children: List[T2] =
       joins.map(otherField.actualField(_).asInstanceOf[MappedForeignKey[K2,O,T2]].obj.openOr(error("Child cannot be found through join table")))
-    protected var joins: List[O] = _
+    protected var _joins: List[O] = _
+    def joins = _joins // read only to the public
     protected var removedJoins: List[O] = Nil
     refresh
     manyToManyFields = this :: manyToManyFields
@@ -108,10 +109,10 @@ trait ManyToMany extends BaseKeyedMapper {
 
 
     def +=(elem: T2) {
-      joins = joins ++ List(own(elem))
+      _joins ++= List(own(elem))
     }
     def +:(elem: T2) = {
-      joins ::= own(elem)
+      _joins ::= own(elem)
       this
     }
 
@@ -119,20 +120,20 @@ trait ManyToMany extends BaseKeyedMapper {
       //TODO if children uses flatMap n needs to be converted
       val (before, after) = joins.splitAt(n)
       val owned = iter map own
-      joins = before ++ owned ++ after
+      _joins = before ++ owned ++ after
     }
 
     def update(n: Int, newelem: T2) {
       unown(childAt(n))
       val (before, after) = (joins.take(n), joins.drop(n+1))
-      joins = before ++ List(own(newelem)) ++ after
+      _joins = before ++ List(own(newelem)) ++ after
     }
 
     def remove(n: Int) = {
       val child = childAt(n)
       unown(child) match {
         case Some(join) =>
-          joins = joins remove join.eq
+          _joins = joins remove join.eq
         case None =>
       }
       child
@@ -141,18 +142,18 @@ trait ManyToMany extends BaseKeyedMapper {
 
     def clear() {
       children foreach unown
-      joins = Nil
+      _joins = Nil
     }
     
     def refresh = {
       val by = new Cmp[O, TheKeyType](thisField, OprEnum.Eql, Full(primaryKeyField.is), Empty)
 
-      joins = joinMeta.findAll( (by :: qp.toList): _*)
+      _joins = joinMeta.findAll( (by :: qp.toList): _*)
       all
     }
     
     def save = {
-      joins = joins.filter { join =>
+      _joins = joins.filter { join =>
           field(join).is ==
             ManyToMany.this.primaryKeyField.is && {
               val f = otherField.actualField(join)
