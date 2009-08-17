@@ -267,7 +267,7 @@ trait OpenIdConsumer[UserType]
 
     // retrieve the previously stored discovery information
     val discovered = httpReq.session.attribute("openid-disc") match {
-      case Full(d: DiscoveryInformation)=> d
+      case d: DiscoveryInformation => d
       case _ => throw ResponseShortcutException.redirect("/")
     }
 
@@ -275,7 +275,7 @@ trait OpenIdConsumer[UserType]
     var receivingURL = httpReq.url
     val queryString = httpReq.queryString openOr ""
     if (queryString != null && queryString.length() > 0) {
-      receivingURL += "?" + httpReq.queryString;
+      receivingURL += "?" + queryString;
     }
 
 
