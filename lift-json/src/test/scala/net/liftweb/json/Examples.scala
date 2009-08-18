@@ -40,6 +40,10 @@ object Examples extends Specification {
     compact(render(parse(""" {"name": null} """))) mustEqual """{"name":null}"""
   }
 
+  "Null rendering example" in {
+    compact(render(nulls)) mustEqual """{"f1":null,"f2":[null,"s"]}"""
+  }
+
   val lotto = """
 {
   "lotto":{
@@ -102,6 +106,8 @@ object Examples extends Specification {
   ]
 }
 """
+
+  val nulls = ("f1" -> null) ~ ("f2" -> List(null, "s"))
 
   val quoted = """["foo \" \n \t \r bar"]"""
 }
