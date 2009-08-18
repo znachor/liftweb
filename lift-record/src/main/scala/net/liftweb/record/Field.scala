@@ -40,7 +40,9 @@ trait OwnedField[OwnerType <: Record[OwnerType]] extends FieldIdentifier {
   def resetDirty {
     if (safe_?) dirty_?(false)
   }
-
+  
+  def dirty_? : Boolean = dirty
+  
   /**
    * Should the field be ignored by the OR Mapper?
    */
