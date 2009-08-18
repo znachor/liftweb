@@ -323,26 +323,35 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
 
     def whereOrAnd = if (wav) " AND " else {wav = true; " WHERE "}
 
+    class DBFuncWrapper(dbFunc: Box[String]) {
+      def apply(field: String) = dbFunc match {
+        case Full(f) => f+"("+field+")"
+        case _ => field
+      }
+    }
+
+    implicit def dbfToFunc(in: Box[String]): DBFuncWrapper = new DBFuncWrapper(in)
+
     by match {
       case Nil => what
       case x :: xs => {
           var updatedWhat = what
           x match {
-            case Cmp(field, opr, Full(_), _) =>
+            case Cmp(field, opr, Full(_), _, dbFunc) =>
               (1 to field.dbColumnCount).foreach {
                 cn =>
-                updatedWhat = updatedWhat + whereOrAnd +field.dbColumnNames(field.name)(cn - 1)+" "+opr+" ? "
+                updatedWhat = updatedWhat + whereOrAnd + dbFunc(field.dbColumnNames(field.name)(cn - 1))+" "+opr+" ? "
               }
 
-            case Cmp(field, opr, _, Full(otherField)) =>
+            case Cmp(field, opr, _, Full(otherField), dbFunc) =>
               (1 to field.dbColumnCount).foreach {
                 cn =>
-                updatedWhat = updatedWhat + whereOrAnd +field.dbColumnNames(field.name)(cn - 1)+" "+opr+" "+
+                updatedWhat = updatedWhat + whereOrAnd + dbFunc(field.dbColumnNames(field.name)(cn - 1))+" "+opr+" "+
                 otherField.dbColumnNames(otherField.name)(cn - 1)
               }
 
-            case Cmp(field, opr, Empty, Empty) =>
-              (1 to field.dbColumnCount).foreach (cn => updatedWhat = updatedWhat + whereOrAnd +field.dbColumnNames(field.name)(cn - 1)+" "+opr+" ")
+            case Cmp(field, opr, Empty, Empty, dbFunc) =>
+              (1 to field.dbColumnCount).foreach (cn => updatedWhat = updatedWhat + whereOrAnd + dbFunc(field.dbColumnNames(field.name)(cn - 1))+" "+opr+" ")
 
               // For vals, add "AND $fieldname = ? [OR $fieldname = ?]*" to the query. The number
               // of fields you add onto the query is equal to vals.length
@@ -389,7 +398,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
   private[mapper] def setStatementFields(st: PreparedStatement, by: List[QueryParam[A]], curPos: Int): Int = {
     by match {
       case Nil => curPos
-      case Cmp(field, _, Full(value), _) :: xs =>
+      case Cmp(field, _, Full(value), _, _) :: xs =>
         st.setObject(curPos, field.convertToJDBCFriendly(value), field.targetSQLType)
         setStatementFields(st, xs, curPos + 1)
 
@@ -1151,8 +1160,10 @@ case class BoundedIndexField[A <: Mapper[A]](field: MappedField[String, A], len:
 }
 
 sealed trait QueryParam[O<:Mapper[O]]
-case class Cmp[O<:Mapper[O], T](field: MappedField[T,O], opr: OprEnum.Value, value: Box[T], otherField: Box[MappedField[T, O]]) extends QueryParam[O]
-case class OrderBy[O<:Mapper[O], T](field: MappedField[T,O],
+final case class Cmp[O<:Mapper[O], T](field: MappedField[T,O], opr: OprEnum.Value, value: Box[T],
+                                      otherField: Box[MappedField[T, O]], dbFunc: Box[String]) extends QueryParam[O]
+
+final case class OrderBy[O<:Mapper[O], T](field: MappedField[T,O],
                                     order: AscOrDesc) extends QueryParam[O]
 
 trait AscOrDesc {
@@ -1167,26 +1178,26 @@ case object Descending extends AscOrDesc {
   def sql: String = " DESC "
 }
 
-case class Distinct[O <: Mapper[O]]() extends QueryParam[O]
+final case class Distinct[O <: Mapper[O]]() extends QueryParam[O]
 
-case class OrderBySql[O <: Mapper[O]](sql: String,
+final case class OrderBySql[O <: Mapper[O]](sql: String,
                                       checkedBy: IHaveValidatedThisSQL) extends QueryParam[O]
 
-case class ByList[O<:Mapper[O], T](field: MappedField[T,O], vals: List[T]) extends QueryParam[O]
+final case class ByList[O<:Mapper[O], T](field: MappedField[T,O], vals: List[T]) extends QueryParam[O]
 /**
  * Represents a query criterion using a parameterized SQL string. Parameters are
  * substituted in order. For Date/Time types, passing a java.util.Date will result in a
  * Timestamp parameter. If you want a specific SQL Date/Time type, use the corresponding
  * java.sql.Date, java.sql.Time, or java.sql.Timestamp classes.
  */
-case class BySql[O<:Mapper[O]](query: String,
+final case class BySql[O<:Mapper[O]](query: String,
                                checkedBy: IHaveValidatedThisSQL,
                                params: Any*) extends QueryParam[O]
-case class MaxRows[O<:Mapper[O]](max: Long) extends QueryParam[O]
-case class StartAt[O<:Mapper[O]](start: Long) extends QueryParam[O]
-case class Ignore[O <: Mapper[O]]() extends QueryParam[O]
+final case class MaxRows[O<:Mapper[O]](max: Long) extends QueryParam[O]
+final case class StartAt[O<:Mapper[O]](start: Long) extends QueryParam[O]
+final case class Ignore[O <: Mapper[O]]() extends QueryParam[O]
 
-abstract class InThing[OuterType <: Mapper[OuterType]] extends QueryParam[OuterType] {
+sealed abstract class InThing[OuterType <: Mapper[OuterType]] extends QueryParam[OuterType] {
   type JoinType
   type InnerType <: Mapper[InnerType]
 
@@ -1202,10 +1213,10 @@ abstract class InThing[OuterType <: Mapper[OuterType]] extends QueryParam[OuterT
   }
 }
 
-case class PreCache[TheType <: Mapper[TheType]](field: MappedForeignKey[_, TheType, _])
+final case class PreCache[TheType <: Mapper[TheType]](field: MappedForeignKey[_, TheType, _])
 extends QueryParam[TheType]
 
-case class InRaw[TheType <:
+final case class InRaw[TheType <:
                  Mapper[TheType], T](field: MappedField[T, TheType],
                                      rawSql: String,
                                      checkedBy: IHaveValidatedThisSQL)
@@ -1257,70 +1268,70 @@ object In {
 
 object Like {
   def apply[O <: Mapper[O]](field: MappedField[String, O], value: String) =
-  Cmp[O, String](field, OprEnum.Like, Full(value), Empty)
+  Cmp[O, String](field, OprEnum.Like, Full(value), Empty, Empty)
 }
 
 object By {
   import OprEnum._
 
-  def apply[O <: Mapper[O], T, U <% T](field: MappedField[T, O], value: U) = Cmp[O,T](field, Eql, Full(value), Empty)
+  def apply[O <: Mapper[O], T, U <% T](field: MappedField[T, O], value: U) = Cmp[O,T](field, Eql, Full(value), Empty, Empty)
   def apply[O <: Mapper[O],T,  Q <: KeyedMapper[T, Q]](field: MappedForeignKey[T, O, Q], value: Q) =
-  Cmp[O,T](field, Eql, Full(value.primaryKeyField.is), Empty)
+  Cmp[O,T](field, Eql, Full(value.primaryKeyField.is), Empty, Empty)
 
   def apply[O <: Mapper[O],T, Q <: KeyedMapper[T, Q]](field: MappedForeignKey[T, O, Q], value: Box[Q]) =
   value match {
-    case Full(v) => Cmp[O,T](field, Eql, Full(v.primaryKeyField.is), Empty)
-    case _ => Cmp(field, IsNull, Empty, Empty)
+    case Full(v) => Cmp[O,T](field, Eql, Full(v.primaryKeyField.is), Empty, Empty)
+    case _ => Cmp(field, IsNull, Empty, Empty, Empty)
   }
 }
 
 object NotBy {
   import OprEnum._
 
-  def apply[O <: Mapper[O], T, U <% T](field: MappedField[T, O], value: U) = Cmp[O,T](field, <>, Full(value), Empty)
+  def apply[O <: Mapper[O], T, U <% T](field: MappedField[T, O], value: U) = Cmp[O,T](field, <>, Full(value), Empty, Empty)
   def apply[O <: Mapper[O],T,  Q <: KeyedMapper[T, Q]](field: MappedForeignKey[T, O, Q], value: Q) =
-  Cmp[O,T](field, <>, Full(value.primaryKeyField.is), Empty)
+  Cmp[O,T](field, <>, Full(value.primaryKeyField.is), Empty, Empty)
   def apply[O <: Mapper[O],T, Q <: KeyedMapper[T, Q]](field: MappedForeignKey[T, O, Q], value: Box[Q]) =
   value match {
-    case Full(v) => Cmp[O,T](field, <>, Full(v.primaryKeyField.is), Empty)
-    case _ => Cmp(field, IsNotNull, Empty, Empty)
+    case Full(v) => Cmp[O,T](field, <>, Full(v.primaryKeyField.is), Empty, Empty)
+    case _ => Cmp(field, IsNotNull, Empty, Empty, Empty)
   }
 }
 
 object ByRef {
   import OprEnum._
 
-  def apply[O <: Mapper[O], T](field: MappedField[T, O], otherField: MappedField[T,O]) = Cmp[O,T](field, Eql, Empty, Full(otherField))
+  def apply[O <: Mapper[O], T](field: MappedField[T, O], otherField: MappedField[T,O]) = Cmp[O,T](field, Eql, Empty, Full(otherField), Empty)
 }
 
 object NotByRef {
   import OprEnum._
 
-  def apply[O <: Mapper[O], T](field: MappedField[T, O], otherField: MappedField[T,O]) = Cmp[O,T](field, <>, Empty, Full(otherField))
+  def apply[O <: Mapper[O], T](field: MappedField[T, O], otherField: MappedField[T,O]) = Cmp[O,T](field, <>, Empty, Full(otherField), Empty)
 }
 
 object By_> {
   import OprEnum._
 
-  def apply[O <: Mapper[O], T, U <% T](field: MappedField[T, O], value: U) = Cmp[O,T](field, >, Full(value), Empty)
-  def apply[O <: Mapper[O], T](field: MappedField[T, O], otherField: MappedField[T,O]) = Cmp[O,T](field, >, Empty, Full(otherField))
+  def apply[O <: Mapper[O], T, U <% T](field: MappedField[T, O], value: U) = Cmp[O,T](field, >, Full(value), Empty, Empty)
+  def apply[O <: Mapper[O], T](field: MappedField[T, O], otherField: MappedField[T,O]) = Cmp[O,T](field, >, Empty, Full(otherField), Empty)
 }
 
 object By_< {
   import OprEnum._
 
-  def apply[O <: Mapper[O], T, U <% T](field: MappedField[T, O], value: U) = Cmp[O,T](field, <, Full(value), Empty)
-  def apply[O <: Mapper[O], T](field: MappedField[T, O], otherField: MappedField[T,O]) = Cmp[O,T](field, <, Empty, Full(otherField))
+  def apply[O <: Mapper[O], T, U <% T](field: MappedField[T, O], value: U) = Cmp[O,T](field, <, Full(value), Empty, Empty)
+  def apply[O <: Mapper[O], T](field: MappedField[T, O], otherField: MappedField[T,O]) = Cmp[O,T](field, <, Empty, Full(otherField), Empty)
 }
 
 object NullRef {
   import OprEnum._
-  def apply[O <: Mapper[O], T](field: MappedField[T, O]) = Cmp(field, IsNull, Empty, Empty)
+  def apply[O <: Mapper[O], T](field: MappedField[T, O]) = Cmp(field, IsNull, Empty, Empty, Empty)
 }
 
 object NotNullRef {
   import OprEnum._
-  def apply[O <: Mapper[O], T](field: MappedField[T, O]) = Cmp(field, IsNotNull, Empty, Empty)
+  def apply[O <: Mapper[O], T](field: MappedField[T, O]) = Cmp(field, IsNotNull, Empty, Empty, Empty)
 }
 
 trait LongKeyedMetaMapper[A <: LongKeyedMapper[A]] extends KeyedMetaMapper[Long, A] { self: A => }

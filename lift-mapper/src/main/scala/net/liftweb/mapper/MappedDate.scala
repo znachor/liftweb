@@ -85,10 +85,14 @@ class MappedDate[T<:Mapper[T]](val fieldOwner: T) extends MappedField[Date, T] {
   S.fmapFunc({s: List[String] => this.setFromAny(s)}){funcName =>
   Full(<input type='text' id={fieldId}
       name={funcName}
-      value={is match {case null => "" case s => toInternetDate(s)}}/>)
+      value={toString}/>)
   }
 
-  override def setFromAny(f : Any): Date = toDate(f).map(d => this.set(d)).openOr(this.is)
+  override def setFromAny(f : Any): Date = f match {
+    case s: String => LiftRules.parseDate(s).map(d => this.set(d)).openOr(this.is)
+    case (s: String) :: _ => LiftRules.parseDate(s).map(d => this.set(d)).openOr(this.is)
+    case _ => this.is
+  }
 
   def jdbcFriendly(field : String) : Object = is match {
     case null => null
@@ -131,4 +135,6 @@ class MappedDate[T<:Mapper[T]](val fieldOwner: T) extends MappedField[Date, T] {
     case null => false
     case d => d.getTime < millis
   }
+
+  override def toString: String = LiftRules.formatDate(is)
 }

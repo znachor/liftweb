@@ -146,7 +146,7 @@ trait ManyToMany extends BaseKeyedMapper {
     }
     
     def refresh = {
-      val by = new Cmp[O, TheKeyType](thisField, OprEnum.Eql, Full(primaryKeyField.is), Empty)
+      val by = new Cmp[O, TheKeyType](thisField, OprEnum.Eql, Full(primaryKeyField.is), Empty, Empty)
 
       _joins = joinMeta.findAll( (by :: qp.toList): _*)
       all
