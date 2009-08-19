@@ -196,7 +196,7 @@ object PostgreSqlDriver extends DriverType("PostgreSQL") {
   def longIndexColumnType = "BIGSERIAL"
   def enumListColumnType = "BIGINT"
   def longColumnType = "BIGINT"
-  def doubleColumnType = "DOUBLE"
+  def doubleColumnType = "DOUBLE PRECISION"
 
   /* PostgreSQL doesn't support generated keys via the JDBC driver. Instead, we use the RETURNING clause on the insert.
    * From: http://www.postgresql.org/docs/8.2/static/sql-insert.html
