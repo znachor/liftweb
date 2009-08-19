@@ -121,7 +121,7 @@ class AutoComplete {
 
       val autocompleteOptions = JsRaw("""{
         minChars: 0,
-        matchContains: true,
+        matchContains: true
       }""")
     
       val onLoad = JsRaw("""

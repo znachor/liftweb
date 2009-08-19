@@ -33,7 +33,7 @@ object A extends DispatchSnippet {
 
     new UnprefixedAttribute("onclick", Text(ajax.toJsCmd),
                             new UnprefixedAttribute("href", Text("javascript://"),
-                                                    S.attrsToMetaData(name => name != "onclick" && name != "href")
+                                                    S.currentAttrsToMetaData(name => name != "onclick" && name != "href")
                                                    ))
  }
 }

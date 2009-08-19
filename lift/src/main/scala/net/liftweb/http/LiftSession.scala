@@ -932,11 +932,12 @@ class LiftSession(val contextPath: String, val uniqueId: String,
 
       case elm: Elem if elm.prefix == "lift" || elm.prefix == "l"=>
         S.doSnippet(elm.label){
+          S.withAttrs(elm.attributes) {
           S.setVars(elm.attributes){
             processSurroundAndInclude(page, NamedPF((elm.label, elm, elm.attributes,
                                                      asNodeSeq(elm.child), page),
                                                     liftTagProcessing))
-          }}
+          }}}
 
       case elm: Elem =>
         Elem(v.prefix, v.label, processAttributes(v.attributes),
