@@ -1308,6 +1308,43 @@ object S extends HasParams {
   }
 
   /**
+   * Converts S.attrs attributes to a MetaData object that can be used to add
+   * attributes to one or more XML elements. Similar to prefixedAttrsToMetaData, except
+   * that it handles both prefixed and unprefixed attributes. This version of the method will
+   * use all of the currently set attributes from S.attrs. If you want to filter it, use the
+   * attrsToMetaData(String => Boolean) version, which allows you to specify a predicate
+   * function for filtering. For example, if you want all of the current attributes to be
+   * added to a div tag, you could do:
+   *
+   * <pre name="code" class="scala" >
+   * val myDiv = (<div>{...}</div>) % S.attrsToMetaData
+   * </pre>
+   *
+   * @return a MetaData instance representing all attributes in S.attrs
+   *
+   * @see #attrsToMetaData(String => Boolean)
+   */
+  def currentAttrsToMetaData: MetaData = currentAttrsToMetaData(ignore => true)
+
+  /**
+   * Similar to S.attrsToMetaData, but lets you specify a predicate function that filters the
+   * generated MetaData. For example, if you only wanted the "id" attribute, you could do:
+   *
+   * <pre name="code" class="scala" >
+   * val myDiv = (<div>{...}</div>) % S.attrsToMetaData(_.equalsIgnoreCase("id"))
+   * </pre>
+   *
+   * @param predicate The predicate function which is executed for each attribute name. If the function
+   * returns <code>true</code>, then the attribute is included in the MetaData.
+   *
+   * @see #attrsToMetaData
+   *
+   */
+  def currentAttrsToMetaData(predicate: String => Boolean): MetaData = {
+    currentAttrs.filter(a => predicate(a.key))
+  }
+
+  /**
    * Find and process a template. This can be used to load a template from within some other Lift processing,
    * such as a snippet or view. If you just want to retrieve the XML contents of a template, use
    * TemplateFinder.findAnyTemplate.
@@ -1388,6 +1425,20 @@ object S extends HasParams {
     if (inS.value) f
     else init(Req.nil,session)(f)
   }
+
+private object _currentAttrs extends RequestVar[MetaData](Null)
+
+def currentAttrs: MetaData = _currentAttrs.is
+
+def withAttrs[T](attrs: MetaData)(f: => T): T = {
+  val oldAttrs = _currentAttrs.is
+  _currentAttrs.set(attrs)
+  try {
+    f
+  } finally {
+    _currentAttrs.set(oldAttrs)
+  }
+}
 
   /**
    * Returns the LiftSession parameter denominated by 'what'.
