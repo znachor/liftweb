@@ -1,5 +1,21 @@
 package net.liftweb.json
 
+/*
+ * Copyright 2009 WorldWide Conferencing, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions
+ * and limitations under the License.
+ */
+
 import scala.reflect.Manifest
 import JsonAST._
 
@@ -38,11 +54,11 @@ object Extraction {
   val memo = new Memo[Class[_], Mapping]
 
   def extract[A](json: JValue)(implicit mf: Manifest[A]): A = 
-    try {
-      extract0(json, mf)
-    } catch {
-      case e: Exception => throw new MappingException(e)
-    }
+  try {
+    extract0(json, mf)
+  } catch {
+    case e: Exception => throw new MappingException(e)
+  }
 
   private def extract0[A](json: JValue, mf: Manifest[A]): A = {
     val mapping = mappingOf(mf.erasure)
@@ -109,9 +125,9 @@ object Extraction {
   }
 
   class Memo[A, R] {
-    var cache = Map[A, R]()
+    private var cache = Map[A, R]()
 
-    def memoize(x: A, f: A => R): R = {
+    def memoize(x: A, f: A => R): R = synchronized {
       if (cache contains x) cache(x) else {
         val ret = f(x)
         cache += (x -> ret)
