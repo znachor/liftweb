@@ -47,6 +47,8 @@ class HTTPRequestServlet(req: HttpServletRequest) extends HTTPRequest {
 
   def contextPath: String = req.getContextPath
 
+  def context: HTTPContext = new HTTPServletContext(req.getSession.getServletContext)
+
   def contentType = Box !! req.getContentType
 
   def session = new HTTPServletSession(req getSession)

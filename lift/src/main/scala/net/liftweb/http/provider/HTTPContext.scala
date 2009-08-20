@@ -51,4 +51,16 @@ trait HTTPContext {
    * @return - the mime type mapped to resource determined by this path.
    */
   def mimeType(path: String): Box[String]
+
+  /**
+   * @param name
+   * @return - the value of the init parameter identified by then provided name. 
+   *           Returns Empty if this parameter does not exist.
+   */
+  def initParam(name: String): Box[String]
+
+  /**
+   * @return - a List of Tuple2 consisting of name and value pair of the init parameters
+   */
+  def initParams: List[(String, String)]
 }

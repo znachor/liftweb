@@ -1426,19 +1426,19 @@ object S extends HasParams {
     else init(Req.nil,session)(f)
   }
 
-private object _currentAttrs extends RequestVar[MetaData](Null)
+  private object _currentAttrs extends RequestVar[MetaData](Null)
 
-def currentAttrs: MetaData = _currentAttrs.is
+  def currentAttrs: MetaData = _currentAttrs.is
 
-def withAttrs[T](attrs: MetaData)(f: => T): T = {
-  val oldAttrs = _currentAttrs.is
-  _currentAttrs.set(attrs)
-  try {
-    f
-  } finally {
-    _currentAttrs.set(oldAttrs)
+  def withAttrs[T](attrs: MetaData)(f: => T): T = {
+    val oldAttrs = _currentAttrs.is
+    _currentAttrs.set(attrs)
+    try {
+      f
+    } finally {
+      _currentAttrs.set(oldAttrs)
+    }
   }
-}
 
   /**
    * Returns the LiftSession parameter denominated by 'what'.

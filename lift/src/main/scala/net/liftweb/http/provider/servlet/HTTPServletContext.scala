@@ -6,6 +6,7 @@ import _root_.java.io.InputStream
 
 import _root_.net.liftweb.http.provider._
 import _root_.net.liftweb.util._
+import Helpers._
 
 class HTTPServletContext(ctx: ServletContext) extends HTTPContext {
 
@@ -16,5 +17,10 @@ class HTTPServletContext(ctx: ServletContext) extends HTTPContext {
   def resourceAsStream(path: String): InputStream  = ctx getResourceAsStream path
 
   def mimeType(path: String) = Box !! ctx.getMimeType(path)
+
+  def initParam(name: String): Box[String] = Box !! ctx.getInitParameter(name)
+
+  def initParams: List[(String, String)] = enumToList[String](ctx.getInitParameterNames.asInstanceOf[_root_.java.util.Enumeration[String]]).
+  map(n => (n, initParam(n) openOr ""))
 
 }
