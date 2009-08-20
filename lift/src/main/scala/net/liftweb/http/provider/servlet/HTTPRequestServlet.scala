@@ -10,6 +10,7 @@ import Helpers._
 
 class HTTPRequestServlet(req: HttpServletRequest) extends HTTPRequest {
 
+  private val ctx = new HTTPServletContext(req.getSession.getServletContext)
 
   private val (hasContinuations_?, contSupport, getContinuation, getObject, setObject, suspend, resume) = {
     try {
@@ -47,7 +48,7 @@ class HTTPRequestServlet(req: HttpServletRequest) extends HTTPRequest {
 
   def contextPath: String = req.getContextPath
 
-  def context: HTTPContext = new HTTPServletContext(req.getSession.getServletContext)
+  def context: HTTPContext = ctx
 
   def contentType = Box !! req.getContentType
 
