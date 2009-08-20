@@ -65,6 +65,13 @@ trait HTTPRequest {
   def contextPath: String
 
   /**
+   * @return - the HTTPContext of this service. It does not guarantee that it returns the same 
+   *           HTTPContext reference upon each invocation but it must guarantee that HTTPContext
+   *           reference contains the same information.
+   */
+  def context: HTTPContext
+
+  /**
    * @return - the MIME type of the body of the request. Empty if this is unknonwn.
    */
   def contentType: Box[String]

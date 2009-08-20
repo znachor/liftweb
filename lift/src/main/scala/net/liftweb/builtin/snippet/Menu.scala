@@ -119,7 +119,6 @@ object Menu extends DispatchSnippet {
               Elem(null, innerTag, Null, TopScope,
                    <xml:group><a href={uri}>{text}</a>{buildUlLine(kids)}</xml:group>) %
               S.prefixedAttrsToMetaData("li_item", liMap)
-              //(<li><a href={uri}>{text}</a>{buildUlLine(kids)}</li>) % S.prefixedAttrsToMetaData("li_item", liMap)
 
             case MenuItem(text, uri, kids, true, _, _) =>
               Elem(null, innerTag, Null, TopScope,
