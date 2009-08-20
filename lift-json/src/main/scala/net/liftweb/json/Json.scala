@@ -132,16 +132,18 @@ object JsonAST {
   }
 
   def render(value: JValue): Document = value match {
-    case JBool(true)  => text("true")
-    case JBool(false) => text("false")
-    case JDouble(n)   => text(n.toString)
-    case JInt(n)      => text(n.toString)
-    case JNull        => text("null")
-    case JNothing     => error("can't render 'nothing'")
-    case JString(s)   => text("\"" + quote(s) + "\"")
-    case JArray(arr)  => text("[") :: series(trimArr(arr).map(render(_))) :: text("]")
-    case JField(n, v) => text("\"" + n + "\":") :: render(v)
-    case JObject(obj) => 
+    case null          => text("null")
+    case JBool(true)   => text("true")
+    case JBool(false)  => text("false")
+    case JDouble(n)    => text(n.toString)
+    case JInt(n)       => text(n.toString)
+    case JNull         => text("null")
+    case JNothing      => error("can't render 'nothing'")
+    case JString(null) => text("null")
+    case JString(s)    => text("\"" + quote(s) + "\"")
+    case JArray(arr)   => text("[") :: series(trimArr(arr).map(render(_))) :: text("]")
+    case JField(n, v)  => text("\"" + n + "\":") :: render(v)
+    case JObject(obj)  => 
       val nested = break :: fields(trimObj(obj).map(f => text("\"" + f.name + "\":") :: render(f.value)))
       text("{") :: nest(2, nested) :: break :: text("}")
   }

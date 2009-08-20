@@ -361,6 +361,7 @@ object LiftRules {
           "embed" -> Embed,
           "tail" -> Tail,
           "with-param" -> WithParam,
+          "bind-at" -> WithParam,
           "VersionInfo" -> VersionInfo,
           "version_info" -> VersionInfo,
           "SkipDocType" -> SkipDocType,
@@ -987,14 +988,14 @@ object LiftRules {
 
   var templateCache: Box[TemplateCache[(Locale, List[String]), NodeSeq]] = Empty
 
-/**
-* A function to format a Date... can be replaced by a function that is user-specific
-*/
+  /**
+   * A function to format a Date... can be replaced by a function that is user-specific
+   */
   var formatDate: Date => String = date => date match {case null => LiftRules.formatDate(new Date(0L)) case s => toInternetDate(s)}
 
-/**
-* A function that parses a String into a Date... can be replaced by something that's user-specific
-*/
+  /**
+   * A function that parses a String into a Date... can be replaced by something that's user-specific
+   */
   var parseDate: String => Box[Date] = str => str match {
     case null => Empty
     case s => Helpers.toDate(s)
