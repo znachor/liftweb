@@ -34,6 +34,13 @@ import Helpers._
  */
 @serializable
 trait BaseMappedField extends SelectableField with Bindable {
+
+
+  def dbDisplay_? = true
+
+  def dbIncludeInForm_? = dbDisplay_?
+  
+
   /**
    * Get a JDBC friendly representation of the named field (this is used for MappedFields that correspond to more than
    * 1 column in the database.)
@@ -377,10 +384,6 @@ trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends Typed
     if (safe_?) dirty_?(false)
   }
 
-  def dbDisplay_? = true
-
-  def dbIncludeInForm_? = dbDisplay_?
-
   /**
    * pascal-style assignment for syntactic sugar
    */
@@ -591,7 +594,7 @@ trait IndexedField[O] extends BaseIndexedField {
   def convertKey(in: Long): Box[O]
   def convertKey(in: AnyRef): Box[O]
   def makeKeyJDBCFriendly(in: O): AnyRef
-  def dbDisplay_? = false
+  override def dbDisplay_? = false
 }
 
 trait BaseIndexedField extends BaseMappedField {
