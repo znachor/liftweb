@@ -647,14 +647,21 @@ object LiftRules {
    */
   val snippets = RulesSeq[SnippetPF]
 
+  private val _cometLogger: FatLazy[LiftLogger] = FatLazy({
+      val ret = LogBoot.loggerByName("comet_trace")
+      ret.level = LiftLogLevels.Off
+      ret
+    })
+
   /**
    * Holds the CometLogger that will be used to log comet activity
    */
-  var cometLogger: LiftLogger = {
-    val ret = LogBoot.loggerByName("comet_trace")
-    ret.level = LiftLogLevels.Off
-    ret
-  }
+  def cometLogger: LiftLogger = _cometLogger.get
+
+  /**
+   * Holds the CometLogger that will be used to log comet activity
+   */
+  def cometLogger_=(newLogger: LiftLogger): Unit = _cometLogger.set(newLogger)
 
   /**
    * Takes a Node, headers, cookies, and a session and turns it into an XhtmlResponse.
@@ -979,6 +986,19 @@ object LiftRules {
   }
 
   var templateCache: Box[TemplateCache[(Locale, List[String]), NodeSeq]] = Empty
+
+/**
+* A function to format a Date... can be replaced by a function that is user-specific
+*/
+  var formatDate: Date => String = date => date match {case null => LiftRules.formatDate(new Date(0L)) case s => toInternetDate(s)}
+
+/**
+* A function that parses a String into a Date... can be replaced by something that's user-specific
+*/
+  var parseDate: String => Box[Date] = str => str match {
+    case null => Empty
+    case s => Helpers.toDate(s)
+  }
 }
 
 case object BreakOut

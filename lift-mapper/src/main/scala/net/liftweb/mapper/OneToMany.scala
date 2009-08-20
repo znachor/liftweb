@@ -32,6 +32,7 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
         case _ => true
       } )
   }
+    
 
   /**
    * This implicit allows a MappedForeignKey to be used as foreignKey function.
@@ -63,18 +64,36 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
    */
   class MappedOneToManyBase[O <: AnyRef{def save(): Boolean}](val reloadFunc: ()=>Seq[O],
                                       val foreign: O => MappedForeignKey[K,_,T]) extends scala.collection.mutable.Buffer[O] {
-
+    private var inited = false
+    private var _delegate: List[O] = _
+    /**
+     * children that were added before the parent was ever saved
+    */
+    private var unlinked: List[O] = Nil
+    protected def delegate: List[O] = {
+      if(!inited) {
+        refresh
+        inited = true
+      }
+      _delegate
+    }
+    protected def delegate_=(d: List[O]) = _delegate = d
     
-    protected var delegate: List[O] = _
-    refresh
     oneToManyFields = this :: oneToManyFields
     
     /**
      * Takes ownership of e. Sets e's foreign key to our primary key
      */
-    protected def own(e: O) = foreign(e) match {
-      case f: MappedLongForeignKey[O,T] with MappedForeignKey[_,_,T] => f.apply(OneToMany.this); e
-      case f => f.set(OneToMany.this.primaryKeyField); e
+    protected def own(e: O) = {
+      foreign(e) match {
+        case f: MappedLongForeignKey[O,T] with MappedForeignKey[_,_,T] =>
+          f.apply(OneToMany.this)
+        case f =>
+          f.set(OneToMany.this.primaryKeyField)
+      }
+      if(!OneToMany.this.saved_?)
+         unlinked ::= e
+      e
     }
     /**
      * Relinquishes ownership of e. Resets e's foreign key to its default value.
@@ -82,6 +101,7 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
     protected def unown(e: O) = {
       val f = foreign(e)
       f.set(f.defaultValue)
+      unlinked = unlinked filter {e.ne}
       e
     }
     /**
@@ -136,9 +156,12 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
      * NOTE: This may leave children in an inconsistent state.
      * It is recommended to call save or clear() before calling refresh.
      */
-    def refresh = {
+    def refresh {
       delegate = reloadFunc().toList
-      all
+      if(saved_?)
+        unlinked = Nil
+      else
+        unlinked = _delegate
     }
     
     /**
@@ -147,16 +170,24 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
      * Returns true if all children were saved successfully.
      */
     def save = {
-//      println("Saving " + this)
-//      println(delegate)
-      import net.liftweb.util.Full
-      delegate = delegate.filter {e =>
-//          println(foreign(e).is + " <-> " + OneToMany.this.primaryKeyField.is)
-          foreign(e).is == OneToMany.this.primaryKeyField.is ||
-            foreign(e).obj == Full(OneToMany.this)
+      import net.liftweb.util.{Full, Empty}
+      unlinked foreach {u =>
+        val f = foreign(u)
+        if(f.obj.map(_ eq OneToMany.this) openOr true) // obj is Empty or this
+          f.set(OneToMany.this.primaryKeyField.is)
       }
-//      println(delegate)
+      unlinked = Nil
+      delegate = delegate.filter {e =>
+          foreign(e).is == OneToMany.this.primaryKeyField.is ||
+            foreign(e).obj.map(_ eq OneToMany.this).openOr(false) // obj is this but not Empty
+      }
       delegate.forall(_.save)
+    }
+    
+    override def toString = {
+      val c = getClass.getSimpleName
+      val l = c.lastIndexOf("$")
+      c.substring(c.lastIndexOf("$",l-1)+1, l) + delegate.mkString("[",", ","]")
     }
   }
   
@@ -210,7 +241,8 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
  * @author nafg
  */
 trait LongMappedForeignMapper[T<:Mapper[T],O<:KeyedMapper[Long,O]]
-                              extends MappedLongForeignKey[T,O] {
+                              extends MappedLongForeignKey[T,O]
+                              with LifecycleCallbacks {
   import net.liftweb.util.{Box, Empty, Full}
   //private var inited = false
   //private var _foreign: Box[O] = Empty
@@ -239,12 +271,23 @@ trait LongMappedForeignMapper[T<:Mapper[T],O<:KeyedMapper[Long,O]]
       super.apply(defaultValue);
   }*/
   
-  /*override def set(v: Long) = {
+  override def set(v: Long) = {
     val ret = super.set(v)
-    _foreign = obj
+    primeObj(if(defined_?) dbKeyToTable.find(i_is_!) else Empty)
     ret
-  }*/
+  }
   
+  override def beforeSave {
+    if(!defined_?)
+      for(o <- obj)
+        set(o.primaryKeyField.is)
+    super.beforeSave
+  }
+  
+  import net.liftweb.http.FieldError
+  val valHasObj = (value: Long) =>
+    if (obj eq Empty) List(FieldError(this, scala.xml.Text("Required field: " + name)))
+    else Nil
   /*override def i_is_! = {
     if(!inited) {
       _foreign = obj

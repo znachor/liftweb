@@ -242,7 +242,7 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] {
       }
   }
 
-  private[record] def foreachCallback(inst: BaseRecord, f: LifecycleCallbacks => Any) {
+  protected def foreachCallback(inst: BaseRecord, f: LifecycleCallbacks => Any) {
     lifecycleCallbacks.foreach(m => f(m._2.invoke(inst).asInstanceOf[LifecycleCallbacks]))
   }
 

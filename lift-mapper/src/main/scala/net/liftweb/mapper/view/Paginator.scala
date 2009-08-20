@@ -24,7 +24,7 @@ import scala.xml.{NodeSeq, Text}
  * @author nafg
  */
 trait PaginatedSnippet[T <: Mapper[T]] extends ModelSnippet[T] {
-  override def dispatch = super.dispatch ++ Map("paginate" -> paginator.paginate _ )
+  override def dispatch = super.dispatch orElse Map("paginate" -> paginator.paginate _ )
   
   val paginator: Paginator[T]
 }
