@@ -188,9 +188,11 @@ object PostgreSqlDriver extends DriverType("PostgreSQL") {
    * From: http://www.postgresql.org/docs/8.2/static/sql-insert.html
    */
   override def performInsertWithPK (conn : Connection, query : String, setter : PreparedStatement => Unit, pkNames : List[String]) : ResultSet = {
-      val stmt = conn.prepareStatement(query + " RETURNING " + pkNames.mkString(","))
+      //val stmt = conn.prepareStatement(query + " RETURNING " + pkNames.mkString(","))
+      val stmt = conn.prepareStatement(query)
       setter(stmt)
-      stmt.executeQuery
+      stmt.executeUpdate
+      conn.createStatement.executeQuery("SELECT lastval()")
   }
 
   override def maxSelectLimit = "ALL"
