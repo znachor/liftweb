@@ -44,6 +44,11 @@ object TextileSpec extends Specification {
       toHtml("*foo* __bar__") must ==/(<p><strong>foo</strong> <i>bar</i></p> )
     }
 
+    "attributes in link quotes" in {
+      val res = toHtml(""""(cms-woof) click here":# """)
+     res must ==/(<p><a href="javascript://" class="cms-woof"> click here</a> </p>)
+    }
+
 
     "Be a single line of text" in {
       toHtml("Hello World") must ==/(<p>Hello World</p>)
