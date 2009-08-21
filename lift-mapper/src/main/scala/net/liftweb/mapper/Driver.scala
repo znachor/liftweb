@@ -19,7 +19,11 @@ package net.liftweb.mapper
 import _root_.java.sql.{Connection,PreparedStatement,ResultSet,Statement}
 import _root_.net.liftweb.util._
 
-
+/**
+ * JDBC Driver Abstraction base class. New driver types should extend this base
+ * class. New drivers should "register" in the companion object
+ * DriverType.calcDriver method.
+ */
 abstract class DriverType(val name : String) {
   def binaryColumnType: String
   def clobColumnType: String
@@ -188,6 +192,9 @@ object H2Driver extends DriverType("H2") {
   override def maxSelectLimit = "0";
 }
 
+/**
+ * Provides some base definitions for PostgreSql databases.
+ */
 abstract class BasePostgreSQLDriver extends DriverType("PostgreSQL") {
   def binaryColumnType = "BYTEA"
   def clobColumnType = "TEXT"
@@ -211,6 +218,13 @@ abstract class BasePostgreSQLDriver extends DriverType("PostgreSQL") {
   override def defaultSchemaName : Box[String] = Full("public")
 }
 
+/**
+ * PostgreSql driver for versions 8.2 and up. Tested with:
+ *
+ * <ul>
+ *   <li>8.3</li>
+ * </ul>
+ */
 object PostgreSqlDriver extends BasePostgreSQLDriver {
   /* PostgreSQL doesn't support generated keys via the JDBC driver. Instead, we use the RETURNING clause on the insert.
    * From: http://www.postgresql.org/docs/8.2/static/sql-insert.html
@@ -222,6 +236,16 @@ object PostgreSqlDriver extends BasePostgreSQLDriver {
   }
 }
 
+/**
+ * PostgreSql driver for versions 8.1 and earlier. Tested with
+ *
+ * <ul>
+ *   <li>8.1</li>
+ *   <li>8.0</li>
+ * </ul>
+ *
+ * Successfuly use of earlier versions should be reported to liftweb@googlegroups.com.
+ */
 object PostgreSqlOldDriver extends BasePostgreSQLDriver {
   /* PostgreSQL doesn't support generated keys via the JDBC driver.
    * Instead, we use the lastval() function to get the last inserted
@@ -254,6 +278,15 @@ object SqlServerDriver extends DriverType("Microsoft SQL Server") {
   override def defaultSchemaName : Box[String] = Full("dbo")
 }
 
+/**
+ * Driver for Oracle databases. Tested with:
+ *
+ * <ul>
+ *  <li>Oracle XE 10.2.0.1</li>
+ * </ul>
+ *
+ * Other working install versions should be reported to liftweb@googlegroups.com.
+ */
 object OracleDriver extends DriverType("Oracle") {
   def binaryColumnType = "LONG RAW"
   def booleanColumnType = "NUMBER"
