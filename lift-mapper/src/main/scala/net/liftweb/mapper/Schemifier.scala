@@ -53,7 +53,7 @@ object Schemifier {
     DB.use(dbId) {
       con =>
 	val connection = con // SuperConnection(con)
-      val driver = con.calcDriver(connection.getMetaData.getDatabaseProductName)
+      val driver = DriverType.calcDriver(connection)
       val actualTableNames = new HashMap[String, String]
       if (performWrite) tables.foreach(_.beforeSchemifier)
       val toRun =

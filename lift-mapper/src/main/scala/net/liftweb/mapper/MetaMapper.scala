@@ -630,7 +630,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
 
           val pkNames = (mappedColumnInfo.filter(_._2.dbPrimaryKey_?).map(_._1)).toList
 
-          val ret = conn.driverType.performInsert(conn, query, prepStat, pkNames) match {
+          val ret = conn.driverType.performInsert(conn, query, prepStat, dbTableName, pkNames) match {
               case Right(count) => count == 1
               case Left(rs) => runAppliers(rs)
           }
