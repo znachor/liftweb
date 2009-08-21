@@ -29,7 +29,16 @@ import js._
 
 import _root_.scala.xml.{NodeSeq}
 
-class MappedDateTime[T<:Mapper[T]](val fieldOwner: T) extends MappedField[Date, T] {
+/**
+ * Represents a time with hour, minute and second fields. The underlying type is
+ * java.util.Date to keep things simple, but be aware that the date portion of the
+ * values will most likely be discarded when this is saved to the database.
+ *
+ * @see MappedDateTime
+ * @see MappedDate
+ */
+
+class MappedTime[T<:Mapper[T]](val fieldOwner: T) extends MappedField[Date, T] {
   private val data = FatLazy(defaultValue)
   private val orgData = FatLazy(defaultValue)
 
@@ -54,7 +63,7 @@ class MappedDateTime[T<:Mapper[T]](val fieldOwner: T) extends MappedField[Date, 
   /**
    * Get the JDBC SQL Type for this field
    */
-  def targetSQLType = Types.TIMESTAMP
+  def targetSQLType = Types.TIME
 
   def defaultValue: Date = null
   // private val defaultValue_i = new Date
@@ -76,7 +85,7 @@ class MappedDateTime[T<:Mapper[T]](val fieldOwner: T) extends MappedField[Date, 
   override def _toForm: Box[NodeSeq] =
   S.fmapFunc({s: List[String] => this.setFromAny(s)}){funcName =>
   Full(<input type='text' id={fieldId}
-      name={funcName} lift:gc={funcName}
+      name={funcName}
       value={is match {case null => "" case s => toInternetDate(s)}}/>)
   }
 
@@ -84,10 +93,10 @@ class MappedDateTime[T<:Mapper[T]](val fieldOwner: T) extends MappedField[Date, 
 
   def jdbcFriendly(field : String) : Object = is match {
     case null => null
-    case d => new _root_.java.sql.Timestamp(d.getTime)
+    case d => new _root_.java.sql.Time(d.getTime)
   }
 
-  def real_convertToJDBCFriendly(value: Date): Object = if (value == null) null else new _root_.java.sql.Timestamp(value.getTime)
+  def real_convertToJDBCFriendly(value: Date): Object = if (value == null) null else new _root_.java.sql.Time(value.getTime)
 
   private def st(in: Box[Date]): Unit =
   in match {
@@ -96,31 +105,22 @@ class MappedDateTime[T<:Mapper[T]](val fieldOwner: T) extends MappedField[Date, 
   }
 
   def buildSetActualValue(accessor: Method, v: AnyRef, columnName: String): (T, AnyRef) => Unit =
-  (inst, v) => doField(inst, accessor, {case f: MappedDateTime[T] => f.st(toDate(v))})
+  (inst, v) => doField(inst, accessor, {case f: MappedTime[T] => f.st(toDate(v))})
 
   def buildSetLongValue(accessor: Method, columnName: String): (T, Long, Boolean) => Unit =
-  (inst, v, isNull) => doField(inst, accessor, {case f: MappedDateTime[T] => f.st(if (isNull) Empty else Full(new Date(v)))})
+  (inst, v, isNull) => doField(inst, accessor, {case f: MappedTime[T] => f.st(if (isNull) Empty else Full(new Date(v)))})
 
   def buildSetStringValue(accessor: Method, columnName: String): (T, String) => Unit =
-  (inst, v) => doField(inst, accessor, {case f: MappedDateTime[T] => f.st(toDate(v))})
+  (inst, v) => doField(inst, accessor, {case f: MappedTime[T] => f.st(toDate(v))})
 
   def buildSetDateValue(accessor: Method, columnName: String): (T, Date) => Unit =
-  (inst, v) => doField(inst, accessor, {case f: MappedDateTime[T] => f.st(Full(v))})
+  (inst, v) => doField(inst, accessor, {case f: MappedTime[T] => f.st(Full(v))})
 
   def buildSetBooleanValue(accessor: Method, columnName: String): (T, Boolean, Boolean) => Unit =
-  (inst, v, isNull) => doField(inst, accessor, {case f: MappedDateTime[T] => f.st(Empty)})
+  (inst, v, isNull) => doField(inst, accessor, {case f: MappedTime[T] => f.st(Empty)})
 
   /**
    * Given the driver type, return the string required to create the column in the database
    */
-  def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.dateTimeColumnType
-
-  def inFuture_? = data.get match {
-    case null => false
-    case d => d.getTime > millis
-  }
-  def inPast_? = data.get match {
-    case null => false
-    case d => d.getTime < millis
-  }
+  def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.timeColumnType
 }

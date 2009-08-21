@@ -418,8 +418,19 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
             case List(s: String) =>
               st.setString(curPos, s)
               setStatementFields(st, xs, curPos + 1)
+	    // Allow specialization of time-related values based on the input parameter
+            case List(t: _root_.java.sql.Timestamp) =>
+              st.setTimestamp(curPos, t)
+              setStatementFields(st, xs, curPos + 1)
+            case List(d: _root_.java.sql.Date) =>
+              st.setDate(curPos, d)
+              setStatementFields(st, xs, curPos + 1)
+            case List(t: _root_.java.sql.Time) =>
+              st.setTime(curPos, t)
+              setStatementFields(st, xs, curPos + 1)
+	    // java.util.Date goes last, since it's a superclass of java.sql.{Date,Time,Timestamp}
             case List(d: Date) =>
-              st.setDate(curPos, new _root_.java.sql.Date(d.getTime))
+              st.setTimestamp(curPos, new _root_.java.sql.Timestamp(d.getTime))
               setStatementFields(st, xs, curPos + 1)
             case List(field: BaseMappedField) => st.setObject(curPos, field.jdbcFriendly, field.targetSQLType)
               setStatementFields(st, xs, curPos + 1)
@@ -1113,6 +1124,12 @@ case class OrderBySql[O <: Mapper[O]](sql: String,
                                      checkedBy: IHaveValidatedThisSQL) extends QueryParam[O]
 
 case class ByList[O<:Mapper[O], T](field: MappedField[T,O], vals: List[T]) extends QueryParam[O]
+/**
+ * Represents a query criterion using a parameterized SQL string. Parameters are
+ * substituted in order. For Date/Time types, passing a java.util.Date will result in a
+ * Timestamp parameter. If you want a specific SQL Date/Time type, use the corresponding
+ * java.sql.Date, java.sql.Time, or java.sql.Timestamp classes.
+ */
 case class BySql[O<:Mapper[O]](query: String,
                                      checkedBy: IHaveValidatedThisSQL,
                                      params: Any*) extends QueryParam[O]
