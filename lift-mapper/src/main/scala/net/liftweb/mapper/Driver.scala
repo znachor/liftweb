@@ -116,7 +116,7 @@ object DriverType {
   def calcDriver (conn : Connection) : DriverType = {
     val meta = conn.getMetaData
 
-      (meta.getDatabaseProductName,meta.getDatabaseMajorVersion,meta.getDatabaseMinorVersion) match {
+    (meta.getDatabaseProductName,meta.getDatabaseMajorVersion,meta.getDatabaseMinorVersion) match {
       case (DerbyDriver.name,_,_) => DerbyDriver
       case (MySqlDriver.name,_,_) => MySqlDriver
       case (PostgreSqlDriver.name, major, minor) if ((major == 8 && minor >= 2) || major > 8) => PostgreSqlDriver
@@ -125,6 +125,7 @@ object DriverType {
       case (SqlServerDriver.name,_,_) => SqlServerDriver
       case (OracleDriver.name,_,_) => OracleDriver
       case (MaxDbDriver.name,_,_) => MaxDbDriver
+      case x => throw new Exception("Could not determine proper DriverType for connection: " + x)
     }
   }
 }
