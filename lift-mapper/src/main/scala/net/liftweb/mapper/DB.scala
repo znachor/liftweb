@@ -689,19 +689,7 @@ class SuperConnection(val connection: Connection,val releaseFunc: () => Unit, va
   def createTablePostpend: String = driverType.createTablePostpend
   def supportsForeignKeys_? : Boolean = driverType.supportsForeignKeys_?
 
-  lazy val driverType = (calcDriver(connection.getMetaData.getDatabaseProductName))
-
-  def calcDriver(name: String): DriverType = {
-    name match {
-      case DerbyDriver.name => DerbyDriver
-      case MySqlDriver.name => MySqlDriver
-      case PostgreSqlDriver.name => PostgreSqlDriver
-      case H2Driver.name => H2Driver
-      case SqlServerDriver.name => SqlServerDriver
-      case OracleDriver.name => OracleDriver
-      case MaxDbDriver.name => MaxDbDriver
-    }
-  }
+  lazy val driverType : DriverType = DriverType.calcDriver(connection)
 }
 
 object SuperConnection {

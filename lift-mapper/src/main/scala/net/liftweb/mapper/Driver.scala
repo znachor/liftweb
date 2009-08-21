@@ -19,7 +19,11 @@ package net.liftweb.mapper
 import _root_.java.sql.{Connection,PreparedStatement,ResultSet,Statement}
 import _root_.net.liftweb.util._
 
-
+/**
+ * JDBC Driver Abstraction base class. New driver types should extend this base
+ * class. New drivers should "register" in the companion object
+ * DriverType.calcDriver method.
+ */
 abstract class DriverType(val name : String) {
   def binaryColumnType: String
   def clobColumnType: String
@@ -63,15 +67,15 @@ abstract class DriverType(val name : String) {
     * @param setter A function that will set the parameters on the prepared statement
     * @param pkName Zero or more generated column names that need to be returned
     */
-  def performInsert (conn : Connection, query : String, setter : PreparedStatement => Unit, pkNames : List[String]) : Either[ResultSet,Int] = pkNames match {
+  def performInsert (conn : Connection, query : String, setter : PreparedStatement => Unit, tableName : String, pkNames : List[String]) : Either[ResultSet,Int] = pkNames match {
       case Nil => Right({val stmt = conn.prepareStatement(query); setter(stmt); stmt.executeUpdate})
-      case pk => Left(performInsertWithPK(conn, query, setter, pk))
+      case pk => Left(performInsertWithPK(conn, query, setter, tableName, pk))
   }
 
   /*
    * Subclasses should override this method if they don't have proper getGeneratedKey support (JDBC3)
    */
-  protected def performInsertWithPK (conn : Connection, query : String, setter : PreparedStatement => Unit, pkNames : List[String]) : ResultSet = {
+  protected def performInsertWithPK (conn : Connection, query : String, setter : PreparedStatement => Unit, tableName : String, pkNames : List[String]) : ResultSet = {
       val stmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)
       setter(stmt)
       stmt.executeUpdate
@@ -111,6 +115,24 @@ abstract class DriverType(val name : String) {
    */
   def primaryKeySetup(tableName : String, columnName : String) : List[String] = {
       List("ALTER TABLE "+tableName+" ADD CONSTRAINT "+tableName+"_PK PRIMARY KEY("+columnName+")")
+  }
+}
+
+object DriverType {
+  def calcDriver (conn : Connection) : DriverType = {
+    val meta = conn.getMetaData
+
+    (meta.getDatabaseProductName,meta.getDatabaseMajorVersion,meta.getDatabaseMinorVersion) match {
+      case (DerbyDriver.name,_,_) => DerbyDriver
+      case (MySqlDriver.name,_,_) => MySqlDriver
+      case (PostgreSqlDriver.name, major, minor) if ((major == 8 && minor >= 2) || major > 8) => PostgreSqlDriver
+      case (PostgreSqlDriver.name, _, _) => PostgreSqlOldDriver
+      case (H2Driver.name,_,_) => H2Driver
+      case (SqlServerDriver.name,_,_) => SqlServerDriver
+      case (OracleDriver.name,_,_) => OracleDriver
+      case (MaxDbDriver.name,_,_) => MaxDbDriver
+      case x => throw new Exception("Could not determine proper DriverType for connection: " + x)
+    }
   }
 }
 
@@ -182,7 +204,10 @@ object H2Driver extends DriverType("H2") {
   override def defaultSchemaName : Box[String] = Full("PUBLIC")
 }
 
-object PostgreSqlDriver extends DriverType("PostgreSQL") {
+/**
+ * Provides some base definitions for PostgreSql databases.
+ */
+abstract class BasePostgreSQLDriver extends DriverType("PostgreSQL") {
   def binaryColumnType = "BYTEA"
   def clobColumnType = "TEXT"
   def booleanColumnType = "BOOLEAN"
@@ -198,17 +223,6 @@ object PostgreSqlDriver extends DriverType("PostgreSQL") {
   def longColumnType = "BIGINT"
   def doubleColumnType = "DOUBLE PRECISION"
 
-  /* PostgreSQL doesn't support generated keys via the JDBC driver. Instead, we use the RETURNING clause on the insert.
-   * From: http://www.postgresql.org/docs/8.2/static/sql-insert.html
-   */
-  override def performInsertWithPK (conn : Connection, query : String, setter : PreparedStatement => Unit, pkNames : List[String]) : ResultSet = {
-      //val stmt = conn.prepareStatement(query + " RETURNING " + pkNames.mkString(","))
-      val stmt = conn.prepareStatement(query)
-      setter(stmt)
-      stmt.executeUpdate
-      conn.createStatement.executeQuery("SELECT lastval()")
-  }
-
   override def maxSelectLimit = "ALL"
 
   /**
@@ -217,6 +231,49 @@ object PostgreSqlDriver extends DriverType("PostgreSQL") {
    */
   override def defaultSchemaName : Box[String] = Full("public")
 }
+
+/**
+ * PostgreSql driver for versions 8.2 and up. Tested with:
+ *
+ * <ul>
+ *   <li>8.3</li>
+ * </ul>
+ */
+object PostgreSqlDriver extends BasePostgreSQLDriver {
+  /* PostgreSQL doesn't support generated keys via the JDBC driver. Instead, we use the RETURNING clause on the insert.
+   * From: http://www.postgresql.org/docs/8.2/static/sql-insert.html
+   */
+  override def performInsertWithPK (conn : Connection, query : String, setter : PreparedStatement => Unit, tableName : String, pkNames : List[String]) : ResultSet = {
+      val stmt = conn.prepareStatement(query + " RETURNING " + pkNames.mkString(","))
+      setter(stmt)
+      stmt.executeQuery
+  }
+}
+
+/**
+ * PostgreSql driver for versions 8.1 and earlier. Tested with
+ *
+ * <ul>
+ *   <li>8.1</li>
+ *   <li>8.0</li>
+ * </ul>
+ *
+ * Successfuly use of earlier versions should be reported to liftweb@googlegroups.com.
+ */
+object PostgreSqlOldDriver extends BasePostgreSQLDriver {
+  /* PostgreSQL doesn't support generated keys via the JDBC driver.
+   * Instead, we use the lastval() function to get the last inserted
+   * key from the DB.
+   */
+  override def performInsertWithPK (conn : Connection, query : String, setter : PreparedStatement => Unit, tableName : String, pkNames : List[String]) : ResultSet = {
+      val stmt = conn.prepareStatement(query)
+      setter(stmt)
+      stmt.executeUpdate
+      val pkValueQuery = pkNames.map(String.format("currval('%s_%s_seq')", tableName, _)).mkString(", ")
+      conn.createStatement.executeQuery("SELECT " + pkValueQuery)
+  }
+}
+
 
 object SqlServerDriver extends DriverType("Microsoft SQL Server") {
   def binaryColumnType = "VARBINARY(MAX)"
@@ -237,6 +294,15 @@ object SqlServerDriver extends DriverType("Microsoft SQL Server") {
   override def defaultSchemaName : Box[String] = Full("dbo")
 }
 
+/**
+ * Driver for Oracle databases. Tested with:
+ *
+ * <ul>
+ *  <li>Oracle XE 10.2.0.1</li>
+ * </ul>
+ *
+ * Other working install versions should be reported to liftweb@googlegroups.com.
+ */
 object OracleDriver extends DriverType("Oracle") {
   def binaryColumnType = "LONG RAW"
   def booleanColumnType = "NUMBER"
@@ -279,7 +345,7 @@ object OracleDriver extends DriverType("Oracle") {
   }
 
   // Oracle supports returning generated keys only if we specify the names of the column(s) to return.
-  override def performInsertWithPK (conn : Connection, query : String, setter : PreparedStatement => Unit, pkNames : List[String]) : ResultSet = {
+  override def performInsertWithPK (conn : Connection, query : String, setter : PreparedStatement => Unit, tableName : String , pkNames : List[String]) : ResultSet = {
       val stmt = conn.prepareStatement(query, pkNames.toArray)
       setter(stmt)
       stmt.executeUpdate
