@@ -21,7 +21,7 @@ import _root_.java.lang.reflect.Method
 import _root_.net.liftweb.util.{FatLazy, Box, Full, Empty, Failure}
 import _root_.java.util.Date
 import _root_.java.util.regex._
-import _root_.scala.xml.{NodeSeq, Text}
+import _root_.scala.xml.{NodeSeq, Text, Elem}
 import _root_.net.liftweb.http.{S, FieldError}
 import _root_.net.liftweb.http.js._
 import S._
@@ -93,7 +93,7 @@ class MappedString[T<:Mapper[T]](val fieldOwner: T,val maxLen: Int) extends Mapp
     orgData.setFrom(data)
   }
 
-  override def _toForm: Box[NodeSeq] =
+  override def _toForm: Box[Elem] =
   fmapFunc({s: List[String] => this.setFromAny(s)}){name =>
     Full(<input type='text' id={fieldId} maxlength={maxLen.toString}
 	 name={name}
@@ -101,6 +101,15 @@ class MappedString[T<:Mapper[T]](val fieldOwner: T,val maxLen: Int) extends Mapp
 
   protected def i_obscure_!(in : String) : String = {
     ""
+  }
+
+  override def toForm: Box[Elem] = {
+
+    super.toForm match {
+    case Full(IsElem(elem)) => Full(elem)
+    case _ =>
+      Empty
+  }
   }
 
   override def setFromAny(in: Any): String = {
@@ -187,4 +196,12 @@ class MappedString[T<:Mapper[T]](val fieldOwner: T,val maxLen: Int) extends Mapp
    */
   def fieldCreatorString(dbType: DriverType, colName: String): String = colName+" VARCHAR("+maxLen+")"
 
+}
+
+private[mapper] object IsElem {
+  def unapply(in: NodeSeq): Option[Elem] = in match {
+    case e: Elem => Some(e)
+    case Seq(e: Elem) => Some(e)
+    case _ => None
+  }
 }

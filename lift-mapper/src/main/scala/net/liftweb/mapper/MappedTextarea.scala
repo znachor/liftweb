@@ -16,7 +16,7 @@ package net.liftweb.mapper
  * and limitations under the License.
  */
 
-import _root_.scala.xml.{NodeSeq}
+import _root_.scala.xml.{NodeSeq, Elem}
 import _root_.net.liftweb.http.S
 import _root_.net.liftweb.http.S._
 import _root_.net.liftweb.util._
@@ -25,7 +25,7 @@ class MappedTextarea[T<:Mapper[T]](owner : T, maxLen: Int) extends MappedString[
   /**
    * Create an input field for the item
    */
-  override def _toForm: Box[NodeSeq] = {
+  override def _toForm: Box[Elem] = {
     S.fmapFunc({s: List[String] => this.setFromAny(s)}){funcName =>
     Full(<textarea name={funcName}
 	 rows={textareaRows.toString}

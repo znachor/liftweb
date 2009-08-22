@@ -195,7 +195,7 @@ trait MappedForeignKey[KeyType, MyOwner <: Mapper[MyOwner], Other <: KeyedMapper
 
   def immutableMsg: NodeSeq = Text(?("Can't change"))
 
-  override def _toForm: Box[NodeSeq] = Full(validSelectValues.flatMap{
+  override def _toForm: Box[Elem] = Full(validSelectValues.flatMap{
       case Nil => Empty
 
       case xs =>
@@ -203,7 +203,7 @@ trait MappedForeignKey[KeyType, MyOwner <: Mapper[MyOwner], Other <: KeyedMapper
         var selected: Box[String] = Empty
 
         Full(SHtml.selectObj(xs, Full(this.is), this.set))
-    }.openOr(immutableMsg))
+    }.openOr(<span>{immutableMsg}</span>))
 
   /**
    * Is the key defined
@@ -405,7 +405,7 @@ trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends Typed
   def calcFieldName: String = fieldOwner.getSingleton._dbTableName+":"+name
 
 
-  final def toForm: Box[NodeSeq] = {
+  def toForm: Box[NodeSeq] = {
     def mf(in: Node): NodeSeq = in match {
       case g: Group => g.nodes.flatMap(mf)
       case e: Elem => e % toFormAppendedAttributes

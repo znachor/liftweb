@@ -207,7 +207,7 @@ trait BindHelpers {
    * BindParam taking its value from an attribute
    */
   final case class AttrBindParam(name: String, myValue: NodeSeq,
-                           newAttr: String) extends BindParam with BindWithAttr {
+                                 newAttr: String) extends BindParam with BindWithAttr {
     def calcValue(in: NodeSeq): NodeSeq = myValue
   }
 
@@ -284,6 +284,18 @@ trait BindHelpers {
     def ->(in: Boolean) = BooleanBindParam(name, in)
     def ->[T <: Bindable](in: T with Bindable) = TheBindableBindParam[T](name, in)
     def ->[T](in: T) = Tuple2[String, T](name, in)
+
+    def -%>(in: Elem) = FuncBindParam(name, old => in % (BindHelpers.currentNode.map(_.attributes) openOr Null))
+    def -%>(in: Box[Elem]) = FuncBindParam(name, old => in.map(_ % (BindHelpers.currentNode.map(_.attributes) openOr Null)) openOr NodeSeq.Empty)
+    def -%>(in: Option[Elem]) = FuncBindParam(name, old => in.map(_ % (BindHelpers.currentNode.map(_.attributes) openOr Null)) getOrElse NodeSeq.Empty)
+    def -%>(in: NodeSeq => Elem) = FuncBindParam(name, old => in(old) % (BindHelpers.currentNode.map(_.attributes) openOr Null))
+
+
+    def _id_>(in: Elem) = FuncBindParam(name, _ => in % new UnprefixedAttribute("id", name, Null))
+    def _id_>(in: Box[Elem]) = FuncBindParam(name, _ => in.map(_ % new UnprefixedAttribute("id", name, Null)) openOr NodeSeq.Empty)
+    def _id_>(in: Option[Elem]) = FuncBindParam(name, _ => in.map(_ % new UnprefixedAttribute("id", name, Null)) getOrElse NodeSeq.Empty)
+    def _id_>(in: NodeSeq => Elem) = FuncBindParam(name, kids => in(kids) % new UnprefixedAttribute("id", name, Null))
+
   }
 
   implicit def strToSuperArrowAssoc(in: String): SuperArrowAssoc = new SuperArrowAssoc(in)
@@ -422,12 +434,12 @@ trait BindHelpers {
               }
             }
           case s : Elem if bindByNameType(s.label) && bindByNameTag(namespace, s) != "" => BindHelpers._currentNode.doWith(s) {
-                        val tag = bindByNameTag(namespace, s)
-                        map.get(tag) match {
-                            case None => nodeFailureXform.map(_(s)) openOr s
-                            case Some(bindParam) => bindByNameMixIn(bindParam, s)
-                        }
-                    }
+              val tag = bindByNameTag(namespace, s)
+              map.get(tag) match {
+                case None => nodeFailureXform.map(_(s)) openOr s
+                case Some(bindParam) => bindByNameMixIn(bindParam, s)
+              }
+            }
           case Group(nodes) => Group(in_bind(nodes))
           case s : Elem => Elem(s.prefix, s.label, attrBind(s.attributes), s.scope, in_bind(s.child) : _*)
           case n => n
@@ -444,14 +456,14 @@ trait BindHelpers {
     case v => v
   }
 
-/*
-  private def mergeBindAttrs(in: NodeSeq, nameSpace: String, attrs: MetaData): NodeSeq = attrs match {
-    case Null => in
-    case p: PrefixedAttribute if p.pre == nameSpace =>
-      mergeBindAttrs(setElemId(in, p.key, p.value), nameSpace, p.next)
-    case m => mergeBindAttrs(in, nameSpace, m.next)
-  }
-  */
+  /*
+   private def mergeBindAttrs(in: NodeSeq, nameSpace: String, attrs: MetaData): NodeSeq = attrs match {
+   case Null => in
+   case p: PrefixedAttribute if p.pre == nameSpace =>
+   mergeBindAttrs(setElemId(in, p.key, p.value), nameSpace, p.next)
+   case m => mergeBindAttrs(in, nameSpace, m.next)
+   }
+   */
 
   /**
    * Replace the content of lift:bind nodes with the corresponding nodes found in a map,
@@ -476,31 +488,31 @@ trait BindHelpers {
         case s : Elem if (isBind(s)) => {
             node.attributes.get("name") match {
               case None => {
-                if (Props.devMode) {
-                  Log.warn("<lift:bind> tag encountered without name attribute!")
-		        }
-                bind(vals, node.child)
-              }
-              case Some(ns) => {
-                def warnOnUnused() =
-                    Log.warn("Unused binding values for <lift:bind>: " +
-                             vals.keySet.filter(key => key != ns.text).mkString(", "))
-                vals.get(ns.text) match {
-                  case None => {
-                    if (Props.devMode) {
-			          Log.warn("No binding values match the <lift:bind> name attribute: " + ns.text)
-			          warnOnUnused()
-		            }
-		            bind(vals, node.child)
-		          }
-                  case Some(nodes) => {
-		            if (Props.devMode && vals.size > 1) {
-			          warnOnUnused()
-		            }
-		            nodes
-		          }
+                  if (Props.devMode) {
+                    Log.warn("<lift:bind> tag encountered without name attribute!")
+                  }
+                  bind(vals, node.child)
                 }
-              }
+              case Some(ns) => {
+                  def warnOnUnused() =
+                  Log.warn("Unused binding values for <lift:bind>: " +
+                           vals.keySet.filter(key => key != ns.text).mkString(", "))
+                  vals.get(ns.text) match {
+                    case None => {
+                        if (Props.devMode) {
+                          Log.warn("No binding values match the <lift:bind> name attribute: " + ns.text)
+                          warnOnUnused()
+                        }
+                        bind(vals, node.child)
+                      }
+                    case Some(nodes) => {
+                        if (Props.devMode && vals.size > 1) {
+                          warnOnUnused()
+                        }
+                        nodes
+                      }
+                  }
+                }
             }
           }
         case Group(nodes) => Group(bind(vals, nodes))
