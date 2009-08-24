@@ -16,6 +16,7 @@ package net.liftweb.json
  * and limitations under the License.
  */
 
+import java.lang.reflect.{Constructor => JConstructor}
 import scala.reflect.Manifest
 import JsonAST._
 
@@ -47,26 +48,24 @@ object Extraction {
    */
   sealed abstract class Mapping
   case class Value(path: String, targetType: Class[_]) extends Mapping
-  case class Constructor(path: Option[String], classname: String, args: List[Mapping]) extends Mapping
-  case class ListConstructor(path: String, classname: String, args: List[Mapping]) extends Mapping
+  case class Constructor(path: Option[String], constructor: JConstructor[_], args: List[Mapping]) extends Mapping
+  case class ListConstructor(path: String, constructor: JConstructor[_], args: List[Mapping]) extends Mapping
   case class ListOfPrimitives(path: String, elementType: Class[_]) extends Mapping
 
   val memo = new Memo[Class[_], Mapping]
 
   def extract[A](json: JValue)(implicit mf: Manifest[A]): A = 
-  try {
-    extract0(json, mf)
-  } catch {
-    case e: Exception => throw new MappingException(e)
-  }
+    try {
+      extract0(json, mf)
+    } catch {
+      case e: Exception => throw new MappingException(e)
+    }
 
   private def extract0[A](json: JValue, mf: Manifest[A]): A = {
     val mapping = mappingOf(mf.erasure)
 
-    def newInstance(classname: String, args: List[Any]) = {
-      val clazz = Thread.currentThread.getContextClassLoader.loadClass(classname)
-      val argTypes = Reflection.types(args)
-      clazz.getConstructor(argTypes.toArray: _*).newInstance(args.map(_.asInstanceOf[AnyRef]).toArray: _*)
+    def newInstance(constructor: JConstructor[_], args: List[Any]) = {
+      constructor.newInstance(args.map(_.asInstanceOf[AnyRef]).toArray: _*)
     }
 
     def newPrimitive(elementType: Class[_], elem: JValue) = convert(elem, elementType)
@@ -97,9 +96,9 @@ object Extraction {
 
   private def mappingOf(clazz: Class[_]) = {
     def makeMapping(path: Option[String], clazz: Class[_], isList: Boolean): Mapping = isList match {
-      case false => Constructor(path, clazz.getName, constructorArgs(clazz))
+      case false => Constructor(path, clazz.getDeclaredConstructors()(0), constructorArgs(clazz))
       case true if Reflection.primitive_?(clazz) => ListOfPrimitives(path.get, clazz)
-      case true => ListConstructor(path.get, clazz.getName, constructorArgs(clazz))
+      case true => ListConstructor(path.get, clazz.getDeclaredConstructors()(0), constructorArgs(clazz))
     }
 
     def constructorArgs(clazz: Class[_]) = clazz.getDeclaredFields.filter(!Reflection.static_?(_)).map { x =>      
@@ -112,7 +111,6 @@ object Extraction {
     memo.memoize(clazz, (x: Class[_]) => makeMapping(None, x, false))
   }
 
-  // FIXME fails if value == JNull
   private def convert(value: JValue, targetType: Class[_]): Any = value match {
     case JInt(x) if (targetType == classOf[Int]) => x.intValue
     case JInt(x) if (targetType == classOf[Long]) => x.longValue
@@ -121,6 +119,7 @@ object Extraction {
     case JInt(x) if (targetType == classOf[String]) => x.toString
     case JDouble(x) if (targetType == classOf[Float]) => x.floatValue
     case JDouble(x) if (targetType == classOf[String]) => x.toString
+    case JNull => null
     case _ => value.values
   }
 
@@ -154,18 +153,6 @@ object Extraction {
     }
 
     def static_?(f: Field) = Modifier.isStatic(f.getModifiers)
-
-    def types(xs: List[Any]) = xs.map {
-      case x: List[_] => classOf[List[_]]
-      case x: Int => classOf[Int]
-      case x: Long => classOf[Long]
-      case x: Short => classOf[Short]
-      case x: Byte => classOf[Byte]
-      case x: Double => classOf[Double]
-      case x: Float => classOf[Float]
-      case x: Boolean => classOf[Boolean]
-      case x => x.asInstanceOf[AnyRef].getClass
-    }
   }
 }
 
