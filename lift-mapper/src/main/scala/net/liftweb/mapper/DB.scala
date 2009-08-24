@@ -203,7 +203,10 @@ object DB {
           case null => null
           case s => s.toString
         }
-      case BIGINT |  INTEGER | DECIMAL | NUMERIC | SMALLINT | TINYINT => rs.getLong(pos).toString
+      case DECIMAL | NUMERIC =>
+        rs.getBigDecimal(pos).toString
+
+      case BIGINT |  INTEGER | /* DECIMAL | NUMERIC | */ SMALLINT | TINYINT => rs.getLong(pos).toString
       case BIT | BOOLEAN => rs.getBoolean(pos).toString
 
       case VARCHAR | CHAR | CLOB | LONGVARCHAR => rs.getString(pos)
