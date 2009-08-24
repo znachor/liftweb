@@ -2,15 +2,15 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>net.liftweb</groupId>
-    <artifactId>JPADemo-Master</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <groupId>${groupId}</groupId>
+    <artifactId>${artifactId}</artifactId>
+    <version>${version}</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>JPADemo-web</artifactId>
+  <artifactId>web</artifactId>
   <packaging>war</packaging>
-  <name>JPADemo-web</name>
+  <name>${parent.artifactId}-web</name>
 
   <dependencies>
     <dependency>
@@ -21,25 +21,25 @@
     </dependency>
     <!-- for LiftConsole -->
     <dependency>
-      <groupId>org.scala-lang</groupId>
-      <artifactId>scala-compiler</artifactId>
-      <version>${scala.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>${pom.groupId}</groupId>
-      <artifactId>JPADemo-spa</artifactId>
+      <artifactId>spa</artifactId>
       <version>${pom.version}</version>
     </dependency>
     <dependency>
-      <groupId>${pom.groupId}</groupId>
+      <groupId>net.liftweb</groupId>
       <artifactId>lift-core</artifactId>
-      <version>${pom.version}</version>
+      <version>1.1-M4</version>
     </dependency>
     <dependency>
-      <groupId>${pom.groupId}</groupId>
+      <groupId>net.liftweb</groupId>
       <artifactId>lift-jpa</artifactId>
-      <version>${pom.version}</version>
+      <version>1.1-M4</version>
+    </dependency>
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>servlet-api</artifactId>
+      <version>2.5</version>
+      <scope>provided</scope>
     </dependency>
   </dependencies>
 
