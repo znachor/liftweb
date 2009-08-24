@@ -58,15 +58,15 @@ object Extraction {
     try {
       extract0(json, mf)
     } catch {
-      case e: Exception => throw new MappingException(e)
+      case e: MappingException => throw e
+      case e: Exception => throw new MappingException("unknown error", e)
     }
 
   private def extract0[A](json: JValue, mf: Manifest[A]): A = {
     val mapping = mappingOf(mf.erasure)
 
-    def newInstance(constructor: JConstructor[_], args: List[Any]) = {
+    def newInstance(constructor: JConstructor[_], args: List[Any]) = 
       constructor.newInstance(args.map(_.asInstanceOf[AnyRef]).toArray: _*)
-    }
 
     def newPrimitive(elementType: Class[_], elem: JValue) = convert(elem, elementType)
 
@@ -87,8 +87,8 @@ object Extraction {
     }
 
     def fieldValue(json: JValue, path: String) = (json \ path) match {
-      case f: JField => f.value
-      case x => error("Expected JField but got " + x + ", json='" + json + "', path='" + path + "'")
+      case JField(_, value) => value
+      case x => fail("Expected JField but got " + x + ", json='" + json + "', path='" + path + "'")
     }
 
     build(json, mapping, Nil).head.asInstanceOf[A]
@@ -123,6 +123,8 @@ object Extraction {
     case _ => value.values
   }
 
+  private def fail(msg: String) = throw new MappingException(msg)
+
   class Memo[A, R] {
     private var cache = Map[A, R]()
 
@@ -156,5 +158,7 @@ object Extraction {
   }
 }
 
-class MappingException(cause: Exception) extends Exception(cause)
+class MappingException(msg: String, cause: Exception) extends Exception(msg, cause) {
+  def this(msg: String) = this(msg, null)
+}
 
