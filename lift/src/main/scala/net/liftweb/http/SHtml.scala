@@ -173,7 +173,7 @@ object SHtml {
                          "; return false;"}>{text}</button>))(_ % _)
   }
 
-    /**
+  /**
    * Create an Ajax button. When it's pressed, the function is executed
    *
    * @param text -- the name/text of the button
