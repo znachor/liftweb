@@ -710,11 +710,17 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     else findClass(name, LiftRules.buildPackage("snippet") ::: ("lift.app.snippet" :: "net.liftweb.builtin.snippet" :: Nil))
   }
 
+private def instantiateOrRedirect[T](c: Class[T]): Box[T] = tryo({
+          case e: ResponseShortcutException => throw e
+          case ite: _root_.java.lang.reflect.InvocationTargetException
+            if (ite.getCause.isInstanceOf[ResponseShortcutException]) => throw ite.getCause.asInstanceOf[ResponseShortcutException]
+        }, c.newInstance)
+
   private def findAttributeSnippet(name: String, rest: MetaData): MetaData = {
     S.doSnippet(name) {
       val (cls, method) = splitColonPair(name, null, "render")
 
-      findSnippetClass(cls).flatMap(clz => instantiate(clz).flatMap(inst =>
+      findSnippetClass(cls).flatMap(clz => instantiateOrRedirect(clz).flatMap(inst =>
           (invokeMethod(clz, inst, method) match {
               case Full(md: MetaData) => Full(md.copy(rest))
               case _ => Empty
@@ -753,7 +759,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
 
   private def findSnippetInstance(cls: String): Box[AnyRef] =
   S.snippetForClass(cls) or
-  (findSnippetClass(cls).flatMap(c => instantiate(c)) match {
+  (findSnippetClass(cls).flatMap(c => instantiateOrRedirect(c)) match {
       case Full(inst: StatefulSnippet) =>
         inst.snippetName = cls; S.setSnippetForClass(cls, inst); Full(inst)
       case Full(ret) => Full(ret)
