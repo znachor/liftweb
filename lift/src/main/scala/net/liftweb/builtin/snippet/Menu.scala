@@ -170,7 +170,7 @@ object Menu extends DispatchSnippet {
   private def buildItemMenu [A] (loc : Loc[A], currLoc: Box[Loc[_]], expandAll : Boolean) : List[MenuItem] = {
     val kids : List[MenuItem] = if (expandAll) loc.buildKidMenuItems(loc.menu.kids) else Nil
 
-    loc.buildItem(kids, currLoc == Full(loc), false).toList
+    loc.buildItem(kids, currLoc == Full(loc), currLoc == Full(loc)).toList
   }
 
   private def renderWhat(expandAll: Boolean): Seq[MenuItem] =
