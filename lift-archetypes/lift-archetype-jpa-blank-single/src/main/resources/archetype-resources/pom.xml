@@ -1,12 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project 
+  xmlns="http://maven.apache.org/POM/4.0.0" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+#set($sv = '${scala.version}')
+#parse('ext.vm')
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>${groupId}</groupId>
-  <version>${version}</version>
-  <artifactId>${artifactId}</artifactId>
+  <groupId>$groupId</groupId>
+  <artifactId>$artifactId</artifactId>
+  <version>$version</version>
   <packaging>war</packaging>
-  <name>${artifactId} Project</name>
+  <name>$artifactId Project</name>
 
   <properties>
     <scala.version>2.7.5</scala.version>
@@ -46,10 +51,10 @@
       <artifactId>hibernate-entitymanager</artifactId>
       <version>3.3.1.ga</version>
       <exclusions>
-	<exclusion>
-	  <groupId>javax.transaction</groupId>
-	  <artifactId>jta</artifactId>
-	</exclusion>
+        <exclusion>
+          <groupId>javax.transaction</groupId>
+          <artifactId>jta</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
@@ -61,13 +66,13 @@
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-compiler</artifactId>
-      <version>${scala.version}</version>
+      <version>$sv</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
-      <version>${scala.version}</version>
+      <version>$sv</version>
     </dependency>
     <dependency>
       <groupId>org.apache.derby</groupId>
@@ -108,7 +113,7 @@
             <arg>-deprecation</arg>
             <arg>-Xno-varargs-conversion</arg>
           </args>
-          <scalaVersion>${scala.version}</scalaVersion>
+          <scalaVersion>$sv</scalaVersion>
         </configuration>
       </plugin>
       <plugin>
