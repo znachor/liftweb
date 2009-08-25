@@ -875,9 +875,11 @@ class LiftSession(val contextPath: String, val uniqueId: String,
                                         Null)
     }
 
+    val uri = S.attr.~("action").map(_.toString) getOrElse S.uri
+
     if (ret.isEmpty) ret else
     attrs.get("form").map(ft => (
-        (<form action={S.uri} method={ft.text.trim.toLowerCase}>{ret}</form> %
+        (<form action={uri} method={ft.text.trim.toLowerCase}>{ret}</form> %
          checkMultiPart(attrs)) %
         checkAttr("class", attrs)) % checkAttr("id",attrs) % checkAttr("target",attrs) ) getOrElse ret
 
