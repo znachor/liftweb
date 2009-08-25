@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project>
+<project 
+  xmlns="http://maven.apache.org/POM/4.0.0" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+#set($sv = '${scala.version}')
+#parse('ext.vm')
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>${groupId}</groupId>
-  <version>${version}</version>
-  <artifactId>${artifactId}</artifactId>
-  <name>${artifactId} Master</name>
+  <groupId>$groupId</groupId>
+  <artifactId>$artifactId</artifactId>
+  <version>$version</version>
+  <name>$artifactId Master</name>
   <packaging>pom</packaging>
   
   <modules>
@@ -34,13 +39,13 @@
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-compiler</artifactId>
-      <version>${scala.version}</version>
+      <version>$sv</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
-      <version>${scala.version}</version>
+      <version>$sv</version>
     </dependency>
     <dependency>
       <groupId>org.apache.derby</groupId>
@@ -82,7 +87,7 @@
             <arg>-deprecation</arg>
             <arg>-Xno-varargs-conversion</arg>
           </args>
-          <scalaVersion>${scala.version}</scalaVersion>
+          <scalaVersion>$sv</scalaVersion>
         </configuration>
       </plugin>
     </plugins>
