@@ -120,7 +120,7 @@ object SHtml {
    */
   private def ajaxCall_*(jsCalcValue: JsExp, func: AFuncHolder): (String, JsExp) =
   fmapFunc(func)(name =>
-    (name, makeAjaxCall(JsRaw("'"+name+"=' + "+jsCalcValue.toJsCmd))))
+    (name, makeAjaxCall(JsRaw("'"+name+"=' + encodeURIComponent("+jsCalcValue.toJsCmd+")"))))
 
   /**
    * Build a JavaScript function that will perform an AJAX call based on a value calculated in JavaScript
@@ -134,7 +134,7 @@ object SHtml {
                          ajaxContext: AjaxContext,
                          func: AFuncHolder): (String, JsExp) =
   fmapFunc(func)(name =>
-    (name, makeAjaxCall(JsRaw("'"+name+"=' + "+jsCalcValue.toJsCmd), ajaxContext)))
+    (name, makeAjaxCall(JsRaw("'"+name+"=' + encodeURIComponent("+jsCalcValue.toJsCmd+")"), ajaxContext)))
 
 
   private def deferCall(data: JsExp, jsFunc: Call): Call =
@@ -170,6 +170,39 @@ object SHtml {
   def jsonButton(text: NodeSeq, func: () => JsObj, ajaxContext: JsonContext, attrs: (String, String)*): Elem = {
     attrs.foldLeft(fmapFunc(func)(name =>
         <button onclick={makeAjaxCall(Str(name+"=true"), ajaxContext).toJsCmd+
+                         "; return false;"}>{text}</button>))(_ % _)
+  }
+
+    /**
+   * Create an Ajax button. When it's pressed, the function is executed
+   *
+   * @param text -- the name/text of the button
+   * @param func -- the function to execute when the button is pushed.  Return Noop if nothing changes on the browser.
+   * @param attrs -- the list of node attributes
+   *
+   * @return a button to put on your page
+   */
+  def ajaxButton(text: NodeSeq, jsExp: JsExp, func: String => JsCmd, attrs: (String, String)*): Elem = {
+    attrs.foldLeft(fmapFunc(SFuncHolder(func))(name =>
+        <button onclick={makeAjaxCall(JsRaw(name.encJs+"+'='+encodeURIComponent("+jsExp.toJsCmd+")")).toJsCmd+
+                         "; return false;"}>{text}</button>))(_ % _)
+  }
+
+  /**
+   * Create an Ajax buttun that when it's pressed it submits an Ajax request and expects back a JSON
+   * construct which will be passed to the <i>success</i> function
+   *
+   * @param text -- the name/text of the button
+   * @param func -- the function to execute when the button is pushed.  Return Noop if nothing changes on the browser.
+   * @param ajaxContext -- defines the callback functions and the JSON response type
+   * @param attrs -- the list of node attributes
+   *
+   * @return a button to put on your page
+   *
+   */
+  def jsonButton(text: NodeSeq, jsExp: JsExp, func: Any => JsObj, ajaxContext: JsonContext, attrs: (String, String)*): Elem = {
+    attrs.foldLeft(jsonFmapFunc(func)(name =>
+        <button onclick={makeAjaxCall(JsRaw(name.encJs+"+'='+ encodeURIComponent(JSON.stringify("+jsExp.toJsCmd+"))"), ajaxContext).toJsCmd+
                          "; return false;"}>{text}</button>))(_ % _)
   }
 
@@ -446,7 +479,7 @@ object SHtml {
   }
 
   def ajaxInvoke(func: () => JsCmd): (String, JsExp) =
-  fmapFunc(NFuncHolder(func))(name => (name, makeAjaxCall(Str(name) + "=true")))
+  fmapFunc(NFuncHolder(func))(name => (name, makeAjaxCall(name + "=true")))
 
   /**
    * Build a swappable visual element.  If the shown element is clicked on, it turns into the hidden element and when

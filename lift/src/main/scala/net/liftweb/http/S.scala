@@ -1853,6 +1853,16 @@ object S extends HasParams {
     f(name)
   }
 
+  /**
+   * Maps a function with an random generated and name
+   */
+  def jsonFmapFunc[T](in: Any => JsObj)(f: String => T): T = //
+  {
+    val name = formFuncName
+    addFunctionMap(name, SFuncHolder((s: String) => JSONParser.parse(s).map(in) openOr js.JE.JsObj()))
+    f(name)
+  }
+
   def render(xhtml:NodeSeq, httpRequest: HTTPRequest): NodeSeq = {
     def doRender(session: LiftSession): NodeSeq =
     session.processSurroundAndInclude("external render", xhtml)
