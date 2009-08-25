@@ -3,3 +3,6 @@
 ## this file is used as an echange area between the maven's filtering (build time) and velocity engine (runtime)
 #set( $scala_version = '${scala.version}')
 #set( $lift_version = '${lift.version}')
+#set($pomVersion = '${pom.version}')
+#set($pomGroupId = '${pom.groupId}')
+
