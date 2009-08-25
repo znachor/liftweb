@@ -27,12 +27,24 @@ import _root_.net.liftweb.http.js._
 import S._
 
 /**
-  * Just like MappedString, except it's defaultValue is "" and the length is auto-cropped to
-  * fit in the column
-  */
+ * Just like MappedString, except it's defaultValue is "" and the length is auto-cropped to
+ * fit in the column
+ */
 class MappedPoliteString[T <: Mapper[T]](towner: T, theMaxLen: Int) extends MappedString[T](towner, theMaxLen) {
   override def defaultValue = ""
   override protected def setFilter = crop _ :: super.setFilter
+}
+
+/**
+ * Mix this trait into a MappedString and it will add maximum length validation to the MappedString
+ */
+trait ValidateLength extends MixableMappedField {
+  self: MappedString[_] =>
+
+  def defaultErrorMessage = S.?("Field too long.  Maximum Length")+": "+maxLen
+
+  abstract override def validations = valMaxLen(maxLen, defaultErrorMessage) _ :: super.validations
+
 }
 
 class MappedString[T<:Mapper[T]](val fieldOwner: T,val maxLen: Int) extends MappedField[String, T] {
@@ -74,8 +86,8 @@ class MappedString[T<:Mapper[T]](val fieldOwner: T,val maxLen: Int) extends Mapp
   }
 
   /**
-  * Get the JDBC SQL Type for this field
-  */
+   * Get the JDBC SQL Type for this field
+   */
   def targetSQLType = Types.VARCHAR
 
   def defaultValue = ""
@@ -87,8 +99,8 @@ class MappedString[T<:Mapper[T]](val fieldOwner: T,val maxLen: Int) extends Mapp
   protected def i_was_! = orgData.get
 
   /**
-     * Called after the field is saved to the database
-     */
+   * Called after the field is saved to the database
+   */
   override protected[mapper] def doneWithSave() {
     orgData.setFrom(data)
   }
@@ -96,8 +108,8 @@ class MappedString[T<:Mapper[T]](val fieldOwner: T,val maxLen: Int) extends Mapp
   override def _toForm: Box[Elem] =
   fmapFunc({s: List[String] => this.setFromAny(s)}){name =>
     Full(<input type='text' id={fieldId} maxlength={maxLen.toString}
-	 name={name}
-	 value={is match {case null => "" case s => s.toString}}/>)}
+        name={name}
+        value={is match {case null => "" case s => s.toString}}/>)}
 
   protected def i_obscure_!(in : String) : String = {
     ""
@@ -106,10 +118,10 @@ class MappedString[T<:Mapper[T]](val fieldOwner: T,val maxLen: Int) extends Mapp
   override def toForm: Box[Elem] = {
 
     super.toForm match {
-    case Full(IsElem(elem)) => Full(elem)
-    case _ =>
-      Empty
-  }
+      case Full(IsElem(elem)) => Full(elem)
+      case _ =>
+        Empty
+    }
   }
 
   override def setFromAny(in: Any): String = {
@@ -145,43 +157,43 @@ class MappedString[T<:Mapper[T]](val fieldOwner: T,val maxLen: Int) extends Mapp
   }
 
   def buildSetActualValue(accessor: Method, inst: AnyRef, columnName: String): (T, AnyRef) => Unit =
-    (inst, v) => doField(inst, accessor, {case f: MappedString[T] => f.wholeSet(if (v eq null) null else v.toString)})
+  (inst, v) => doField(inst, accessor, {case f: MappedString[T] => f.wholeSet(if (v eq null) null else v.toString)})
 
   def buildSetLongValue(accessor: Method, columnName: String): (T, Long, Boolean) => Unit =
-    (inst, v, isNull) => doField(inst, accessor, {case f: MappedString[T] => f.wholeSet(if (isNull) null else v.toString)})
+  (inst, v, isNull) => doField(inst, accessor, {case f: MappedString[T] => f.wholeSet(if (isNull) null else v.toString)})
 
   def buildSetStringValue(accessor: Method, columnName: String): (T, String) => Unit =
-    (inst, v) => doField(inst, accessor, {case f: MappedString[T] => f.wholeSet(if (v eq null) null else v)})
+  (inst, v) => doField(inst, accessor, {case f: MappedString[T] => f.wholeSet(if (v eq null) null else v)})
 
   def buildSetDateValue(accessor: Method, columnName: String): (T, Date) => Unit =
-    (inst, v) => doField(inst, accessor, {case f: MappedString[T] => f.wholeSet(if (v eq null) null else v.toString)})
+  (inst, v) => doField(inst, accessor, {case f: MappedString[T] => f.wholeSet(if (v eq null) null else v.toString)})
 
   def buildSetBooleanValue(accessor: Method, columnName: String): (T, Boolean, Boolean) => Unit =
-    (inst, v, isNull) => doField(inst, accessor, {case f: MappedString[T] => f.wholeSet(if (isNull) null else v.toString)})
+  (inst, v, isNull) => doField(inst, accessor, {case f: MappedString[T] => f.wholeSet(if (isNull) null else v.toString)})
 
   /**
    * A validation helper.  Make sure the string is at least a particular
    * length and generate a validation issue if not
    */
   def valMinLen(len: Int, msg: => String)(value: String): List[FieldError] =
-    if ((value eq null) || value.length < len) List(FieldError(this, Text(msg)))
-    else Nil
+  if ((value eq null) || value.length < len) List(FieldError(this, Text(msg)))
+  else Nil
 
   /**
    * A validation helper.  Make sure the string is no more than a particular
    * length and generate a validation issue if not
    */
   def valMaxLen(len: Int, msg: => String)(value: String): List[FieldError] =
-    if ((value ne null) && value.length > len) List(FieldError(this, Text(msg)))
-    else Nil
+  if ((value ne null) && value.length > len) List(FieldError(this, Text(msg)))
+  else Nil
 
   /**
    * Make sure that the field is unique in the database
    */
   def valUnique(msg: => String)(value: String): List[FieldError] =
-    fieldOwner.getSingleton.findAll(By(this,value)).
-      filter(!_.comparePrimaryKeys(this.fieldOwner)).
-      map(x =>FieldError(this, Text(msg)))
+  fieldOwner.getSingleton.findAll(By(this,value)).
+  filter(!_.comparePrimaryKeys(this.fieldOwner)).
+  map(x =>FieldError(this, Text(msg)))
 
   /**
    * Make sure the field matches a regular expression
