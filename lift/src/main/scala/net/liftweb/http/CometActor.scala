@@ -265,7 +265,7 @@ trait CometActor extends Actor with BindHelpers {
 
   def hasOuter = true
 
-  def parentTag = <span/>
+  def parentTag = <div style="display: inline"/>
 
   private def _handleJson(in: Any): JsCmd =
   if (jsonHandlerChain.isDefinedAt(in))

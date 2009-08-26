@@ -1084,7 +1084,7 @@ private def instantiateOrRedirect[T](c: Class[T]): Box[T] = tryo({
 
 }
 
-private[liftweb] object CVPVar extends RequestVar[List[CometVersionPair]](Nil)
+// private[liftweb] object CVPVar extends RequestVar[List[CometVersionPair]](Nil)
 
 /**
  * The response from a page saying that it's been rendered

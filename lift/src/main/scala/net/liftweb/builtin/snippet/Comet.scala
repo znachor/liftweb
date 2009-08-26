@@ -35,8 +35,15 @@ object Comet extends DispatchSnippet {
     }
   }
 
+  private def buildSpan(timeb: Box[Long], xml: NodeSeq, cometActor: CometActor, spanId: String): NodeSeq =
+  Elem(cometActor.parentTag.prefix, cometActor.parentTag.label, cometActor.parentTag.attributes,
+       cometActor.parentTag.scope, Group(xml)) %
+  (new UnprefixedAttribute("id", Text(spanId), Null)) %
+  (timeb.map(time => (new PrefixedAttribute("lift", "when", Text(time.toString), Null))) openOr Null)
+    
   private def buildComet(kids: NodeSeq) : NodeSeq = {
 
+    /*
     def accumulate(e: NodeSeq): NodeSeq = {
       val elem : Node = e first
 
@@ -46,6 +53,8 @@ object Comet extends DispatchSnippet {
       }
       e
     }
+    */
+
 
     (for {ctx <- S.session} yield {
        val theType: Box[String] = S.attr.~("type").map(_.text)
@@ -55,12 +64,14 @@ object Comet extends DispatchSnippet {
 
             (c !? (26600, AskRender)) match {
               case Some(AnswerRender(response, _, when, _)) if c.hasOuter =>
-                <span id={c.uniqueId+"_outer"}>{accumulate(c.buildSpan(when, response.inSpan))}{response.outSpan}</span>
+                buildSpan(Empty, c.buildSpan(when, response.inSpan) ++ response.outSpan, c, c.uniqueId+"_outer")
+                // <span id={c.uniqueId+"_outer"}>{accumulate(c.buildSpan(when, response.inSpan))}{response.outSpan}</span>
 
               case Some(AnswerRender(response, _, when, _)) =>
-                accumulate(c.buildSpan(when, response.inSpan))
+                c.buildSpan(when, response.inSpan)
 
-              case _ => <span id={c.uniqueId} lift:when="0">{Comment("FIXME comet type "+theType+" name "+name+" timeout") ++ kids}</span>
+              case _ => 
+                 buildSpan(Full(0), Comment("FIXME comet type "+theType+" name "+name+" timeout") ++ kids, c, c.uniqueId)
             }) openOr Comment("FIXME - comet type: "+theType+" name: "+name+" Not Found ") ++ kids
           } catch {
             case e => Log.error("Failed to find a comet actor", e); kids
