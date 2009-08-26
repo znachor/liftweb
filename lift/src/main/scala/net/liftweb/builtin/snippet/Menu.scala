@@ -90,14 +90,27 @@ object Menu extends DispatchSnippet {
 
     val toRender : Seq[MenuItem] = (S.attr("item"), S.attr("group")) match {
       case (Full(item),_) =>
-        (for (sm <- LiftRules.siteMap;
-              loc <- sm.findLoc(item)) yield { buildItemMenu(loc, expandAll) }) openOr Nil
+        for {
+          sm <- LiftRules.siteMap.toList
+          req <- S.request.toList
+          loc <- sm.findLoc(item).toList
+          item <- buildItemMenu(loc, req.location, expandAll)
+        } yield item
+
       case (_,Full(group)) =>
-        LiftRules.siteMap.map({
-            sm => sm.locForGroup(group).flatMap({
-                loc => buildItemMenu(loc, expandAll)
-              })
-          }) openOr Nil
+        for {
+          sm <- LiftRules.siteMap.toList
+          loc <- sm.locForGroup(group)
+          req <- S.request.toList
+          item <- buildItemMenu(loc, req.location, expandAll)
+        } yield item
+        /*
+         LiftRules.siteMap.map({
+         sm => sm.locForGroup(group).flatMap({
+         loc => buildItemMenu(loc, expandAll)
+         })
+         }) openOr Nil
+         */
       case _ => renderWhat(expandAll)
     }
 
@@ -113,13 +126,13 @@ object Menu extends DispatchSnippet {
             case m @ MenuItem(text, uri, kids, _, _, _) if m.placeholder_?  =>
               Elem(null, innerTag, Null, TopScope,
                    <xml:group><span>{text}</span>{buildUlLine(kids)}</xml:group>) %
-              S.prefixedAttrsToMetaData("li_item", liMap)
+              (if (m.path) S.prefixedAttrsToMetaData("li_path", liMap) else Null) %
+              (if (m.current) S.prefixedAttrsToMetaData("li_item", liMap) else Null)
 
             case MenuItem(text, uri, kids, true, _, _) if expandAll =>
               Elem(null, innerTag, Null, TopScope,
                    <xml:group><a href={uri}>{text}</a>{buildUlLine(kids)}</xml:group>) %
               S.prefixedAttrsToMetaData("li_item", liMap)
-              //(<li><a href={uri}>{text}</a>{buildUlLine(kids)}</li>) % S.prefixedAttrsToMetaData("li_item", liMap)
 
             case MenuItem(text, uri, kids, true, _, _) =>
               Elem(null, innerTag, Null, TopScope,
@@ -133,7 +146,7 @@ object Menu extends DispatchSnippet {
 
             case MenuItem(text, uri, kids, _, _, _) =>
               Elem(null, innerTag, Null, TopScope,
-                   <xml:group><a href={uri}>{text}</a>{buildUlLine(kids)}</xml:group>) % li
+                   <xml:group><a href={uri}>{text}</a>{buildUlLine(kids)}</xml:group>) % li 
           }
         }
 
@@ -154,9 +167,10 @@ object Menu extends DispatchSnippet {
   }
 
   // This is used to build a MenuItem for a single Loc
-  private def buildItemMenu [A] (loc : Loc[A], expandAll : Boolean) : List[MenuItem] = {
+  private def buildItemMenu [A] (loc : Loc[A], currLoc: Box[Loc[_]], expandAll : Boolean) : List[MenuItem] = {
     val kids : List[MenuItem] = if (expandAll) loc.buildKidMenuItems(loc.menu.kids) else Nil
-    loc.buildItem(kids, false, false).map(List(_)) openOr Nil
+
+    loc.buildItem(kids, currLoc == Full(loc), currLoc == Full(loc)).toList
   }
 
   private def renderWhat(expandAll: Boolean): Seq[MenuItem] =

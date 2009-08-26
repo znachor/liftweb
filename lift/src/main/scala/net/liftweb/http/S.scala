@@ -1426,19 +1426,19 @@ object S extends HasParams {
     else init(Req.nil,session)(f)
   }
 
-private object _currentAttrs extends RequestVar[MetaData](Null)
+  private object _currentAttrs extends RequestVar[MetaData](Null)
 
-def currentAttrs: MetaData = _currentAttrs.is
+  def currentAttrs: MetaData = _currentAttrs.is
 
-def withAttrs[T](attrs: MetaData)(f: => T): T = {
-  val oldAttrs = _currentAttrs.is
-  _currentAttrs.set(attrs)
-  try {
-    f
-  } finally {
-    _currentAttrs.set(oldAttrs)
+  def withAttrs[T](attrs: MetaData)(f: => T): T = {
+    val oldAttrs = _currentAttrs.is
+    _currentAttrs.set(attrs)
+    try {
+      f
+    } finally {
+      _currentAttrs.set(oldAttrs)
+    }
   }
-}
 
   /**
    * Returns the LiftSession parameter denominated by 'what'.
@@ -1853,6 +1853,16 @@ def withAttrs[T](attrs: MetaData)(f: => T): T = {
     f(name)
   }
 
+  /**
+   * Maps a function with an random generated and name
+   */
+  def jsonFmapFunc[T](in: Any => JsObj)(f: String => T): T = //
+  {
+    val name = formFuncName
+    addFunctionMap(name, SFuncHolder((s: String) => JSONParser.parse(s).map(in) openOr js.JE.JsObj()))
+    f(name)
+  }
+
   def render(xhtml:NodeSeq, httpRequest: HTTPRequest): NodeSeq = {
     def doRender(session: LiftSession): NodeSeq =
     session.processSurroundAndInclude("external render", xhtml)
@@ -2091,4 +2101,5 @@ trait FieldIdentifier {
 case class FieldError(field : FieldIdentifier, msg : NodeSeq) {
   override def toString = field.uniqueFieldId + " : " + msg
 }
+
 

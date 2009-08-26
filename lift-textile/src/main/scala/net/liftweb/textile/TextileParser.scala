@@ -418,8 +418,8 @@ object TextileParser {
      * "reference":reference
      */
     lazy val quote_ref: Parser[Textile] =
-    ('"' ~> chrsExcept('"', '\n') <~ '"') ~ (':' ~> urlStr) ^^
-    {case fs ~ rc => RefAnchor(Nil, rc, fs, Nil)}
+    ('"' ~> rep(attribute) ~ chrsExcept('"', '\n') <~ '"') ~ (':' ~> urlStr) ^^
+    {case attr ~ fs ~ rc => RefAnchor(Nil, rc, fs, attr)}
 
 
     lazy val httpStr =
@@ -429,8 +429,8 @@ object TextileParser {
     /**
      * "google":http://google.com
      */
-    lazy val quote_url: Parser[Textile] = ('"' ~> chrsExcept('"', '\n')) ~ ('"' ~> ':' ~> httpStr) ^^
-    { case fs ~ url => Anchor(Nil, url, fs, Nil, disableLinks) }
+    lazy val quote_url: Parser[Textile] = ('"' ~> rep(attribute) ~ chrsExcept('"', '\n')) ~ ('"' ~> ':' ~> httpStr) ^^
+    { case attr ~ fs ~ url => Anchor(Nil, url, fs, attr, disableLinks) }
 
     /**
      * [reference]:http://reference.com
@@ -489,7 +489,7 @@ object TextileParser {
 
     def validTagChar(c: Char) = Character.isDigit(c) || Character.isLetter(c) || c == '_'
     def validStyleChar(c: Char) = Character.isDigit(c) || Character.isLetter(c) || c == '.' || c == ' ' || c == ';' || c == '#'
-    def validClassChar(c: Char) = Character.isDigit(c) || Character.isLetter(c) || c == '.'
+    def validClassChar(c: Char) = Character.isDigit(c) || Character.isLetter(c) || c == '.' || c == '-' || c == '_'
 
     lazy val validTag =
     rep1(elem("valid tag character", validTagChar)) ^^

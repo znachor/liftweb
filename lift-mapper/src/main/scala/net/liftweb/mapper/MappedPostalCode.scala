@@ -1,7 +1,7 @@
 package net.liftweb.mapper
 
 /*
- * Copyright 2006-2008 WorldWide Conferencing, LLC
+ * Copyright 2006-2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ package net.liftweb.mapper
  * and limitations under the License.
  */
 
-import _root_.scala.xml.{NodeSeq, Text}
+import _root_.scala.xml.{NodeSeq, Text, Elem}
 import _root_.net.liftweb.http.{S, SHtml, FieldError}
 import _root_.net.liftweb.util._
 import Helpers._
@@ -77,7 +77,7 @@ class MappedLocale[T <: Mapper[T]](owner: T) extends MappedString[T](owner, 16) 
     case x :: xs => x
   }
 
-  override def _toForm: Box[NodeSeq] =
+  override def _toForm: Box[Elem] =
   Full(SHtml.select(Locale.getAvailableLocales.
                     toList.sort(_.getDisplayName < _.getDisplayName).
                     map(lo => (lo.toString, lo.getDisplayName)),
@@ -92,7 +92,7 @@ class MappedTimeZone[T <: Mapper[T]](owner: T) extends MappedString[T](owner, 32
     case x => x
   }
 
-  override def _toForm: Box[NodeSeq] =
+  override def _toForm: Box[Elem] =
   Full(SHtml.select(MappedTimeZone.timeZoneList, Full(this.is), set) %
        ("id" -> fieldId))
 }
