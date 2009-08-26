@@ -27,7 +27,6 @@ import _root_.net.liftweb.builtin.snippet._
 import _root_.java.lang.reflect.{Method, Modifier, InvocationTargetException}
 import _root_.scala.xml.{Node, NodeSeq, Elem, MetaData, Null, UnprefixedAttribute, PrefixedAttribute, XML, Comment, Group}
 import _root_.java.io.InputStream
-import _root_.scala.xml.transform._
 import _root_.java.util.concurrent.TimeUnit
 import _root_.java.util.Locale
 import js._
@@ -463,7 +462,7 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
        loc <- req.location;
        template <- loc.template) yield template
 
-def contextPath = (LiftRules.calcContextPath(this) or S.curRequestContextPath) openOr _contextPath
+  def contextPath = (LiftRules.calcContextPath(this) or S.curRequestContextPath) openOr _contextPath
 
   /**
    * Manages the merge phase of the rendering pipeline
@@ -602,7 +601,33 @@ def contextPath = (LiftRules.calcContextPath(this) or S.curRequestContextPath) o
     htmlKids += Elem(bodyTag.prefix, bodyTag.label, bodyTag.attributes, bodyTag.scope, bodyChildren.toList :_*)
     htmlKids += nl
 
-    Elem(htmlTag.prefix, htmlTag.label, htmlTag.attributes, htmlTag.scope, htmlKids.toList :_*)
+    val tmpRet = Elem(htmlTag.prefix, htmlTag.label, htmlTag.attributes, htmlTag.scope, htmlKids.toList :_*)
+
+    val ret: Node = if (Props.devMode) {
+      LiftRules.xhtmlValidator.toList.flatMap(_(tmpRet)) match {
+        case Nil => tmpRet
+        case xs =>
+          import _root_.scala.xml.transform._
+
+          val errors: NodeSeq = xs.map(e =>
+            <div style="border: red solid 2px">
+              XHTML Validation error: {e.msg} at line {e.line + 1} and column {e.col}
+            </div>)
+
+          val rule = new RewriteRule {
+            override def transform(n: Node) = n match {
+              case e: Elem if e.label == "body" =>
+                Elem(e.prefix, e.label, e.attributes, e.scope,e.child ++ errors :_*)
+
+              case x => super.transform(x)
+            }
+          }
+          (new RuleTransformer(rule)).transform(tmpRet)(0)
+      }
+
+    } else tmpRet
+
+    ret
   }
 
   /*

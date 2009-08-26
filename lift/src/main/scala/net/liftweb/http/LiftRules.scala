@@ -699,9 +699,9 @@ object LiftRules {
   val responseTransformers = RulesSeq[LiftResponse => LiftResponse]
 
   /**
-  * Calculate the context path for a given session if it should be something different than
-  * the normal context path
-  */
+   * Calculate the context path for a given session if it should be something different than
+   * the normal context path
+   */
   val calcContextPath: LiftSession => Box[String] = _ => Empty
 
   /**
@@ -860,6 +860,11 @@ object LiftRules {
    * Tells Lift if the Ajax JavaScript shoukd be included. By default it is set to true.
    */
   var autoIncludeAjax: LiftSession => Boolean = session => true
+
+  /**
+   * Define the XHTML validator
+   */
+  var xhtmlValidator: Box[XHtmlValidator] = Full(TransitionalXHTML1_0Validator)
 
   /**
    * Returns the JavaScript that manages Ajax requests.
@@ -1085,3 +1090,45 @@ trait CometVersionPair {
 
 case class CVP(guid: String, version: Long) extends CometVersionPair
 
+case class XHTMLValidationError(msg: String, line: Int, col: Int)
+
+trait XHtmlValidator extends Function1[Node, List[XHTMLValidationError]]
+
+object StrictXHTML1_0Validator extends GenericValidtor {
+  val ngurl = "http://www.w3.org/2002/08/xhtml/xhtml1-strict.xsd"
+}
+
+abstract class GenericValidtor extends XHtmlValidator {
+  import javax.xml.validation._
+  import javax.xml._
+  import XMLConstants._
+  import java.net.URL
+  import javax.xml.transform.dom._
+  import javax.xml.transform.stream._
+  import java.io.ByteArrayInputStream
+
+  private lazy val sf = SchemaFactory.newInstance(W3C_XML_SCHEMA_NS_URI)
+  // private val ngurl = "http://www.w3.org/2002/08/xhtml/xhtml1-transitional.xsd"
+  protected def ngurl: String
+
+  //val ngurl = "http://www.thaiopensource.com/relaxng/xhtml/xhtml-strict.rng"
+
+  private lazy val schema = sf.newSchema(new URL(ngurl))
+
+  def apply(in: Node): List[XHTMLValidationError] = {
+    val v = schema.newValidator()
+    val source = new StreamSource(new ByteArrayInputStream(in.toString.getBytes("UTF-8")))
+
+    try {
+      v.validate(source)
+      Nil
+    } catch {
+      case e: org.xml.sax.SAXParseException =>
+        List(XHTMLValidationError(e.getMessage, e.getLineNumber, e.getColumnNumber))
+    }
+  }
+}
+
+object TransitionalXHTML1_0Validator extends GenericValidtor {
+  val ngurl = "http://www.w3.org/2002/08/xhtml/xhtml1-transitional.xsd"
+}
