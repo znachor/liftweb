@@ -201,10 +201,13 @@ object SessionMaster extends Actor {
   }
 }
 
-object TailVar extends RequestVar[NodeSeq](NodeSeq.Empty)
+// object TailVar extends RequestVar[NodeSeq](NodeSeq.Empty)
 
 object PageName extends RequestVar[String]("")
 
+/**
+ * Information about the page garbage collection
+ */
 object RenderVersion {
   private object ver extends RequestVar({
       val ret =  Helpers.nextFuncName
@@ -221,7 +224,7 @@ object RenderVersion {
  * The LiftSession class containg the session state information
  */
 @serializable
-class LiftSession(val contextPath: String, val uniqueId: String,
+class LiftSession(val _contextPath: String, val uniqueId: String,
                   val httpSession: Box[HTTPSession]) {
   import TemplateFinder._
 
@@ -269,6 +272,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   def running_? = _running_?
 
   private var cometList: List[AnyActor] = Nil
+
 
   private[http] def breakOutComet(): Unit = {
     val cl = synchronized {cometList}
@@ -459,51 +463,191 @@ class LiftSession(val contextPath: String, val uniqueId: String,
        loc <- req.location;
        template <- loc.template) yield template
 
+def contextPath = (LiftRules.calcContextPath(this) or S.curRequestContextPath) openOr _contextPath
 
   /**
    * Manages the merge phase of the rendering pipeline
    */
-  private def merge(xhtml: NodeSeq) : NodeSeq = {
 
-    val headInBody: NodeSeq =
-    (for (body <- xhtml \ "body";
-          head <- findElems(body)(_.label == "head")) yield head.child).
-    flatMap {e => e}
+  private def merge(xhtml: NodeSeq): Node = {
+    var htmlTag = <html xmlns="http://www.w3.org/1999/xhtml" xmlns:lift='http://liftweb.net'/>
+    var headTag = <head/>
+    var bodyTag = <body/>
+    val headChildren = new ListBuffer[Node]
+    val bodyChildren = new ListBuffer[Node]
+    val addlHead = new ListBuffer[Node]
+    val addlTail = new ListBuffer[Node]
+    val cometTimes = new ListBuffer[CometVersionPair]
+    val rewrite = URLRewriter.rewriteFunc
+    val fixHref = Req.fixHref
 
-    /**
-     * Document walkthrough
-     */
-    def xform(in: NodeSeq, inBody: Boolean)
-    (headAppenders : Node => Node)
-    (bodyAppenders : Node => Node): NodeSeq = in flatMap {
-      case e: Elem if !inBody && e.label == "body" =>
-        val n = Elem(e.prefix, e.label, e.attributes, e.scope,
-                     xform(e.child, true)(headAppenders)(bodyAppenders) :_*)
-        bodyAppenders(n)
+    val contextPath: String = this.contextPath
 
-      case e: Elem if inBody && e.label == "head" => NodeSeq.Empty
-
-      case e: Elem if e.label == "head" =>
-        val n = if (!headInBody.isEmpty) {
-          Elem(e.prefix, e.label, e.attributes,
-               e.scope, HeadHelper.removeHtmlDuplicates(e.child ++ headInBody) :_*)
-        } else {
-          e
+    def fixAttrs(original: MetaData, toFix : String, attrs : MetaData, fixURL: Boolean) : MetaData = attrs match {
+      case Null => Null
+      case p: PrefixedAttribute if p.key == "when" && p.pre == "lift" =>
+        val when = p.value.text
+        original.find(a => !a.isPrefixed && a.key == "id").map {
+          id =>
+          cometTimes += CVP(id.value.text, when.toLong)
         }
-        headAppenders(n)
+        fixAttrs(original, toFix, p.next, fixURL)
+      case u: UnprefixedAttribute if u.key == toFix =>
+        new UnprefixedAttribute(toFix, fixHref(contextPath, attrs.value, fixURL, rewrite),fixAttrs(original, toFix, attrs.next, fixURL))
+      case _ => attrs.copy(fixAttrs(original, toFix, attrs.next, fixURL))
 
-      case e: Elem =>
-        Elem(e.prefix, e.label, e.attributes, e.scope, xform(e.child, inBody)(headAppenders)(bodyAppenders) :_*)
-
-      case g: Group =>
-        xform(g.child, inBody)(headAppenders)(bodyAppenders)
-
-      case x => x
     }
 
-    xform(xhtml, false)(DomAppenders.headAppenders(this))(DomAppenders.bodyAppenders(this))
+    def _fixHtml(in: NodeSeq, _inHtml: Boolean, _inHead: Boolean, _justHead: Boolean, _inBody: Boolean, _justBody: Boolean, _bodyHead: Boolean, _bodyTail: Boolean): NodeSeq = {
+      in.map{
+        v =>
+        var inHtml = _inHtml
+        var inHead = _inHead
+        var justHead = false
+        var justBody = false
+        var inBody = _inBody
+        var bodyHead = false
+        var bodyTail = false
+
+        v match {
+          case e: Elem if e.label == "html" && !inHtml => htmlTag = e; inHtml = true
+          case e: Elem if e.label == "head" && inHtml && !inBody => headTag = e; inHead = true; justHead = true
+          case e: Elem if e.label == "head" && inHtml && inBody => bodyHead = true 
+          case e: Elem if e.label == "tail" && inHtml && inBody => bodyTail = true
+          case e: Elem if e.label == "body" && inHtml => bodyTag = e; inBody = true; justBody = true
+
+          case _ =>
+        }
+
+        val ret: Node = v match {
+          case Group(nodes) => Group(_fixHtml( nodes, inHtml, inHead, justHead, inBody, justBody, bodyHead, bodyTail))
+          case e: Elem if e.label == "form" => Elem(v.prefix, v.label, fixAttrs(v.attributes, "action", v.attributes, true), v.scope, _fixHtml(v.child, inHtml, inHead, justHead, inBody, justBody, bodyHead, bodyTail) : _* )
+          case e: Elem if e.label == "script" => Elem(v.prefix, v.label, fixAttrs(v.attributes, "src", v.attributes, false), v.scope, _fixHtml(v.child, inHtml, inHead, justHead, inBody, justBody, bodyHead, bodyTail) : _* )
+          case e: Elem if e.label == "a" => Elem(v.prefix, v.label, fixAttrs(v.attributes, "href", v.attributes, true), v.scope, _fixHtml( v.child, inHtml, inHead, justHead, inBody, justBody, bodyHead, bodyTail) : _* )
+          case e: Elem if e.label == "link" => Elem(v.prefix, v.label, fixAttrs(v.attributes, "href", v.attributes, false), v.scope, _fixHtml( v.child, inHtml, inHead, justHead, inBody, justBody, bodyHead, bodyTail) : _* )
+          case e: Elem => Elem(v.prefix, v.label, fixAttrs(v.attributes, "src", v.attributes, true), v.scope, _fixHtml( v.child, inHtml, inHead, justHead, inBody, justBody, bodyHead, bodyTail) : _*)
+          case _ => v
+        }
+        if (_justHead) headChildren += ret
+        else if (_justBody) bodyChildren += ret
+        else if (_bodyHead) addlHead += ret
+        else if (_bodyTail) addlTail += ret
+
+        if (bodyHead || bodyTail) Text("")
+        else ret
+      }
+    }
+    _fixHtml(xhtml, false, false, false, false, false, false,false)
+
+    val htmlKids = new ListBuffer[Node]
+
+    val nl = Text("\n")
+
+    for {
+      node <- HeadHelper.removeHtmlDuplicates(addlHead.toList)
+    } {
+      headChildren += node
+      headChildren += nl
+    }
+
+    /**
+     * Appends ajax stript to body
+     */
+
+    if (LiftRules.autoIncludeAjax(this)) {
+      headChildren += <script src={S.encodeURL(contextPath+"/"+
+                                               LiftRules.ajaxPath +
+                                               "/" + LiftRules.ajaxScriptName())}
+        type="text/javascript"/>
+      headChildren += nl
+    }
+  
+    val cometList = cometTimes.toList
+
+    /**
+     * Appends comet stript reference to head
+     */
+    if (!cometList.isEmpty &&  LiftRules.autoIncludeComet(this)) {
+      headChildren += <script src={S.encodeURL(contextPath+"/"+
+                                               LiftRules.cometPath +
+                                               "/" + urlEncode(this.uniqueId) +
+                                               "/" + LiftRules.cometScriptName())}
+        type="text/javascript"/>
+      headChildren += nl
+    }
+
+    for {
+      node <- HeadHelper.removeHtmlDuplicates(addlTail.toList)
+    } bodyChildren += node
+
+    bodyChildren += nl
+
+    if (!cometList.isEmpty &&  LiftRules.autoIncludeComet(this)) {
+      bodyChildren +=  JsCmds.Script(LiftRules.renderCometPageContents(this, cometList))
+      bodyChildren += nl
+    }
+
+    if (LiftRules.enableLiftGC) {
+      import js._
+      import JsCmds._
+      import JE._
+
+      bodyChildren += JsCmds.Script(OnLoad(JsRaw("liftAjax.lift_successRegisterGC()")) &
+                                    JsCrVar("lift_page", RenderVersion.get))
+    }
+
+    htmlKids += nl
+    htmlKids += Elem(headTag.prefix, headTag.label, headTag.attributes, headTag.scope, headChildren.toList :_*)
+    htmlKids += nl
+    htmlKids += Elem(bodyTag.prefix, bodyTag.label, bodyTag.attributes, bodyTag.scope, bodyChildren.toList :_*)
+    htmlKids += nl
+
+    Elem(htmlTag.prefix, htmlTag.label, htmlTag.attributes, htmlTag.scope, htmlKids.toList :_*)
   }
 
+  /*
+   private def merge(xhtml: NodeSeq) : NodeSeq = {
+
+   val headInBody: NodeSeq =
+   (for (body <- xhtml \ "body";
+   head <- findElems(body)(_.label == "head")) yield head.child).
+   flatMap {e => e}
+
+   /**
+    * Document walkthrough
+    */
+   def xform(in: NodeSeq, inBody: Boolean)
+   (headAppenders : Node => Node)
+   (bodyAppenders : Node => Node): NodeSeq = in flatMap {
+   case e: Elem if !inBody && e.label == "body" =>
+   val n = Elem(e.prefix, e.label, e.attributes, e.scope,
+   xform(e.child, true)(headAppenders)(bodyAppenders) :_*)
+   bodyAppenders(n)
+
+   case e: Elem if inBody && e.label == "head" => NodeSeq.Empty
+
+   case e: Elem if e.label == "head" =>
+   val n = if (!headInBody.isEmpty) {
+   Elem(e.prefix, e.label, e.attributes,
+   e.scope, HeadHelper.removeHtmlDuplicates(e.child ++ headInBody) :_*)
+   } else {
+   e
+   }
+   headAppenders(n)
+
+   case e: Elem =>
+   Elem(e.prefix, e.label, e.attributes, e.scope, xform(e.child, inBody)(headAppenders)(bodyAppenders) :_*)
+
+   case g: Group =>
+   xform(g.child, inBody)(headAppenders)(bodyAppenders)
+
+   case x => x
+   }
+
+   xform(xhtml, false)(DomAppenders.headAppenders(this))(DomAppenders.bodyAppenders(this))
+   }
+   */
+ 
   private[http] def processRequest(request: Req): Box[LiftResponse] = {
     ieMode.is // make sure this is primed
     S.oldNotices(notices)
@@ -546,6 +690,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
                       case Full(rawXml: NodeSeq) => {
                           // Phase 2: Head & Tail merge, add additional elements to body & head
                           val xml = merge(rawXml)
+
                           this.synchronized {
                             S.functionMap.foreach {mi =>
                               // ensure the right owner
@@ -558,10 +703,10 @@ class LiftSession(val contextPath: String, val uniqueId: String,
 
                           notices = Nil
                           // Phase 3: Response conversion including fixHtml
-                          Full(LiftRules.convertResponse((xml,
-                                                          S.getHeaders(LiftRules.defaultHeaders((xml, request))),
-                                                          S.responseCookies,
-                                                          request)))
+                          Full(LiftRules.convertResponse(xml,
+                                                         S.getHeaders(LiftRules.defaultHeaders((xml, request))),
+                                                         S.responseCookies,
+                                                         request))
                         }
                       case _ => if (LiftRules.passNotFoundToChain) Empty else Full(request.createNotFound)
                     })
@@ -710,11 +855,11 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     else findClass(name, LiftRules.buildPackage("snippet") ::: ("lift.app.snippet" :: "net.liftweb.builtin.snippet" :: Nil))
   }
 
-private def instantiateOrRedirect[T](c: Class[T]): Box[T] = tryo({
-          case e: ResponseShortcutException => throw e
-          case ite: _root_.java.lang.reflect.InvocationTargetException
-            if (ite.getCause.isInstanceOf[ResponseShortcutException]) => throw ite.getCause.asInstanceOf[ResponseShortcutException]
-        }, c.newInstance)
+  private def instantiateOrRedirect[T](c: Class[T]): Box[T] = tryo({
+      case e: ResponseShortcutException => throw e
+      case ite: _root_.java.lang.reflect.InvocationTargetException
+        if (ite.getCause.isInstanceOf[ResponseShortcutException]) => throw ite.getCause.asInstanceOf[ResponseShortcutException]
+    }, c.newInstance)
 
   private def findAttributeSnippet(name: String, rest: MetaData): MetaData = {
     S.doSnippet(name) {
@@ -885,7 +1030,7 @@ private def instantiateOrRedirect[T](c: Class[T]): Box[T] = tryo({
     attrs.get("form").map(ft => (
         (<form action={S.uri} method={ft.text.trim.toLowerCase}>{ret}</form> %
          checkMultiPart(attrs)) %
-         checkAttr("class", attrs)) % checkAttr("id",attrs) % checkAttr("target",attrs) ) getOrElse ret
+        checkAttr("class", attrs)) % checkAttr("id",attrs) % checkAttr("target",attrs) ) getOrElse ret
 
   }
 
@@ -939,11 +1084,11 @@ private def instantiateOrRedirect[T](c: Class[T]): Box[T] = tryo({
       case elm: Elem if elm.prefix == "lift" || elm.prefix == "l"=>
         S.doSnippet(elm.label){
           S.withAttrs(elm.attributes) {
-          S.setVars(elm.attributes){
-            processSurroundAndInclude(page, NamedPF((elm.label, elm, elm.attributes,
-                                                     asNodeSeq(elm.child), page),
-                                                    liftTagProcessing))
-          }}}
+            S.setVars(elm.attributes){
+              processSurroundAndInclude(page, NamedPF((elm.label, elm, elm.attributes,
+                                                       asNodeSeq(elm.child), page),
+                                                      liftTagProcessing))
+            }}}
 
       case elm: Elem =>
         Elem(v.prefix, v.label, processAttributes(v.attributes),

@@ -668,7 +668,7 @@ object LiftRules {
    * Takes a Node, headers, cookies, and a session and turns it into an XhtmlResponse.
    */
   private def cvt(ns: Node, headers: List[(String, String)], cookies: List[HTTPCookie], session: Req) =
-  convertResponse({val ret = XhtmlResponse(Group(session.fixHtml(ns)),
+  convertResponse({val ret = XhtmlResponse(ns, //Group(session.fixHtml(ns)),
                                            ResponseInfo.docType(session),
                                            headers, cookies, 200,
                                            S.ieMode)
@@ -697,6 +697,12 @@ object LiftRules {
    * Holds the user's transformer functions allowing the user to modify a LiftResponse before sending it to client.
    */
   val responseTransformers = RulesSeq[LiftResponse => LiftResponse]
+
+  /**
+  * Calculate the context path for a given session if it should be something different than
+  * the normal context path
+  */
+  val calcContextPath: LiftSession => Box[String] = _ => Empty
 
   /**
    * convertResponse is a PartialFunction that reduces a given Tuple4 into a
