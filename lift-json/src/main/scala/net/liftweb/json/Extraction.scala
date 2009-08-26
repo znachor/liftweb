@@ -65,8 +65,11 @@ object Extraction {
   private def extract0[A](json: JValue, mf: Manifest[A]): A = {
     val mapping = mappingOf(mf.erasure)
 
-    def newInstance(constructor: JConstructor[_], args: List[Any]) = 
+    def newInstance(constructor: JConstructor[_], args: List[Any]) = try {
       constructor.newInstance(args.map(_.asInstanceOf[AnyRef]).toArray: _*)
+    } catch {
+      case e: IllegalArgumentException => fail("Parsed JSON values do not match with class constructor\nargs=" + args.mkString(",") + "\narg types=" + args.map(_.asInstanceOf[AnyRef].getClass.getName).mkString(",")  + "\nconstructor=" + constructor)
+    }
 
     def newPrimitive(elementType: Class[_], elem: JValue) = convert(elem, elementType)
 
