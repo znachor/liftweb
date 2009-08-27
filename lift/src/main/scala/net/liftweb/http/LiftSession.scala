@@ -528,7 +528,7 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
           case _ => v
         }
         if (_justHead) headChildren += ret
-        else if (_justBody) bodyChildren += ret
+        else if (_justBody && !bodyHead && !bodyTail) bodyChildren += ret
         else if (_bodyHead) addlHead += ret
         else if (_bodyTail) addlTail += ret
 
