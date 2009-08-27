@@ -132,19 +132,28 @@ object Props {
    * The resource path segment corresponding to the current mode.
    */
   lazy val modeName = mode match {
-    case Test => "test."
-    case Staging => "staging."
-    case Production => "production."
-    case Pilot => "pilot."
-    case Profile => "profile."
+    case Test => "test"
+    case Staging => "staging"
+    case Production => "production"
+    case Pilot => "pilot"
+    case Profile => "profile"
     case _ => ""
+  }
+
+  private lazy val _modeName = dotLen(modeName)
+
+  private def dotLen(in: String): String = in match {
+    case null | "" => in
+    case x => x+"."
   }
 
   /**
    * The resource path segment corresponding to the current system user
    * (from System.getProperty("user.name"))
    */
-  lazy val userName = System.getProperty("user.name") + "."
+  lazy val userName = System.getProperty("user.name")
+
+  private lazy val _userName = dotLen(userName)
 
   /**
    * Is the app running in the Google App engine (the System property in.gae.j is set)
@@ -154,7 +163,9 @@ object Props {
   /**
    * The resource path segment corresponding to the system hostname.
    */
-  lazy val hostName: String = (if (inGAE) "GAE" else InetAddress.getLocalHost.getHostName) + "."
+  lazy val hostName: String = (if (inGAE) "GAE" else InetAddress.getLocalHost.getHostName)
+
+  private lazy val _hostName = dotLen(hostName)
 
   /**
    * The list of paths to search for property file resources.
@@ -162,14 +173,14 @@ object Props {
    * in /props
    */
   lazy val toTry: List[() => String] = List(
-    () => "/props/" + modeName + userName + hostName,
-      () => "/props/" + modeName + userName,
-      () => "/props/" + modeName + hostName,
-      () => "/props/" + modeName + "default.",
-      () => "/" + modeName + userName + hostName,
-      () => "/" + modeName + userName,
-      () => "/" + modeName + hostName,
-      () => "/" + modeName + "default.")
+    () => "/props/" + _modeName + _userName + _hostName,
+      () => "/props/" + _modeName + _userName,
+      () => "/props/" + _modeName + _hostName,
+      () => "/props/" + _modeName + "default.",
+      () => "/" + _modeName + _userName + _hostName,
+      () => "/" + _modeName + _userName,
+      () => "/" + _modeName + _hostName,
+      () => "/" + _modeName + "default.")
 
   /**
    * The map of key/value pairs retrieved from the property file.
