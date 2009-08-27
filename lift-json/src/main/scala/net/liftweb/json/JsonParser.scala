@@ -193,6 +193,11 @@ object JsonParser {
               case 'n' => '\n'
               case 't' => '\t'
               case 'r' => '\r'
+              case 'b' => '\b'
+              case 'u' => 
+                val codePoint = Integer.parseInt(buf.substring(cur+1, cur+5), 16)
+                cur = cur+4
+                Character.toChars(codePoint)(0) // FIXME when can this return more than 1 char? Use s.appendCodePoint?
               case _ => '\\'
             }
           } else c
