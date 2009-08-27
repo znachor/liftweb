@@ -864,7 +864,7 @@ object LiftRules {
   /**
    * Define the XHTML validator
    */
-  var xhtmlValidator: Box[XHtmlValidator] = Full(TransitionalXHTML1_0Validator)
+  var xhtmlValidator: Box[XHtmlValidator] = Empty // Full(TransitionalXHTML1_0Validator)
 
   /**
    * Returns the JavaScript that manages Ajax requests.

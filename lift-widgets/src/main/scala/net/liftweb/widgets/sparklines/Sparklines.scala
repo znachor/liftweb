@@ -50,7 +50,6 @@ object Sparklines {
     {
       Script(OnLoad(toJsExp(id, graphStyle, data, opts)))
     }
-    </script>
     </head>
   }
 

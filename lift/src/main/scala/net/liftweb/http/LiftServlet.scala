@@ -280,7 +280,7 @@ class LiftServlet {
 
           Full(ret)
         } finally {
-          liftSession.updateFunctionMap(S.functionMap)
+          liftSession.updateFunctionMap(S.functionMap, RenderVersion.get, millis)
         }
     }
     tryo{LiftSession.onEndServicing.foreach(_(liftSession, requestState, ret))}

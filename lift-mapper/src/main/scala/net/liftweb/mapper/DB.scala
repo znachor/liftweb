@@ -82,7 +82,7 @@ object DB {
     if (ks.isEmpty)
     threadStore.remove
     else {
-      ks.foreach(n => releaseConnectionNamed(n))
+      ks.foreach(n => releaseConnectionNamed(n, true))
       clearThread
     }
   }
@@ -140,15 +140,16 @@ object DB {
     }
     info(name) = ret
     Log.trace("Acquired connection "+name+" on thread "+Thread.currentThread+
-    " count "+ret.cnt)
+              " count "+ret.cnt)
     ret.conn
   }
 
-  private def releaseConnectionNamed(name: ConnectionIdentifier) {
+  private def releaseConnectionNamed(name: ConnectionIdentifier, rollback: Boolean) {
     Log.trace("Request to release connection: "+name+" on thread "+Thread.currentThread)
     (info.get(name): @unchecked) match {
       case Some(ConnectionHolder(c, 1, post)) =>
-        c.commit
+        if (rollback) c.rollback
+        else c.commit
         tryo(c.releaseFunc())
         info -= name
         post.reverse.foreach(f => tryo(f()))
@@ -249,12 +250,12 @@ object DB {
           case (l: Long, idx) => ps.setLong(idx + 1, l)
           case (d: Double, idx) => ps.setDouble(idx + 1, d)
           case (f: Float, idx) => ps.setFloat(idx + 1, f)
-	  // Allow the user to specify how they want the Date handled based on the input type
-	  case (t: _root_.java.sql.Timestamp, idx) => ps.setTimestamp(idx + 1, t)
-	  case (d: _root_.java.sql.Date, idx) => ps.setDate(idx + 1, d)
-	  case (t: _root_.java.sql.Time, idx) => ps.setTime(idx + 1, t)
-	  /* java.util.Date has to go last, since the java.sql date/time classes subclass it. By default we
-	   * assume a Timestamp value */
+            // Allow the user to specify how they want the Date handled based on the input type
+          case (t: _root_.java.sql.Timestamp, idx) => ps.setTimestamp(idx + 1, t)
+          case (d: _root_.java.sql.Date, idx) => ps.setDate(idx + 1, d)
+          case (t: _root_.java.sql.Time, idx) => ps.setTime(idx + 1, t)
+            /* java.util.Date has to go last, since the java.sql date/time classes subclass it. By default we
+             * assume a Timestamp value */
           case (d: _root_.java.util.Date, idx) => ps.setTimestamp(idx + 1, new _root_.java.sql.Timestamp(d.getTime))
           case (b: Boolean, idx) => ps.setBoolean(idx + 1, b)
           case (s: String, idx) => ps.setString(idx + 1, s)
@@ -318,10 +319,13 @@ object DB {
    */
   def use[T](name : ConnectionIdentifier)(f : (SuperConnection) => T) : T = {
     val conn = getConnection(name)
+    var rollback = true
     try {
-      f(conn)
+      val ret = f(conn)
+      rollback = false
+      ret
     } finally {
-        releaseConnectionNamed(name)
+      releaseConnectionNamed(name, rollback)
     }
   }
 

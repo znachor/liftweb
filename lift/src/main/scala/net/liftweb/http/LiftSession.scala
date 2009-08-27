@@ -235,6 +235,10 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
   @volatile
   private var _running_? = false
 
+  /**
+  *  ****IMPORTANT**** when you access messageCallback, it *MUST*
+  * be in a block that's synchronized on the owner LiftSession
+  */
   private var messageCallback: HashMap[String, S.AFuncHolder] = new HashMap
 
   private[http] var notices: Seq[(NoticeType.Value, NodeSeq, Box[String])] = Nil
@@ -340,10 +344,11 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
     ret
   }
 
+/*
   private[http] def updateFunctionMap(funcs: Map[String, S.AFuncHolder]): Unit = synchronized {
     funcs.foreach(mi => messageCallback(mi._1) = mi._2)
   }
-
+*/
   /**
    * Updates the internal functions mapping
    */
@@ -414,7 +419,7 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
       val now = millis
       messageCallback.keys.toList.foreach{k =>
         val f = messageCallback(k)
-        if (!f.sessionLife && (now - f.lastSeen) > LiftRules.unusedFunctionsLifeTime) {
+        if (!f.sessionLife && f.owner.isDefined && (now - f.lastSeen) > LiftRules.unusedFunctionsLifeTime) {
           messageCallback -= k
         }
       }
@@ -424,9 +429,13 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
   /**
    * Return the number if updated functions
    */
-  private[http] def updateFuncByOwner(ownerName: String, time: Long): Int = {
+  private[http] def updateFuncByOwner(ownerName: String, time: Long): Int = synchronized {
     (0 /: messageCallback)((l, v) => l + (v._2.owner match {
-          case Full(owner) if (owner == ownerName) => v._2.lastSeen = time; 1
+          case Full(owner) if (owner == ownerName) =>
+            v._2.lastSeen = time
+            1
+          case Empty => v._2.lastSeen = time
+            1
           case _ => 0
         }))
   }
@@ -716,7 +725,7 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
                           // Phase 2: Head & Tail merge, add additional elements to body & head
                           val xml = merge(rawXml)
 
-                          this.synchronized {
+                          LiftSession.this.synchronized {
                             S.functionMap.foreach {mi =>
                               // ensure the right owner
                               messageCallback(mi._1) = mi._2.owner match {
