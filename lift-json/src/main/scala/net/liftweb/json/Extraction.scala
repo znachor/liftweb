@@ -111,22 +111,24 @@ object Extraction {
   }
 
   private def mappingOf(clazz: Class[_]) = {
+    import Reflection._
+
     def makeMapping(path: Option[String], clazz: Class[_], isList: Boolean): Mapping = isList match {
       case false => Constructor(path, clazz.getDeclaredConstructors()(0), constructorArgs(clazz))
-      case true if Reflection.primitive_?(clazz) => ListOfPrimitives(path.get, clazz)
+      case true if primitive_?(clazz) => ListOfPrimitives(path.get, clazz)
       case true => ListConstructor(path.get, clazz.getDeclaredConstructors()(0), constructorArgs(clazz))
     }
 
-    def constructorArgs(clazz: Class[_]) = clazz.getDeclaredFields.filter(!Reflection.static_?(_)).map { x =>
+    def constructorArgs(clazz: Class[_]) = clazz.getDeclaredFields.filter(!static_?(_)).map { x =>
       fieldMapping(x.getName, x.getType, x.getGenericType)
     }.toList.reverse
 
     def fieldMapping(name: String, fieldType: Class[_], genericType: Type): Mapping = 
-      if (Reflection.primitive_?(fieldType)) Value(name, fieldType)
+      if (primitive_?(fieldType)) Value(name, fieldType)
       else if (fieldType == classOf[BigInt]) Value(name, fieldType)
-      else if (fieldType == classOf[List[_]]) makeMapping(Some(name), Reflection.typeParameter(genericType), true)
+      else if (fieldType == classOf[List[_]]) makeMapping(Some(name), typeParameter(genericType), true)
       else if (classOf[Option[_]].isAssignableFrom(fieldType))
-        Optional(fieldMapping(name, Reflection.typeParameter(genericType), null)) // FIXME is it possible to find out the next genericType here?
+        Optional(fieldMapping(name, typeParameter(genericType), null)) // FIXME is it possible to find out the next genericType here?
       else makeMapping(Some(name), fieldType, false)
     memo.memoize(clazz, (x: Class[_]) => makeMapping(None, x, false))
   }
