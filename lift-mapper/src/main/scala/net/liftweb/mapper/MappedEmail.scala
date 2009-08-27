@@ -21,7 +21,7 @@ import _root_.scala.xml.Text
 import _root_.net.liftweb.http.{S, FieldError}
 
 object MappedEmail {
-  val emailPattern = Pattern.compile("^[a-z0-9._%-]+@(?:[a-z0-9-]+\\.)+[a-z]{2,4}$")
+  val emailPattern = Pattern.compile("^[a-z0-9._%-+]+@(?:[a-z0-9-]+\\.)+[a-z]{2,4}$")
   def validEmailAddr_?(email: String): Boolean = emailPattern.matcher(email).matches
 }
 

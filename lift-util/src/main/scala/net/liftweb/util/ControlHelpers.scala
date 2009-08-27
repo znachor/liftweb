@@ -49,21 +49,18 @@ trait ControlHelpers extends ClassHelpers {
    * an exception with its class in the 'ignore' list or if 'ignore' is
    * null or an empty list, ignore the exception and return None.
    *
-   * @param ignore - a list of exception classes to ignore. A thrown exception will be ignored if it is assignable from one of
-   * the exception classes in the list
-   * @param onError - an optional callback function that will use the thrown exception as a parameter
+   * @param handler - A partial function that handles exceptions
    * @param f - the block of code to evaluate
    * @return <ul>
    *   <li>Full(result of the evaluation of f) if f doesn't throw any exception
    *   <li>a Failure if f throws an exception
-   *   <li>Empty if the exception class is in the ignore list
    *   </ul>
    */
-  def tryo[T](ignore: PartialFunction[Throwable, T], f: => T): Box[T] = {
+  def tryo[T](handler: PartialFunction[Throwable, T], f: => T): Box[T] = {
     try {
       Full(f)
     } catch {
-      case t if ignore.isDefinedAt(t) => Full(ignore(t))
+      case t if handler.isDefinedAt(t) => Full(handler(t))
       case e => Failure(e.getMessage, Full(e), Empty)
     }
   }

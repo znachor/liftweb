@@ -35,6 +35,13 @@ object ToHeadUsages extends Specification {
       )
     }
 
+    "merge <head> from html fragment does not include head element in body" >> {
+      JettyTestServer.browse(
+        "/htmlFragmentWithHead",
+        _.assertElementNotPresentByXPath("/html/body/script[@id='fromFrag']")
+      )
+    }
+
     "merge <head> from snippet" >> {
       JettyTestServer.browse(
         "/htmlSnippetWithHead",

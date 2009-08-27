@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2008 WorldWide Conferencing, LLC
+ * Copyright 2007-2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,10 +47,10 @@ object Sparklines {
   def onLoad(id: String, graphStyle: SparklineStyle.Value, data: JsArray, opts: JsObj) : NodeSeq = {
     <head>
        <script type="text/javascript" src={"/" + LiftRules.resourceServerPath + "/sparklines/sparklines.min.js"}/>
-       <script type="text/javascript" charset="utf-8"> {
-         OnLoad(toJsExp(id, graphStyle, data, opts)) toJsCmd
-       }
-       </script>
+    {
+      Script(OnLoad(toJsExp(id, graphStyle, data, opts)))
+    }
+    </script>
     </head>
   }
 

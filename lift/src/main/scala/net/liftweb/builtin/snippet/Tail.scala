@@ -11,7 +11,8 @@ object Tail extends DispatchSnippet {
      case _ => render _
    }
 
-   def render(xhtml: NodeSeq) : NodeSeq = {
+   def render(xhtml: NodeSeq) : NodeSeq = <tail>xhtml</tail>
+   /*{
      (for {ctx <- S.session ?~ ("FIX"+"ME: Invalid session")
           req <- S.request ?~ ("FIX"+"ME: Invalid request")
      } yield {
@@ -22,5 +23,5 @@ object Tail extends DispatchSnippet {
        case Empty => Comment("FIX"+ "ME: session or request are invalid")
        case Failure(msg, _, _) => Comment(msg)
      }
-   }
+   }*/
 }

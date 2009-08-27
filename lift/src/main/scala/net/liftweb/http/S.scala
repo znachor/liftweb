@@ -510,6 +510,11 @@ object S extends HasParams {
   def addSessionRewriter(name: String, rw: LiftRules.RewritePF) =
   session map (_.sessionRewriter += (name -> rw))
 
+  private object _curRequestContextPath extends RequestVar[Box[String]](Empty)
+  def curRequestContextPath: Box[String] = _curRequestContextPath.is
+
+  def curRequestContextPath_=(str: Box[String]) {_curRequestContextPath.set(str)}
+
   /**
    * Removes the given per-session rewriter. See addSessionRewriter for an
    * example of usage.
@@ -977,9 +982,9 @@ object S extends HasParams {
    * @see #getHeaders(List[(String,String)])
    */
   def getRequestHeader(name : String) : Box[String] =
-    for (req <- request;
-	 hdr <- req.header(name))
-      yield hdr
+  for (req <- request;
+       hdr <- req.header(name))
+  yield hdr
 
   /**
    * Sets the document type for the response. If this is not set, the DocType for Lift responses
@@ -1365,17 +1370,17 @@ object S extends HasParams {
    * attributes:
    *
    * <pre name="code" class="scala">
-    // Get a Box for the attribute:
-    val myAttr = S.attr("test") openOr "Not found"
+   // Get a Box for the attribute:
+   val myAttr = S.attr("test") openOr "Not found"
 
-    // Get an attribute or return a default value:
-    val myAttr = S.attr("name", "Fred")
+   // Get an attribute or return a default value:
+   val myAttr = S.attr("name", "Fred")
 
-    // Apply a transform function on the attribute value, or return an Empty:
-    val pageSize = S.attr("count", _.toInt) openOr 20
+   // Apply a transform function on the attribute value, or return an Empty:
+   val pageSize = S.attr("count", _.toInt) openOr 20
 
-    // There are also prefixed versions:
-    val prefixedAttr = S.attr("prefix", "name") openOr "Not found"
+   // There are also prefixed versions:
+   val prefixedAttr = S.attr("prefix", "name") openOr "Not found"
    * </pre>
    */
   object attr extends AttrHelper[Box] {
@@ -1472,7 +1477,7 @@ object S extends HasParams {
    * Returns the 'type' S attribute. This corresponds to the current Snippet's name. For example, the snippet:
    *
    * <pre name="code" class="xml">
-    &lt;lift:Hello.world /&gt;
+   &lt;lift:Hello.world /&gt;
    * </pre>
    *
    * Will return "Hello.world".

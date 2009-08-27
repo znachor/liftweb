@@ -4,6 +4,7 @@ import _root_.scala.xml._
 import _root_.net.liftweb.util._
 import _root_.net.liftweb.http.js._
 
+/*
 private[http] object DomAppenders {
   def headAppenders(s: LiftSession): Node => Node =
     (ajaxAppend(s) _) andThen (cometHeadAppend(s) _)
@@ -85,3 +86,4 @@ private[http] object ajaxAppend extends DomAppenders {
     } else node
 }
 
+*/
