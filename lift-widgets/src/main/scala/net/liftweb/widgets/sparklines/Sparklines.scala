@@ -47,10 +47,10 @@ object Sparklines {
   def onLoad(id: String, graphStyle: SparklineStyle.Value, data: JsArray, opts: JsObj) : NodeSeq = {
     <head>
        <script type="text/javascript" src={"/" + LiftRules.resourceServerPath + "/sparklines/sparklines.min.js"}/>
-       <script type="text/javascript" charset="utf-8"> {
-         Script(OnLoad(toJsExp(id, graphStyle, data, opts)))
-       }
-       </script>
+    {
+      Script(OnLoad(toJsExp(id, graphStyle, data, opts)))
+    }
+    </script>
     </head>
   }
 
