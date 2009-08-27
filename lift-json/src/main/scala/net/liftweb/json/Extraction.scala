@@ -16,7 +16,7 @@ package net.liftweb.json
  * and limitations under the License.
  */
 
-import java.lang.reflect.{Constructor => JConstructor}
+import java.lang.reflect.{Constructor => JConstructor, Type}
 import scala.reflect.Manifest
 import JsonAST._
 
@@ -24,6 +24,7 @@ import JsonAST._
  *
  *  FIXME: Add support to extract List of values too.
  *  FIXME: Add support for Optional values.
+ *  FIXME: Add support for Date primitive.
  *  FIXME: Add annnotation to configure path
  *
  *  See: ExtractionExamples.scala
@@ -51,6 +52,7 @@ object Extraction {
   case class Constructor(path: Option[String], constructor: JConstructor[_], args: List[Mapping]) extends Mapping
   case class ListConstructor(path: String, constructor: JConstructor[_], args: List[Mapping]) extends Mapping
   case class ListOfPrimitives(path: String, elementType: Class[_]) extends Mapping
+  case class Optional(mapping: Mapping) extends Mapping
 
   val memo = new Memo[Class[_], Mapping]
 
@@ -68,7 +70,7 @@ object Extraction {
     def newInstance(constructor: JConstructor[_], args: List[Any]) = try {
       constructor.newInstance(args.map(_.asInstanceOf[AnyRef]).toArray: _*)
     } catch {
-      case e: IllegalArgumentException => fail("Parsed JSON values do not match with class constructor\nargs=" + args.mkString(",") + "\narg types=" + args.map(_.asInstanceOf[AnyRef].getClass.getName).mkString(",")  + "\nconstructor=" + constructor)
+      case e @ (_:IllegalArgumentException | _:InstantiationException) => fail("Parsed JSON values do not match with class constructor\nargs=" + args.mkString(",") + "\narg types=" + args.map(_.asInstanceOf[AnyRef].getClass.getName).mkString(",")  + "\nconstructor=" + constructor)
     }
 
     def newPrimitive(elementType: Class[_], elem: JValue) = convert(elem, elementType)
@@ -87,6 +89,17 @@ object Extraction {
       case ListOfPrimitives(path, elementType) =>
         val arr = fieldValue(root, path).asInstanceOf[JArray]
         arr.arr.map(elem => newPrimitive(elementType, elem)) :: argStack
+      case Optional(m) =>
+        // FIXME Remove this try-catch.
+        try { 
+          val opt = build(root, m, argStack) 
+          (opt(0) match {
+            case null => None
+            case x => Some(x)
+          }) :: argStack
+        } catch {
+          case e: MappingException => None :: argStack
+        }
     }
 
     def fieldValue(json: JValue, path: String) = (json \ path) match {
@@ -98,19 +111,25 @@ object Extraction {
   }
 
   private def mappingOf(clazz: Class[_]) = {
+    import Reflection._
+
     def makeMapping(path: Option[String], clazz: Class[_], isList: Boolean): Mapping = isList match {
       case false => Constructor(path, clazz.getDeclaredConstructors()(0), constructorArgs(clazz))
-      case true if Reflection.primitive_?(clazz) => ListOfPrimitives(path.get, clazz)
+      case true if primitive_?(clazz) => ListOfPrimitives(path.get, clazz)
       case true => ListConstructor(path.get, clazz.getDeclaredConstructors()(0), constructorArgs(clazz))
     }
 
-    def constructorArgs(clazz: Class[_]) = clazz.getDeclaredFields.filter(!Reflection.static_?(_)).map { x =>      
-      if (Reflection.primitive_?(x.getType)) Value(x.getName, x.getType)
-      else if (x.getType == classOf[BigInt]) Value(x.getName, x.getType)
-      else if (x.getType == classOf[List[_]]) makeMapping(Some(x.getName), Reflection.parametrizedType(x), true)
-      else makeMapping(Some(x.getName), x.getType, false)
+    def constructorArgs(clazz: Class[_]) = clazz.getDeclaredFields.filter(!static_?(_)).map { x =>
+      fieldMapping(x.getName, x.getType, x.getGenericType)
     }.toList.reverse
 
+    def fieldMapping(name: String, fieldType: Class[_], genericType: Type): Mapping = 
+      if (primitive_?(fieldType)) Value(name, fieldType)
+      else if (fieldType == classOf[BigInt]) Value(name, fieldType)
+      else if (fieldType == classOf[List[_]]) makeMapping(Some(name), typeParameter(genericType), true)
+      else if (classOf[Option[_]].isAssignableFrom(fieldType))
+        Optional(fieldMapping(name, typeParameter(genericType), null)) // FIXME is it possible to find out the next genericType here?
+      else makeMapping(Some(name), fieldType, false)
     memo.memoize(clazz, (x: Class[_]) => makeMapping(None, x, false))
   }
 
@@ -143,8 +162,8 @@ object Extraction {
   object Reflection {
     import java.lang.reflect._
 
-    def parametrizedType(f: Field): Class[_] = {
-      val ptype = f.getGenericType.asInstanceOf[ParameterizedType]
+    def typeParameter(t: Type): Class[_] = {
+      val ptype = t.asInstanceOf[ParameterizedType]
       ptype.getActualTypeArguments()(0).asInstanceOf[Class[_]]
     }
 

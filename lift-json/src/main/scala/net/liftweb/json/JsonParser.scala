@@ -178,25 +178,32 @@ object JsonParser {
 
       def parseString: String = {
         cur = cur+1
-        val s = new StringBuilder
+        val s = new java.lang.StringBuilder
+        
+        def append(c: Char) = s.append(c)
+        
         while (true) {
-          var c = buf.charAt(cur)
+          val c = buf.charAt(cur)
           if (c == '"') {
             cur = cur+1
             return s.toString
           }
 
-          c = if (c == '\\') {
+          if (c == '\\') {
             cur = cur+1
             buf.charAt(cur) match {
-              case '"' => '"'
-              case 'n' => '\n'
-              case 't' => '\t'
-              case 'r' => '\r'
-              case _ => '\\'
+              case '"' => append('"')
+              case 'n' => append('\n')
+              case 't' => append('\t')
+              case 'r' => append('\r')
+              case 'b' => append('\b')
+              case 'u' => 
+                val codePoint = Integer.parseInt(buf.substring(cur+1, cur+5), 16)
+                cur = cur+4
+                s.appendCodePoint(codePoint)
+              case _ => append('\\')
             }
-          } else c
-          s.append(c)
+          } else append(c)
           cur = cur+1
         }
         error("can't happen")

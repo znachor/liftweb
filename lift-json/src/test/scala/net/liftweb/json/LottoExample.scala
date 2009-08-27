@@ -28,8 +28,8 @@ object LottoExample extends Specification {
 
   (json \ "lotto" \ "winners")(0).extract[Winner] mustEqual Winner(23, List(2, 45, 34, 23, 3, 5))
 
-  // FIXME: needs Option support
-  //(json \ "lotto").extract[Lotto] mustEqual lotto
+  // FIXME: needs Option and Date support
+//  (json \ "lotto").extract[Lotto] mustEqual lotto
 
   case class Lotto2(id: Long, winningNumbers: List[Int], winners: List[Winner])
 

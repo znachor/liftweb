@@ -40,6 +40,11 @@ object ExtractionExamples extends Specification {
     json.extract[Child] mustEqual Child(null, 5)
   }
 
+  "Option extraction example" in {
+    val json = parse("""{ "name": null, "age": 5, "mother":{"name":"Marilyn"}}""")
+    json.extract[OChild] mustEqual OChild(None, 5, Some(Parent("Marilyn")), None)
+  }
+
   /* Does not work yet.
   "List extraction example" in {
     val json = parse(testJson)
@@ -91,3 +96,6 @@ case class SimplePerson(name: String, address: Address)
 case class Name(name: String)
 
 case class Primitives(i: Int, l: Long, d: Double, f: Float, s: String, sh: Short, b: Byte, bool: Boolean)
+
+case class OChild(name: Option[String], age: Int, mother: Option[Parent], father: Option[Parent])
+case class Parent(name: String)
