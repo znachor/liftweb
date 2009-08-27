@@ -426,6 +426,14 @@ class Req(val path: ParsePath,
   lazy val isOpera9: Boolean = (userAgent.map(s => s.indexOf("Opera/9.") >= 0) openOr false)
   def isOpera = isOpera9
 
+  lazy val acceptsJavaScript_? = {
+    request.headers.filter(_.name.toLowerCase == "accept").
+    find(h => h.values.find(s =>
+        s.toLowerCase.indexOf("text/javascript") >= 0 ||
+        s.toLowerCase.indexOf("application/javascript") >= 0 ||
+        s.toLowerCase.indexOf("*/*") >= 0
+      ).isDefined).isDefined
+  }
 
   def updateWithContextPath(uri: String): String = if (uri.startsWith("/")) contextPath + uri else uri
 }

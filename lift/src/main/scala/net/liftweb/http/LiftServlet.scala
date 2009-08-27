@@ -121,12 +121,38 @@ class LiftServlet {
 
     tryo { LiftRules.onBeginServicing.toList.foreach(_(req)) }
 
-    val resp =
+    def hasSession(req: Req): Boolean = {
+      req.request.sessionId.flatMap(id => SessionMaster.getSession(id, Empty)).isDefined
+    }
+
+    def isCometOrAjax(req: Req): Boolean = {
+      val wp = req.path.wholePath
+      val len = wp.length
+
+      if (len < 2) false
+      else {
+        val kindaComet = wp.head == LiftRules.cometPath
+        val cometScript = (len >= 3 && kindaComet &&
+                           wp(2) == LiftRules.cometScriptName())
+        val kindaAjax = wp.head == LiftRules.ajaxPath
+        val ajaxScript =  len >= 2 && kindaAjax &&
+        wp(1) == LiftRules.ajaxScriptName()
+
+
+        ((kindaComet && !cometScript) || (kindaAjax && !ajaxScript)) &&
+        req.acceptsJavaScript_?
+      }
+    }
+
+    val resp: Box[LiftResponse] =
     // if the application is shutting down, return a 404
     if (LiftRules.ending) {
       LiftRules.notFoundOrIgnore(req, Empty)
     } else if (!authPassed_?(req)) {
       Full(LiftRules.authentication.unauthorizedResponse)
+    } else if (LiftRules.redirectAjaxOnSessionLoss && !hasSession(req) && isCometOrAjax(req)) {
+      Full(JavaScriptResponse(js.JE.JsRaw("window.location = " +
+                                          (req.request.header("Referer") openOr "/").encJs).cmd, Nil, Nil, 200))
     } else
     // if the request is matched is defined in the stateless table, dispatch
     if ({tmpStatelessHolder = NamedPF.applyBox(req,

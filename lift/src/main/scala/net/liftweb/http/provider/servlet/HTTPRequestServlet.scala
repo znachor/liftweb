@@ -39,11 +39,11 @@ class HTTPRequestServlet(req: HttpServletRequest) extends HTTPRequest {
 
   def authType: Box[String] = Box !! req.getAuthType
 
-  def header(name: String): Box[String] = Box !! req.getHeader(name)
+  //def header(name: String): Box[String] = Box !! req.getHeader(name)
 
   def headers(name: String): List[String] = enumToList[String](req.getHeaders(name).asInstanceOf[_root_.java.util.Enumeration[String]])
 
-  def headers: List[HTTPParam] = enumToList[String](req.getHeaderNames.asInstanceOf[_root_.java.util.Enumeration[String]]).
+  lazy val headers: List[HTTPParam] = enumToList[String](req.getHeaderNames.asInstanceOf[_root_.java.util.Enumeration[String]]).
     map(n => HTTPParam(n, headers(n)))
 
   def contextPath: String = req.getContextPath

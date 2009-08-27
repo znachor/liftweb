@@ -729,6 +729,12 @@ object LiftRules {
   private def logSnippetFailure(sf: SnippetFailure) = Log.warn("Snippet Failure: "+sf)
 
   /**
+  * Set to false if you do not want Ajax/Comet requests that are not associated with a session
+  * to cause a page reload
+  */
+  var redirectAjaxOnSessionLoss = true
+
+  /**
    * Holds the falure information when a snippet can not be executed.
    */
   case class SnippetFailure(page: String, typeName: Box[String], failure: SnippetFailures.Value)
