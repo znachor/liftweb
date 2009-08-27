@@ -1108,26 +1108,31 @@ abstract class GenericValidtor extends XHtmlValidator {
   import java.io.ByteArrayInputStream
 
   private lazy val sf = SchemaFactory.newInstance(W3C_XML_SCHEMA_NS_URI)
-  // private val ngurl = "http://www.w3.org/2002/08/xhtml/xhtml1-transitional.xsd"
   protected def ngurl: String
 
-  //val ngurl = "http://www.thaiopensource.com/relaxng/xhtml/xhtml-strict.rng"
-
-  private lazy val schema = sf.newSchema(new URL(ngurl))
+  private lazy val schema = tryo(sf.newSchema(new URL(ngurl)))
 
   def apply(in: Node): List[XHTMLValidationError] = {
-    val v = schema.newValidator()
-    val source = new StreamSource(new ByteArrayInputStream(in.toString.getBytes("UTF-8")))
-
-    try {
-      v.validate(source)
-      Nil
-    } catch {
-      case e: org.xml.sax.SAXParseException =>
-        List(XHTMLValidationError(e.getMessage, e.getLineNumber, e.getColumnNumber))
+    (for {
+        sc <- schema
+        v <- tryo(sc.newValidator)
+        source = new StreamSource(new ByteArrayInputStream(in.toString.getBytes("UTF-8")))
+      } yield try {
+        v.validate(source)
+        Nil
+      } catch {
+        case e: org.xml.sax.SAXParseException =>
+          List(XHTMLValidationError(e.getMessage, e.getLineNumber, e.getColumnNumber))
+      }) match {
+      case Full(x) => x
+      case Failure(msg, _, _) =>
+        Log.info("XHTML Validation Failure: "+msg)
+        Nil
+      case _ => Nil
     }
   }
 }
+
 
 object TransitionalXHTML1_0Validator extends GenericValidtor {
   val ngurl = "http://www.w3.org/2002/08/xhtml/xhtml1-transitional.xsd"
