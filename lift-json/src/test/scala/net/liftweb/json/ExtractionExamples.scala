@@ -46,6 +46,12 @@ object ExtractionExamples extends Specification {
   }
 
   /* Does not work yet.
+  "Optional List extraction example" in {
+    parse("""{ "elems": null }""").extract[OList] mustEqual OList(None)
+    parse("""{ "foo": 5 }""").extract[OList] mustEqual OList(None)
+    parse("""{ "elems": [1,2,3] }""").extract[OList] mustEqual OList(Some(List(1,2,3)))
+  }
+
   "List extraction example" in {
     val json = parse(testJson)
     (json \ "children").extract[List[Name]] mustEqual List("Mary", "Mazy")
@@ -99,3 +105,5 @@ case class Primitives(i: Int, l: Long, d: Double, f: Float, s: String, sh: Short
 
 case class OChild(name: Option[String], age: Int, mother: Option[Parent], father: Option[Parent])
 case class Parent(name: String)
+
+case class OList(elems: Option[List[Int]])

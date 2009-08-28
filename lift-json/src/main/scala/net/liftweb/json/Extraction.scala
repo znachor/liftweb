@@ -125,12 +125,11 @@ object Extraction {
 
     def fieldMapping(name: String, fieldType: Class[_], genericType: Type): Mapping = 
       if (primitive_?(fieldType)) Value(name, fieldType)
-      else if (fieldType == classOf[BigInt]) Value(name, fieldType)
       else if (fieldType == classOf[List[_]]) makeMapping(Some(name), typeParameter(genericType), true)
       else if (classOf[Option[_]].isAssignableFrom(fieldType))
         Optional(fieldMapping(name, typeParameter(genericType), null)) // FIXME is it possible to find out the next genericType here?
       else makeMapping(Some(name), fieldType, false)
-    memo.memoize(clazz, (x: Class[_]) => makeMapping(None, x, false))
+    memo.memoize(clazz, makeMapping(None, _, false))
   }
 
   private def convert(value: JValue, targetType: Class[_]): Any = value match {
@@ -162,20 +161,19 @@ object Extraction {
   object Reflection {
     import java.lang.reflect._
 
+    val primitives = Set[Class[_]](classOf[String], classOf[Int], classOf[Long], classOf[Double], 
+                                   classOf[Float], classOf[Byte], classOf[BigInt], classOf[Boolean], 
+                                   classOf[Short], classOf[java.lang.Integer], classOf[java.lang.Long], 
+                                   classOf[java.lang.Double], classOf[java.lang.Float], 
+                                   classOf[java.lang.Byte], classOf[java.lang.Boolean], 
+                                   classOf[java.lang.Short])
+
     def typeParameter(t: Type): Class[_] = {
       val ptype = t.asInstanceOf[ParameterizedType]
       ptype.getActualTypeArguments()(0).asInstanceOf[Class[_]]
     }
 
-    def primitive_?(clazz: Class[_]) = {
-      clazz == classOf[String] || clazz == classOf[Int] || clazz == classOf[Long] ||
-      clazz == classOf[Double] || clazz == classOf[Float] || clazz == classOf[Byte] ||
-      clazz == classOf[Boolean] || clazz == classOf[Short] || clazz == classOf[java.lang.Integer] ||
-      clazz == classOf[java.lang.Long] || clazz == classOf[java.lang.Double] ||
-      clazz == classOf[java.lang.Float] || clazz == classOf[java.lang.Byte] ||
-      clazz == classOf[java.lang.Boolean] || clazz == classOf[java.lang.Short]
-    }
-
+    def primitive_?(clazz: Class[_]) = primitives contains clazz
     def static_?(f: Field) = Modifier.isStatic(f.getModifiers)
   }
 }
