@@ -24,6 +24,21 @@ object Examples extends Specification {
     compact(render(json \ "person" \ "name")) mustEqual "\"name\":\"Joe\""
   }
 
+  "Queries on person example" in {
+    val json = parse(person)
+    val filtered = json filter {
+      case JField("name", _) => true
+      case _ => false
+    }
+    filtered mustEqual List(JField("name", JString("Joe")), JField("name", JString("Marilyn")))
+
+    val found = json find {
+      case JField("name", _) => true
+      case _ => false
+    }
+    found mustEqual Some(JField("name", JString("Joe")))
+  }
+
   "Object array example" in {
     val json = parse(objArray)
     compact(render(json \ "children" \ "name")) mustEqual """["name":"Mary","name":"Mazy"]"""

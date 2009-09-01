@@ -63,6 +63,19 @@ object JsonAST {
       case _ => Nil
     }
 
+    def fold[A](z: A)(f: (A, JValue) => A): A = {
+      def loop(acc: A, v: JValue) = {
+        val newAcc = f(acc, v)
+        v match {
+          case JObject(l) => l.foldLeft(newAcc)((a, e) => e.fold(a)(f))
+          case JArray(l) => l.foldLeft(newAcc)((a, e) => e.fold(a)(f))
+          case JField(_, value) => value.fold(newAcc)(f)
+          case _ => newAcc
+        }
+      }
+      loop(z, this)
+    }
+
     def find(p: JValue => Boolean): Option[JValue] = {
       def find(json: JValue): Option[JValue] = {
         if (p(json)) return Some(json)
@@ -76,18 +89,8 @@ object JsonAST {
       find(this)
     }
 
-    def filter(p: JValue => Boolean): List[JValue] = {
-      def filter(json: JValue, acc: List[JValue]): List[JValue] = {
-        val newAcc = if (p(json)) json :: acc else acc
-        json match {
-          case JObject(l) => l.foldLeft(newAcc)((a, e) => filter(e, a))
-          case JArray(l) => l.foldLeft(newAcc)((a, e) => filter(e, a))
-          case JField(_, value) => filter(value, newAcc)
-          case _ => newAcc
-        }
-      }
-      filter(this, Nil).reverse
-    }
+    def filter(p: JValue => Boolean): List[JValue] = 
+      fold(List[JValue]())((acc, e) => if (p(e)) e :: acc else acc).reverse
 
     def extract[A](implicit mf: scala.reflect.Manifest[A]) = Extraction.extract(this)(mf)
   }
