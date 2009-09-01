@@ -388,10 +388,10 @@ class Req(val path: ParsePath,
        id <- boxParseInternetDate(ims)
   } yield id
 
-  def testIfModifiedSince(when: Long): Boolean =
-  (when / 1000L) > ((ifModifiedSince.map(_.getTime) openOr 0L) / 1000L)
+  def testIfModifiedSince(when: Long): Boolean = (when == 0L) ||
+  ((when / 1000L) > ((ifModifiedSince.map(_.getTime) openOr 0L) / 1000L))
 
-  def testFor304(lastModified: Long, headers: (String, String)*): Box[LiftResponse] =
+  def testFor304(lastModified: Long, headers: (String, String)*): Box[LiftResponse] = 
   if (!testIfModifiedSince(lastModified))
   Full(InMemoryResponse(new Array[Byte](0), ("Content-Type" -> "text/plain") :: headers.toList, Nil, 304))
   else
