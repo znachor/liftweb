@@ -163,7 +163,7 @@ object S extends HasParams {
    * @see LiftRules#resourceBundleFactories
    */
   private val _resBundle = new ThreadGlobal[List[ResourceBundle]]
-  private val _liftCoreResBundle = new ThreadGlobal[Box[ResourceBundle]]
+  // private val _liftCoreResBundle = new ThreadGlobal[Box[ResourceBundle]]
   private val _stateSnip = new ThreadGlobal[HashMap[String, StatefulSnippet]]
   private val _responseHeaders = new ThreadGlobal[ResponseInfoHolder]
   private val _responseCookies = new ThreadGlobal[CookieHolder]
@@ -586,39 +586,37 @@ object S extends HasParams {
    */
   def loc(str: String, dflt: NodeSeq): NodeSeq = loc(str).openOr(dflt)
 
-  /**
-   * Get a List of the resource bundles for the current locale. The resource bundles are defined by
-   * the LiftRules.resourceNames and LiftRules.resourceBundleFactories variables.
-   *
-   * @see LiftRules.resourceNames
-   * @see LiftRules.resourceBundleFactories
-   */
-  def resourceBundles: List[ResourceBundle] = {
-    _resBundle.value match {
-      case Nil => {
-          _resBundle.set(LiftRules.resourceNames.flatMap(name => tryo(
-                List(ResourceBundle.getBundle(name, locale))
-              ).openOr(
-                NamedPF.applyBox((name, locale), LiftRules.resourceBundleFactories.toList).map(List(_)) openOr Nil
-              )))
-          _resBundle.value
-        }
-      case bundles => bundles
-    }
+/**
+ * Get a List of the resource bundles for the current locale. The resource bundles are defined by
+ * the LiftRules.resourceNames and LiftRules.resourceBundleFactories variables.
+ *
+ * @see LiftRules.resourceNames
+ * @see LiftRules.resourceBundleFactories
+ */
+def resourceBundles: List[ResourceBundle] = {
+  _resBundle.value match {
+    case Nil => {
+        _resBundle.set(LiftRules.resourceNames.flatMap(name => tryo(
+              List(ResourceBundle.getBundle(name, locale))
+            ).openOr(
+              NamedPF.applyBox((name, locale), LiftRules.resourceBundleFactories.toList).map(List(_)) openOr Nil
+            )))
+        _resBundle.value
+      }
+    case bundles => bundles
   }
+}
 
-  /**
-   * Get the lift core resource bundle for the current locale as defined by the
-   * LiftRules.liftCoreResourceName varibale.
-   *
-   * @see LiftRules.liftCoreResourceName
-   */
-  def liftCoreResourceBundle: Box[ResourceBundle] =
-  Box.legacyNullTest(_liftCoreResBundle.value).openOr {
-    val rb = tryo(ResourceBundle.getBundle(LiftRules.liftCoreResourceName, locale))
-    _liftCoreResBundle.set(rb)
-    rb
-  }
+private object _liftCoreResBundle extends
+RequestVar[Box[ResourceBundle]](tryo(ResourceBundle.getBundle(LiftRules.liftCoreResourceName, locale)))
+
+/**
+ * Get the lift core resource bundle for the current locale as defined by the
+ * LiftRules.liftCoreResourceName varibale.
+ *
+ * @see LiftRules.liftCoreResourceName
+ */
+ def liftCoreResourceBundle: Box[ResourceBundle] = _liftCoreResBundle.is
 
   /**
    * Get a localized string or return the original string.
@@ -1063,11 +1061,9 @@ object S extends HasParams {
       _attrs.doWith(Nil) {
         snippetMap.doWith(new HashMap) {
           _resBundle.doWith(Nil) {
-            _liftCoreResBundle.doWith(null){
               inS.doWith(true) {
                 _stateSnip.doWith(new HashMap) {
                   _nest2InnerInit(f)
-                }
               }
             }
           }
