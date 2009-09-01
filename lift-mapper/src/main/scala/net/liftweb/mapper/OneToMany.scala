@@ -41,14 +41,18 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
   implicit def foreignKey[K, O<:Mapper[O], T<:KeyedMapper[K,T]](field: MappedForeignKey[K,O,T]): O=>MappedForeignKey[K,O,T] =
     field.actualField(_).asInstanceOf[MappedForeignKey[K,O,T]] 
 
-  
   /**
    * Simple OneToMany support for children from the same table
    */
   class MappedOneToMany[O <: Mapper[O]](meta: MetaMapper[O], foreign: MappedForeignKey[K,O,T], qp: QueryParam[O]*)
     extends MappedOneToManyBase[O](
-      ()=> meta.findAll(By(foreign, primaryKeyField) :: qp.toList : _*),
-//      e=>foreign.actualField(e).asInstanceOf[MappedFor]
+      ()=>{
+        val ret = meta.findAll(By(foreign, primaryKeyField) :: qp.toList : _*)
+        for(child <- ret) {
+          foreign.actualField(child).asInstanceOf[MappedForeignKey[K,O,T]].primeObj(net.liftweb.util.Full(OneToMany.this : T))
+        }
+        ret
+      },
       foreign
     )
   
@@ -234,12 +238,22 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
 
 
 
-
 /**
- * A subtype of MappedLongForeignKey whose value can be
- * get and set as the target parent mapper instead of its primary key.
+ * A subclass of MappedLongForeignKey whose value can be
+ * get and set as the target parent mapper instead of as its primary key.
  * @author nafg
  */
+class LongMappedMapper[T<:Mapper[T], O<:KeyedMapper[Long,O]](theOwner: T, foreign: => KeyedMetaMapper[Long, O])
+  extends MappedLongForeignKey[T,O](theOwner, foreign) with LongMappedForeignMapper[T,O]
+  
+  
+/**
+ * A subtype of MappedLongForeignKey whose value can be
+ * get and set as the target parent mapper instead of as its primary key.
+ * @deprecated Use LongMappedMapper instead, to avoid mixing in MappedLongForeignKey manually
+ * @author nafg
+ */
+@deprecated
 trait LongMappedForeignMapper[T<:Mapper[T],O<:KeyedMapper[Long,O]]
                               extends MappedLongForeignKey[T,O]
                               with LifecycleCallbacks {
