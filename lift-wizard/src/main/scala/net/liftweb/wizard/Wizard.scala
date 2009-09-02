@@ -18,14 +18,14 @@ package net.liftweb.wizard
 import _root_.net.liftweb.http._
 import _root_.net.liftweb.util._
 import Helpers._
-import _root_.scala.xml.{NodeSeq}
+import _root_.scala.xml.{NodeSeq, Null, MetaData, Text}
 import _root_.java.util.Locale
 import _root_.scala.collection.mutable.ListBuffer
 
 object Wizard {
 
 
-  trait Field  {
+  trait Field extends SettableValueHolder  {
     def validate: List[FieldError]
     
     /**
@@ -34,8 +34,29 @@ object Wizard {
     def confirmPage_? = true
 
     def asBindParam: BindParam
+
+    /**
+     * The localized display name of this field
+     */
+    def displayName: NodeSeq = Text(bindName)
+
+  def bindName: String
+
+    def toForm: Box[NodeSeq]
   }
-  
+
+  trait LocalField extends Field  {
+    object currentValue extends WizardVar[ValueType](default) {
+      override protected def __nameSalt = randomString(20)
+    }
+
+    def default: ValueType
+
+    def is = currentValue.is
+    def set(v: ValueType) = currentValue.set(v)
+
+  }
+
   object Field {
   
   }
@@ -60,9 +81,66 @@ object Wizard {
     def validate: List[FieldError] = fields.flatMap(_.validate)
     def howManyMore_? : Box[Int] = Empty
     def lastScreen_? = true
-    def screenContent(in: NodeSeq) = bind(bindName, template, fields.map(_.asBindParam) :_*)
+    def buildContinuation: NodeSeq = {
+      val currentScreenVars = ScreenVars.is
+      SHtml.hidden(() => ScreenVars.set(currentScreenVars))
+    }
+    def screenContent(in: NodeSeq) = {
+
+
+      <form mathod="post" action={S.uri}>
+        {
+          buildContinuation
+        }
+        {
+          bind(bindName, template, fields.map(_.asBindParam) :_*)
+        }
+
+      </form> % formAttrs
+    }
+
+    def formAttrs: MetaData = Null
     def bindName = "wizard"
+    def &>(other: Screen): Screen = {
+      val self = this
+      new ProxyScreen {
+        def proxyTo = self
+        override def nextScreen: Box[Screen] = Full(other)
+      }
+    }
+
+  /*
+  def &>[Me <: Screen](other: PartialFunction[Me, Screen]): Screen = {
+      val self = this
+      new ProxyScreen {
+        def proxyTo = self
+        override def nextScreen: Box[Screen] = if ()
+      }
+    }
+    */
   }
+
+trait ProxyScreen extends Screen {
+  def proxyTo: Screen
+  override def dispatch = proxyTo.dispatch
+
+  override def templateName: Box[String] = proxyTo.templateName
+    override def locale: Locale = proxyTo.locale
+    override def template: NodeSeq = proxyTo.template
+    override def nextScreen: Box[Screen] = proxyTo.nextScreen
+    override def finished: () => Unit = proxyTo.finished
+    override def fields: List[Field] = proxyTo.fields
+    override def validate: List[FieldError] = proxyTo.validate
+    override def howManyMore_? : Box[Int] = proxyTo.howManyMore_?
+    override def lastScreen_? = proxyTo.lastScreen_?
+    override def buildContinuation: NodeSeq = proxyTo.buildContinuation
+    override def screenContent(in: NodeSeq) = proxyTo.screenContent(in)
+
+
+  override def formAttrs: MetaData = proxyTo.formAttrs
+  override def bindName = proxyTo.bindName
+  }
+
 
   object Screen {
 
@@ -78,7 +156,7 @@ object Wizard {
    *
    * @param dflt - the default value of the session variable
    */
-  abstract class WizardVar[T](dflt: => T) extends AnyVar[T, WizardVar[T]](dflt) {
+  abstract class WizardVar[T](dflt: => T) extends NonCleanAnyVar[T](dflt) {
     override protected def findFunc(name: String): Box[T] = WizardVarHandler.get(name)
     override protected def setFunc(name: String, value: T): Unit = WizardVarHandler.set(name, this, value)
     override protected def clearFunc(name: String): Unit = WizardVarHandler.clear(name)
@@ -88,10 +166,6 @@ object Wizard {
       WizardVarHandler.set(bn, this, true)
       old
     }
-  }
-
-  trait CleanRequestVarOnSessionTransition {
-    self: WizardVar[_] =>
   }
 
   private object WizardVarHandler /* extends LoanWrapper */ {

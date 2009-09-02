@@ -303,7 +303,7 @@ trait TypedField[FieldType] {
  * The strongly typed field that's mapped to a column (or many columns) in the database.
  * FieldType is the type of the field and OwnerType is the Owner of the field
  */
-trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends TypedField[FieldType] with BaseOwnedMappedField[OwnerType] with FieldIdentifier with SettableValueHolder[FieldType] {
+trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends TypedField[FieldType] with BaseOwnedMappedField[OwnerType] with FieldIdentifier with PSettableValueHolder[FieldType] {
 
   /**
    * Will be set to the type of the field

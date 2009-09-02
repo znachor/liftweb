@@ -29,8 +29,10 @@ import _root_.java.io.{InputStream, ByteArrayOutputStream, BufferedReader, Strin
 import js._
 import JE._
 import auth._
+import _root_.java.util.concurrent.{ConcurrentHashMap => CHash}
+import _root_.scala.reflect.Manifest
 
-object LiftRules {
+object LiftRules extends SimpleInjector {
   val noticesContainerId = "lift__noticesContainer__"
 
   type DispatchPF = PartialFunction[Req, () => Box[LiftResponse]];
@@ -464,6 +466,7 @@ object LiftRules {
   private[http] var ending = false
 
   private[http] var doneBoot = false;
+
 
   /**
    * Holds user's DispatchPF functions that will be executed in a stateless context. This means that

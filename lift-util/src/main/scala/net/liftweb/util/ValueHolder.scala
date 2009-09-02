@@ -15,12 +15,20 @@ package net.liftweb.util
 
 import scala.reflect.Manifest
 
-trait ValueHolder[T] {
-  def is: T
-  def get: T
+trait ValueHolder {
+  type ValueType
+    def is: ValueType
+  def get: ValueType
+}
+
+trait SettableValueHolder extends ValueHolder {
+  def set(in: ValueType): ValueType
+}
+
+trait PValueHolder[T] extends ValueHolder {
+ type ValueType = T
   // def manifest: Manifest[T]
 }
 
-trait SettableValueHolder[T] extends ValueHolder[T] {
-  def set(in: T): T
-}
+trait PSettableValueHolder[T] extends PValueHolder[T] with SettableValueHolder
+
