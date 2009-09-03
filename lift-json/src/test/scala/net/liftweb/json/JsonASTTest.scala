@@ -11,14 +11,14 @@ object JsonASTSpec extends Specification with JValueGen with ScalaCheck {
   import JsonAST._
 
   "Functor identity" in {
-    val identityProp = (json: JValue) => { json == json.map(identity) }
+    val identityProp = (json: JValue) => json == (json map identity)
     forAll(identityProp) must pass
   }
 
   "Functor composition" in {
-    val compositionProp = (json: JValue, fa: JValue => JValue, fb: JValue => JValue) => { 
+    val compositionProp = (json: JValue, fa: JValue => JValue, fb: JValue => JValue) => 
       json.map(fb).map(fa) == json.map(fa compose fb) 
-    }
+
     forAll(compositionProp) must pass
   }
 
