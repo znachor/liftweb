@@ -78,7 +78,7 @@ object JsonAST {
 
     def map(f: JValue => JValue): JValue = {
       def loop(v: JValue): JValue = v match {
-        case JObject(l) => f(JObject(l.map(f => loop(f).asInstanceOf[JField])))
+        case JObject(l) => f(JObject(l.map(f => loop(f).asInstanceOf[JField]))) // FIXME eliminate this cast
         case JArray(l) => f(JArray(l.map(loop)))
         case JField(name, value) => f(JField(name, loop(value)))
         case x => f(x)
