@@ -22,7 +22,7 @@ import _root_.scala.collection.mutable.{HashMap, ListBuffer}
 /**
  * Abstract a request or a session scoped variable.
  */
-abstract class AnyVar[T, MyType <: AnyVar[T, MyType]](dflt: => T) {
+abstract class AnyVar[T, MyType <: AnyVar[T, MyType]](dflt: => T) extends PSettableValueHolder[T] {
   self: MyType =>
   private lazy val name = "_lift_sv_"+getClass.getName+"_"+__nameSalt
   protected def findFunc(name: String): Box[T]
@@ -61,16 +61,17 @@ abstract class AnyVar[T, MyType <: AnyVar[T, MyType]](dflt: => T) {
   /**
    * Shadow of the apply method
    */
-  def set(what: T): Unit = apply(what)
+  def set(what: T): T = apply(what)
 
   /**
    * Set the session variable
    *
    * @param what -- the value to set the session variable to
    */
-  def apply(what: T): Unit = {
+  def apply(what: T): T = {
     testInitialized
     setFunc(name, what)
+    what
   }
 
   /**
@@ -104,6 +105,11 @@ abstract class AnyVar[T, MyType <: AnyVar[T, MyType]](dflt: => T) {
   protected def onShutdown(session: CleanUpParam): Unit = {}
 
   override def toString = is.toString
+}
+
+abstract class NonCleanAnyVar[T](dflt: => T) extends AnyVar[T, NonCleanAnyVar[T]](dflt) {
+  type CleanUpParam = Unit
+  private[http] def registerCleanupFunc(in: Unit => Unit): Unit = {}
 }
 
 /**

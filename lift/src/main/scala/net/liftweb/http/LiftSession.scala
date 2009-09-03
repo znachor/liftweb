@@ -236,9 +236,9 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
   private var _running_? = false
 
   /**
-  *  ****IMPORTANT**** when you access messageCallback, it *MUST*
-  * be in a block that's synchronized on the owner LiftSession
-  */
+   *  ****IMPORTANT**** when you access messageCallback, it *MUST*
+   * be in a block that's synchronized on the owner LiftSession
+   */
   private var messageCallback: HashMap[String, S.AFuncHolder] = new HashMap
 
   private[http] var notices: Seq[(NoticeType.Value, NodeSeq, Box[String])] = Nil
@@ -344,11 +344,11 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
     ret
   }
 
-/*
-  private[http] def updateFunctionMap(funcs: Map[String, S.AFuncHolder]): Unit = synchronized {
-    funcs.foreach(mi => messageCallback(mi._1) = mi._2)
-  }
-*/
+  /*
+   private[http] def updateFunctionMap(funcs: Map[String, S.AFuncHolder]): Unit = synchronized {
+   funcs.foreach(mi => messageCallback(mi._1) = mi._2)
+   }
+   */
   /**
    * Updates the internal functions mapping
    */
@@ -1008,12 +1008,14 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
             (locateAndCacheSnippet(cls)) match {
 
               case Full(inst: StatefulSnippet) =>
-                if (inst.dispatch.isDefinedAt(method))
-                (if (isForm) SHtml.hidden(() => inst.registerThisSnippet) else NodeSeq.Empty) ++
-                inst.dispatch(method)(kids)
-                else reportSnippetError(page, snippetName,
-                                        LiftRules.SnippetFailures.StatefulDispatchNotMatched,
-                                        wholeTag)
+                if (inst.dispatch.isDefinedAt(method)) {
+                  val res = inst.dispatch(method)(kids)
+
+                  (if (isForm && !res.isEmpty) SHtml.hidden(() => inst.registerThisSnippet) else NodeSeq.Empty) ++
+                  res
+                } else reportSnippetError(page, snippetName,
+                                          LiftRules.SnippetFailures.StatefulDispatchNotMatched,
+                                          wholeTag)
 
               case Full(inst: DispatchSnippet) =>
                 if (inst.dispatch.isDefinedAt(method)) inst.dispatch(method)(kids)

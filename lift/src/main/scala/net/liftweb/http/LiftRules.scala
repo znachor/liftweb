@@ -29,8 +29,10 @@ import _root_.java.io.{InputStream, ByteArrayOutputStream, BufferedReader, Strin
 import js._
 import JE._
 import auth._
+import _root_.java.util.concurrent.{ConcurrentHashMap => CHash}
+import _root_.scala.reflect.Manifest
 
-object LiftRules {
+object LiftRules extends SimpleInjector {
   val noticesContainerId = "lift__noticesContainer__"
 
   type DispatchPF = PartialFunction[Req, () => Box[LiftResponse]];
@@ -465,6 +467,7 @@ object LiftRules {
 
   private[http] var doneBoot = false;
 
+
   /**
    * Holds user's DispatchPF functions that will be executed in a stateless context. This means that
    * S object is not availble yet.
@@ -727,6 +730,12 @@ object LiftRules {
   val snippetFailedFunc = RulesSeq[SnippetFailure => Unit].prepend(logSnippetFailure _)
 
   private def logSnippetFailure(sf: SnippetFailure) = Log.warn("Snippet Failure: "+sf)
+
+  /**
+  * Set to false if you do not want Ajax/Comet requests that are not associated with a session
+  * to cause a page reload
+  */
+  var redirectAjaxOnSessionLoss = true
 
   /**
    * Holds the falure information when a snippet can not be executed.

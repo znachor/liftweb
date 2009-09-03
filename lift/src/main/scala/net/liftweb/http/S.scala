@@ -30,6 +30,8 @@ import _root_.java.util.{Locale, TimeZone, ResourceBundle}
 import _root_.java.util.concurrent.atomic.AtomicLong
 import _root_.net.liftweb.builtin.snippet._
 import provider._
+import _root_.java.util.concurrent.{ConcurrentHashMap => CHash}
+import _root_.scala.reflect.Manifest
 
 trait HasParams {
   def param(name: String): Box[String]
@@ -163,7 +165,7 @@ object S extends HasParams {
    * @see LiftRules#resourceBundleFactories
    */
   private val _resBundle = new ThreadGlobal[List[ResourceBundle]]
-  private val _liftCoreResBundle = new ThreadGlobal[Box[ResourceBundle]]
+  // private val _liftCoreResBundle = new ThreadGlobal[Box[ResourceBundle]]
   private val _stateSnip = new ThreadGlobal[HashMap[String, StatefulSnippet]]
   private val _responseHeaders = new ThreadGlobal[ResponseInfoHolder]
   private val _responseCookies = new ThreadGlobal[CookieHolder]
@@ -607,18 +609,16 @@ object S extends HasParams {
     }
   }
 
+  private object _liftCoreResBundle extends
+  RequestVar[Box[ResourceBundle]](tryo(ResourceBundle.getBundle(LiftRules.liftCoreResourceName, locale)))
+
   /**
    * Get the lift core resource bundle for the current locale as defined by the
    * LiftRules.liftCoreResourceName varibale.
    *
    * @see LiftRules.liftCoreResourceName
    */
-  def liftCoreResourceBundle: Box[ResourceBundle] =
-  Box.legacyNullTest(_liftCoreResBundle.value).openOr {
-    val rb = tryo(ResourceBundle.getBundle(LiftRules.liftCoreResourceName, locale))
-    _liftCoreResBundle.set(rb)
-    rb
-  }
+  def liftCoreResourceBundle: Box[ResourceBundle] = _liftCoreResBundle.is
 
   /**
    * Get a localized string or return the original string.
@@ -1063,11 +1063,9 @@ object S extends HasParams {
       _attrs.doWith(Nil) {
         snippetMap.doWith(new HashMap) {
           _resBundle.doWith(Nil) {
-            _liftCoreResBundle.doWith(null){
-              inS.doWith(true) {
-                _stateSnip.doWith(new HashMap) {
-                  _nest2InnerInit(f)
-                }
+            inS.doWith(true) {
+              _stateSnip.doWith(new HashMap) {
+                _nest2InnerInit(f)
               }
             }
           }
@@ -1700,6 +1698,36 @@ object S extends HasParams {
     }
   }
 
+  private object diHash extends SessionVar(new CHash[Class[_], Function0[_]]())
+  private object rdiHash extends RequestVar(Map[Class[_], Function0[_]]())
+  private object stackHash extends RequestVar(Map[Class[_], Function0[_]]())
+
+  implicit def inject[T](implicit man: Manifest[T]): Box[T] =
+  Box(stackHash.is.get(man.erasure).map(f => f.apply().asInstanceOf[T])) or
+  Box(rdiHash.is.get(man.erasure).map(f => f.apply().asInstanceOf[T])) or
+  (diHash.is.get(man.erasure) match {
+      case null => Empty
+      case f => Full(f.apply().asInstanceOf[T])
+    }) or LiftRules.inject(man)
+
+  def registerInjection[T](f: () => T)(implicit man: Manifest[T]) {
+    diHash.is.put(man.erasure, f)
+  }
+
+  def registerRequestInjection[T](f: () => T)(implicit man: Manifest[T]) {
+    rdiHash.set(rdiHash.is + (man.erasure -> f))
+  }
+
+  def doInjection[F, T](injFunc: () => T)(f: => F)(implicit man: Manifest[T]): F = {
+    val old = stackHash.is
+    stackHash.set(old + (man.erasure -> injFunc))
+    try {
+      f
+    } finally {
+      stackHash.set(old)
+    }
+  }
+
   /**
    * Build a handler for incoming JSON commands
    *
@@ -2037,6 +2065,10 @@ object S extends HasParams {
 
   implicit def tuple2FieldError(t: (FieldIdentifier, NodeSeq)) = FieldError(t._1, t._2)
 
+  implicit object SInjector extends Injector {
+    implicit def inject[T](implicit man: Manifest[T]): Box[T] = S.inject(man)
+  }
+
 }
 
 /**
@@ -2108,3 +2140,19 @@ case class FieldError(field : FieldIdentifier, msg : NodeSeq) {
 }
 
 
+trait Injector {
+  implicit def inject[T](implicit man: Manifest[T]): Box[T]
+}
+
+trait SimpleInjector extends Injector {
+  private val diHash: CHash[Class[_], Function0[_]] = new CHash
+
+  implicit def inject[T](implicit man: Manifest[T]): Box[T] = diHash.get(man.erasure) match {
+    case null => Empty
+    case f => Full(f.apply().asInstanceOf[T])
+  }
+
+  def registerInjection[T](f: () => T)(implicit man: Manifest[T]) {
+    diHash.put(man.erasure, f)
+  }
+}

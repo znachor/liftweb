@@ -41,7 +41,8 @@ trait HTTPRequest {
    * @param name - the header name
    * @return - the header value. Empty if there is no such header 
    */
-  def header(name: String): Box[String]
+  def header(name: String): Box[String] =
+  headers.filter(_.name.equalsIgnoreCase(name)).firstOption.flatMap(_.values.firstOption)
 
   /**
    * Return the header values by the given name.

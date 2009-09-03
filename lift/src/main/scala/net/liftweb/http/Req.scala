@@ -388,10 +388,10 @@ class Req(val path: ParsePath,
        id <- boxParseInternetDate(ims)
   } yield id
 
-  def testIfModifiedSince(when: Long): Boolean =
-  (when / 1000L) > ((ifModifiedSince.map(_.getTime) openOr 0L) / 1000L)
+  def testIfModifiedSince(when: Long): Boolean = (when == 0L) ||
+  ((when / 1000L) > ((ifModifiedSince.map(_.getTime) openOr 0L) / 1000L))
 
-  def testFor304(lastModified: Long, headers: (String, String)*): Box[LiftResponse] =
+  def testFor304(lastModified: Long, headers: (String, String)*): Box[LiftResponse] = 
   if (!testIfModifiedSince(lastModified))
   Full(InMemoryResponse(new Array[Byte](0), ("Content-Type" -> "text/plain") :: headers.toList, Nil, 304))
   else
@@ -426,6 +426,14 @@ class Req(val path: ParsePath,
   lazy val isOpera9: Boolean = (userAgent.map(s => s.indexOf("Opera/9.") >= 0) openOr false)
   def isOpera = isOpera9
 
+  lazy val acceptsJavaScript_? = {
+    request.headers.filter(_.name.toLowerCase == "accept").
+    find(h => h.values.find(s =>
+        s.toLowerCase.indexOf("text/javascript") >= 0 ||
+        s.toLowerCase.indexOf("application/javascript") >= 0 ||
+        s.toLowerCase.indexOf("*/*") >= 0
+      ).isDefined).isDefined
+  }
 
   def updateWithContextPath(uri: String): String = if (uri.startsWith("/")) contextPath + uri else uri
 }
