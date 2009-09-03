@@ -76,6 +76,16 @@ object JsonAST {
       loop(z, this)
     }
 
+    def map(f: JValue => JValue): JValue = {
+      def loop(v: JValue): JValue = v match {
+        case JObject(l) => f(JObject(l.map(f => loop(f).asInstanceOf[JField])))
+        case JArray(l) => f(JArray(l.map(loop)))
+        case JField(name, value) => f(JField(name, loop(value)))
+        case x => f(x)
+      }
+      loop(this)
+    }
+
     def find(p: JValue => Boolean): Option[JValue] = {
       def find(json: JValue): Option[JValue] = {
         if (p(json)) return Some(json)
