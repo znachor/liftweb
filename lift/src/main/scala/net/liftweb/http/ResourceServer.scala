@@ -72,7 +72,7 @@ object ResourceServer {
   request.testFor304(lastModified, "Expires" -> toInternetDate(millis + 30.days)) openOr {
     val stream = url.openStream
     StreamingResponse(stream, () => stream.close, uc.getContentLength,
-                      (if (uc.getLastModified == 0L) Nil else
+                      (if (lastModified == 0L) Nil else
                        List(("Last-Modified", toInternetDate(lastModified)))) :::
                       List(("Expires", toInternetDate(millis + 30.days)),
                            ("Content-Type", detectContentType(rw.last))), Nil,
