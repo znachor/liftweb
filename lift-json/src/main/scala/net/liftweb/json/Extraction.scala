@@ -25,7 +25,6 @@ import JsonAST._
  *
  *  FIXME: Add support to extract List of values too.
  *  FIXME: Add support for Optional values.
- *  FIXME: Add support for Date primitive.
  *  FIXME: Add annnotation to configure path
  *
  *  See: ExtractionExamples.scala
@@ -141,8 +140,9 @@ object Extraction {
     case JInt(x) if (targetType == classOf[String]) => x.toString
     case JDouble(x) if (targetType == classOf[Float]) => x.floatValue
     case JDouble(x) if (targetType == classOf[String]) => x.toString
-    case JString(s) if (targetType == classOf[Date]) => formats.dateFormat.parse(s).getOrElse(fail("invalid date '" + s + "'"))
+    case JString(s) if (targetType == classOf[Date]) => formats.dateFormat.parse(s).getOrElse(fail("Invalid date '" + s + "'"))
     case JNull => null
+    case JNothing => fail("Did not find value which can be converted into " + targetType.getName)
     case _ => value.values
   }
 
@@ -168,7 +168,7 @@ object Extraction {
                                    classOf[Short], classOf[java.lang.Integer], classOf[java.lang.Long], 
                                    classOf[java.lang.Double], classOf[java.lang.Float], 
                                    classOf[java.lang.Byte], classOf[java.lang.Boolean], 
-                                   classOf[java.lang.Short])
+                                   classOf[java.lang.Short], classOf[Date])
 
     def typeParameter(t: Type): Class[_] = {
       val ptype = t.asInstanceOf[ParameterizedType]
