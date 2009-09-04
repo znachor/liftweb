@@ -24,7 +24,7 @@ import _root_.scala.collection.mutable.{HashMap, ListBuffer}
  */
 abstract class AnyVar[T, MyType <: AnyVar[T, MyType]](dflt: => T) extends PSettableValueHolder[T] {
   self: MyType =>
-  private lazy val name = "_lift_sv_"+getClass.getName+"_"+__nameSalt
+  protected lazy val name = "_lift_sv_"+getClass.getName+"_"+__nameSalt
   protected def findFunc(name: String): Box[T]
   protected def setFunc(name: String, value: T): Unit
   protected def clearFunc(name: String): Unit
@@ -105,6 +105,22 @@ abstract class AnyVar[T, MyType <: AnyVar[T, MyType]](dflt: => T) extends PSetta
   protected def onShutdown(session: CleanUpParam): Unit = {}
 
   override def toString = is.toString
+
+  /**
+   * Change the value of the Var for the lifespan of the function
+   */
+  def doWith[F](newVal: T)(f: => F): F = {
+    val old = findFunc(name)
+    setFunc(name, newVal)
+    try {
+      f
+    } finally {
+      old match {
+        case Full(t) => setFunc(name, t)
+        case _ => clearFunc(name)
+      }
+    }
+  }
 }
 
 abstract class NonCleanAnyVar[T](dflt: => T) extends AnyVar[T, NonCleanAnyVar[T]](dflt) {
