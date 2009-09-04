@@ -44,6 +44,7 @@ object Examples extends Specification {
     compact(render(json \ "children" \ "name")) mustEqual """["name":"Mary","name":"Mazy"]"""
     compact(render((json \ "children")(0) \ "name")) mustEqual "\"name\":\"Mary\""
     compact(render((json \ "children")(1) \ "name")) mustEqual "\"name\":\"Mazy\""
+    (for { JField("name", JString(y)) <- json } yield y) mustEqual List("joe", "Mary", "Mazy")
   }
 
   "Quoted example" in {
