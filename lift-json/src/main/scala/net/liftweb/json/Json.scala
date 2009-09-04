@@ -105,7 +105,8 @@ object JsonAST {
     def filter(p: JValue => Boolean): List[JValue] = 
       fold(List[JValue]())((acc, e) => if (p(e)) e :: acc else acc).reverse
 
-    def extract[A](implicit mf: scala.reflect.Manifest[A]) = Extraction.extract(this)(mf)
+    def extract[A](implicit formats: Formats, mf: scala.reflect.Manifest[A]) = 
+      Extraction.extract(this)(formats, mf)
   }
 
   case object JNothing extends JValue {

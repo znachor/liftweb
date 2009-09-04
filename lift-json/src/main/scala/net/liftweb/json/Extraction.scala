@@ -17,6 +17,7 @@ package net.liftweb.json
  */
 
 import java.lang.reflect.{Constructor => JConstructor, Type}
+import java.util.Date
 import scala.reflect.Manifest
 import JsonAST._
 
@@ -56,15 +57,15 @@ object Extraction {
 
   val memo = new Memo[Class[_], Mapping]
 
-  def extract[A](json: JValue)(implicit mf: Manifest[A]): A = 
+  def extract[A](json: JValue)(implicit formats: Formats, mf: Manifest[A]): A = 
     try {
-      extract0(json, mf)
+      extract0(json, formats, mf)
     } catch {
       case e: MappingException => throw e
       case e: Exception => throw new MappingException("unknown error", e)
     }
 
-  private def extract0[A](json: JValue, mf: Manifest[A]): A = {
+  private def extract0[A](json: JValue, formats: Formats, mf: Manifest[A]): A = {
     val mapping = mappingOf(mf.erasure)
 
     def newInstance(constructor: JConstructor[_], args: List[Any]) = try {
@@ -73,10 +74,10 @@ object Extraction {
       case e @ (_:IllegalArgumentException | _:InstantiationException) => fail("Parsed JSON values do not match with class constructor\nargs=" + args.mkString(",") + "\narg types=" + args.map(_.asInstanceOf[AnyRef].getClass.getName).mkString(",")  + "\nconstructor=" + constructor)
     }
 
-    def newPrimitive(elementType: Class[_], elem: JValue) = convert(elem, elementType)
+    def newPrimitive(elementType: Class[_], elem: JValue) = convert(elem, elementType, formats)
 
     def build(root: JValue, mapping: Mapping, argStack: List[Any]): List[Any] = mapping match {
-      case Value(path, targetType) => convert(fieldValue(root, path), targetType) :: argStack
+      case Value(path, targetType) => convert(fieldValue(root, path), targetType, formats) :: argStack
       case Constructor(path, classname, args) => 
         val newRoot = path match {
           case Some(p) => root \ p
@@ -132,7 +133,7 @@ object Extraction {
     memo.memoize(clazz, makeMapping(None, _, false))
   }
 
-  private def convert(value: JValue, targetType: Class[_]): Any = value match {
+  private def convert(value: JValue, targetType: Class[_], formats: Formats): Any = value match {
     case JInt(x) if (targetType == classOf[Int]) => x.intValue
     case JInt(x) if (targetType == classOf[Long]) => x.longValue
     case JInt(x) if (targetType == classOf[Short]) => x.shortValue
@@ -140,6 +141,7 @@ object Extraction {
     case JInt(x) if (targetType == classOf[String]) => x.toString
     case JDouble(x) if (targetType == classOf[Float]) => x.floatValue
     case JDouble(x) if (targetType == classOf[String]) => x.toString
+    case JString(s) if (targetType == classOf[Date]) => formats.dateFormat.parse(s).getOrElse(fail("invalid date '" + s + "'"))
     case JNull => null
     case _ => value.values
   }

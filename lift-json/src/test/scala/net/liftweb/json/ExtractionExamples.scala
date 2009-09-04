@@ -8,6 +8,8 @@ object ExtractionExamples extends Specification {
   import JsonAST._
   import JsonParser._
 
+  implicit val formats = DefaultFormats
+
   "Extraction example" in {
     val json = parse(testJson)
     json.extract[Person] mustEqual Person("joe", Address("Bulevard", "Helsinki"), List(Child("Mary", 5), Child("Mazy", 3)))

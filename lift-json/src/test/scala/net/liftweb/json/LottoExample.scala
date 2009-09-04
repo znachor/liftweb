@@ -8,6 +8,8 @@ object LottoExample extends Specification {
   import JsonAST._
   import JsonDSL._
 
+  implicit val formats = DefaultFormats
+
   case class Winner(id: Long, numbers: List[Int])
   case class Lotto(id: Long, winningNumbers: List[Int], winners: List[Winner], drawDate: Option[java.util.Date])
 
@@ -28,10 +30,5 @@ object LottoExample extends Specification {
 
   (json \ "lotto" \ "winners")(0).extract[Winner] mustEqual Winner(23, List(2, 45, 34, 23, 3, 5))
 
-  // FIXME: needs Option and Date support
-//  (json \ "lotto").extract[Lotto] mustEqual lotto
-
-  case class Lotto2(id: Long, winningNumbers: List[Int], winners: List[Winner])
-
-  (json \ "lotto").extract[Lotto2] mustEqual Lotto2(5, List(2, 45, 34, 23, 7, 5, 3), winners)
+  (json \ "lotto").extract[Lotto] mustEqual lotto
 }
