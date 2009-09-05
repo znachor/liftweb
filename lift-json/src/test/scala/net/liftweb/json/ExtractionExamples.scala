@@ -13,7 +13,7 @@ object ExtractionExamples extends Specification {
 
   "Extraction example" in {
     val json = parse(testJson)
-    json.extract[Person] mustEqual Person("joe", Address("Bulevard", "Helsinki"), List(Child("Mary", 5), Child("Mazy", 3)))
+    json.extract[Person] mustEqual Person("joe", Address("Bulevard", "Helsinki"), List(Child("Mary", 5, Some(date("2004-09-04T18:06:22Z"))), Child("Mazy", 3, None)))
   }
 
   "Extraction with path expression example" in {
@@ -39,8 +39,8 @@ object ExtractionExamples extends Specification {
   }
 
   "Null extraction example" in {
-    val json = parse("""{ "name": null, "age": 5 }""")
-    json.extract[Child] mustEqual Child(null, 5)
+    val json = parse("""{ "name": null, "age": 5, "birthdate": null }""")
+    json.extract[Child] mustEqual Child(null, 5, None)
   }
 
   "Date extraction example" in {
@@ -77,6 +77,7 @@ object ExtractionExamples extends Specification {
     {
       "name": "Mary",
       "age": 5
+      "birthdate": "2004-09-04T18:06:22Z"
     },
     {
       "name": "Mazy",
@@ -105,7 +106,7 @@ object ExtractionExamples extends Specification {
 
 case class Person(name: String, address: Address, children: List[Child])
 case class Address(street: String, city: String)
-case class Child(name: String, age: Int)
+case class Child(name: String, age: Int, birthdate: Option[java.util.Date])
 
 case class SimplePerson(name: String, address: Address)
 
