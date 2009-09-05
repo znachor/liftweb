@@ -15,7 +15,7 @@ package net.liftweb.record.field
 
 import _root_.scala.xml._
 import _root_.net.liftweb.util._
-import _root_.net.liftweb.http.{S, FieldError, SHtml}
+import _root_.net.liftweb.http.{S, SHtml}
 import _root_.net.liftweb.http.js._
 import Helpers._
 import S._

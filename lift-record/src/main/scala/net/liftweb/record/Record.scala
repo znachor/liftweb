@@ -17,7 +17,7 @@ import net.liftweb._
 import util._
 import scala.xml._
 import net.liftweb.http.js.{JsExp, JE}
-import net.liftweb.http.{FieldError, SHtml}
+import net.liftweb.http.{SHtml}
 import net.liftweb.mapper.{Safe, KeyObfuscator}
 import field._
 

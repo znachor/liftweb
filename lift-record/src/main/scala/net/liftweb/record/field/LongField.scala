@@ -16,7 +16,7 @@ package net.liftweb.record.field
 import scala.xml._
 import net.liftweb.util._
 import Helpers._
-import net.liftweb.http.{S, FieldError}
+import net.liftweb.http.{S}
 import S._
 
 class LongField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends NumericField[Long, OwnerType] {

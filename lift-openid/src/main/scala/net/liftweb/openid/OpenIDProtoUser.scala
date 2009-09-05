@@ -22,7 +22,7 @@ import http._
 import js._
 import JsCmds._
 import sitemap.{Loc, Menu}
-import util.{Box, Empty, Full, Helpers}
+import util._
 import Helpers._
 
 import _root_.org.openid4java.consumer._

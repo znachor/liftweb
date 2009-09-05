@@ -22,7 +22,8 @@ import _root_.net.liftweb.util.{FatLazy, Box, Full, Empty, Failure}
 import _root_.java.util.Date
 import _root_.java.util.regex._
 import _root_.scala.xml.{NodeSeq, Text, Elem}
-import _root_.net.liftweb.http.{S, FieldError}
+import _root_.net.liftweb.http.{S}
+import _root_.net.liftweb.util.{FieldError}
 import _root_.net.liftweb.http.js._
 import S._
 
