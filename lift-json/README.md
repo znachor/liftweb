@@ -166,8 +166,16 @@ Json AST can be queried using XPath like functions. Following REPL session shows
            }
     res6: List[net.liftweb.json.JsonAST.JValue] = List(JField(name,JString(Joe)), JField(name,JString(Marilyn)))
 
+    scala> json map {
+             case JField("name", JString(s)) => JField("NAME", JString(s.toUpperCase))
+             case x => x
+           }
+    res7: net.liftweb.json.JsonAST.JValue = JObject(List(JField(person,JObject(List(
+    JField(NAME,JString(JOE)), JField(age,JInt(35)), JField(spouse,JObject(List(
+    JField(person,JObject(List(JField(NAME,JString(MARILYN)), JField(age,JInt(33)))))))))))))
+
     scala> json.values
-    res7: net.liftweb.json.JsonAST.JValue#Values = Map(person -> Map(name -> Joe, age -> 35, spouse -> Map(person -> Map(name -> Marilyn, age -> 33))))
+    res8: net.liftweb.json.JsonAST.JValue#Values = Map(person -> Map(name -> Joe, age -> 35, spouse -> Map(person -> Map(name -> Marilyn, age -> 33))))
 
 Indexed path expressions work too, and values can be extracted using for-comprehensions.
 
@@ -221,7 +229,7 @@ Please see more examples in src/test/scala/net/liftweb/json/ExtractionExamples.s
                  {
                    "name": "Mary",
                    "age": 5
-		   "birthdate": "2004-09-04T18:06:22Z"
+                   "birthdate": "2004-09-04T18:06:22Z"
                  },
                  {
                    "name": "Mazy",
