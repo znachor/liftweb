@@ -17,10 +17,7 @@ package net.liftweb.http
 
 import _root_.net.liftweb.util.Helpers
 import Helpers._
-import _root_.net.liftweb.util.{Log, Box, Full, Empty,
-                                EmptyBox,
-                                Failure, ThreadGlobal,
-                                NamedPF, NamedPartialFunction}
+import _root_.net.liftweb.util._
 import _root_.net.liftweb.http.provider._
 import _root_.net.liftweb.util.Helpers
 import _root_.java.io.{InputStream, ByteArrayInputStream, File, FileInputStream,

@@ -18,7 +18,7 @@ import util._
 import scala.collection.mutable.{ListBuffer}
 import scala.xml._
 import net.liftweb.http.js.{JsExp, JE, JsObj}
-import net.liftweb.http.{FieldError, SHtml, Req, LiftResponse, LiftRules}
+import net.liftweb.http.{SHtml, Req, LiftResponse, LiftRules}
 import _root_.java.lang.reflect.Method
 import field._
 import Box._

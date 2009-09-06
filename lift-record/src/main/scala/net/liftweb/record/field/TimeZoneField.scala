@@ -15,7 +15,7 @@ package net.liftweb.record.field
 
 import scala.xml._
 import net.liftweb.util._
-import net.liftweb.http.{S, SHtml, FieldError}
+import net.liftweb.http.{S, SHtml}
 import _root_.java.util._
 import S._
 import Helpers._

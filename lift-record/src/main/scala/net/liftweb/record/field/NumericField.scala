@@ -13,7 +13,7 @@
 
 package net.liftweb.record.field
 
-import net.liftweb.http.{S, FieldError}
+import net.liftweb.http.{S}
 import net.liftweb.http.js._
 import net.liftweb.util._
 import scala.xml._

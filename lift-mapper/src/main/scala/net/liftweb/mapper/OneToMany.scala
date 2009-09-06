@@ -284,7 +284,7 @@ trait LongMappedForeignMapper[T<:Mapper[T],O<:KeyedMapper[Long,O]]
     super.beforeSave
   }
   
-  import net.liftweb.http.FieldError
+  import net.liftweb.util.FieldError
   val valHasObj = (value: Long) =>
     if (obj eq Empty) List(FieldError(this, scala.xml.Text("Required field: " + name)))
     else Nil

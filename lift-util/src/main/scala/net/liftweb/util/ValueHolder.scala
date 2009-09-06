@@ -30,5 +30,15 @@ trait PValueHolder[T] extends ValueHolder {
   // def manifest: Manifest[T]
 }
 
+object PValueHolder {
+  implicit def tToVHT[T](in: T): PValueHolder[T] = new PValueHolder[T] {def is = in; def get = is}
+  def apply[T](in: T) = tToVHT(in)
+}
+
+object ValueHolder {
+  implicit def tToVHT[T](in: T): ValueHolder = new PValueHolder[T] {def is = in; def get = is}
+  def apply[T](in: T) = tToVHT(in)
+}
+
 trait PSettableValueHolder[T] extends PValueHolder[T] with SettableValueHolder
 

@@ -20,10 +20,10 @@ import _root_.scala.collection.mutable._
 import _root_.java.lang.reflect.Method
 import _root_.java.sql.{ResultSet, Types}
 import _root_.scala.xml.{Elem, Node, NodeSeq}
-import _root_.net.liftweb.http.{S, FieldError}
+import _root_.net.liftweb.http.{S}
 import S._
 import _root_.net.liftweb.http.js._
-import _root_.net.liftweb.util.{Box, Empty, Full, Failure}
+import _root_.net.liftweb.util.{Box, Empty, Full, Failure, FieldError}
 
 trait BaseMapper {
   type MapperType <: Mapper[MapperType]

@@ -20,9 +20,7 @@ import _root_.scala.xml.{NodeSeq, Elem, Text, UnprefixedAttribute, Null, MetaDat
                          PrefixedAttribute,
                          Group, Node, HasKeyValue}
 import _root_.scala.collection.immutable.{ListMap, TreeMap}
-import _root_.net.liftweb.util.{Helpers, ThreadGlobal, LoanWrapper, Box, Empty, Full, Failure,
-                                Log, JSONParser, NamedPartialFunction, NamedPF,
-                                AttrHelper, Props}
+import _root_.net.liftweb.util._
 import Helpers._
 import js._
 import _root_.java.io.InputStream
@@ -30,12 +28,8 @@ import _root_.java.util.{Locale, TimeZone, ResourceBundle}
 import _root_.java.util.concurrent.atomic.AtomicLong
 import _root_.net.liftweb.builtin.snippet._
 import provider._
-import _root_.java.util.concurrent.{ConcurrentHashMap => CHash}
 import _root_.scala.reflect.Manifest
-
-trait HasParams {
-  def param(name: String): Box[String]
-}
+import _root_.java.util.concurrent.{ConcurrentHashMap => CHash}
 
 /**
  * An object representing the current state of the HTTP request and response.
@@ -2107,57 +2101,3 @@ abstract class JsonHandler {
   def apply(in: Any): JsCmd
 }
 
-/**
- * Impersonates a JSON command
- */
-case class JsonCmd(command: String, target: String, params: Any,
-                   all: _root_.scala.collection.Map[String, Any])
-
-/**
- * Holds information about a response
- */
-class ResponseInfoHolder {
-  var headers: Map[String, String] = Map.empty
-  private var _docType: Box[String] = Empty
-  private var _setDocType = false
-
-  def docType = _docType
-  def docType_=(in: Box[String]) {
-    _docType = in
-    _setDocType = true
-  }
-
-  def overrodeDocType = _setDocType
-}
-
-/**
- * Defines the association of this reference with an markup tag ID
- */
-trait FieldIdentifier {
-  def uniqueFieldId: Box[String] = Empty
-}
-
-/**
- * Associate a FieldIdentifier with an NodeSeq
- */
-case class FieldError(field : FieldIdentifier, msg : NodeSeq) {
-  override def toString = field.uniqueFieldId + " : " + msg
-}
-
-
-trait Injector {
-  implicit def inject[T](implicit man: Manifest[T]): Box[T]
-}
-
-trait SimpleInjector extends Injector {
-  private val diHash: CHash[Class[_], Function0[_]] = new CHash
-
-  implicit def inject[T](implicit man: Manifest[T]): Box[T] = diHash.get(man.erasure) match {
-    case null => Empty
-    case f => Full(f.apply().asInstanceOf[T])
-  }
-
-  def registerInjection[T](f: () => T)(implicit man: Manifest[T]) {
-    diHash.put(man.erasure, f)
-  }
-}
