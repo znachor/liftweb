@@ -24,7 +24,6 @@ import JsonAST._
 /** Function to extract values from JSON AST using case classes.
  *
  *  FIXME: Add support to extract List of values too.
- *  FIXME: Add support for Optional values.
  *  FIXME: Add annnotation to configure path
  *
  *  See: ExtractionExamples.scala
@@ -54,7 +53,7 @@ object Extraction {
   case class ListOfPrimitives(path: String, elementType: Class[_]) extends Mapping
   case class Optional(mapping: Mapping) extends Mapping
 
-  val memo = new Memo[Class[_], Mapping]
+  private val memo = new Memo[Class[_], Mapping]
 
   def extract[A](json: JValue)(implicit formats: Formats, mf: Manifest[A]): A = 
     try {
@@ -127,7 +126,10 @@ object Extraction {
       if (primitive_?(fieldType)) Value(name, fieldType)
       else if (fieldType == classOf[List[_]]) makeMapping(Some(name), typeParameter(genericType), true)
       else if (classOf[Option[_]].isAssignableFrom(fieldType))
-        Optional(fieldMapping(name, typeParameter(genericType), null)) // FIXME is it possible to find out the next genericType here?
+        if (container_?(genericType)) {
+          val types = containerTypes(genericType)
+          Optional(fieldMapping(name, types._1, types._2))
+        } else Optional(fieldMapping(name, typeParameter(genericType), null))
       else makeMapping(Some(name), fieldType, false)
     memo.memoize(clazz, makeMapping(None, _, false))
   }
@@ -148,7 +150,7 @@ object Extraction {
 
   private def fail(msg: String) = throw new MappingException(msg)
 
-  class Memo[A, R] {
+  private class Memo[A, R] {
     private var cache = Map[A, R]()
 
     def memoize(x: A, f: A => R): R = synchronized {
@@ -175,8 +177,17 @@ object Extraction {
       ptype.getActualTypeArguments()(0).asInstanceOf[Class[_]]
     }
 
+    def containerTypes(t: Type): (Class[_], Type) = {
+      val ptype = t.asInstanceOf[ParameterizedType]
+      val c = ptype.getActualTypeArguments()(0).asInstanceOf[ParameterizedType]
+      val ctype = c.getRawType.asInstanceOf[Class[_]]
+      (ctype, c)
+    }
+
     def primitive_?(clazz: Class[_]) = primitives contains clazz
     def static_?(f: Field) = Modifier.isStatic(f.getModifiers)
+    def container_?(t: Type) = 
+      t.asInstanceOf[ParameterizedType].getActualTypeArguments()(0).isInstanceOf[ParameterizedType]
   }
 }
 

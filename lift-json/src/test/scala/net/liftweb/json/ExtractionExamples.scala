@@ -53,13 +53,12 @@ object ExtractionExamples extends Specification {
     json.extract[OChild] mustEqual OChild(None, 5, Some(Parent("Marilyn")), None)
   }
 
-  /* Does not work yet.
   "Optional List extraction example" in {
-    parse("""{ "elems": null }""").extract[OList] mustEqual OList(None)
     parse("""{ "foo": 5 }""").extract[OList] mustEqual OList(None)
     parse("""{ "elems": [1,2,3] }""").extract[OList] mustEqual OList(Some(List(1,2,3)))
   }
 
+  /* Does not work yet.
   "List extraction example" in {
     val json = parse(testJson)
     (json \ "children").extract[List[Name]] mustEqual List("Mary", "Mazy")
