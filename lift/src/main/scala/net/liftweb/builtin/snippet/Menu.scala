@@ -104,13 +104,6 @@ object Menu extends DispatchSnippet {
           req <- S.request.toList
           item <- buildItemMenu(loc, req.location, expandAll)
         } yield item
-        /*
-         LiftRules.siteMap.map({
-         sm => sm.locForGroup(group).flatMap({
-         loc => buildItemMenu(loc, expandAll)
-         })
-         }) openOr Nil
-         */
       case _ => renderWhat(expandAll)
     }
 
