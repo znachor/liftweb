@@ -467,7 +467,6 @@ object LiftRules extends SimpleInjector {
 
   private[http] var doneBoot = false;
 
-
   /**
    * Holds user's DispatchPF functions that will be executed in a stateless context. This means that
    * S object is not availble yet.
@@ -671,7 +670,7 @@ object LiftRules extends SimpleInjector {
    * Takes a Node, headers, cookies, and a session and turns it into an XhtmlResponse.
    */
   private def cvt(ns: Node, headers: List[(String, String)], cookies: List[HTTPCookie], session: Req) =
-  convertResponse({val ret = XhtmlResponse(ns, //Group(session.fixHtml(ns)),
+  convertResponse({val ret = XhtmlResponse(ns,
                                            ResponseInfo.docType(session),
                                            headers, cookies, 200,
                                            S.ieMode)

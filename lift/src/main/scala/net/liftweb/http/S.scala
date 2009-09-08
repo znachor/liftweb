@@ -159,7 +159,6 @@ object S extends HasParams with Injector {
    * @see LiftRules#resourceBundleFactories
    */
   private val _resBundle = new ThreadGlobal[List[ResourceBundle]]
-  // private val _liftCoreResBundle = new ThreadGlobal[Box[ResourceBundle]]
   private val _stateSnip = new ThreadGlobal[HashMap[String, StatefulSnippet]]
   private val _responseHeaders = new ThreadGlobal[ResponseInfoHolder]
   private val _responseCookies = new ThreadGlobal[CookieHolder]
