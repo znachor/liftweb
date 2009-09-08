@@ -103,7 +103,8 @@ Any valid json can be parsed into internal AST format.
 Queries
 -------
 
-Json AST can be queried using XPath like functions. Following REPL session shows the usage of '\\', '\\\\', 'find', 'filter', 'map' and 'values' functions. 
+Json AST can be queried using XPath like functions. Following REPL session shows the usage of 
+'\\', '\\\\', 'find', 'filter', 'map' and 'values' functions. 
 
     The example json is:
 
@@ -200,10 +201,13 @@ Indexed path expressions work too, and values can be extracted using for-compreh
 Extracting values
 -----------------
 
-Case classes can be used to extract values from parsed JSON.
+Case classes can be used to extract values from parsed JSON. Non-existing values
+can be extracted into scala.Option and strings can be automatically converted into
+java.util.Dates.
 Please see more examples in src/test/scala/net/liftweb/json/ExtractionExamples.scala
 
-    scala> case class Child(name: String, age: Int)
+    scala> implicit val formats = net.liftweb.json.DefaultFormats // Brings in default date formats etc.
+    scala> case class Child(name: String, age: Int, birthdate: Option[java.util.Date])
     scala> case class Address(street: String, city: String)
     scala> case class Person(name: String, address: Address, children: List[Child])
     scala> import net.liftweb.json.JsonParser._
@@ -217,6 +221,7 @@ Please see more examples in src/test/scala/net/liftweb/json/ExtractionExamples.s
                  {
                    "name": "Mary",
                    "age": 5
+		   "birthdate": "2004-09-04T18:06:22Z"
                  },
                  {
                    "name": "Mazy",
@@ -227,7 +232,7 @@ Please see more examples in src/test/scala/net/liftweb/json/ExtractionExamples.s
            """)
 
     scala> json.extract[Person] 
-    res0: Person = Person("joe", Address("Bulevard", "Helsinki"), List(Child("Mary", 5), Child("Mazy", 3)))
+    res0: Person = Person(joe,Address(Bulevard,Helsinki),List(Child(Mary,5,Some(Sat Sep 04 18:06:22 EEST 2004)), Child(Mazy,3,None)))
 
 
 Kudos

@@ -1,5 +1,6 @@
 package net.liftweb.json
 
+import java.util.Date
 import _root_.org.specs.Specification
 import _root_.org.specs.runner.{Runner, JUnit}
 
@@ -8,9 +9,11 @@ object ExtractionExamples extends Specification {
   import JsonAST._
   import JsonParser._
 
+  implicit val formats = DefaultFormats
+
   "Extraction example" in {
     val json = parse(testJson)
-    json.extract[Person] mustEqual Person("joe", Address("Bulevard", "Helsinki"), List(Child("Mary", 5), Child("Mazy", 3)))
+    json.extract[Person] mustEqual Person("joe", Address("Bulevard", "Helsinki"), List(Child("Mary", 5, Some(date("2004-09-04T18:06:22Z"))), Child("Mazy", 3, None)))
   }
 
   "Extraction with path expression example" in {
@@ -36,8 +39,13 @@ object ExtractionExamples extends Specification {
   }
 
   "Null extraction example" in {
-    val json = parse("""{ "name": null, "age": 5 }""")
-    json.extract[Child] mustEqual Child(null, 5)
+    val json = parse("""{ "name": null, "age": 5, "birthdate": null }""")
+    json.extract[Child] mustEqual Child(null, 5, None)
+  }
+
+  "Date extraction example" in {
+    val json = parse("""{"name":"e1","timestamp":"2009-09-04T18:06:22Z"}""")
+    json.extract[Event] mustEqual Event("e1", date("2009-09-04T18:06:22Z"))
   }
 
   "Option extraction example" in {
@@ -69,6 +77,7 @@ object ExtractionExamples extends Specification {
     {
       "name": "Mary",
       "age": 5
+      "birthdate": "2004-09-04T18:06:22Z"
     },
     {
       "name": "Mazy",
@@ -91,11 +100,13 @@ object ExtractionExamples extends Specification {
   "bool": true
 }
 """
+
+  def date(s: String) = DefaultFormats.dateFormat.parse(s).get
 }
 
 case class Person(name: String, address: Address, children: List[Child])
 case class Address(street: String, city: String)
-case class Child(name: String, age: Int)
+case class Child(name: String, age: Int, birthdate: Option[java.util.Date])
 
 case class SimplePerson(name: String, address: Address)
 
@@ -107,3 +118,5 @@ case class OChild(name: Option[String], age: Int, mother: Option[Parent], father
 case class Parent(name: String)
 
 case class OList(elems: Option[List[Int]])
+
+case class Event(name: String, timestamp: Date)
