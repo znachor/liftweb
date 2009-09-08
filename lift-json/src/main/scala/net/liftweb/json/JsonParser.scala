@@ -215,10 +215,10 @@ object JsonParser {
         var doubleVal = false
         while (wasInt) {
           val c = buf.charAt(i)
-          if (c == '.') {
+          if (c == '.' || c == 'e' || c == 'E') {
             doubleVal = true
             i = i+1
-          } else if (!(Character.isDigit(c) || c == '.')) {
+          } else if (!(Character.isDigit(c) || c == '.' || c == 'e' || c == 'E' || c == '-')) {
             wasInt = false
           } else {
             i = i+1
