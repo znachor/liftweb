@@ -15,6 +15,20 @@
     </action>
     see http://maven.apache.org/plugins/maven-changes-plugin/usage.html for full guide
   -->
+    <release version="1.0.1" date="2009-09-09" description="First bug fix release"> 
+      <action dev="David Pollak" type="fix">Backported fixes for the Textile and XML parsers</action>
+      <action dev="David Pollak" type="fix">Backported the Actor memory leak fixes</action>
+      <action dev="David Pollak" type="fix">Backported a fix to S.params</action>
+      <action dev="Derek Chen-Becker" type="fix">Fixed PostgreSQL Double type mapping</action>
+      <action dev="Derek Chen-Becker" type="add" issue="37">Added custom type mapping to the DriverType class</action>
+      <action dev="Derek Chen-Becker" type="fix" issue="37">Fixed support for Oracle</action>
+      <action dev="Derek Chen-Becker" type="update" issue="37">Refactored generated key support in DB/Mapper</action>
+      <action dev="Derek Chen-Becker" type="add" issue="12">Added MappedDate and MappedTime to allow for better specification of time data</action>
+      <action dev="Derek Chen-Becker" type="fix" issue="12">Fixed MappedDateTime to use TIMESTAMP mapping</action>
+      <action dev="David Pollak" type="fix" issue="36">Fixed ResultSet stringification for NUMERIC and DECIMAL</action>
+      <action dev="Derek Chen-Becker" type="update">Modified DB Driver resolution to allow for version-specific drivers</action>
+      <action dev="Derek Chen-Becker" type="update">Upgrade to Scala 2.7.5</action>
+    </release>
     <release version="1.0" date="2009-02-26" description="First Major">
       <action dev="Marius Danciu" type="add">Added support for multiple resource bundles</action>
     </release>
