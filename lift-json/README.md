@@ -242,6 +242,11 @@ Please see more examples in src/test/scala/net/liftweb/json/ExtractionExamples.s
     scala> json.extract[Person] 
     res0: Person = Person(joe,Address(Bulevard,Helsinki),List(Child(Mary,5,Some(Sat Sep 04 18:06:22 EEST 2004)), Child(Mazy,3,None)))
 
+By default the constructor parameter names must match json field names. This default mapping can be changed
+using @path annotation (see src/test/scala/net/liftweb/json/LottoExample.scala for bigger example)
+
+    scala> import net.liftweb.json.path
+    scala> case class Person(@path("fname") firstname: String)
 
 Kudos
 -----

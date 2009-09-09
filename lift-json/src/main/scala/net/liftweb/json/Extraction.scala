@@ -24,7 +24,6 @@ import JsonAST._
 /** Function to extract values from JSON AST using case classes.
  *
  *  FIXME: Add support to extract List of values too.
- *  FIXME: Add annnotation to configure path
  *
  *  See: ExtractionExamples.scala
  */
@@ -118,8 +117,10 @@ object Extraction {
       case true => ListConstructor(path.get, clazz.getDeclaredConstructors()(0), constructorArgs(clazz))
     }
 
-    def constructorArgs(clazz: Class[_]) = clazz.getDeclaredFields.filter(!static_?(_)).map { x =>
-      fieldMapping(x.getName, x.getType, x.getGenericType)
+    def constructorArgs(clazz: Class[_]) = clazz.getDeclaredFields.filter(!static_?(_)).map { f =>
+      val annot = f.getAnnotation(classOf[path])
+      val path = if (annot == null) f.getName else annot.value
+      fieldMapping(path, f.getType, f.getGenericType)
     }.toList.reverse
 
     def fieldMapping(name: String, fieldType: Class[_], genericType: Type): Mapping = 

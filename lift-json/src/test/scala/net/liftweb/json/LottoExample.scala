@@ -10,8 +10,9 @@ object LottoExample extends Specification {
 
   implicit val formats = DefaultFormats
 
-  case class Winner(id: Long, numbers: List[Int])
-  case class Lotto(id: Long, winningNumbers: List[Int], winners: List[Winner], drawDate: Option[java.util.Date])
+  case class Winner(@path("winner-id") id: Long, numbers: List[Int])
+  case class Lotto(id: Long, @path("winning-numbers") winningNumbers: List[Int], winners: List[Winner], 
+                   @path("draw-date") drawDate: Option[java.util.Date])
 
   val winners = List(Winner(23, List(2, 45, 34, 23, 3, 5)), Winner(54, List(52, 3, 12, 11, 18, 22)))
   val lotto = Lotto(5, List(2, 45, 34, 23, 7, 5, 3), winners, None)
@@ -19,14 +20,14 @@ object LottoExample extends Specification {
   val json = 
     ("lotto" ->
       ("id" -> lotto.id) ~
-      ("winningNumbers" -> lotto.winningNumbers) ~
-      ("drawDate" -> lotto.drawDate.map(_.toString)) ~
+      ("winning-numbers" -> lotto.winningNumbers) ~
+      ("draw-date" -> lotto.drawDate.map(_.toString)) ~
       ("winners" ->
         lotto.winners.map { w =>
-          (("id" -> w.id) ~
+          (("winner-id" -> w.id) ~
            ("numbers" -> w.numbers))}))
 
-  compact(render(json)) mustEqual """{"lotto":{"id":5,"winningNumbers":[2,45,34,23,7,5,3],"winners":[{"id":23,"numbers":[2,45,34,23,3,5]},{"id":54,"numbers":[52,3,12,11,18,22]}]}}"""
+  compact(render(json)) mustEqual """{"lotto":{"id":5,"winning-numbers":[2,45,34,23,7,5,3],"winners":[{"winner-id":23,"numbers":[2,45,34,23,3,5]},{"winner-id":54,"numbers":[52,3,12,11,18,22]}]}}"""
 
   (json \ "lotto" \ "winners")(0).extract[Winner] mustEqual Winner(23, List(2, 45, 34, 23, 3, 5))
 
