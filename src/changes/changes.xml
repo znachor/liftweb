@@ -15,6 +15,7 @@
     </action>
     see http://maven.apache.org/plugins/maven-changes-plugin/usage.html for full guide
   -->
+    <release version="1.1-SNAPSHOT" date="" description=""/>
     <release version="1.1-M5" date="2009-09-08" description="Lift 1.1 Milestone 5"/>
     <release version="1.1-M4" date="2009-08-04" description="Lift 1.1 Milestone 4">
       <action dev="Marius Danciu" type="add">Added HTTP abstraction for making Lift container agnostic.</action>
