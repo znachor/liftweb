@@ -24,20 +24,20 @@ import _root_.java.util.concurrent.{ConcurrentHashMap => CHash}
 * A base trait for
 */
 trait Factory extends Injector {
-  private var manMap: CHash[Class[_], Maker[_]] = new CHash
+  private var manMap: CHash[String, Maker[_]] = new CHash
 
   implicit def inject[T](implicit man: Manifest[T]): Box[T] = 
-  (Box !! manMap.get(man.erasure)).flatMap(_.make.asInstanceOf[Box[T]])
+  (Box !! manMap.get(man.toString)).flatMap(_.make.asInstanceOf[Box[T]])
 
   abstract class FactoryMaker[T](_default: () => T)
-  (implicit man: Manifest[T]) extends StackableMaker[T] {
-    manMap.put(man.erasure, this)
+  (implicit man: Manifest[T]) extends StackableMaker[T] with Vendor[T] {
+    manMap.put(man.toString, this)
 
-    object default extends PSettableValueHolder[Maker[T]] {
-      private var value: Maker[T] = _default
+    object default extends PSettableValueHolder[() => T] {
+      private var value = _default
       def get = value
       def is = get
-      def set(v: Maker[T]): Maker[T] = {
+      def set(v: () => T): () => T = {
         value = v
         v
       }
@@ -45,10 +45,9 @@ trait Factory extends Injector {
 
     object session extends SessionVar[Maker[T]](Empty)
     object request extends RequestVar[Maker[T]](Empty)
-    private val _sub: List[PValueHolder[Maker[T]]] = List(request, session,
-                                                          default)
+    private val _sub: List[PValueHolder[Maker[T]]] = List(request, session)
+    implicit def vend: T = make openOr default.is.apply()
 
-
-    override implicit def make: Box[T] = super.make or find(_sub)
+    override implicit def make: Box[T] = super.make or find(_sub) or Full(default.is.apply())
   }
 }

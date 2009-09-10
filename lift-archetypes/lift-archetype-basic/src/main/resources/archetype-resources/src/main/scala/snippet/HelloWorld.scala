@@ -7,8 +7,8 @@ import Helpers._
 import ${packageName}.lib._
 
 class HelloWorld {
-  /* lazy val date = DependencyFactory.inject[Date] // inject the date */
-  lazy val date = DependencyFactory.time.make // create the date via factory
+  lazy val date = DependencyFactory.inject[Date] // inject the date 
+  /* lazy val date = DependencyFactory.time.make // create the date via factory */
 
   def howdy(in: NodeSeq): NodeSeq =
     Helpers.bind("b", in, "time" -> date.map(d => Text(d.toString)))

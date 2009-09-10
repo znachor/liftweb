@@ -25,15 +25,15 @@ trait Injector {
 }
 
 trait SimpleInjector extends Injector {
-  private val diHash: CHash[Class[_], Function0[_]] = new CHash
+  private val diHash: CHash[String, Function0[_]] = new CHash
 
-  implicit def inject[T](implicit man: Manifest[T]): Box[T] = diHash.get(man.erasure) match {
+  implicit def inject[T](implicit man: Manifest[T]): Box[T] = diHash.get(man.toString) match {
     case null => Empty
     case f => Full(f.apply().asInstanceOf[T])
   }
 
   def registerInjection[T](f: () => T)(implicit man: Manifest[T]) {
-    diHash.put(man.erasure, f)
+    diHash.put(man.toString, f)
   }
 }
 
@@ -98,5 +98,10 @@ case class MakerStack[T](subMakers: PValueHolder[Maker[T]]*) extends StackableMa
   private val _sub: List[PValueHolder[Maker[T]]] = subMakers.toList
     
   override implicit def make: Box[T] = super.make or find(_sub)
+}
+
+trait Vendor[T] extends Maker[T] with Function0[T] {
+  implicit def vend: T
+  def apply() = vend
 }
 
