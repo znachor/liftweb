@@ -2,7 +2,7 @@ package net.liftweb.http.testing
 
 import _root_.net.liftweb.util.Helpers._
 import _root_.net.liftweb.util._
-import _root_.scala.xml.{NodeSeq, Text, XML, Elem}
+import _root_.scala.xml._
 import _root_.java.util.{Map => JavaMap, Set => JavaSet, Iterator => JavaIterator, List => JavaList}
 import _root_.java.util.regex.Pattern
 import _root_.java.io.IOException
@@ -276,10 +276,21 @@ class HttpResponse(override val baseUrl: String,
 Response with GetPoster
 {
 
+  private object FindElem {
+    def unapply(in: NodeSeq): Option[Elem] = in match {
+      case e: Elem => Some(e)
+      case d: Document => unapply(d.docElem)
+      case g: Group => unapply(g.nodes)
+      case n: Text => None
+      case sn: SpecialNode => None
+      case n: NodeSeq => n.flatMap(unapply).firstOption
+    }
+  }
+
   // override def assertSuccess = assert(code == 200, "Not an HTTP success")
-  override lazy val xml = {
+  override lazy val xml: Elem = {
     PCDataXmlParser(new _root_.java.io.ByteArrayInputStream(body)) match {
-      case Full(e: Elem) => e
+      case Full(FindElem(e)) => e
     }
   }
 
