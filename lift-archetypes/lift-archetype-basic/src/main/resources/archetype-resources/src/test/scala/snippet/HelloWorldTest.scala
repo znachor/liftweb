@@ -1,6 +1,5 @@
 package ${packageName}.snippet
 
-/*
 import org.specs._
 import org.specs.runner.JUnit3
 import org.specs.runner.ConsoleRunner
@@ -36,4 +35,3 @@ object HelloWorldTestSpecs extends Specification {
   }
 }
 
-*/
