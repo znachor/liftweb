@@ -41,22 +41,20 @@ trait Maker[T] {
   implicit def make: Box[T]
 }
 
-case class BoxMaker[T](fb: Box[() => T]) extends Maker[T] {
-  implicit def make: Box[T] = fb.map(_.apply())
-}
-
 object Maker {
   def apply[T](value: T): Maker[T] = new Maker[T]{implicit def make: Box[T] = Full(value)}
   def apply[T](func:() => T): Maker[T] = new Maker[T]{implicit def make: Box[T] = Full(func())}
   def apply[T](func: Box[() => T]): Maker[T] = new Maker[T]{implicit def make: Box[T] = func.map(_.apply())}
   def apply1[T](box: Box[T]): Maker[T] = new Maker[T]{implicit def make: Box[T] = box}
   def apply2[T](func: Box[() => Box[T]]): Maker[T] = new Maker[T]{implicit def make: Box[T] = func.flatMap(_.apply())}
+  def apply3[T](func: () => Box[T]): Maker[T] = new Maker[T]{implicit def make: Box[T] = func.apply()}
 
   implicit def vToMake[T](v: T): Maker[T] = this.apply(v)
   implicit def vToMake[T](v: () => T): Maker[T] = this.apply(v)
   implicit def vToMakeB1[T](v: Box[T]): Maker[T] = this.apply1(v)
   implicit def vToMakeB2[T](v: Box[() => T]): Maker[T] = this.apply(v)
   implicit def vToMakeB3[T](v: Box[() => Box[T]]): Maker[T] = this.apply2(v)
+   implicit def vToMakeB4[T](v: () => Box[T]): Maker[T] = this.apply3(v)
 }
 
 trait StackableMaker[T] extends Maker[T] {
