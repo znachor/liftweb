@@ -20,23 +20,41 @@ import _root_.java.util.concurrent.{ConcurrentHashMap => CHash}
 import _root_.java.lang.ThreadLocal
 import _root_.scala.reflect.Manifest
 
+/**
+ * A trait that does basic dependency injection.
+ */
 trait Injector {
   implicit def inject[T](implicit man: Manifest[T]): Box[T]
 }
 
+/**
+ * An implementation of Injector that has an implementation
+ */
 trait SimpleInjector extends Injector {
   private val diHash: CHash[String, Function0[_]] = new CHash
 
-  implicit def inject[T](implicit man: Manifest[T]): Box[T] = diHash.get(man.toString) match {
-    case null => Empty
-    case f => Full(f.apply().asInstanceOf[T])
-  }
+  /**
+   * Perform the injection for the given type.  You can call:
+   * inject[Date] or inject[List[Map[String, PaymentThing]]].  The
+   * appropriate Manifest will be
+   */
+  implicit def inject[T](implicit man: Manifest[T]): Box[T] = 
+  (Box !! diHash.get(man.toString)).flatMap(f => Helpers.tryo(f.apply())).asInstanceOf[Box[T]]
 
+  /**
+   * Register a function that will inject for the given Manifest
+   */
   def registerInjection[T](f: () => T)(implicit man: Manifest[T]) {
     diHash.put(man.toString, f)
   }
 }
 
+/**
+ * In addition to an Injector, you can have a Maker which will make a given
+ * type.  The important thing about a Maker is that it's intended to be used
+ * as part of a factory that can vend an instance without the vaguaries of
+ * whether the given class has registered a with the injector.
+ */
 trait Maker[T] {
   implicit def make: Box[T]
 }
@@ -54,9 +72,14 @@ object Maker {
   implicit def vToMakeB1[T](v: Box[T]): Maker[T] = this.apply1(v)
   implicit def vToMakeB2[T](v: Box[() => T]): Maker[T] = this.apply(v)
   implicit def vToMakeB3[T](v: Box[() => Box[T]]): Maker[T] = this.apply2(v)
-   implicit def vToMakeB4[T](v: () => Box[T]): Maker[T] = this.apply3(v)
+  implicit def vToMakeB4[T](v: () => Box[T]): Maker[T] = this.apply3(v)
 }
 
+/**
+ * A StackableMaker allows DynamicVar functionality by supply a Maker or function
+ * that will vend an instance during any sub-call on the stack and then
+ * restore the implementation.  This is value for testing.
+ */
 trait StackableMaker[T] extends Maker[T] {
   private val _stack: ThreadLocal[List[PValueHolder[Maker[T]]]] = new ThreadLocal
 
@@ -93,15 +116,37 @@ trait StackableMaker[T] extends Maker[T] {
   implicit def make: Box[T] = find(stack)
 }
 
-
-case class MakerStack[T](subMakers: PValueHolder[Maker[T]]*) extends StackableMaker[T] {
+/**
+ * An implementation where you can define the stack of makers.
+ */
+class MakerStack[T](subMakers: PValueHolder[Maker[T]]*) extends StackableMaker[T] {
   private val _sub: List[PValueHolder[Maker[T]]] = subMakers.toList
     
   override implicit def make: Box[T] = super.make or find(_sub)
 }
 
+/**
+ * A Vendor is a Maker that also guarantees that it will return a value
+ */
 trait Vendor[T] extends Maker[T] with Function0[T] {
   implicit def vend: T
   def apply() = vend
 }
 
+/**
+ * A companion to the Vendor trait
+ */
+object Vendor {
+  def apply[T](f: () => T): Vendor[T] = new Vendor[T] {
+    implicit def vend: T = f()
+    implicit def make: Box[T] = Full(f())
+  }
+
+  def apply[T](f: T): Vendor[T] = new Vendor[T] {
+    implicit def vend: T = f
+    implicit def make: Box[T] = Full(f)
+  }
+
+  implicit def valToVender[T](value: T): Vendor[T] = apply(value)
+  implicit def funcToVender[T](f: () => T): Vendor[T] = apply(f)
+}
