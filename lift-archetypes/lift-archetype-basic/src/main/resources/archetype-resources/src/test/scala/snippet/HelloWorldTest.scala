@@ -10,6 +10,7 @@ import org.specs.matcher._
 import Helpers._
 import lib._
 
+/*
 class HelloWorldTestSpecsAsTest extends JUnit3(HelloWorldTestSpecs)
 object HelloWorldTestSpecsRunner extends ConsoleRunner(HelloWorldTestSpecs)
 
@@ -33,3 +34,5 @@ object HelloWorldTestSpecs extends Specification {
     }
   }
 }
+
+*/

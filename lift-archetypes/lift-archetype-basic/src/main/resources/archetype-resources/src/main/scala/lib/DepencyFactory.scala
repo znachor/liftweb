@@ -12,9 +12,11 @@ import _root_.java.util.Date
  * or override the default implementation on a session, request or current call
  * stack basis.
  */
+/*
 object DependencyFactory extends Factory {
   implicit object time extends FactoryMaker(Helpers.now _)
 }
+*/
 
 /*
 /**
