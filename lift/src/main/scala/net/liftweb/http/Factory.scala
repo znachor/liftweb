@@ -48,6 +48,7 @@ trait Factory extends Injector {
     private val _sub: List[PValueHolder[Maker[T]]] = List(request, session,
                                                           default)
 
+
     override implicit def make: Box[T] = super.make or find(_sub)
   }
 }
