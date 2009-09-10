@@ -11,7 +11,9 @@ class HelloWorld {
 
   //lazy val date = inject[Date] // inject the date
   // lazy val date = DependencyFactory.time.make // create the date via factory
-  val date = new Date()
+
+
+  val date = Full(new Date())
   def howdy(in: NodeSeq): NodeSeq =
     Helpers.bind("b", in, "time" -> date.map(d => Text(d.toString)))
 }
