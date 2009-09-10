@@ -68,26 +68,26 @@ class LiftServlet extends HttpServlet {
   }
 
   /**
-   * Returns a LiftSession instance.
-   */
+  * Returns a LiftSession instance.
+  */
   def getLiftSession(request: Req, httpSession: HttpSession): LiftSession = {
     val wp = request.path.wholePath
     val cometSessionId =
-    if (wp.length >= 3 && wp.head == LiftRules.cometPath)
-    Full(wp(2))
-    else
-    Empty
+      if (wp.length >= 3 && wp.head == LiftRules.cometPath)
+	Full(wp(2))
+      else
+	Empty
 
     val ret = SessionMaster.getSession(httpSession, cometSessionId) match {
       case Full(ret) =>
         ret.fixSessionTime()
-        ret
+      ret
 
       case _ =>
         val ret = LiftSession(httpSession, request.contextPath, request.headers)
-        ret.fixSessionTime()
-        SessionMaster.addSession(ret)
-        ret
+      ret.fixSessionTime()
+      SessionMaster.addSession(ret)
+      ret
     }
 
     ret.breakOutComet()
@@ -95,8 +95,8 @@ class LiftServlet extends HttpServlet {
   }
 
   /**
-   * Processes the HTTP requests
-   */
+  * Processes the HTTP requests
+  */
   def service(req: HttpServletRequest,resp: HttpServletResponse, requestState: Req): Boolean = {
     try {
       def doIt: Boolean = {
@@ -134,48 +134,48 @@ class LiftServlet extends HttpServlet {
 
     val role = NamedPF.applyBox(req.path, LiftRules.httpAuthProtectedResource.toList)
     role.map(_ match {
-        case Full(r) =>
-          LiftRules.authentication.verified_?(req) match {
-            case true => checkRoles(r, userRoles.get)
-            case _ => false
-          }
-        case _ => true
-      }) openOr true
+      case Full(r) =>
+        LiftRules.authentication.verified_?(req) match {
+          case true => checkRoles(r, userRoles.get)
+          case _ => false
+        }
+      case _ => true
+    }) openOr true
   }
 
   /**
-   * Service the HTTP request
-   */
+  * Service the HTTP request
+  */
   def doService(request: HttpServletRequest, response: HttpServletResponse, requestState: Req): Boolean = {
     var tmpStatelessHolder: Box[() => Box[LiftResponse]] = null
 
     tryo { LiftRules.onBeginServicing.toList.foreach(_(requestState)) }
 
     val resp =
-    // if the servlet is shutting down, return a 404
-    if (LiftRules.ending) {
-      LiftRules.notFoundOrIgnore(requestState, Empty)
-    } else if (!authPassed_?(requestState)) {
-      Full(LiftRules.authentication.unauthorizedResponse)
-    } else
-    // if the request is matched is defined in the stateless table, dispatch
-    if ({tmpStatelessHolder = NamedPF.applyBox(requestState,
-                                               LiftRules.statelessDispatchTable.toList);
-         tmpStatelessHolder.isDefined})
-    {
-      val f = tmpStatelessHolder.open_!
-      f() match {
-        case Full(v) => Full(LiftRules.convertResponse( (v, Nil, S.responseCookies, requestState) ))
-        case Empty => LiftRules.notFoundOrIgnore(requestState, Empty)
-        case f: Failure => Full(requestState.createNotFound(f))
-      }
-    } else {
+      // if the servlet is shutting down, return a 404
+      if (LiftRules.ending) {
+	LiftRules.notFoundOrIgnore(requestState, Empty)
+      } else if (!authPassed_?(requestState)) {
+	Full(LiftRules.authentication.unauthorizedResponse)
+      } else
+	// if the request is matched is defined in the stateless table, dispatch
+	if ({tmpStatelessHolder = NamedPF.applyBox(requestState,
+						   LiftRules.statelessDispatchTable.toList);
+             tmpStatelessHolder.isDefined})
+	  {
+	    val f = tmpStatelessHolder.open_!
+	    f() match {
+              case Full(v) => Full(LiftRules.convertResponse( (v, Nil, S.responseCookies, requestState) ))
+              case Empty => LiftRules.notFoundOrIgnore(requestState, Empty)
+              case f: Failure => Full(requestState.createNotFound(f))
+	    }
+	  } else {
 	    // otherwise do a stateful response
-      val liftSession = getLiftSession(requestState, request.getSession)
-      S.init(requestState, liftSession) {
-        dispatchStatefulRequest(request, liftSession, requestState)
-      }
-    }
+	    val liftSession = getLiftSession(requestState, request.getSession)
+	    S.init(requestState, liftSession) {
+              dispatchStatefulRequest(request, liftSession, requestState)
+	    }
+	  }
 
     tryo { LiftRules.onEndServicing.toList.foreach(_(requestState, resp)) }
 
@@ -183,10 +183,10 @@ class LiftServlet extends HttpServlet {
       case Full(cresp) =>
         val resp = cresp.toResponse
 
-        logIfDump(requestState, resp)
+      logIfDump(requestState, resp)
 
-        sendResponse(resp, response, Full(requestState))
-        true
+      sendResponse(resp, response, Full(requestState))
+      true
 
       case _ => false
     }
@@ -196,55 +196,55 @@ class LiftServlet extends HttpServlet {
                                       liftSession: LiftSession,
                                       requestState: Req):
   Box[LiftResponse] =
-  {
-    val toMatch = requestState
+    {
+      val toMatch = requestState
 
-    val dispatch: (Boolean, Box[LiftResponse]) =
-    NamedPF.find(toMatch, LiftRules.dispatchTable(request)) match {
-      case Full(pf) =>
-        LiftSession.onBeginServicing.foreach(_(liftSession, requestState))
-        val ret: (Boolean, Box[LiftResponse]) =
-        try {
-          pf(toMatch)() match {
-            case Full(v) =>
-              (true, Full(LiftRules.convertResponse( (liftSession.checkRedirect(v), Nil,
-                                                      S.responseCookies, requestState) )))
+      val dispatch: (Boolean, Box[LiftResponse]) =
+	NamedPF.find(toMatch, LiftRules.dispatchTable(request)) match {
+	  case Full(pf) =>
+            LiftSession.onBeginServicing.foreach(_(liftSession, requestState))
+          val ret: (Boolean, Box[LiftResponse]) =
+            try {
+              pf(toMatch)() match {
+		case Full(v) =>
+		  (true, Full(LiftRules.convertResponse( (liftSession.checkRedirect(v), Nil,
+							  S.responseCookies, requestState) )))
 
-            case Empty =>
-              (true, LiftRules.notFoundOrIgnore(requestState, Full(liftSession)))
+		  case Empty =>
+		    (true, LiftRules.notFoundOrIgnore(requestState, Full(liftSession)))
 
-            case f: Failure =>
-              (true, Full(liftSession.checkRedirect(requestState.createNotFound(f))))
-          }
-        } finally {
-          liftSession.notices = S.getNotices
-        }
+		    case f: Failure =>
+		      (true, Full(liftSession.checkRedirect(requestState.createNotFound(f))))
+              }
+            } finally {
+              liftSession.notices = S.getNotices
+            }
 
-        LiftSession.onEndServicing.foreach(_(liftSession, requestState,
-                                             ret._2))
-        ret
+          LiftSession.onEndServicing.foreach(_(liftSession, requestState,
+                                               ret._2))
+          ret
 
-      case _ => (false, Empty)
+	  case _ => (false, Empty)
+	}
+
+      val wp = requestState.path.wholePath
+
+      val toTransform: Box[LiftResponse] =
+	if (dispatch._1) dispatch._2
+	else if (wp.length == 3 && wp.head == LiftRules.cometPath &&
+		 wp(2) == LiftRules.cometScriptName())
+	  LiftRules.serveCometScript(liftSession, requestState)
+	else if ((wp.length >= 1) && wp.head == LiftRules.cometPath)
+	  handleComet(requestState, liftSession)
+	else if (wp.length == 2 && wp.head == LiftRules.ajaxPath &&
+		 wp(1) == LiftRules.ajaxScriptName())
+	  LiftRules.serveAjaxScript(liftSession, requestState)
+	else if (wp.length >= 1 && wp.head == LiftRules.ajaxPath)
+	  handleAjax(liftSession, requestState)
+	else liftSession.processRequest(requestState)
+
+      toTransform.map(LiftRules.performTransform)
     }
-
-    val wp = requestState.path.wholePath
-
-    val toTransform: Box[LiftResponse] =
-    if (dispatch._1) dispatch._2
-    else if (wp.length == 3 && wp.head == LiftRules.cometPath &&
-             wp(2) == LiftRules.cometScriptName())
-    LiftRules.serveCometScript(liftSession, requestState)
-    else if ((wp.length >= 1) && wp.head == LiftRules.cometPath)
-    handleComet(requestState, liftSession)
-    else if (wp.length == 2 && wp.head == LiftRules.ajaxPath &&
-             wp(1) == LiftRules.ajaxScriptName())
-    LiftRules.serveAjaxScript(liftSession, requestState)
-    else if (wp.length >= 1 && wp.head == LiftRules.ajaxPath)
-    handleAjax(liftSession, requestState)
-    else liftSession.processRequest(requestState)
-
-    toTransform.map(LiftRules.performTransform)
-  }
 
   private def extractVersion(path : List[String]) {
     path match {
@@ -255,52 +255,52 @@ class LiftServlet extends HttpServlet {
 
   private def handleAjax(liftSession: LiftSession,
                          requestState: Req): Box[LiftResponse] =
-  {
-    extractVersion(requestState.path.partPath)
+			   {
+			     extractVersion(requestState.path.partPath)
 
-    LiftRules.cometLogger.debug("AJAX Request: "+liftSession.uniqueId+" "+requestState.params)
-    tryo{LiftSession.onBeginServicing.foreach(_(liftSession, requestState))}
-    val ret = requestState.param("__lift__GC") match {
-      case Full(_) =>
-        val now = millis
-        val found: Int = liftSession.synchronized {
-          liftSession.updateFuncByOwner(RenderVersion.get, now)
-        }
+			     LiftRules.cometLogger.debug("AJAX Request: "+liftSession.uniqueId+" "+requestState.params)
+			     tryo{LiftSession.onBeginServicing.foreach(_(liftSession, requestState))}
+			     val ret = requestState.param("__lift__GC") match {
+			       case Full(_) =>
+				 val now = millis
+			       val found: Int = liftSession.synchronized {
+				 liftSession.updateFuncByOwner(RenderVersion.get, now)
+			       }
 
-        import js.JsCmds._
-        if (found == 0) Full(JavaScriptResponse(RedirectTo("/")))
-        else Full(JavaScriptResponse(js.JsCmds.Noop))
+			       import js.JsCmds._
+			       if (found == 0) Full(JavaScriptResponse(RedirectTo("/")))
+			       else Full(JavaScriptResponse(js.JsCmds.Noop))
 
-      case _ =>
-        try {
-          val what = flatten(liftSession.runParams(requestState))
+			       case _ =>
+				 try {
+				   val what = flatten(liftSession.runParams(requestState))
 
-          val what2 = what.flatMap{
-            case js: JsCmd => List(js)
-            case n: NodeSeq => List(n)
-            case js: JsCommands => List(js)
-            case r: LiftResponse => List(r)
-            case s => Nil
-          }
+				   val what2 = what.flatMap{
+				     case js: JsCmd => List(js)
+				     case n: NodeSeq => List(n)
+				     case js: JsCommands => List(js)
+				     case r: LiftResponse => List(r)
+				     case s => Nil
+				   }
 
-          val ret: LiftResponse = what2 match {
-            case (js: JsCmd) :: xs  => (JsCommands(S.noticesToJsCmd::Nil) & ((js :: xs).flatMap{case js: JsCmd => List(js) case _ => Nil}.reverse)).toResponse
-            case (n: Node) :: _ => XmlResponse(n)
-            case (ns: NodeSeq) :: _ => XmlResponse(Group(ns))
-            case (r: LiftResponse) :: _ => r
-            case _ => JsCommands(S.noticesToJsCmd :: JsCmds.Noop :: Nil).toResponse
-          }
+				   val ret: LiftResponse = what2 match {
+				     case (js: JsCmd) :: xs  => (JsCommands(S.noticesToJsCmd::Nil) & ((js :: xs).flatMap{case js: JsCmd => List(js) case _ => Nil}.reverse)).toResponse
+				     case (n: Node) :: _ => XmlResponse(n)
+				     case (ns: NodeSeq) :: _ => XmlResponse(Group(ns))
+				     case (r: LiftResponse) :: _ => r
+				     case _ => JsCommands(S.noticesToJsCmd :: JsCmds.Noop :: Nil).toResponse
+				   }
 
-          LiftRules.cometLogger.debug("AJAX Response: "+liftSession.uniqueId+" "+ret)
+				   LiftRules.cometLogger.debug("AJAX Response: "+liftSession.uniqueId+" "+ret)
 
-          Full(ret)
-        } finally {
-          liftSession.updateFunctionMap(S.functionMap)
-        }
-    }
-    tryo{LiftSession.onEndServicing.foreach(_(liftSession, requestState, ret))}
-    ret
-  }
+				   Full(ret)
+				 } finally {
+				   liftSession.updateFunctionMap(S.functionMap)
+				 }
+			     }
+			     tryo{LiftSession.onEndServicing.foreach(_(liftSession, requestState, ret))}
+			     ret
+			   }
 
   /**
    * An actor that manages continuations from container (Jetty style)
@@ -313,14 +313,14 @@ class LiftServlet extends HttpServlet {
       react {
         case BeginContinuation =>
           this.link(PointlessActorToWorkAroundBug)
-          val mySelf = self
-          val sendItToMe: AnswerRender => Unit = ah => mySelf ! (seqId, ah)
+        val mySelf = self
+        val sendItToMe: AnswerRender => Unit = ah => mySelf ! (seqId, ah)
 
-          actors.foreach{case (act, when) => act ! Listen(when, ListenerId(seqId), sendItToMe)}
+        actors.foreach{case (act, when) => act ! Listen(when, ListenerId(seqId), sendItToMe)}
 
         case (theId: Long, ar: AnswerRender) =>
           answers = ar :: answers
-          ActorPing.schedule(this, BreakOut, TimeSpan(5))
+        ActorPing.schedule(this, BreakOut, TimeSpan(5))
 
         case 'byebye =>
           this.exit()
@@ -328,18 +328,18 @@ class LiftServlet extends HttpServlet {
         case BreakOut =>
           this ! 'byebye
 
-          actors.foreach{case (act, _) => tryo(act ! Unlisten(ListenerId(seqId)))}
-          try {
+        actors.foreach{case (act, _) => tryo(act ! Unlisten(ListenerId(seqId)))}
+        try {
           LiftRules.resumeRequest(
             S.init(request, sessionActor)
             (LiftRules.performTransform(
-                convertAnswersToCometResponse(sessionActor,
-                                              answers.toArray, actors))),
-                                                request.request)
+              convertAnswersToCometResponse(sessionActor,
+                                            answers.toArray, actors))),
+            request.request)
 
-          } finally {
+        } finally {
           sessionActor.exitComet(this)
-	  }
+	}
 
         case _ =>
       }
@@ -366,8 +366,8 @@ class LiftServlet extends HttpServlet {
   }
 
   private def handleComet(requestState: Req, sessionActor: LiftSession): Box[LiftResponse] = {
-   val actors: List[(CometActor, Long)] =
-    requestState.params.toList.flatMap{case (name, when) =>
+    val actors: List[(CometActor, Long)] =
+      requestState.params.toList.flatMap{case (name, when) =>
         sessionActor.getAsyncComponent(name).toList.map(c => (c, toLong(when)))}
 
     if (actors.isEmpty) Full(new JsCommands(JsCmds.RedirectTo(LiftRules.noCometSessionPage) :: Nil).toResponse)
@@ -410,7 +410,7 @@ class LiftServlet extends HttpServlet {
 
           case s =>
             Log.trace("Drained "+s)
-            drainTheSwamp(len, in)
+          drainTheSwamp(len, in)
         }
       }
 
@@ -452,14 +452,14 @@ class LiftServlet extends HttpServlet {
   }
 
   /**
-   * Sends the {@code HttpServletResponse} to the browser using data from the
-   * {@link Response} and {@link Req}.
-   */
+  * Sends the {@code HttpServletResponse} to the browser using data from the
+  * {@link Response} and {@link Req}.
+  */
   def sendResponse(resp: BasicResponse, response: HttpServletResponse, request: Box[Req]) {
     def fixHeaders(headers : List[(String, String)]) = headers map ((v) => v match {
-        case ("Location", uri) => (v._1, response.encodeURL(request map (_ updateWithContextPath(uri)) openOr uri))
+      case ("Location", uri) => (v._1, response.encodeURL(request map (_ updateWithContextPath(uri)) openOr uri))
         case _ => v
-      })
+    })
 
     def pairFromRequest(in: Box[Req]): (Box[Req], Box[String]) = {
       val acceptHeader = for (req <- in;
@@ -490,7 +490,7 @@ class LiftServlet extends HttpServlet {
       resp match {
         case InMemoryResponse(bytes, _, _, _) =>
           response.getOutputStream.write(bytes)
-          response.getOutputStream.flush()
+        response.getOutputStream.flush()
 
         case StreamingResponse(stream, endFunc, _, _, _, _) =>
           try {
@@ -519,23 +519,23 @@ trait LiftFilterTrait {
   def actualServlet: LiftServlet
 
   /**
-   * Executes the Lift filter component.
-   */
+  * Executes the Lift filter component.
+  */
   def doFilter(req: ServletRequest, res: ServletResponse, chain: FilterChain) = {
     RequestVarHandler(Empty,
                       (req, res) match {
-        case (httpReq: HttpServletRequest, httpRes: HttpServletResponse) =>
-          tryo { LiftRules.early.toList.foreach(_(httpReq)) }
+			case (httpReq: HttpServletRequest, httpRes: HttpServletResponse) =>
+			  tryo { LiftRules.early.toList.foreach(_(httpReq)) }
 
-          var session = Req(httpReq, LiftRules.rewriteTable(httpReq), System.nanoTime)
+			var session = Req(httpReq, LiftRules.rewriteTable(httpReq), System.nanoTime)
 
-          URLRewriter.doWith(url => NamedPF.applyBox(httpRes.encodeURL(url), LiftRules.urlDecorate.toList) openOr httpRes.encodeURL(url)) {
-            if (!(isLiftRequest_?(session) && actualServlet.service(httpReq, httpRes, session))) {
-              chain.doFilter(req, res)
-            }
-          }
-        case _ => chain.doFilter(req, res)
-      })
+			URLRewriter.doWith(url => NamedPF.applyBox(httpRes.encodeURL(url), LiftRules.urlDecorate.toList) openOr httpRes.encodeURL(url)) {
+			  if (!(isLiftRequest_?(session) && actualServlet.service(httpReq, httpRes, session))) {
+			    chain.doFilter(req, res)
+			  }
+			}
+			case _ => chain.doFilter(req, res)
+		      })
   }
 
   def isLiftRequest_?(session: Req): Boolean
@@ -558,9 +558,9 @@ class LiftFilter extends Filter with LiftFilterTrait
     actualServlet = new LiftServlet(context)
     actualServlet.init
 
-      ActorSchedulerFixer.doActorSchedulerFix()
-      // access the object to work around Scala actor memory retention problems
-      PointlessActorToWorkAroundBug
+    ActorSchedulerFixer.doActorSchedulerFix()
+    // access the object to work around Scala actor memory retention problems
+    PointlessActorToWorkAroundBug
   }
 
   //And throw it away on destruction
@@ -576,25 +576,25 @@ class LiftFilter extends Filter with LiftFilterTrait
    * Executes Lift's Boot
    */
   def bootLift(loader : Box[String]) : Unit =
-  {
-    try
     {
-      val b : Bootable = loader.map(b => Class.forName(b).newInstance.asInstanceOf[Bootable]) openOr DefaultBootstrap
+      try
+      {
+	val b : Bootable = loader.map(b => Class.forName(b).newInstance.asInstanceOf[Bootable]) openOr DefaultBootstrap
 
-      preBoot
-      b.boot
-      postBoot
-    } catch {
-      case e => Log.error("Failed to Boot", e); None
+	preBoot
+	b.boot
+	postBoot
+      } catch {
+	case e => Log.error("Failed to Boot", e); None
+      }
     }
-  }
 
   private def preBoot() {
     LiftRules.dispatch.prepend(NamedPF("Classpath service") {
-        case r @ Req(mainPath :: subPath, suffx, _)
-          if mainPath == LiftRules.resourceServerPath =>
-          ResourceServer.findResourceInClasspath(r, r.path.wholePath.drop(1))
-      })
+      case r @ Req(mainPath :: subPath, suffx, _)
+      if mainPath == LiftRules.resourceServerPath =>
+        ResourceServer.findResourceInClasspath(r, r.path.wholePath.drop(1))
+    })
   }
 
   private def postBoot {
@@ -614,15 +614,15 @@ class LiftFilter extends Filter with LiftFilterTrait
   in.endsWith(".xml") || in.endsWith(".liftjs") || in.endsWith(".liftcss")
 
   /**
-   * Tests if a request should be handled by Lift or passed to the container to be executed by other potential filters or servlets.
-   */
+  * Tests if a request should be handled by Lift or passed to the container to be executed by other potential filters or servlets.
+  */
   def isLiftRequest_?(session: Req): Boolean = {
     NamedPF.applyBox(session, LiftRules.liftRequest.toList) match {
       case Full(b) => b
       case _ =>  session.path.endSlash ||
-        (session.path.wholePath.takeRight(1) match
-         {case Nil => true case x :: xs => liftHandled(x)}) ||
-        context.getResource(session.uri) == null
+      (session.path.wholePath.takeRight(1) match
+       {case Nil => true case x :: xs => liftHandled(x)}) ||
+      context.getResource(session.uri) == null
     }
   }
 
@@ -639,7 +639,7 @@ object ActorSchedulerFixer {
       Scheduler.impl match {
         case fj: FJTaskScheduler2 =>
           fj.snapshot()
-          fj.shutdown()
+        fj.shutdown()
         case _ =>
       }
 
@@ -650,38 +650,38 @@ object ActorSchedulerFixer {
         new IScheduler {
 
           /** Submits a closure for execution.
-           *
-           *  @param  fun  the closure to be executed
-           */
+          *
+          *  @param  fun  the closure to be executed
+          */
           def execute(fun: => Unit): Unit = es.execute(new Runnable {
-              def run() {
-                try {
-                  fun
-                } catch {
-                  case e => Log.error("Actor scheduler", e)
-                }
+            def run() {
+              try {
+                fun
+              } catch {
+                case e => Log.error("Actor scheduler", e)
               }
-            })
+            }
+          })
 
           /** Submits a <code>Runnable</code> for execution.
-           *
-           *  @param  task  the task to be executed
-           */
+          *
+          *  @param  task  the task to be executed
+          */
           def execute(task: Runnable): Unit = es.execute(new Runnable {
-              def run() {
-                try {
-                  task.run()
-                } catch {
-                  case e => Log.error("Actor scheduler", e)
-                }
+            def run() {
+              try {
+                task.run()
+              } catch {
+                case e => Log.error("Actor scheduler", e)
               }
-            })
+            }
+          })
 
           /** Notifies the scheduler about activity of the
-           *  executing actor.
-           *
-           *  @param  a  the active actor
-           */
+          *  executing actor.
+          *
+          *  @param  a  the active actor
+          */
           def tick(a: Actor): Unit = {}
 
           /** Shuts down the scheduler.
@@ -705,25 +705,26 @@ object PointlessActorToWorkAroundBug extends Actor {
   import java.lang.reflect.Field
 
   private def findField(in: Class[_], name: String): Box[Field] =
-  in match {
-    case null => Empty
-    case in => tryo(in.getDeclaredField(name)) or findField(in.getSuperclass, name)
-  }
+    in match {
+      case null => Empty
+      case in => tryo(in.getDeclaredField(name)) or findField(in.getSuperclass, name)
+    }
 
   def act = loop {
     react {
       case "ActorBug" =>
-        try {
-          import scala.collection.mutable.HashSet
-          import java.lang.ref.Reference
+	if (shouldActuallyDoDebug) {
+          try {
+            import scala.collection.mutable.HashSet
+            import java.lang.ref.Reference
 
-          val agc = ActorGC
-          agc.synchronized {
-            val rsf = agc.getClass.getDeclaredField("refSet")
-            rsf.setAccessible(true)
-            rsf.get(agc) match {
-              case h: HashSet[Reference[Object]] =>
-                Log.trace("[MEMDEBUG] got the actor refSet... length: "+h.size)
+            val agc = ActorGC
+            agc.synchronized {
+              val rsf = agc.getClass.getDeclaredField("refSet")
+              rsf.setAccessible(true)
+              rsf.get(agc) match {
+		case h: HashSet[Reference[Object]] =>
+                  Log.trace("[MEMDEBUG] got the actor refSet... length: "+h.size)
 
                 val nullRefs = h.elements.filter(f => f.get eq null).toList
 
@@ -736,26 +737,27 @@ object PointlessActorToWorkAroundBug extends Actor {
 
                 nonNull.foreach{r =>
                   for
-                  {
-                    a <- findField(r.get.getClass, "exiting")
-                  } {
-                    a.setAccessible(true)
-                    if (a.getBoolean(r.get)) {
-                      h -= r
-                      r.clear
+                    {
+                      a <- findField(r.get.getClass, "exiting")
+                    } {
+                      a.setAccessible(true)
+                      if (a.getBoolean(r.get)) {
+			h -= r
+			r.clear
+                      }
                     }
-                  }
-                }
+			      }
 
                 Log.trace("[MEMDEBUG] (again) got the actor refSet... length: "+h.size)
 
-              case _ =>
+		case _ =>
+              }
             }
+          } catch {
+            case e => Log.error("[MEMDEBUG] failure", e)
           }
-        } catch {
-          case e => Log.error("[MEMDEBUG] failure", e)
-        }
-        ping()
+	}
+      ping()
 
       case _ =>
     }
@@ -772,5 +774,8 @@ object PointlessActorToWorkAroundBug extends Actor {
   }
 
   ctor()
+
+  var shouldActuallyDoDebug = false
+
 }
 
