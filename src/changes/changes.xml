@@ -15,7 +15,9 @@
     </action>
     see http://maven.apache.org/plugins/maven-changes-plugin/usage.html for full guide
   -->
-    <release version="1.0.2" ... />
+    <release version="1.0.2" date="2009-09-10" description="Bugfix release for Actors issue">
+      <action dev="David Pollak" type="fix">Removed unnecessary fix for Actors issue now that we're on Scala 2.7.5</action>
+    </release>
     <release version="1.0.1" date="2009-09-09" description="First bug fix release"> 
       <action dev="David Pollak" type="fix">Backported fixes for the Textile and XML parsers</action>
       <action dev="David Pollak" type="fix">Backported the Actor memory leak fixes</action>
