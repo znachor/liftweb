@@ -192,7 +192,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
     DB.use(dbId) {
       conn =>
       val bl = by.toList ::: addlQueryParams.is
-      val (query, start, max) = addEndStuffs(addFields("SELECT COUNT(*) FROM "+MapperRules.quoteTableName(dbTableName)+"  ", false, bl), bl, conn)
+      val (query, start, max) = addEndStuffs(addFields("SELECT COUNT(*) FROM "+MapperRules.quoteTableName(dbTableName)+"  ", false, bl, conn), bl, conn)
 
       DB.prepareStatement(query, conn) {
         st =>
@@ -276,7 +276,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
     DB.use(dbId) {
       conn =>
       val bl = by.toList ::: addlQueryParams.is
-      val (query, start, max) = addEndStuffs(addFields("DELETE FROM "+MapperRules.quoteTableName(dbTableName)+" ", false, bl), bl, conn)
+      val (query, start, max) = addEndStuffs(addFields("DELETE FROM "+MapperRules.quoteTableName(dbTableName)+" ", false, bl, conn), bl, conn)
 
       DB.prepareStatement(query, conn) {
         st =>
@@ -310,7 +310,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
                                                        fields.map(_.dbSelectString).
                                                        mkString(", ")+
                                                        " FROM "+MapperRules.quoteTableName(dbTableName)+
-                                                       "  ", false, bl), bl, conn)
+                                                       "  ", false, bl, conn), bl, conn)
       DB.prepareStatement(query, conn) {
         st =>
         setStatementFields(st, bl, 1)
@@ -325,7 +325,8 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
     override val __nameSalt = randomString(10)
   }
 
-  private[mapper] def addFields(what: String, whereAdded: Boolean, by: List[QueryParam[A]]): String = {
+  private[mapper] def addFields(what: String, whereAdded: Boolean,
+                                by: List[QueryParam[A]], conn: SuperConnection): String = {
 
     var wav = whereAdded
 
@@ -384,20 +385,19 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
             case (in: InThing[A]) =>
               updatedWhat = updatedWhat + whereOrAnd +
               MapperRules.quoteColumnName(in.outerField.dbColumnName)+
-              " IN ("+in.innerMeta.addFields("SELECT "+
+              " IN ("+in.innerMeta.addEndStuffs(in.innerMeta.addFields("SELECT "+
                                              in.distinct+
                                              MapperRules.quoteColumnName(in.innerField.dbColumnName)+
                                              " FROM "+
                                              MapperRules.quoteTableName(in.innerMeta.dbTableName)+" ",false,
-                                             in.queryParams)+" ) "
-
+                                             in.queryParams, conn), in.queryParams, conn)._1+" ) "
 
               // Executes a subquery with {@code query}
             case BySql(query, _,  _*) =>
               updatedWhat = updatedWhat + whereOrAnd + " ( "+ query +" ) "
             case _ =>
           }
-          addFields(updatedWhat, wav, xs)
+          addFields(updatedWhat, wav, xs, conn)
         }
     }
   }
@@ -1425,7 +1425,7 @@ trait KeyedMetaMapper[Type, A<:KeyedMapper[Type, A]] extends MetaMapper[A] with 
       val (query, start, max) = addEndStuffs(addFields("SELECT "+
                                                        fields.map(_.dbSelectString).
                                                        mkString(", ")+
-                                                       " FROM "+MapperRules.quoteTableName(dbTableName)+" ",false,  bl), bl, conn)
+                                                       " FROM "+MapperRules.quoteTableName(dbTableName)+" ",false,  bl, conn), bl, conn)
       DB.prepareStatement(query, conn) {
         st =>
         setStatementFields(st, bl, 1)
