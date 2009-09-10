@@ -4,7 +4,7 @@ import _root_.scala.xml.{NodeSeq, Text}
 import _root_.net.liftweb.util._
 import _root_.java.util.Date
 import Helpers._
-import ${packageName}.lib._
+// import ${packageName}.lib._
 
 class HelloWorld {
       //  import DependencyFactory._ // Import the Dependency Injector

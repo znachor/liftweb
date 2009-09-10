@@ -1,5 +1,6 @@
 package ${packageName}.snippet
 
+/*
 import org.specs._
 import org.specs.runner.JUnit3
 import org.specs.runner.ConsoleRunner
@@ -10,7 +11,7 @@ import org.specs.matcher._
 import Helpers._
 import lib._
 
-/*
+
 class HelloWorldTestSpecsAsTest extends JUnit3(HelloWorldTestSpecs)
 object HelloWorldTestSpecsRunner extends ConsoleRunner(HelloWorldTestSpecs)
 
