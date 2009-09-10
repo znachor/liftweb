@@ -470,8 +470,27 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
    * Manages the merge phase of the rendering pipeline
    */
 
-  private def merge(xhtml: NodeSeq): Node = {
-    var htmlTag = <html xmlns="http://www.w3.org/1999/xhtml" xmlns:lift='http://liftweb.net'/>
+  private def merge(xhtml: NodeSeq, req: Req): Node = {
+  val hasHtmlHeadAndBody: Boolean = xhtml.find {
+    case e: Elem if e.label == "html" =>
+      e.child.find {
+        case e: Elem if e.label == "head" => true
+        case _ => false
+      }.isDefined &&
+       e.child.find {
+        case e: Elem if e.label == "body" => true
+        case _ => false
+      }.isDefined
+    case _ => false
+  }.isDefined
+
+  if (!hasHtmlHeadAndBody) {
+    req.fixHtml(xhtml).find {
+      case e: Elem => true
+      case _ => false
+    } getOrElse Text("")
+  } else {
+ var htmlTag = <html xmlns="http://www.w3.org/1999/xhtml" xmlns:lift='http://liftweb.net'/>
     var headTag = <head/>
     var bodyTag = <body/>
     val headChildren = new ListBuffer[Node]
@@ -631,6 +650,7 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
 
     ret
   }
+  }
 
   private[http] def processRequest(request: Req): Box[LiftResponse] = {
     ieMode.is // make sure this is primed
@@ -673,7 +693,7 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
                    map(xml => processSurroundAndInclude(PageName get, xml)) match {
                       case Full(rawXml: NodeSeq) => {
                           // Phase 2: Head & Tail merge, add additional elements to body & head
-                          val xml = merge(rawXml)
+                          val xml = merge(rawXml, request)
 
                           LiftSession.this.synchronized {
                             S.functionMap.foreach {mi =>
