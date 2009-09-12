@@ -29,34 +29,20 @@ import JsonParser.parse
  *  See: SerializationExamples.scala
  */
 object Serialization {
-  import Meta._
+  import Meta.Reflection._
 
   def save[A <: AnyRef](a: A): String = {
-    val mapping = mappingOf(a.getClass)
-
-    // FIXME make this unncessary
-    def pathOf(m: Mapping) = m match {
-      case Value(p, _) => p
-      case Constructor(Some(p), _, _) => p
-      case _ => error("no path")
+    def serialize(a: Any): JValue = a.asInstanceOf[AnyRef] match {
+      case x if primitive_?(x.getClass) => JInt(a.asInstanceOf[Int])
+      case x: List[_] => JArray(x.map(serialize))
+      case x => 
+        JObject(x.getClass.getDeclaredFields.filter(!static_?(_)).toList.map { f => 
+          f.setAccessible(true)
+          JField(f.getName, serialize(f.get(x)))
+        })
     }
 
-    def serialize(mapping: Mapping): JValue = mapping match {
-      case Value(path, targetType) => JInt(1)
-      case Constructor(path, classname, args) => 
-        JObject(args.map(a => JField(pathOf(a), serialize(a))))
-/*
-      case ListConstructor(path, classname, args) => 
-        val arr = fieldValue(root, path).asInstanceOf[JArray]
-        arr.arr.map(elem => newInstance(classname, args.flatMap(build(elem, _, argStack)))) :: argStack
-      case ListOfPrimitives(path, elementType) =>
-        val arr = fieldValue(root, path).asInstanceOf[JArray]
-        arr.arr.map(elem => newPrimitive(elementType, elem)) :: argStack
-      case Optional(m) =>
-      */
-    }
-
-    Printer.compact(render(serialize(mapping)))
+    Printer.compact(render(serialize(a)))
   }
 
   def load[A](json: String)(implicit mf: Manifest[A]) = parse(json).extract(DefaultFormats, mf)
