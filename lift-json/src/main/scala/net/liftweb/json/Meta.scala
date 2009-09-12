@@ -112,5 +112,26 @@ object Meta {
     def static_?(f: Field) = Modifier.isStatic(f.getModifiers)
     def container_?(t: Type) = 
       t.asInstanceOf[ParameterizedType].getActualTypeArguments()(0).isInstanceOf[ParameterizedType]
+
+    def primitive2jvalue(a: Any) = a match {
+      case x: String => JString(x)
+      case x: Int => JInt(x)
+      case x: Long => JInt(x)
+      case x: Double => JDouble(x)
+      case x: Float => JDouble(x)
+      case x: Byte => JInt(BigInt(x))
+      case x: BigInt => JInt(x)
+      case x: Boolean => JBool(x)
+      case x: Short => JInt(BigInt(x))
+      case x: java.lang.Integer => JInt(BigInt(x.asInstanceOf[Int]))
+      case x: java.lang.Long => JInt(BigInt(x.asInstanceOf[Long]))
+      case x: java.lang.Double => JDouble(x.asInstanceOf[Double])
+      case x: java.lang.Float => JDouble(x.asInstanceOf[Float])
+      case x: java.lang.Byte => JInt(BigInt(x.asInstanceOf[Byte]))
+      case x: java.lang.Boolean => JBool(x.asInstanceOf[Boolean])
+      case x: java.lang.Short => JInt(BigInt(x.asInstanceOf[Short]))
+//      case x: Date =>
+      case _ => error("not a primitive " + a.asInstanceOf[AnyRef].getClass)
+    }
   }
 }

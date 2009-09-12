@@ -33,7 +33,7 @@ object Serialization {
 
   def save[A <: AnyRef](a: A): String = {
     def serialize(a: Any): JValue = a.asInstanceOf[AnyRef] match {
-      case x if primitive_?(x.getClass) => JInt(a.asInstanceOf[Int])
+      case x if primitive_?(x.getClass) => primitive2jvalue(x)
       case x: List[_] => JArray(x.map(serialize))
       case x => 
         JObject(x.getClass.getDeclaredFields.filter(!static_?(_)).toList.map { f => 
