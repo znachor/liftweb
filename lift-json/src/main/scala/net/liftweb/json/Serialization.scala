@@ -24,6 +24,10 @@ import JsonParser.parse
 
 /** Functions to serialize and deserialize a case class.
  *
+ *  FIXME: @path
+ *  FIXME: Option support
+ *  FIXME: Map support
+ * 
  *  See: SerializationExamples.scala
  */
 object Serialization {
