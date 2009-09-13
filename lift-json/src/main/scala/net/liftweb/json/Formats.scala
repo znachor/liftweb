@@ -16,7 +16,7 @@ package net.liftweb.json
  * and limitations under the License.
  */
 
-import java.util.Date
+import java.util.{Date, TimeZone}
 
 trait Formats {
   val dateFormat: DateFormat
@@ -26,13 +26,17 @@ trait DateFormat {
   def parse(s: String): Option[Date]
 }
 
+/** Default date format is UTC time.
+ */
 object DefaultFormats extends DefaultFormats
 trait DefaultFormats extends Formats {
   import java.text.{ParseException, SimpleDateFormat}
 
   val dateFormat = new DateFormat {
     def parse(s: String) = try {
-      Some(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").parse(s))
+      val format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
+      format.setTimeZone(TimeZone.getTimeZone("UTC"))
+      Some(format.parse(s))
     } catch {
       case e: ParseException => None
     }
