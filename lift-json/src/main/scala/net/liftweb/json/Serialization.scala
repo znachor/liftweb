@@ -24,12 +24,12 @@ import JsonParser.parse
 
 /** Functions to serialize and deserialize a case class.
  *
- *  FIXME: @path
  *  FIXME: Map support
  * 
  *  See: SerializationExamples.scala
  */
 object Serialization {
+  import Meta.pathName
   import Meta.Reflection._
 
   val formats = DefaultFormats.lossless
@@ -40,10 +40,13 @@ object Serialization {
       case x: List[_] => JArray(x map serialize)
       case x: Option[_] => serialize(x getOrElse JNothing)
       case x => 
-        JObject(x.getClass.getDeclaredFields.filter(!static_?(_)).toList.map { f => 
+        x.getClass.getDeclaredFields.filter(!static_?(_)).toList.map { f => 
           f.setAccessible(true)
-          JField(f.getName, serialize(f get x))
-        })
+          JField(pathName(f), serialize(f get x))
+        } match {
+          case Nil => JNothing
+          case fields => JObject(fields)
+        }
     }
 
     Printer.compact(render(serialize(a)))

@@ -16,11 +16,11 @@ package net.liftweb.json
  * and limitations under the License.
  */
 
-import java.lang.reflect.{Constructor => JConstructor, Type}
+import java.lang.reflect.{Constructor => JConstructor, Field, Type}
 import java.util.Date
 import JsonAST._
 
-object Meta {
+private[json] object Meta {
   /** Intermediate metadata format for case classes.
    *  This ADT is constructed (and then memoized) from given case class using reflection.
    *
@@ -57,9 +57,7 @@ object Meta {
     }
 
     def constructorArgs(clazz: Class[_]) = clazz.getDeclaredFields.filter(!static_?(_)).map { f =>
-      val annot = f.getAnnotation(classOf[path])
-      val path = if (annot == null) f.getName else annot.value
-      fieldMapping(path, f.getType, f.getGenericType)
+      fieldMapping(pathName(f), f.getType, f.getGenericType)
     }.toList.reverse
 
     def fieldMapping(name: String, fieldType: Class[_], genericType: Type): Mapping = 
@@ -72,6 +70,11 @@ object Meta {
         } else Optional(fieldMapping(name, typeParameter(genericType), null))
       else makeMapping(Some(name), fieldType, false)
     memo.memoize(clazz, makeMapping(None, _, false))
+  }
+
+  private[json] def pathName(f: Field) = {
+    val annot = f.getAnnotation(classOf[path])
+    if (annot == null) f.getName else annot.value
   }
 
   private class Memo[A, R] {

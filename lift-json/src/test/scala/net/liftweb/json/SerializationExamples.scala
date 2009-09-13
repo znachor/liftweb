@@ -22,12 +22,10 @@ object SerializationExamples extends Specification {
   case class Team(role: String, members: List[Employee])
   case class Employee(name: String, experience: Int)
 
-/*
   "Lotto serialization example" in {
     import LottoExample.{Lotto, lotto}
 
     val ser = save(lotto)
     load[Lotto](ser) mustEqual lotto
   }
-*/
 }
