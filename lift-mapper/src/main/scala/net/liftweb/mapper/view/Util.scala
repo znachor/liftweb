@@ -51,66 +51,40 @@ object Util {
    * for field-specific nodes. The snippet should bind the containing (repeating) node to the function
    * returned by this method, passing this method the mapper instance whose fields should be used and
    * a function that returns BindParams to process the "field:" prefixed nodes.
+   * This method takes an additional filter function to restrict certain fields from being
+   * displayed. There is an overload without it too. 
    */
-  def eachField[T<:net.liftweb.mapper.Mapper[T]](mapper: T, fn:MappedField[_,T]=>Seq[BindParam]):NodeSeq=>NodeSeq = (ns: NodeSeq) => BindHelpers.attr("fields") match {
-    case Some(fields) =>
-      NodeSeq.fromSeq(
-        fields.text.split("\\s+").flatMap {f =>
-            val params = mapper.fieldByName(f.toString)
-            bind("field", ns, fn(params.open_!) : _*)
+  def eachField[T<:net.liftweb.mapper.Mapper[T]](
+    mapper: T,
+    fn:MappedField[_,T]=>Seq[BindParam],
+    filter: MappedField[_,T]=>Boolean
+  ): NodeSeq=>NodeSeq = {
+    (ns: NodeSeq) => BindHelpers.attr("fields") match {
+      case Some(fields) =>
+        NodeSeq.fromSeq(
+          fields.text.split("\\s+").flatMap {f =>
+              val field = mapper.fieldByName(f.toString)
+              field match {
+                case Full(f) if filter(f) =>
+                  bind("field", ns, fn(f) : _*)
+                case _ =>
+                  NodeSeq.Empty
+              }
+            }
+        )
+      case None =>
+        NodeSeq.fromSeq(
+          mapper.formFields.filter(filter).flatMap { case f: MappedField[_,T] =>
+            bind("field",ns, fn(f): _*)
           }
-      )
-    case None =>
-      NodeSeq.fromSeq(
-        mapper.formFields.flatMap { case f: MappedField[_,T] =>
-          bind("field",ns, fn(f): _*)
-        }
-      )
-  }
-
-  class BindableNodeSeq(ns: NodeSeq) {
-    def bind(prefix: String, bindParams: BindParam*) = Helpers.bind(prefix, ns, bindParams: _*)
-    def bind(prefix: String, nodeFailureXform: Box[NodeSeq => NodeSeq],
-             paramFailureXform: Box[xml.PrefixedAttribute => xml.MetaData], bindParams: BindParam*) =
-      Helpers.bind(prefix, nodeFailureXform, paramFailureXform, ns, bindParams: _*)
-  }
-
-  /**
-   * Can be used to support a bind-chaining syntax, for use with multiple prefixes.
-   * For example:
-   * <pre>
-   *  xhtml.bind("prefix1",
-   *    bindParam1,
-   *    bindParam2
-   *  ).bind("prefix2",
-   *    bindParam1,
-   *    bindParam2
-   *  )
-   * Where bindParam can be the usual arrow -> syntax or any BindParam.
-   * Can also be used with the bind overload that takes nodeFailureXform
-   * and paramFailureXform arguments.
-   * Just import this method, or Util._
-   */
-  implicit def nodeSeqToBindable(ns: NodeSeq): BindableNodeSeq = new BindableNodeSeq(ns)
-  
-  
-  /**
-   * If you want all your attributes specified in the view carried
-   * over to the result of bind without prefixing them, use keepAttrs.
-   * For example, say you bind &lt;my:text /&gt; to SHtml.text(...).
-   * You can either pass attributes to SHtml.text as tuples in you code,
-   * or put the attributes in the view, prefixed with lift:
-   * lift:id, lift:size, lift:maxlength...
-   * With keepAttrs, you can write the attributes as usual without the
-   * prefix. Just wrap the call to SHtml.text with keepAttrs(...)
-   * and all attributes in the view will be applied to the bound result.
-   */
-  def keepAttrs(elem: Elem) = (ns: NodeSeq) =>
-    BindHelpers.currentNode match {
-      case Full(inElem) =>
-        elem % inElem.attributes
-      case other =>
-        elem
+        )
     }
+  }
+  def eachField[T<:net.liftweb.mapper.Mapper[T]](
+    mapper: T,
+    fn:MappedField[_,T]=>Seq[BindParam]
+  ): NodeSeq=>NodeSeq = eachField(mapper, fn, (f:MappedField[_,T])=>true)
+
+  
 }
 
