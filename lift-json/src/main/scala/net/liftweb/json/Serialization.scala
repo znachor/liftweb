@@ -33,9 +33,11 @@ import JsonParser.parse
 object Serialization {
   import Meta.Reflection._
 
+  val formats = DefaultFormats.lossless
+
   def save[A <: AnyRef](a: A): String = {
     def serialize(a: Any): JValue = a.asInstanceOf[AnyRef] match {
-      case x if primitive_?(x.getClass) => primitive2jvalue(x)
+      case x if primitive_?(x.getClass) => primitive2jvalue(x)(formats)
       case x: List[_] => JArray(x map serialize)
       case x => 
         JObject(x.getClass.getDeclaredFields.filter(!static_?(_)).toList.map { f => 
@@ -47,5 +49,5 @@ object Serialization {
     Printer.compact(render(serialize(a)))
   }
 
-  def load[A](json: String)(implicit mf: Manifest[A]) = parse(json).extract(DefaultFormats, mf)
+  def load[A](json: String)(implicit mf: Manifest[A]) = parse(json).extract(formats, mf)
 }

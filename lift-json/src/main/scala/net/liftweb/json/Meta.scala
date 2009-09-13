@@ -113,7 +113,7 @@ object Meta {
     def container_?(t: Type) = 
       t.asInstanceOf[ParameterizedType].getActualTypeArguments()(0).isInstanceOf[ParameterizedType]
 
-    def primitive2jvalue(a: Any) = a match {
+    def primitive2jvalue(a: Any)(implicit formats: Formats) = a match {
       case x: String => JString(x)
       case x: Int => JInt(x)
       case x: Long => JInt(x)
@@ -130,7 +130,7 @@ object Meta {
       case x: java.lang.Byte => JInt(BigInt(x.asInstanceOf[Byte]))
       case x: java.lang.Boolean => JBool(x.asInstanceOf[Boolean])
       case x: java.lang.Short => JInt(BigInt(x.asInstanceOf[Short]))
-//      case x: Date =>
+      case x: Date => JString(formats.dateFormat.format(x))
       case _ => error("not a primitive " + a.asInstanceOf[AnyRef].getClass)
     }
   }

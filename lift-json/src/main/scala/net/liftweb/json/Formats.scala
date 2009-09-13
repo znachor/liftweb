@@ -24,6 +24,7 @@ trait Formats {
 
 trait DateFormat {
   def parse(s: String): Option[Date]
+  def format(d: Date): String
 }
 
 /** Default date format is UTC time.
@@ -32,13 +33,25 @@ object DefaultFormats extends DefaultFormats
 trait DefaultFormats extends Formats {
   import java.text.{ParseException, SimpleDateFormat}
 
-  val dateFormat = new DateFormat {
+  val dateFormat = new DateFormat {    
     def parse(s: String) = try {
-      val format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
-      format.setTimeZone(TimeZone.getTimeZone("UTC"))
-      Some(format.parse(s))
+      Some(formatter.parse(s))
     } catch {
       case e: ParseException => None
     }
+    
+    def format(d: Date) = formatter.format(d)
+
+    private def formatter = {
+      val f = dateFormatter
+      f.setTimeZone(TimeZone.getTimeZone("UTC"))
+      f
+    }
+  }
+
+  protected def dateFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
+
+  def lossless = new DefaultFormats {
+    override def dateFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
   }
 }
