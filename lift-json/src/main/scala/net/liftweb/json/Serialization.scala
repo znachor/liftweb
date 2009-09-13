@@ -34,7 +34,7 @@ object Serialization {
 
   val formats = DefaultFormats.lossless
 
-  def save[A <: AnyRef](a: A): String = {
+  def write[A <: AnyRef](a: A): String = {
     def serialize(a: Any): JValue = a.asInstanceOf[AnyRef] match {
       case x if primitive_?(x.getClass) => primitive2jvalue(x)(formats)
       case x: List[_] => JArray(x map serialize)
@@ -52,5 +52,5 @@ object Serialization {
     Printer.compact(render(serialize(a)))
   }
 
-  def load[A](json: String)(implicit mf: Manifest[A]) = parse(json).extract(formats, mf)
+  def read[A](json: String)(implicit mf: Manifest[A]) = parse(json).extract(formats, mf)
 }
