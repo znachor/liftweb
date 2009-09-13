@@ -2,6 +2,7 @@
   <id>liftweb-archetype-basic</id>
   <sources>
     <source>src/main/scala/lib/.keep</source>
+    <source>src/main/scala/lib/DepencyFactory.scala</source>
     <source>src/main/scala/comet/.keep</source>
     <source>src/main/scala/model/.keep</source>
     <source>src/main/scala/model/User.scala</source>
@@ -18,6 +19,7 @@
   </resources>
   <testSources>
     <source>src/test/scala/AppTest.scala</source>
+    <source>src/test/scala/snippet/HelloWorldTest.scala</source>
   </testSources>
   <testResources>
     <resource>src/test/scala/RunWebApp.scala</resource>

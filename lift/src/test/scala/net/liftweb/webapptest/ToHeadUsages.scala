@@ -31,24 +31,58 @@ object ToHeadUsages extends Specification {
     "merge <head> from html fragment" >> {
       JettyTestServer.browse(
         "/htmlFragmentWithHead",
-        _.assertElementPresentByXPath("/html/head/script[@id='fromFrag']")
+         _.assertElementPresentByXPath("/html/head/script[@id='fromFrag']")
       )
     }
 
     "merge <head> from html fragment does not include head element in body" >> {
       JettyTestServer.browse(
         "/htmlFragmentWithHead",
-        _.assertElementNotPresentByXPath("/html/body/script[@id='fromFrag']")
+         _.assertElementNotPresentByXPath("/html/body/script[@id='fromFrag']")
       )
     }
 
     "merge <head> from snippet" >> {
       JettyTestServer.browse(
         "/htmlSnippetWithHead",
-        _.assertElementPresentByXPath("/html/head/script[@src='snippet.js']")
+         _.assertElementPresentByXPath("/html/head/script[@src='snippet.js']")
       )
     }
+    
+    "not merge for bodyless html" >> {
+      JettyTestServer.browse(
+        "/basicDiv",html => {
+          html.assertElementPresent("fruit")
+          html.assertElementPresent("bat")
+        }
+      )
+    }
+
+    "not merge for headless bodyless html" >> {
+      JettyTestServer.browse(
+        "/h1",html => {
+          html.assertElementPresent("h1")
+        }
+      )
+    }
+
+    "not merge for headless body html" >> {
+      JettyTestServer.browse(
+        "/body_no_head",html => {
+          html.assertElementPresentByXPath("/html/body/head/div")
+        }
+      )
+    }
+
+    "not merge non-html" >> {
+      JettyTestServer.browse(
+        "/non_html",html => {
+          html.assertElementPresent("frog")
+        }
+      )
+    }
+
   }
 
-//  JettyTestServer.stop()
+  //  JettyTestServer.stop()
 }

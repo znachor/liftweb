@@ -255,7 +255,7 @@ object Req {
 
   private[liftweb] def defaultCreateNotFound(in: Req) =
   XhtmlResponse((<html><body>The Requested URL {in.contextPath+in.uri} was not found on this server</body></html>),
-                ResponseInfo.docType(in), List("Content-Type" -> "text/html"), Nil, 404, S.ieMode)
+                ResponseInfo.docType(in), List("Content-Type" -> "text/html; charset=utf-8"), Nil, 404, S.ieMode)
 
   def unapply(in: Req): Option[(List[String], String, RequestType)] = Some((in.path.partPath, in.path.suffix, in.requestType))
 }
@@ -390,7 +390,7 @@ class Req(val path: ParsePath,
 
   def testFor304(lastModified: Long, headers: (String, String)*): Box[LiftResponse] = 
   if (!testIfModifiedSince(lastModified))
-  Full(InMemoryResponse(new Array[Byte](0), ("Content-Type" -> "text/plain") :: headers.toList, Nil, 304))
+  Full(InMemoryResponse(new Array[Byte](0), ("Content-Type" -> "text/plain; charset=utf-8") :: headers.toList, Nil, 304))
   else
   Empty
 

@@ -40,7 +40,7 @@ import _root_.java.util.concurrent.{ConcurrentHashMap => CHash}
  * @see LiftSession
  * @see LiftFilter
  */
-object S extends HasParams with Injector {
+object S extends HasParams {
   /**
    * RewriteHolder holds a partial function that re-writes an incoming request. It is
    * used for per-session rewrites, as opposed to global rewrites, which are handled
@@ -1691,36 +1691,6 @@ object S extends HasParams with Injector {
     }
   }
 
-  private object diHash extends SessionVar(new CHash[Class[_], Function0[_]]())
-  private object rdiHash extends RequestVar(Map[Class[_], Function0[_]]())
-  private object stackHash extends RequestVar(Map[Class[_], Function0[_]]())
-
-  implicit def inject[T](implicit man: Manifest[T]): Box[T] =
-  Box(stackHash.is.get(man.erasure).map(f => f.apply().asInstanceOf[T])) or
-  Box(rdiHash.is.get(man.erasure).map(f => f.apply().asInstanceOf[T])) or
-  (diHash.is.get(man.erasure) match {
-      case null => Empty
-      case f => Full(f.apply().asInstanceOf[T])
-    }) or LiftRules.inject(man)
-
-  def registerInjection[T](f: () => T)(implicit man: Manifest[T]) {
-    diHash.is.put(man.erasure, f)
-  }
-
-  def registerRequestInjection[T](f: () => T)(implicit man: Manifest[T]) {
-    rdiHash.set(rdiHash.is + (man.erasure -> f))
-  }
-
-  def doInjection[F, T](injFunc: () => T)(f: => F)(implicit man: Manifest[T]): F = {
-    val old = stackHash.is
-    stackHash.set(old + (man.erasure -> injFunc))
-    try {
-      f
-    } finally {
-      stackHash.set(old)
-    }
-  }
-
   /**
    * Build a handler for incoming JSON commands
    *
@@ -2062,11 +2032,6 @@ object S extends HasParams with Injector {
   }
 
   implicit def tuple2FieldError(t: (FieldIdentifier, NodeSeq)) = FieldError(t._1, t._2)
-
-  implicit object SInjector extends Injector {
-    implicit def inject[T](implicit man: Manifest[T]): Box[T] = S.inject(man)
-  }
-
 }
 
 /**

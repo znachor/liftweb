@@ -164,8 +164,8 @@ object LiftRules extends SimpleInjector {
    */
   var determineContentType: PartialFunction[(Box[Req], Box[String]), String] = {
     case (_, Full(accept)) if this.useXhtmlMimeType && accept.toLowerCase.contains("application/xhtml+xml") =>
-      "application/xhtml+xml"
-    case _ => "text/html"
+      "application/xhtml+xml; charset=utf-8"
+    case _ => "text/html; charset=utf-8"
   }
 
   lazy val liftVersion: String = {
@@ -765,12 +765,12 @@ object LiftRules extends SimpleInjector {
       XhtmlResponse((<html><body>Exception occured while processing {r.uri}
               <pre>{
                   showException(e)
-                }</pre></body></html>),ResponseInfo.docType(r), List("Content-Type" -> "text/html"), Nil, 500, S.ieMode)
+                }</pre></body></html>),ResponseInfo.docType(r), List("Content-Type" -> "text/html; charset=utf-8"), Nil, 500, S.ieMode)
 
     case (_, r, e) =>
       Log.error("Exception being returned to browser when processing "+r, e)
       XhtmlResponse((<html><body>Something unexpected happened while serving the page at {r.uri}
-                           </body></html>),ResponseInfo.docType(r), List("Content-Type" -> "text/html"), Nil, 500, S.ieMode)
+                           </body></html>),ResponseInfo.docType(r), List("Content-Type" -> "text/html; charset=utf-8"), Nil, 500, S.ieMode)
   }
 
   /**
