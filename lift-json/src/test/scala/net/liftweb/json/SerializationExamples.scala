@@ -28,4 +28,11 @@ object SerializationExamples extends Specification {
     val ser = save(lotto)
     load[Lotto](ser) mustEqual lotto
   }
+
+  "Primitive serialization example" in {
+    val primitives = Primitives(124, 123L, 126.5, 127.5.floatValue, "128", 125, 129.byteValue, true)
+    val ser = save(primitives)
+    load[Primitives](ser) mustEqual primitives
+  }
+
 }
