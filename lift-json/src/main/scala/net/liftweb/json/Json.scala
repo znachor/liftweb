@@ -229,23 +229,29 @@ object JsonDSL extends Printer {
 
 object Printer extends Printer
 trait Printer {
+  import java.io._
   import scala.text._
 
-  def compact(d: Document): String = {
-    def layout(doc: Document): String = doc match {
-      case DocText(s)      => s 
-      case DocCons(d1, d2) => layout(d1) + layout(d2)
-      case DocBreak        => ""
+  def compact(d: Document): String = compact(d, new StringWriter).toString
+
+  def compact[A <: Writer](d: Document, out: A): A = {
+    def layout(doc: Document): Unit = doc match {
+      case DocText(s)      => out.write(s) 
+      case DocCons(d1, d2) => layout(d1); layout(d2)
+      case DocBreak        => 
       case DocNest(_, d)   => layout(d)
       case DocGroup(d)     => layout(d)
-      case DocNil          => ""
+      case DocNil          => 
     }
     layout(d)
+    out.flush
+    out
   }
 
-  def pretty(d: Document): String = {
-    val s = new java.io.StringWriter
-    d.format(80, s)
-    s.toString
+  def pretty(d: Document): String = pretty(d, new StringWriter).toString
+
+  def pretty[A <: Writer](d: Document, out: A): A = {
+    d.format(80, out)
+    out
   }
 }

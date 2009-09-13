@@ -74,7 +74,7 @@ Example
 
 Example produces following pretty printed JSON. Notice that draw-date field is not rendered since its value is None:
 
-    scala> pretty(render(JsonExample.json))
+    scala> pretty(JsonAST.render(JsonExample.json))
 
     {
       "lotto":{
