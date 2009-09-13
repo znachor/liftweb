@@ -31,7 +31,7 @@ trait ItemsList[T <: Mapper[T]] {
    * Must itself be a T (the mapper type it represents)
    */
   def metaMapper: T with MetaMapper[T]
-  
+  var sortNullFirst = true
   var current: List[T] = Nil
   var added: List[T] = Nil
   var removed: List[T] = Nil
@@ -46,6 +46,9 @@ trait ItemsList[T <: Mapper[T]] {
           (a, b) => ((field.actualField(a).is: Any, field.actualField(b).is: Any) match {
             case (aval: String, bval: String) => aval.toLowerCase < bval.toLowerCase
             case (aval: Ordered[Any], bval: Ordered[Any]) => aval < bval
+            case (aval: java.lang.Comparable[Any], bval: java.lang.Comparable[Any]) => (aval compareTo bval) < 0
+            case (null, _) => sortNullFirst
+            case (_, null) => !sortNullFirst
             case (aval, bval) => aval.toString < bval.toString
           }) match {
             case cmp =>
@@ -68,9 +71,17 @@ trait ItemsList[T <: Mapper[T]] {
   def save {
     val toSave = (added++current) filter {i=>removed.forall(i.ne)}
     val toRemove = removed filter {_.saved_?}
-    toSave.forall(_.save)
-    toRemove.forall(_.delete_!)
-    reload
+    
+//    val (valid, invalid) = toSave.partition(_.validate eq Nil)
+//    val (saved, unsaved) = valid.partition(_.save)
+    val saved = toSave filter {_.validate eq Nil} filter (_.save)
+//    val (deleted, notdeleted) = toRemove.partition(_.delete_!)
+    val deleted = toRemove filter (_.delete_!)
+    
+    removed --= deleted
+    added --= saved
+    current = current ++ saved removeDuplicates
+    
   }
   
   var sortField: Option[MappedField[_, T]] = None
@@ -82,6 +93,15 @@ trait ItemsList[T <: Mapper[T]] {
     case _ | null =>
       sortField = Some(field)
       ascending = true
+  }
+  def sortFn(field: MappedField[_, T]) = (sortField, ascending) match {
+    case (Some(f), true) if f eq field =>
+      () => ascending = false
+    case _ | null =>
+      () => {
+        sortField = Some(field)
+        ascending = true
+      }
   }
   
   reload
@@ -130,35 +150,61 @@ package snippet {
 }
 
 /**
- * This class provides the actual view binding against a ItemsList.
+ * This class does the actual view binding against a ItemsList.
+ * The implementation is in the base trait ItemsListEditor
  * @author nafg
  */
-protected class TableEditorImpl[T <: Mapper[T]](title: String, meta: T with MetaMapper[T]) {  
+protected class TableEditorImpl[T <: Mapper[T]](val title: String, meta: T with MetaMapper[T]) extends ItemsListEditor[T] {
   var items = new ItemsList[T] {
     def metaMapper = meta
-  } 
-    
+  }
+}
+
+/**
+ * General trait to edit an ItemsList.
+ * @author nafg
+ */
+trait ItemsListEditor[T<:Mapper[T]] {
+  def items: ItemsList[T]
+  def title: String
+  
+  def onInsert: Unit = items.add
+  def onRemove(item: T): Unit = items.remove(item)
+  def onSubmit: Unit = items.save
+  def sortFn(f: MappedField[_, T]): ()=>Unit = items.sortFn(f)
+  
+  val fieldFilter: MappedField[_,T]=>Boolean = (f: MappedField[_,T])=>true
   
   def edit(xhtml: NodeSeq) = {
     xhtml.bind("header",
          "fields" -> eachField[T](
-             items.metaMapper, (f: MappedField[_,T]) => Seq(
-               "name" -> SHtml.link(S.uri, ()=>items.sortBy(f), Text(capify(f.displayName)))
-             )
+             items.metaMapper,
+             (f: MappedField[_,T]) => Seq(
+               "name" -> SHtml.link(S.uri, sortFn(f), Text(capify(f.displayName)))
+             ),
+             fieldFilter
          )
     ).bind("table",
          "title" -> title,
-         "insertBtn" -> SHtml.submit(?("Insert"), ()=>{items.add}),
+         "insertBtn" -> SHtml.submit(?("Insert"), onInsert _),
          "items" -> ((ns:NodeSeq)=>NodeSeq.fromSeq(items.items.flatMap {i =>
            bind("item",
                 ns,
-                "fields" -> eachField(i, (f: MappedField[_,T]) => Seq(
-                  "form" -> f.toForm
-                )),
-                "removeBtn" -> SHtml.submit(?("Remove"), ()=>items.remove(i))
+                "fields" -> eachField(
+                  i,
+                  (f: MappedField[_,T]) => Seq("form" -> f.toForm),
+                  fieldFilter
+                ),
+                "removeBtn" -> SHtml.submit(?("Remove"), ()=>onRemove(i)),
+                "msg" -> (i.validate match {
+                  case Nil =>
+                    if(!i.saved_?) Text(?("New")) else if(i.dirty_?) Text(?("Unsaved")) else NodeSeq.Empty
+                  case errors => (<ul>{errors.flatMap(e => <li>{e.msg}</li>)}</ul>)
+                })
            )
          })),
-         "saveBtn" -> SHtml.submit(?("Save"), ()=>items.save)
+         "saveBtn" -> SHtml.submit(?("Save"), onSubmit _)
     )
   }
+  
 }
