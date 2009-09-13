@@ -135,7 +135,7 @@ object JsonParser {
 
   private class ValStack {
     import java.util.LinkedList
-    val stack = new LinkedList[MValue]()
+    private[this] val stack = new LinkedList[MValue]()
 
     def pop[A <: MValue] = stack.poll match {
       case x: A => x
@@ -155,9 +155,9 @@ object JsonParser {
   private class Parser(buf: String) {
     import java.util.LinkedList
 
-    val blocks = new LinkedList[BlockMode]()
-    var fieldNameMode = true
-    var cur = 0 // Pointer which points current parsing location
+    private[this] val blocks = new LinkedList[BlockMode]()
+    private[this] var fieldNameMode = true
+    private[this] var cur = 0 // Pointer which points current parsing location
 
     def nextToken: Token = {
       def isDelimiter(c: Char) = c == ' ' || c == '\n' || c == ',' || c == '\r' || c == '\t' || c == '}' || c == ']'
