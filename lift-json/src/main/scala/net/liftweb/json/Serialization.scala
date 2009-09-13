@@ -29,12 +29,15 @@ import JsonParser.parse
  *  See: SerializationExamples.scala
  */
 object Serialization {
+  import java.io.{StringWriter, Writer}
   import Meta.pathName
   import Meta.Reflection._
 
   val formats = DefaultFormats.lossless
 
-  def write[A <: AnyRef](a: A): String = {
+  def write[A <: AnyRef](a: A): String = write(a, new StringWriter).toString
+
+  def write[A <: AnyRef, W <: Writer](a: A, out: W): W = {
     def serialize(a: Any): JValue = a.asInstanceOf[AnyRef] match {
       case x if primitive_?(x.getClass) => primitive2jvalue(x)(formats)
       case x: List[_] => JArray(x map serialize)
@@ -49,8 +52,8 @@ object Serialization {
         }
     }
 
-    Printer.compact(render(serialize(a)))
+    Printer.compact(render(serialize(a)), out)
   }
 
-  def read[A](json: String)(implicit mf: Manifest[A]) = parse(json).extract(formats, mf)
+  def read[A](json: String)(implicit mf: Manifest[A]): A = parse(json).extract(formats, mf)
 }
