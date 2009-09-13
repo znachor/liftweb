@@ -250,7 +250,7 @@ class LongMappedMapper[T<:Mapper[T], O<:KeyedMapper[Long,O]](theOwner: T, foreig
 /**
  * A subtype of MappedLongForeignKey whose value can be
  * get and set as the target parent mapper instead of as its primary key.
- * @deprecated Use LongMappedMapper instead, to avoid mixing in MappedLongForeignKey manually
+ * @deprecated Use LongMappedMapper instead, to avoid mixing in MappedLongForeignKey manually. May be folded into it in the future.
  * @author nafg
  */
 @deprecated
