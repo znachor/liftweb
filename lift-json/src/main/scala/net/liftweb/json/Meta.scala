@@ -76,7 +76,7 @@ private[json] object Meta {
     operators.foldLeft(f.getName)((n, o) => n.replace(o._1, o._2))
 
   val operators = Map("$eq" -> "=", "$greater" -> ">", "$less" -> "<", "$plus" -> "+", "$minus" -> "-",
-                      "$times" -> "*", "div" -> "/", "$bang" -> "!", "$at" -> "@", "$hash" -> "#",
+                      "$times" -> "*", "$div" -> "/", "$bang" -> "!", "$at" -> "@", "$hash" -> "#",
                       "$percent" -> "%", "$up" -> "^", "$amp" -> "&", "$tilde" -> "~", "$qmark" -> "?",
                       "$bar" -> "|", "$bslash" -> "\\")
 
