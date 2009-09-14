@@ -127,7 +127,7 @@ object ForbiddenResponse {
  * Authorization will not help and the request SHOULD NOT be repeated.
  */
 case class ForbiddenResponse(message: String) extends LiftResponse with HeaderStuff {
-  def toResponse = InMemoryResponse(message.getBytes("UTF-8"), "Content-Type" -> "text/plain" :: headers, cookies, 403)
+  def toResponse = InMemoryResponse(message.getBytes("UTF-8"), "Content-Type" -> "text/plain; charset=utf-8" :: headers, cookies, 403)
 }
 
 
@@ -141,7 +141,7 @@ object NotFoundResponse {
  * The server has not found anything matching the Request-URI.
  */
 case class NotFoundResponse(message: String) extends LiftResponse with HeaderStuff {
-  def toResponse = InMemoryResponse(message.getBytes("UTF-8"), "Content-Type" -> "text/plain" :: headers, cookies, 404)
+  def toResponse = InMemoryResponse(message.getBytes("UTF-8"), "Content-Type" -> "text/plain; charset=utf-8" :: headers, cookies, 404)
 }
 
 /**
@@ -240,7 +240,7 @@ object JavaScriptResponse {
 case class JavaScriptResponse(js: JsCmd, headers: List[(String, String)], cookies: List[HTTPCookie], code: Int) extends LiftResponse {
   def toResponse = {
     val bytes = js.toJsCmd.getBytes("UTF-8")
-    InMemoryResponse(bytes, ("Content-Length", bytes.length.toString) :: ("Content-Type", "text/javascript") :: headers, cookies, code)
+    InMemoryResponse(bytes, ("Content-Length", bytes.length.toString) :: ("Content-Type", "text/javascript; charset=utf-8") :: headers, cookies, code)
   }
 }
 
@@ -255,7 +255,7 @@ object JsonResponse extends HeaderStuff {
 case class JsonResponse(json: JsExp, headers: List[(String, String)], cookies: List[HTTPCookie], code: Int) extends LiftResponse {
 	def toResponse = {
 		val bytes = json.toJsCmd.getBytes("UTF-8")
-		InMemoryResponse(bytes, ("Content-Length", bytes.length.toString) :: ("Content-Type", "application/json") :: headers, cookies, code)
+		InMemoryResponse(bytes, ("Content-Length", bytes.length.toString) :: ("Content-Type", "application/json; charset=utf-8") :: headers, cookies, code)
 	}
 }
 
@@ -333,7 +333,7 @@ object PlainTextResponse {
 case class PlainTextResponse(text: String, headers: List[(String, String)], code: Int) extends LiftResponse {
   def toResponse = {
     val bytes = text.getBytes("UTF-8")
-    InMemoryResponse(bytes, ("Content-Length", bytes.length.toString) :: ("Content-Type", "text/plain") :: headers, Nil, code)
+    InMemoryResponse(bytes, ("Content-Length", bytes.length.toString) :: ("Content-Type", "text/plain; charset=utf-8") :: headers, Nil, code)
   }
 }
 
@@ -345,7 +345,7 @@ object CSSResponse {
 case class CSSResponse(text: String, headers: List[(String, String)], code: Int) extends LiftResponse {
   def toResponse = {
     val bytes = text.getBytes("UTF-8")
-    InMemoryResponse(bytes, ("Content-Length", bytes.length.toString) :: ("Content-Type", "text/css") :: headers, Nil, code)
+    InMemoryResponse(bytes, ("Content-Length", bytes.length.toString) :: ("Content-Type", "text/css; charset=utf-8") :: headers, Nil, code)
   }
 }
 
@@ -431,7 +431,7 @@ case class XmlMimeResponse(xml: Node, mime: String) extends NodeResponse {
 case class XmlResponse(xml: Node) extends NodeResponse {
   def docType = Empty
   def code = 200
-  def headers = List("Content-Type" -> "text/xml")
+  def headers = List("Content-Type" -> "text/xml; charset=utf-8")
   def cookies = Nil
   def out = xml
 }
@@ -442,7 +442,7 @@ case class XmlResponse(xml: Node) extends NodeResponse {
 case class AtomResponse(xml: Node) extends NodeResponse {
   def docType = Empty
   def code = 200
-  def headers = List("Content-Type" -> "application/atom+xml")
+  def headers = List("Content-Type" -> "application/atom+xml; charset=utf-8")
   def cookies = Nil
   def out = xml
 }
@@ -453,7 +453,7 @@ case class AtomResponse(xml: Node) extends NodeResponse {
 case class OpenSearchResponse(xml: Node) extends NodeResponse {
   def docType = Empty
   def code = 200
-  def headers = List("Content-Type" -> "application/opensearchdescription+xml")
+  def headers = List("Content-Type" -> "application/opensearchdescription+xml; charset=utf-8")
   def cookies = Nil
   def out = xml
 }

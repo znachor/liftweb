@@ -24,11 +24,27 @@ object Examples extends Specification {
     compact(render(json \ "person" \ "name")) mustEqual "\"name\":\"Joe\""
   }
 
+  "Queries on person example" in {
+    val json = parse(person)
+    val filtered = json filter {
+      case JField("name", _) => true
+      case _ => false
+    }
+    filtered mustEqual List(JField("name", JString("Joe")), JField("name", JString("Marilyn")))
+
+    val found = json find {
+      case JField("name", _) => true
+      case _ => false
+    }
+    found mustEqual Some(JField("name", JString("Joe")))
+  }
+
   "Object array example" in {
     val json = parse(objArray)
     compact(render(json \ "children" \ "name")) mustEqual """["name":"Mary","name":"Mazy"]"""
     compact(render((json \ "children")(0) \ "name")) mustEqual "\"name\":\"Mary\""
     compact(render((json \ "children")(1) \ "name")) mustEqual "\"name\":\"Mazy\""
+    (for { JField("name", JString(y)) <- json } yield y) mustEqual List("joe", "Mary", "Mazy")
   }
 
   "Quoted example" in {
@@ -46,6 +62,13 @@ object Examples extends Specification {
 
   "Unicode example" in {
     parse("[\" \\u00e4\\u00e4li\\u00f6t\"]") mustEqual JArray(List(JString(" \u00e4\u00e4li\u00f6t")))
+  }
+
+  "Exponent example" in {
+    parse("""{"num": 2e5 }""") mustEqual JObject(List(JField("num", JDouble(200000.0))))
+    parse("""{"num": -2E5 }""") mustEqual JObject(List(JField("num", JDouble(-200000.0))))
+    parse("""{"num": 2.5e5 }""") mustEqual JObject(List(JField("num", JDouble(250000.0))))
+    parse("""{"num": 2.5e-5 }""") mustEqual JObject(List(JField("num", JDouble(2.5e-5))))
   }
 
   val lotto = """

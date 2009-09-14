@@ -22,7 +22,7 @@ import _root_.java.sql.{ResultSet, Types}
 import _root_.scala.xml.{Text, Node, NodeSeq, Group,
                          Elem, Null, PrefixedAttribute, MetaData}
 import _root_.java.util.Date
-import _root_.net.liftweb.http.{S, SHtml, FieldError, FieldIdentifier}
+import _root_.net.liftweb.http.{S, SHtml}
 import _root_.net.liftweb.http.S._
 import _root_.net.liftweb.http.js._
 import _root_.net.liftweb.util._
@@ -303,7 +303,7 @@ trait TypedField[FieldType] {
  * The strongly typed field that's mapped to a column (or many columns) in the database.
  * FieldType is the type of the field and OwnerType is the Owner of the field
  */
-trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends TypedField[FieldType] with BaseOwnedMappedField[OwnerType] with FieldIdentifier {
+trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends TypedField[FieldType] with BaseOwnedMappedField[OwnerType] with FieldIdentifier with PSettableValueHolder[FieldType] {
 
   /**
    * Will be set to the type of the field
@@ -537,6 +537,11 @@ trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends Typed
     if (safe_? || readPermission_?) i_is_!
     else i_obscure_!(i_is_!)
   }
+
+  /**
+  * An alternative getter
+  */
+  def get: FieldType = is
 
   /**
    * What value was the field's value when it was pulled from the DB?

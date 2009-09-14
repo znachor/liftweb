@@ -17,7 +17,7 @@ package net.liftweb.http
 
 import _root_.net.liftweb.util.{Box, Full, Empty, Helpers}
 import Helpers._
-import _root_.java.net.{URLConnection}
+import _root_.java.net.{URLConnection, JarURLConnection}
 
 object ResourceServer {
   var allowedPaths: PartialFunction[List[String], Boolean] = {
@@ -48,6 +48,18 @@ object ResourceServer {
    */
   var baseResourceLocation = "toserve"
 
+  def calcLastModified(in: URLConnection): Long = in.getLastModified match {
+    case 0L => in match {
+        case jc: JarURLConnection => jc.getJarEntry() match {
+            case null => 0L
+            case e => e.getTime()
+          }
+        case _ => 0L
+      }
+    case x => x
+  }
+
+
   def findResourceInClasspath(request: Req, uri: List[String])(): Box[LiftResponse] =
   for {
     auri <- Full(uri.filter(!_.startsWith("."))) if isAllowed(auri)
@@ -55,12 +67,14 @@ object ResourceServer {
     path = rw.mkString("/", "/", "")
     url <- LiftRules.getResource(path)
     uc <- tryo(url.openConnection)
+    lastModified = calcLastModified(uc)
   } yield
-  request.testFor304(uc.getLastModified, "Expires" -> toInternetDate(millis + 30.days)) openOr {
+  request.testFor304(lastModified, "Expires" -> toInternetDate(millis + 30.days)) openOr {
     val stream = url.openStream
     StreamingResponse(stream, () => stream.close, uc.getContentLength,
-                      List(("Last-Modified", toInternetDate(uc.getLastModified)),
-                           ("Expires", toInternetDate(millis + 30.days)),
+                      (if (lastModified == 0L) Nil else
+                       List(("Last-Modified", toInternetDate(lastModified)))) :::
+                      List(("Expires", toInternetDate(millis + 30.days)),
                            ("Content-Type", detectContentType(rw.last))), Nil,
                       200)
   }

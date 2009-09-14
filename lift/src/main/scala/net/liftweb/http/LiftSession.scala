@@ -200,7 +200,6 @@ object SessionMaster extends Actor {
   }
 }
 
-// object TailVar extends RequestVar[NodeSeq](NodeSeq.Empty)
 
 object PageName extends RequestVar[String]("")
 
@@ -236,9 +235,9 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
   private var _running_? = false
 
   /**
-  *  ****IMPORTANT**** when you access messageCallback, it *MUST*
-  * be in a block that's synchronized on the owner LiftSession
-  */
+   *  ****IMPORTANT**** when you access messageCallback, it *MUST*
+   * be in a block that's synchronized on the owner LiftSession
+   */
   private var messageCallback: HashMap[String, S.AFuncHolder] = new HashMap
 
   private[http] var notices: Seq[(NoticeType.Value, NodeSeq, Box[String])] = Nil
@@ -275,7 +274,6 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
   def running_? = _running_?
 
   private var cometList: List[AnyActor] = Nil
-
 
   private[http] def breakOutComet(): Unit = {
     val cl = synchronized {cometList}
@@ -344,11 +342,6 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
     ret
   }
 
-/*
-  private[http] def updateFunctionMap(funcs: Map[String, S.AFuncHolder]): Unit = synchronized {
-    funcs.foreach(mi => messageCallback(mi._1) = mi._2)
-  }
-*/
   /**
    * Updates the internal functions mapping
    */
@@ -477,8 +470,27 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
    * Manages the merge phase of the rendering pipeline
    */
 
-  private def merge(xhtml: NodeSeq): Node = {
-    var htmlTag = <html xmlns="http://www.w3.org/1999/xhtml" xmlns:lift='http://liftweb.net'/>
+  private def merge(xhtml: NodeSeq, req: Req): Node = {
+  val hasHtmlHeadAndBody: Boolean = xhtml.find {
+    case e: Elem if e.label == "html" =>
+      e.child.find {
+        case e: Elem if e.label == "head" => true
+        case _ => false
+      }.isDefined &&
+       e.child.find {
+        case e: Elem if e.label == "body" => true
+        case _ => false
+      }.isDefined
+    case _ => false
+  }.isDefined
+
+  if (!hasHtmlHeadAndBody) {
+    req.fixHtml(xhtml).find {
+      case e: Elem => true
+      case _ => false
+    } getOrElse Text("")
+  } else {
+ var htmlTag = <html xmlns="http://www.w3.org/1999/xhtml" xmlns:lift='http://liftweb.net'/>
     var headTag = <head/>
     var bodyTag = <body/>
     val headChildren = new ListBuffer[Node]
@@ -638,50 +650,8 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
 
     ret
   }
+  }
 
-  /*
-   private def merge(xhtml: NodeSeq) : NodeSeq = {
-
-   val headInBody: NodeSeq =
-   (for (body <- xhtml \ "body";
-   head <- findElems(body)(_.label == "head")) yield head.child).
-   flatMap {e => e}
-
-   /**
-    * Document walkthrough
-    */
-   def xform(in: NodeSeq, inBody: Boolean)
-   (headAppenders : Node => Node)
-   (bodyAppenders : Node => Node): NodeSeq = in flatMap {
-   case e: Elem if !inBody && e.label == "body" =>
-   val n = Elem(e.prefix, e.label, e.attributes, e.scope,
-   xform(e.child, true)(headAppenders)(bodyAppenders) :_*)
-   bodyAppenders(n)
-
-   case e: Elem if inBody && e.label == "head" => NodeSeq.Empty
-
-   case e: Elem if e.label == "head" =>
-   val n = if (!headInBody.isEmpty) {
-   Elem(e.prefix, e.label, e.attributes,
-   e.scope, HeadHelper.removeHtmlDuplicates(e.child ++ headInBody) :_*)
-   } else {
-   e
-   }
-   headAppenders(n)
-
-   case e: Elem =>
-   Elem(e.prefix, e.label, e.attributes, e.scope, xform(e.child, inBody)(headAppenders)(bodyAppenders) :_*)
-
-   case g: Group =>
-   xform(g.child, inBody)(headAppenders)(bodyAppenders)
-
-   case x => x
-   }
-
-   xform(xhtml, false)(DomAppenders.headAppenders(this))(DomAppenders.bodyAppenders(this))
-   }
-   */
- 
   private[http] def processRequest(request: Req): Box[LiftResponse] = {
     ieMode.is // make sure this is primed
     S.oldNotices(notices)
@@ -723,7 +693,7 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
                    map(xml => processSurroundAndInclude(PageName get, xml)) match {
                       case Full(rawXml: NodeSeq) => {
                           // Phase 2: Head & Tail merge, add additional elements to body & head
-                          val xml = merge(rawXml)
+                          val xml = merge(rawXml, request)
 
                           LiftSession.this.synchronized {
                             S.functionMap.foreach {mi =>
@@ -1008,12 +978,14 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
             (locateAndCacheSnippet(cls)) match {
 
               case Full(inst: StatefulSnippet) =>
-                if (inst.dispatch.isDefinedAt(method))
-                (if (isForm) SHtml.hidden(() => inst.registerThisSnippet) else NodeSeq.Empty) ++
-                inst.dispatch(method)(kids)
-                else reportSnippetError(page, snippetName,
-                                        LiftRules.SnippetFailures.StatefulDispatchNotMatched,
-                                        wholeTag)
+                if (inst.dispatch.isDefinedAt(method)) {
+                  val res = inst.dispatch(method)(kids)
+
+                  (if (isForm && !res.isEmpty) SHtml.hidden(() => inst.registerThisSnippet) else NodeSeq.Empty) ++
+                  res
+                } else reportSnippetError(page, snippetName,
+                                          LiftRules.SnippetFailures.StatefulDispatchNotMatched,
+                                          wholeTag)
 
               case Full(inst: DispatchSnippet) =>
                 if (inst.dispatch.isDefinedAt(method)) inst.dispatch(method)(kids)
@@ -1064,7 +1036,7 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
     attrs.get("form").map(ft => (
         (<form action={S.uri} method={ft.text.trim.toLowerCase}>{ret}</form> %
          checkMultiPart(attrs)) %
-        checkAttr("class", attrs)) % checkAttr("id",attrs) % checkAttr("target",attrs) ) getOrElse ret
+         checkAttr("class", attrs)) % checkAttr("id",attrs) % checkAttr("target",attrs) ) getOrElse ret
 
   }
 
@@ -1263,7 +1235,6 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
 
 }
 
-// private[liftweb] object CVPVar extends RequestVar[List[CometVersionPair]](Nil)
 
 /**
  * The response from a page saying that it's been rendered

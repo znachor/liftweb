@@ -15,7 +15,7 @@ package net.liftweb.record.field
 
 import _root_.scala.xml._
 import _root_.net.liftweb.util._
-import _root_.net.liftweb.http.{S, FieldError}
+import _root_.net.liftweb.http.{S}
 import _root_.net.liftweb.http.js._
 import _root_.java.util.Calendar
 import Helpers._

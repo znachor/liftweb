@@ -14,7 +14,7 @@
 package net.liftweb.record
 
 import net.liftweb.util._
-import net.liftweb.http.{S, FieldIdentifier, FieldError}
+import net.liftweb.http.{S}
 import net.liftweb.http.js.{JsExp}
 import scala.xml._
 

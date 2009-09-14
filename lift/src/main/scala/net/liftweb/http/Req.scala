@@ -17,10 +17,7 @@ package net.liftweb.http
 
 import _root_.net.liftweb.util.Helpers
 import Helpers._
-import _root_.net.liftweb.util.{Log, Box, Full, Empty,
-                                EmptyBox,
-                                Failure, ThreadGlobal,
-                                NamedPF, NamedPartialFunction}
+import _root_.net.liftweb.util._
 import _root_.net.liftweb.http.provider._
 import _root_.net.liftweb.util.Helpers
 import _root_.java.io.{InputStream, ByteArrayInputStream, File, FileInputStream,
@@ -258,7 +255,7 @@ object Req {
 
   private[liftweb] def defaultCreateNotFound(in: Req) =
   XhtmlResponse((<html><body>The Requested URL {in.contextPath+in.uri} was not found on this server</body></html>),
-                ResponseInfo.docType(in), List("Content-Type" -> "text/html"), Nil, 404, S.ieMode)
+                ResponseInfo.docType(in), List("Content-Type" -> "text/html; charset=utf-8"), Nil, 404, S.ieMode)
 
   def unapply(in: Req): Option[(List[String], String, RequestType)] = Some((in.path.partPath, in.path.suffix, in.requestType))
 }
@@ -388,12 +385,12 @@ class Req(val path: ParsePath,
        id <- boxParseInternetDate(ims)
   } yield id
 
-  def testIfModifiedSince(when: Long): Boolean =
-  (when / 1000L) > ((ifModifiedSince.map(_.getTime) openOr 0L) / 1000L)
+  def testIfModifiedSince(when: Long): Boolean = (when == 0L) ||
+  ((when / 1000L) > ((ifModifiedSince.map(_.getTime) openOr 0L) / 1000L))
 
-  def testFor304(lastModified: Long, headers: (String, String)*): Box[LiftResponse] =
+  def testFor304(lastModified: Long, headers: (String, String)*): Box[LiftResponse] = 
   if (!testIfModifiedSince(lastModified))
-  Full(InMemoryResponse(new Array[Byte](0), ("Content-Type" -> "text/plain") :: headers.toList, Nil, 304))
+  Full(InMemoryResponse(new Array[Byte](0), ("Content-Type" -> "text/plain; charset=utf-8") :: headers.toList, Nil, 304))
   else
   Empty
 

@@ -103,7 +103,8 @@ Any valid json can be parsed into internal AST format.
 Queries
 -------
 
-Json AST can be queried using XPath like functions. Following REPL session shows the usage of '\\', '\\\\', 'find', 'filter' and 'values' functions. 
+Json AST can be queried using XPath like functions. Following REPL session shows the usage of 
+'\\', '\\\\', 'find', 'filter', 'map' and 'values' functions. 
 
     The example json is:
 
@@ -165,10 +166,18 @@ Json AST can be queried using XPath like functions. Following REPL session shows
            }
     res6: List[net.liftweb.json.JsonAST.JValue] = List(JField(name,JString(Joe)), JField(name,JString(Marilyn)))
 
-    scala> json.values
-    res7: net.liftweb.json.JsonAST.JValue#Values = Map(person -> Map(name -> Joe, age -> 35, spouse -> Map(person -> Map(name -> Marilyn, age -> 33))))
+    scala> json map {
+             case JField("name", JString(s)) => JField("NAME", JString(s.toUpperCase))
+             case x => x
+           }
+    res7: net.liftweb.json.JsonAST.JValue = JObject(List(JField(person,JObject(List(
+    JField(NAME,JString(JOE)), JField(age,JInt(35)), JField(spouse,JObject(List(
+    JField(person,JObject(List(JField(NAME,JString(MARILYN)), JField(age,JInt(33)))))))))))))
 
-Indexed path expressions work too.
+    scala> json.values
+    res8: net.liftweb.json.JsonAST.JValue#Values = Map(person -> Map(name -> Joe, age -> 35, spouse -> Map(person -> Map(name -> Marilyn, age -> 33))))
+
+Indexed path expressions work too, and values can be extracted using for-comprehensions.
 
     scala> val json = parse("""
              { "name": "joe",
@@ -191,13 +200,22 @@ Indexed path expressions work too.
     scala> (json \ "children")(1) \ "name"
     res1: net.liftweb.json.JsonAST.JValue = JField(name,JString(Mazy))
 
+    scala> for { JField("age", y) <- json } yield y
+    res2: List[net.liftweb.json.JsonAST.JValue] = List(JInt(5), JInt(3))
+
+    scala> for { JField("age", JInt(y)) <- json } yield y
+    res3: List[BigInt] = List(5, 3)
+
 Extracting values
 -----------------
 
-Case classes can be used to extract values from parsed JSON.
+Case classes can be used to extract values from parsed JSON. Non-existing values
+can be extracted into scala.Option and strings can be automatically converted into
+java.util.Dates.
 Please see more examples in src/test/scala/net/liftweb/json/ExtractionExamples.scala
 
-    scala> case class Child(name: String, age: Int)
+    scala> implicit val formats = net.liftweb.json.DefaultFormats // Brings in default date formats etc.
+    scala> case class Child(name: String, age: Int, birthdate: Option[java.util.Date])
     scala> case class Address(street: String, city: String)
     scala> case class Person(name: String, address: Address, children: List[Child])
     scala> import net.liftweb.json.JsonParser._
@@ -211,6 +229,7 @@ Please see more examples in src/test/scala/net/liftweb/json/ExtractionExamples.s
                  {
                    "name": "Mary",
                    "age": 5
+                   "birthdate": "2004-09-04T18:06:22Z"
                  },
                  {
                    "name": "Mazy",
@@ -221,8 +240,13 @@ Please see more examples in src/test/scala/net/liftweb/json/ExtractionExamples.s
            """)
 
     scala> json.extract[Person] 
-    res0: Person = Person("joe", Address("Bulevard", "Helsinki"), List(Child("Mary", 5), Child("Mazy", 3)))
+    res0: Person = Person(joe,Address(Bulevard,Helsinki),List(Child(Mary,5,Some(Sat Sep 04 18:06:22 EEST 2004)), Child(Mazy,3,None)))
 
+By default the constructor parameter names must match json field names. This default mapping can be changed
+using @path annotation (see src/test/scala/net/liftweb/json/LottoExample.scala for bigger example)
+
+    scala> import net.liftweb.json.path
+    scala> case class Person(@path("fname") firstname: String)
 
 Kudos
 -----

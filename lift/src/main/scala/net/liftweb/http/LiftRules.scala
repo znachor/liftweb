@@ -29,8 +29,10 @@ import _root_.java.io.{InputStream, ByteArrayOutputStream, BufferedReader, Strin
 import js._
 import JE._
 import auth._
+import _root_.java.util.concurrent.{ConcurrentHashMap => CHash}
+import _root_.scala.reflect.Manifest
 
-object LiftRules {
+object LiftRules extends SimpleInjector {
   val noticesContainerId = "lift__noticesContainer__"
 
   type DispatchPF = PartialFunction[Req, () => Box[LiftResponse]];
@@ -162,8 +164,8 @@ object LiftRules {
    */
   var determineContentType: PartialFunction[(Box[Req], Box[String]), String] = {
     case (_, Full(accept)) if this.useXhtmlMimeType && accept.toLowerCase.contains("application/xhtml+xml") =>
-      "application/xhtml+xml"
-    case _ => "text/html"
+      "application/xhtml+xml; charset=utf-8"
+    case _ => "text/html; charset=utf-8"
   }
 
   lazy val liftVersion: String = {
@@ -668,7 +670,7 @@ object LiftRules {
    * Takes a Node, headers, cookies, and a session and turns it into an XhtmlResponse.
    */
   private def cvt(ns: Node, headers: List[(String, String)], cookies: List[HTTPCookie], session: Req) =
-  convertResponse({val ret = XhtmlResponse(ns, //Group(session.fixHtml(ns)),
+  convertResponse({val ret = XhtmlResponse(ns,
                                            ResponseInfo.docType(session),
                                            headers, cookies, 200,
                                            S.ieMode)
@@ -763,12 +765,12 @@ object LiftRules {
       XhtmlResponse((<html><body>Exception occured while processing {r.uri}
               <pre>{
                   showException(e)
-                }</pre></body></html>),ResponseInfo.docType(r), List("Content-Type" -> "text/html"), Nil, 500, S.ieMode)
+                }</pre></body></html>),ResponseInfo.docType(r), List("Content-Type" -> "text/html; charset=utf-8"), Nil, 500, S.ieMode)
 
     case (_, r, e) =>
       Log.error("Exception being returned to browser when processing "+r, e)
       XhtmlResponse((<html><body>Something unexpected happened while serving the page at {r.uri}
-                           </body></html>),ResponseInfo.docType(r), List("Content-Type" -> "text/html"), Nil, 500, S.ieMode)
+                           </body></html>),ResponseInfo.docType(r), List("Content-Type" -> "text/html; charset=utf-8"), Nil, 500, S.ieMode)
   }
 
   /**

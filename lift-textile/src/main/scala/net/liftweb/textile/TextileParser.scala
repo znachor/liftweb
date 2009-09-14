@@ -111,20 +111,20 @@ object TextileParser {
       
 
     def this(source: Array[Char], offset: Int) =
-      this(source, offset, {
-	var lineStarts = new ArrayBuffer[Int]
-	lineStarts += 0
-	for (i <- 0 until source.length)
-	  if (source.charAt(i) == '\n') lineStarts += (i + 1)
-	lineStarts += source.length
-	lineStarts.toArray
+    this(source, offset, {
+        var lineStarts = new ArrayBuffer[Int]
+        lineStarts += 0
+        for (i <- 0 until source.length)
+        if (source.charAt(i) == '\n') lineStarts += (i + 1)
+        lineStarts += source.length
+        lineStarts.toArray
       })
 
 
 
     override def rest: CharSequenceReader =
-      if (offset < source.length) new MyReader(source, offset + 1, index)
-      else this
+    if (offset < source.length) new MyReader(source, offset + 1, index)
+    else this
     
     /** The position of the first element in the reader
      */
@@ -134,40 +134,40 @@ object TextileParser {
      *  <code>n</code> elements.
      */
     override def drop(n: Int): CharSequenceReader =
-      new MyReader(source, offset + n, index)
+    new MyReader(source, offset + n, index)
 
   }
 
   
   /** <p>
-     *    <code>OffsetPosition</code> is a standard class for positions
-     *    represented as offsets into a source ``document''.
-     *    @param source   The source document
-     *    @param offset   The offset indicating the position
-       *
-       * @author Martin Odersky
-       */
+   *    <code>OffsetPosition</code> is a standard class for positions
+   *    represented as offsets into a source ``document''.
+   *    @param source   The source document
+   *    @param offset   The offset indicating the position
+   *
+   * @author Martin Odersky
+   */
   private case class MyOffsetPosition(source: _root_.java.lang.CharSequence, offset: Int, index: Array[Int]) extends Position {
 	
-/*	  /** An index that contains all line starts, including first line, and eof */
-	  private lazy val index: Array[Int] = {
-	    var lineStarts = new ArrayBuffer[Int]
-	    lineStarts += 0
-	    for (i <- 0 until source.length)
-	      if (source.charAt(i) == '\n') lineStarts += (i + 1)
-	    lineStarts += source.length
-	    lineStarts.toArray
-	  }
-	  */
+    /*	  /** An index that contains all line starts, including first line, and eof */
+     private lazy val index: Array[Int] = {
+     var lineStarts = new ArrayBuffer[Int]
+     lineStarts += 0
+     for (i <- 0 until source.length)
+     if (source.charAt(i) == '\n') lineStarts += (i + 1)
+     lineStarts += source.length
+     lineStarts.toArray
+     }
+     */
 
     /** The line number referred to by the position; line numbers start at 1 */
     lazy val line: Int = {
       var lo = 0
       var hi = index.length - 1
       while (lo + 1 < hi) {
-	val mid = (hi + lo) / 2
-	if (offset < index(mid)) hi = mid
-	else lo = mid
+        val mid = (hi + lo) / 2
+        if (offset < index(mid)) hi = mid
+        else lo = mid
       }
       lo + 1
     }
@@ -181,7 +181,7 @@ object TextileParser {
      * @return the line at `lnum' (not including a newline)
      */
     def lineContents: String =
-      source.subSequence(index(line - 1), index(line)).toString
+    source.subSequence(index(line - 1), index(line)).toString
     
     /** Returns a string representation of the `Position', of the form `line.column' */
     override def toString = line+"."+column
@@ -195,10 +195,10 @@ object TextileParser {
      */
     override def <(that: Position) = that match {
       case OffsetPosition(_, that_offset) =>
-	this.offset < that_offset
+        this.offset < that_offset
       case _ =>
-	this.line < that.line ||
-      this.line == that.line && this.column < that.column
+        this.line < that.line ||
+        this.line == that.line && this.column < that.column
     }
   }
 
@@ -237,13 +237,13 @@ object TextileParser {
 
     def discard[T](p: Parser[T]): Parser[Unit] = p ^^ {x => ()}
 
-  def peek[T](p: Parser[T]): Parser[T] = Parser { in =>
-    p(in) match {
+    def peek[T](p: Parser[T]): Parser[T] = Parser { in =>
+      p(in) match {
 	      case s @ Success(v, _) => Success(v, in)
 	      case e @ Error(msg, _) => Error(msg, in)
 	      case f @ Failure(msg, _) => Failure(msg, in)
 	    }
-  }
+    }
 
     lazy val document : Parser[Lst] = rep(paragraph) ^^ Lst
     // final val  Ch = '\032'
@@ -277,13 +277,13 @@ object TextileParser {
      */
     lazy val lineElem : Parser[Textile] = {
       not(blankLine) ~> (endOfLine | image | footnote_def |
-                                  anchor | dimension | elipsis  |
-                                  copyright | trademark | registered |
-                                  emDash |
-                                  enDash | italic | emph | bold  |
-                                  cite |  span | code | delete | insert |
-                                  sup | sub | strong | html |
-                                  single_quote | quote | acronym | charBlock)
+                         anchor | dimension | elipsis  |
+                         copyright | trademark | registered |
+                         emDash |
+                         enDash | italic | emph | bold  |
+                         cite |  span | code | delete | insert |
+                         sup | sub | strong | html |
+                         single_quote | quote | acronym | charBlock)
     }
 
     /**
@@ -292,11 +292,11 @@ object TextileParser {
      */
     lazy val lineElem_notEmph : Parser[Textile] = {
       not(blankLine) ~> (endOfLine | image | footnote_def | anchor |
-                                  dimension | elipsis |
-                                  copyright | trademark | registered | emDash | enDash | italic |
-                                  bold  |
-                                  cite |  span| code | delete | insert| sup | sub | strong  |
-                                  html| single_quote | quote | acronym | charBlock)
+                         dimension | elipsis |
+                         copyright | trademark | registered | emDash | enDash | italic |
+                         bold  |
+                         cite |  span| code | delete | insert| sup | sub | strong  |
+                         html| single_quote | quote | acronym | charBlock)
     }
 
     /**
@@ -304,11 +304,11 @@ object TextileParser {
      */
     lazy val lineElem_notStrong : Parser[Textile] = {
       not(blankLine) ~> (endOfLine | image | footnote_def | anchor |
-                                  dimension | elipsis |
-                                  copyright | trademark | registered | emDash | enDash | italic |
-                                  emph |
-                                  cite |  span | code | delete | insert  | sup |
-                                  sub | bold  | html| single_quote | quote | acronym  | charBlock)
+                         dimension | elipsis |
+                         copyright | trademark | registered | emDash | enDash | italic |
+                         emph |
+                         cite |  span | code | delete | insert  | sup |
+                         sub | bold  | html| single_quote | quote | acronym  | charBlock)
     }
 
 
@@ -678,42 +678,42 @@ object TextileParser {
     lazy val quote : Parser[Textile] = formattedLineElem('"', success(Nil)) ^^ flatten4((f, x, y, lst) => Quoted(f, x, lst))
 
     def reduceCharBlocks(in : List[Textile]) : List[Textile] =
-      {
-	val ret = new scala.collection.mutable.ListBuffer[Textile]
+    {
+      val ret = new scala.collection.mutable.ListBuffer[Textile]
 
-	def dw[A](in: List[A])(f: A => Boolean): List[A] = in match {
-	  case Nil => Nil
-	  case x :: xs if !f(x) => in
-	  case x :: xs => dw(xs)(f)
-	}
+      def dw[A](in: List[A])(f: A => Boolean): List[A] = in match {
+        case Nil => Nil
+        case x :: xs if !f(x) => in
+        case x :: xs => dw(xs)(f)
+      }
 
-	def rcb(in: List[Textile]) {
-	  (in: @unchecked) match {
-	    case Nil => 
+      def rcb(in: List[Textile]) {
+        (in: @unchecked) match {
+          case Nil =>
             // this is now done (hacked) in flattenAndDropLastEOL
             //        case EOL() :: BOL() :: rest => EOL :: reduceCharBlocks(rest)
             //        case EOL() :: rest => reduceCharBlocks(rest)
-	    case CharBlock(s1) :: CharBlock(s2) :: _ =>
-	      val sb = new StringBuilder
-	    val rest = dw(in) {
-	      case CharBlock(s) =>
-		sb.append(s)
-		true
-	      case _ => false
-	    }
-	    ret += CharBlock(sb.toString)
+          case CharBlock(s1) :: CharBlock(s2) :: _ =>
+            val sb = new StringBuilder
+            val rest = dw(in) {
+              case CharBlock(s) =>
+                sb.append(s)
+                true
+              case _ => false
+            }
+            ret += CharBlock(sb.toString)
 	    
-	      rcb(rest)
+            rcb(rest)
 	    
-	    case x :: xs => 
-	      ret += x; rcb(xs)
-	  }
-	}
-
-	rcb(in)
-
-	ret.toList
+          case x :: xs =>
+            ret += x; rcb(xs)
+        }
       }
+
+      rcb(in)
+
+      ret.toList
+    }
 
     lazy val charBlock : Parser[Textile] = chrExcept('\n') ^^ {c => CharBlock(c.toString)}
 

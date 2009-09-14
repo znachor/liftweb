@@ -377,12 +377,14 @@ trait CRUDify[KeyType, CrudType <: KeyedMapper[KeyType, CrudType]] {
   def _showAllTemplate =
   <lift:crud.all>
     <table id={showAllId} class={showAllClass}>
-      <tr>
-        <crud:header_item><th><crud:name/></th></crud:header_item>
-        <th>&nbsp;</th>
-        <th>&nbsp;</th>
-        <th>&nbsp;</th>
-      </tr>
+      <thead>
+        <tr>
+          <crud:header_item><th><crud:name/></th></crud:header_item>
+          <th>&nbsp;</th>
+          <th>&nbsp;</th>
+          <th>&nbsp;</th>
+        </tr>
+      </thead>
       <tbody>
         <crud:row>
           <tr>
@@ -392,11 +394,13 @@ trait CRUDify[KeyType, CrudType <: KeyedMapper[KeyType, CrudType]] {
             <td><a crud:delete_href="">{S.??("Delete")}</a></td>
           </tr>
         </crud:row>
+      </tbody>
+      <tfoot>
         <tr>
           <td colspan="3"><crud:prev>{previousWord}</crud:prev></td>
           <td colspan="3"><crud:next>{nextWord}</crud:next></td>
         </tr>
-      </tbody>
+      </tfoot>
     </table>
   </lift:crud.all>
 

@@ -17,54 +17,28 @@ package net.liftweb.json
  */
 
 import java.lang.reflect.{Constructor => JConstructor, Type}
+import java.util.Date
 import scala.reflect.Manifest
 import JsonAST._
 
 /** Function to extract values from JSON AST using case classes.
  *
  *  FIXME: Add support to extract List of values too.
- *  FIXME: Add support for Optional values.
- *  FIXME: Add support for Date primitive.
- *  FIXME: Add annnotation to configure path
  *
  *  See: ExtractionExamples.scala
  */
 object Extraction {
-  /** Intermediate format which describes the mapping.
-   *  This ADT is constructed (and then memoized) from given case class using reflection.
-   *
-   *  Example mapping.
-   *
-   *  package xx 
-   *  case class Person(name: String, address: Address, children: List[Child])
-   *  case class Address(street: String, city: String)
-   *  case class Child(name: String, age: BigInt)
-   *
-   *  will produce following Mapping:
-   *
-   *  Constructor(None, "xx.Person", List(
-   *    Value("name"),
-   *    Constructor(Some("address"), "xx.Address", List(Value("street"), Value("city"))),
-   *    ListConstructor("children", "xx.Child", List(Value("name"), Value("age")))))
-   */
-  sealed abstract class Mapping
-  case class Value(path: String, targetType: Class[_]) extends Mapping
-  case class Constructor(path: Option[String], constructor: JConstructor[_], args: List[Mapping]) extends Mapping
-  case class ListConstructor(path: String, constructor: JConstructor[_], args: List[Mapping]) extends Mapping
-  case class ListOfPrimitives(path: String, elementType: Class[_]) extends Mapping
-  case class Optional(mapping: Mapping) extends Mapping
+  import Meta._
 
-  val memo = new Memo[Class[_], Mapping]
-
-  def extract[A](json: JValue)(implicit mf: Manifest[A]): A = 
+  def extract[A](json: JValue)(implicit formats: Formats, mf: Manifest[A]): A = 
     try {
-      extract0(json, mf)
+      extract0(json, formats, mf)
     } catch {
       case e: MappingException => throw e
       case e: Exception => throw new MappingException("unknown error", e)
     }
 
-  private def extract0[A](json: JValue, mf: Manifest[A]): A = {
+  private def extract0[A](json: JValue, formats: Formats, mf: Manifest[A]): A = {
     val mapping = mappingOf(mf.erasure)
 
     def newInstance(constructor: JConstructor[_], args: List[Any]) = try {
@@ -73,10 +47,10 @@ object Extraction {
       case e @ (_:IllegalArgumentException | _:InstantiationException) => fail("Parsed JSON values do not match with class constructor\nargs=" + args.mkString(",") + "\narg types=" + args.map(_.asInstanceOf[AnyRef].getClass.getName).mkString(",")  + "\nconstructor=" + constructor)
     }
 
-    def newPrimitive(elementType: Class[_], elem: JValue) = convert(elem, elementType)
+    def newPrimitive(elementType: Class[_], elem: JValue) = convert(elem, elementType, formats)
 
     def build(root: JValue, mapping: Mapping, argStack: List[Any]): List[Any] = mapping match {
-      case Value(path, targetType) => convert(fieldValue(root, path), targetType) :: argStack
+      case Value(path, targetType) => convert(fieldValue(root, path), targetType, formats) :: argStack
       case Constructor(path, classname, args) => 
         val newRoot = path match {
           case Some(p) => root \ p
@@ -110,30 +84,7 @@ object Extraction {
     build(json, mapping, Nil).head.asInstanceOf[A]
   }
 
-  private def mappingOf(clazz: Class[_]) = {
-    import Reflection._
-
-    def makeMapping(path: Option[String], clazz: Class[_], isList: Boolean): Mapping = isList match {
-      case false => Constructor(path, clazz.getDeclaredConstructors()(0), constructorArgs(clazz))
-      case true if primitive_?(clazz) => ListOfPrimitives(path.get, clazz)
-      case true => ListConstructor(path.get, clazz.getDeclaredConstructors()(0), constructorArgs(clazz))
-    }
-
-    def constructorArgs(clazz: Class[_]) = clazz.getDeclaredFields.filter(!static_?(_)).map { x =>
-      fieldMapping(x.getName, x.getType, x.getGenericType)
-    }.toList.reverse
-
-    def fieldMapping(name: String, fieldType: Class[_], genericType: Type): Mapping = 
-      if (primitive_?(fieldType)) Value(name, fieldType)
-      else if (fieldType == classOf[BigInt]) Value(name, fieldType)
-      else if (fieldType == classOf[List[_]]) makeMapping(Some(name), typeParameter(genericType), true)
-      else if (classOf[Option[_]].isAssignableFrom(fieldType))
-        Optional(fieldMapping(name, typeParameter(genericType), null)) // FIXME is it possible to find out the next genericType here?
-      else makeMapping(Some(name), fieldType, false)
-    memo.memoize(clazz, (x: Class[_]) => makeMapping(None, x, false))
-  }
-
-  private def convert(value: JValue, targetType: Class[_]): Any = value match {
+  private def convert(value: JValue, targetType: Class[_], formats: Formats): Any = value match {
     case JInt(x) if (targetType == classOf[Int]) => x.intValue
     case JInt(x) if (targetType == classOf[Long]) => x.longValue
     case JInt(x) if (targetType == classOf[Short]) => x.shortValue
@@ -141,43 +92,13 @@ object Extraction {
     case JInt(x) if (targetType == classOf[String]) => x.toString
     case JDouble(x) if (targetType == classOf[Float]) => x.floatValue
     case JDouble(x) if (targetType == classOf[String]) => x.toString
+    case JString(s) if (targetType == classOf[Date]) => formats.dateFormat.parse(s).getOrElse(fail("Invalid date '" + s + "'"))
     case JNull => null
+    case JNothing => fail("Did not find value which can be converted into " + targetType.getName)
     case _ => value.values
   }
 
   private def fail(msg: String) = throw new MappingException(msg)
-
-  class Memo[A, R] {
-    private var cache = Map[A, R]()
-
-    def memoize(x: A, f: A => R): R = synchronized {
-      if (cache contains x) cache(x) else {
-        val ret = f(x)
-        cache += (x -> ret)
-        ret
-      }
-    }
-  }
-
-  object Reflection {
-    import java.lang.reflect._
-
-    def typeParameter(t: Type): Class[_] = {
-      val ptype = t.asInstanceOf[ParameterizedType]
-      ptype.getActualTypeArguments()(0).asInstanceOf[Class[_]]
-    }
-
-    def primitive_?(clazz: Class[_]) = {
-      clazz == classOf[String] || clazz == classOf[Int] || clazz == classOf[Long] ||
-      clazz == classOf[Double] || clazz == classOf[Float] || clazz == classOf[Byte] ||
-      clazz == classOf[Boolean] || clazz == classOf[Short] || clazz == classOf[java.lang.Integer] ||
-      clazz == classOf[java.lang.Long] || clazz == classOf[java.lang.Double] ||
-      clazz == classOf[java.lang.Float] || clazz == classOf[java.lang.Byte] ||
-      clazz == classOf[java.lang.Boolean] || clazz == classOf[java.lang.Short]
-    }
-
-    def static_?(f: Field) = Modifier.isStatic(f.getModifiers)
-  }
 }
 
 class MappingException(msg: String, cause: Exception) extends Exception(msg, cause) {

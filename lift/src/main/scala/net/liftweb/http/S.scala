@@ -20,9 +20,7 @@ import _root_.scala.xml.{NodeSeq, Elem, Text, UnprefixedAttribute, Null, MetaDat
                          PrefixedAttribute,
                          Group, Node, HasKeyValue}
 import _root_.scala.collection.immutable.{ListMap, TreeMap}
-import _root_.net.liftweb.util.{Helpers, ThreadGlobal, LoanWrapper, Box, Empty, Full, Failure,
-                                Log, JSONParser, NamedPartialFunction, NamedPF,
-                                AttrHelper, Props}
+import _root_.net.liftweb.util._
 import Helpers._
 import js._
 import _root_.java.io.InputStream
@@ -30,10 +28,8 @@ import _root_.java.util.{Locale, TimeZone, ResourceBundle}
 import _root_.java.util.concurrent.atomic.AtomicLong
 import _root_.net.liftweb.builtin.snippet._
 import provider._
-
-trait HasParams {
-  def param(name: String): Box[String]
-}
+import _root_.scala.reflect.Manifest
+import _root_.java.util.concurrent.{ConcurrentHashMap => CHash}
 
 /**
  * An object representing the current state of the HTTP request and response.
@@ -163,7 +159,6 @@ object S extends HasParams {
    * @see LiftRules#resourceBundleFactories
    */
   private val _resBundle = new ThreadGlobal[List[ResourceBundle]]
-  private val _liftCoreResBundle = new ThreadGlobal[Box[ResourceBundle]]
   private val _stateSnip = new ThreadGlobal[HashMap[String, StatefulSnippet]]
   private val _responseHeaders = new ThreadGlobal[ResponseInfoHolder]
   private val _responseCookies = new ThreadGlobal[CookieHolder]
@@ -607,18 +602,16 @@ object S extends HasParams {
     }
   }
 
+  private object _liftCoreResBundle extends
+  RequestVar[Box[ResourceBundle]](tryo(ResourceBundle.getBundle(LiftRules.liftCoreResourceName, locale)))
+
   /**
    * Get the lift core resource bundle for the current locale as defined by the
    * LiftRules.liftCoreResourceName varibale.
    *
    * @see LiftRules.liftCoreResourceName
    */
-  def liftCoreResourceBundle: Box[ResourceBundle] =
-  Box.legacyNullTest(_liftCoreResBundle.value).openOr {
-    val rb = tryo(ResourceBundle.getBundle(LiftRules.liftCoreResourceName, locale))
-    _liftCoreResBundle.set(rb)
-    rb
-  }
+  def liftCoreResourceBundle: Box[ResourceBundle] = _liftCoreResBundle.is
 
   /**
    * Get a localized string or return the original string.
@@ -1063,11 +1056,9 @@ object S extends HasParams {
       _attrs.doWith(Nil) {
         snippetMap.doWith(new HashMap) {
           _resBundle.doWith(Nil) {
-            _liftCoreResBundle.doWith(null){
-              inS.doWith(true) {
-                _stateSnip.doWith(new HashMap) {
-                  _nest2InnerInit(f)
-                }
+            inS.doWith(true) {
+              _stateSnip.doWith(new HashMap) {
+                _nest2InnerInit(f)
               }
             }
           }
@@ -1779,22 +1770,27 @@ object S extends HasParams {
    * Abstrats a function that is executed on HTTP requests from client.
    */
   @serializable
-  abstract class AFuncHolder {
+  sealed abstract class AFuncHolder {
     def owner: Box[String]
     def apply(in: List[String]): Any
     def duplicate(newOwner: String): AFuncHolder
     private[http] var lastSeen: Long = millis
-    val sessionLife = functionLifespan_?
+    def sessionLife = _sessionLife
+    private[this] var _sessionLife = functionLifespan_?
+    protected def setLife(in: Boolean): AFuncHolder = {
+      _sessionLife = in
+      this
+    }
   }
 
   /**
    * Impersonates a function that will be called when uploading files
    */
   @serializable
-  class BinFuncHolder(val func: FileParamHolder => Any, val owner: Box[String]) extends AFuncHolder {
+  final class BinFuncHolder(val func: FileParamHolder => Any, val owner: Box[String]) extends AFuncHolder {
     def apply(in: List[String]) {Log.error("You attempted to call a 'File Upload' function with a normal parameter.  Did you forget to 'enctype' to 'multipart/form-data'?")}
     def apply(in: FileParamHolder) = func(in)
-    def duplicate(newOwner: String) = new BinFuncHolder(func, Full(newOwner))
+    def duplicate(newOwner: String) = (new BinFuncHolder(func, Full(newOwner))).setLife(sessionLife)
   }
 
   object BinFuncHolder {
@@ -1812,10 +1808,10 @@ object S extends HasParams {
    * takes a String as the only parameter and returns an Any.
    */
   @serializable
-  class SFuncHolder(val func: String => Any, val owner: Box[String]) extends AFuncHolder {
+  final class SFuncHolder(val func: String => Any, val owner: Box[String]) extends AFuncHolder {
     def this(func: String => Any) = this(func, Empty)
     def apply(in: List[String]): Any = in.firstOption.toList.map(func(_))
-    def duplicate(newOwner: String) = new SFuncHolder(func, Full(newOwner))
+    def duplicate(newOwner: String) = (new SFuncHolder(func, Full(newOwner))).setLife(sessionLife)
   }
 
   object LFuncHolder {
@@ -1828,9 +1824,9 @@ object S extends HasParams {
    * takes a List[String] as the only parameter and returns an Any.
    */
   @serializable
-  class LFuncHolder(val func: List[String] => Any,val owner: Box[String]) extends AFuncHolder {
+  final class LFuncHolder(val func: List[String] => Any,val owner: Box[String]) extends AFuncHolder {
     def apply(in: List[String]): Any = func(in)
-    def duplicate(newOwner: String) = new LFuncHolder(func, Full(newOwner))
+    def duplicate(newOwner: String) = (new LFuncHolder(func, Full(newOwner))).setLife(sessionLife)
   }
 
   object NFuncHolder {
@@ -1843,9 +1839,9 @@ object S extends HasParams {
    * takes zero arguments and returns an Any.
    */
   @serializable
-  class NFuncHolder(val func: () => Any,val owner: Box[String]) extends AFuncHolder {
+  final class NFuncHolder(val func: () => Any,val owner: Box[String]) extends AFuncHolder {
     def apply(in: List[String]): Any = in.firstOption.toList.map(s => func())
-    def duplicate(newOwner: String) = new NFuncHolder(func, Full(newOwner))
+    def duplicate(newOwner: String) = (new NFuncHolder(func, Full(newOwner))).setLife(sessionLife)
   }
 
   /**
@@ -2036,7 +2032,6 @@ object S extends HasParams {
   }
 
   implicit def tuple2FieldError(t: (FieldIdentifier, NodeSeq)) = FieldError(t._1, t._2)
-
 }
 
 /**
@@ -2069,42 +2064,4 @@ abstract class JsonHandler {
 
   def apply(in: Any): JsCmd
 }
-
-/**
- * Impersonates a JSON command
- */
-case class JsonCmd(command: String, target: String, params: Any,
-                   all: _root_.scala.collection.Map[String, Any])
-
-/**
- * Holds information about a response
- */
-class ResponseInfoHolder {
-  var headers: Map[String, String] = Map.empty
-  private var _docType: Box[String] = Empty
-  private var _setDocType = false
-
-  def docType = _docType
-  def docType_=(in: Box[String]) {
-    _docType = in
-    _setDocType = true
-  }
-
-  def overrodeDocType = _setDocType
-}
-
-/**
- * Defines the association of this reference with an markup tag ID
- */
-trait FieldIdentifier {
-  def uniqueFieldId: Box[String] = Empty
-}
-
-/**
- * Associate a FieldIdentifier with an NodeSeq
- */
-case class FieldError(field : FieldIdentifier, msg : NodeSeq) {
-  override def toString = field.uniqueFieldId + " : " + msg
-}
-
 

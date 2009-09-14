@@ -776,8 +776,12 @@ object SHtml {
     def map[A](f: ChoiceItem[T] => A) = items.map(f)
     def flatMap[A](f: ChoiceItem[T] => Iterable[A]) = items.flatMap(f)
     def filter(f: ChoiceItem[T] => Boolean) = items.filter(f)
-    def toForm: NodeSeq = flatMap(c => (<span>{c.xhtml}&nbsp;{c.key.toString}<br /></span>))
+    def toForm: NodeSeq = flatMap(ChoiceHolder.htmlize)
   }
+
+object ChoiceHolder {
+  var htmlize: ChoiceItem[_] => NodeSeq = c => (<span>{c.xhtml}&nbsp;{c.key.toString}<br /></span>)
+}
 
   private def checked(in: Boolean) = if (in) new UnprefixedAttribute("checked", "checked", Null) else Null
   private def setId(in: Box[String]) = in match { case Full(id) => new UnprefixedAttribute("id", Text(id), Null); case _ => Null}

@@ -34,7 +34,7 @@ class JsCommands(val reverseList: List[JsCmd]) {
 
   def toResponse = {
     val data = reverseList.reverse.map(_.toJsCmd).mkString("\n").getBytes("UTF-8")
-    InMemoryResponse(data, List("Content-Length" -> data.length.toString, "Content-Type" -> "text/javascript"), Nil, 200)
+    InMemoryResponse(data, List("Content-Length" -> data.length.toString, "Content-Type" -> "text/javascript; charset=utf-8"), Nil, 200)
   }
 }
 

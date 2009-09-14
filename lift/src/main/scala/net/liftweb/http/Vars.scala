@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2008 WorldWide Conferencing, LLC
+ * Copyright 2007-2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,93 +18,6 @@ package net.liftweb.http
 import _root_.net.liftweb.util._
 import Helpers._
 import _root_.scala.collection.mutable.{HashMap, ListBuffer}
-
-/**
- * Abstract a request or a session scoped variable.
- */
-abstract class AnyVar[T, MyType <: AnyVar[T, MyType]](dflt: => T) {
-  self: MyType =>
-  private lazy val name = "_lift_sv_"+getClass.getName+"_"+__nameSalt
-  protected def findFunc(name: String): Box[T]
-  protected def setFunc(name: String, value: T): Unit
-  protected def clearFunc(name: String): Unit
-  protected def wasInitialized(name: String): Boolean
-
-  protected def __nameSalt = ""
-
-  type CleanUpParam
-
-  /**
-   * The current value of the variable
-   */
-  def is: T = synchronized {
-    findFunc(name) match {
-      case Full(v) => v
-      case _ => val ret = dflt
-        testInitialized
-        apply(ret)
-        ret
-    }
-  }
-
-  private def testInitialized: Unit = synchronized {
-    if (!wasInitialized(name)) {
-      registerCleanupFunc(_onShutdown _)
-    }
-  }
-
-  /**
-   * Shadow of the 'is' method
-   */
-  def get: T = is
-
-  /**
-   * Shadow of the apply method
-   */
-  def set(what: T): Unit = apply(what)
-
-  /**
-   * Set the session variable
-   *
-   * @param what -- the value to set the session variable to
-   */
-  def apply(what: T): Unit = {
-    testInitialized
-    setFunc(name, what)
-  }
-
-  /**
-   * Applies the given function to the contents of this
-   * variable and sets the variable to the resulting value.
-   *
-   * @param f -- the function to apply and set the result from.
-   */
-  def update(f: T => T): T = {
-    apply(f(is))
-    is
-  }
-
-  def remove(): Unit = clearFunc(name)
-
-  //def cleanupFunc: Box[() => Unit] = Empty
-
-  private[http] def registerCleanupFunc(in: CleanUpParam => Unit): Unit
-
-  protected final def registerGlobalCleanupFunc(in: CleanUpParam => Unit) {
-    cuf ::= in
-  }
-
-  private var cuf: List[CleanUpParam => Unit] = Nil
-
-  private def _onShutdown(session: CleanUpParam): Unit = {
-    cuf.foreach(f => tryo(f(session)))
-    onShutdown(session)
-  }
-
-  protected def onShutdown(session: CleanUpParam): Unit = {}
-
-  override def toString = is.toString
-}
 
 /**
  * Keep session information around without the nastiness of naming session variables
@@ -130,7 +43,7 @@ abstract class SessionVar[T](dflt: => T) extends AnyVar[T, SessionVar[T]](dflt) 
     old
   }
 
-  private[http] override def registerCleanupFunc(in: LiftSession => Unit): Unit =
+  protected override def registerCleanupFunc(in: LiftSession => Unit): Unit =
   S.session.foreach(_.addSessionCleanup(in))
 
   type CleanUpParam = LiftSession
@@ -158,7 +71,7 @@ abstract class RequestVar[T](dflt: => T) extends AnyVar[T, RequestVar[T]](dflt) 
     old
   }
 
-  override private[http] def registerCleanupFunc(in: Box[LiftSession] => Unit): Unit =
+  override protected def registerCleanupFunc(in: Box[LiftSession] => Unit): Unit =
   RequestVarHandler.addCleanupFunc(in)
 }
 
@@ -166,7 +79,7 @@ trait CleanRequestVarOnSessionTransition {
   self: RequestVar[_] =>
 }
 
-private[http] object RequestVarHandler /* extends LoanWrapper */ {
+private[http] object RequestVarHandler {
   private val vals: ThreadGlobal[HashMap[String, (RequestVar[_], Any)]] = new ThreadGlobal
   private val cleanup: ThreadGlobal[ListBuffer[Box[LiftSession] => Unit]] = new ThreadGlobal
   private val isIn: ThreadGlobal[String] = new ThreadGlobal
