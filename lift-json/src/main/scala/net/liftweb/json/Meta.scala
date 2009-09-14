@@ -57,7 +57,7 @@ private[json] object Meta {
     }
 
     def constructorArgs(clazz: Class[_]) = clazz.getDeclaredFields.filter(!static_?(_)).map { f =>
-      fieldMapping(pathName(f), f.getType, f.getGenericType)
+      fieldMapping(unmangleName(f), f.getType, f.getGenericType)
     }.toList.reverse
 
     def fieldMapping(name: String, fieldType: Class[_], genericType: Type): Mapping = 
@@ -72,10 +72,13 @@ private[json] object Meta {
     memo.memoize(clazz, makeMapping(None, _, false))
   }
 
-  private[json] def pathName(f: Field) = {
-    val annot = f.getAnnotation(classOf[path])
-    if (annot == null) f.getName else annot.value
-  }
+  private[json] def unmangleName(f: Field) = 
+    operators.foldLeft(f.getName)((n, o) => n.replace(o._1, o._2))
+
+  val operators = Map("$eq" -> "=", "$greater" -> ">", "$less" -> "<", "$plus" -> "+", "$minus" -> "-",
+                      "$times" -> "*", "div" -> "/", "$bang" -> "!", "$at" -> "@", "$hash" -> "#",
+                      "$percent" -> "%", "$up" -> "^", "$amp" -> "&", "$tilde" -> "~", "$qmark" -> "?",
+                      "$bar" -> "|", "$bslash" -> "\\")
 
   private class Memo[A, R] {
     private var cache = Map[A, R]()

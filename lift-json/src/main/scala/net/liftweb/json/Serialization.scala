@@ -30,7 +30,7 @@ import JsonParser.parse
  */
 object Serialization {
   import java.io.{StringWriter, Writer}
-  import Meta.pathName
+  import Meta.unmangleName
   import Meta.Reflection._
 
   val formats = DefaultFormats.lossless
@@ -45,7 +45,7 @@ object Serialization {
       case x => 
         x.getClass.getDeclaredFields.filter(!static_?(_)).toList.map { f => 
           f.setAccessible(true)
-          JField(pathName(f), serialize(f get x))
+          JField(unmangleName(f), serialize(f get x))
         } match {
           case Nil => JNothing
           case fields => JObject(fields)

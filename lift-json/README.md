@@ -242,11 +242,21 @@ Please see more examples in src/test/scala/net/liftweb/json/ExtractionExamples.s
     scala> json.extract[Person] 
     res0: Person = Person(joe,Address(Bulevard,Helsinki),List(Child(Mary,5,Some(Sat Sep 04 18:06:22 EEST 2004)), Child(Mazy,3,None)))
 
-By default the constructor parameter names must match json field names. This default mapping can be changed
-using @path annotation (see src/test/scala/net/liftweb/json/LottoExample.scala for bigger example)
+By default the constructor parameter names must match json field names. However, sometimes json 
+field names contain characters which are not allowed characters in Scala identifiers. There's two 
+solutions for this (see src/test/scala/net/liftweb/json/LottoExample.scala for bigger example).
 
-    scala> import net.liftweb.json.path
-    scala> case class Person(@path("fname") firstname: String)
+1. Use back ticks.
+
+    scala> case class Person(`first-name`: String)
+
+2. Use map function to postprocess AST.
+
+    scala> case class Person(firstname: String)
+    scala> json map {
+             case JField("first-name", x) => JField("firstname", x)
+             case x => x
+           }
 
 Kudos
 -----

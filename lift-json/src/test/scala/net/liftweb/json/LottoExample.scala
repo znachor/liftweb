@@ -10,9 +10,9 @@ object LottoExample extends Specification {
 
   implicit val formats = DefaultFormats
 
-  case class Winner(@path("winner-id") id: Long, numbers: List[Int])
-  case class Lotto(id: Long, @path("winning-numbers") winningNumbers: List[Int], winners: List[Winner], 
-                   @path("draw-date") drawDate: Option[java.util.Date])
+  case class Winner(`winner-id`: Long, numbers: List[Int])
+  case class Lotto(id: Long, `winning-numbers`: List[Int], winners: List[Winner], 
+                   `draw-date`: Option[java.util.Date])
 
   val winners = List(Winner(23, List(2, 45, 34, 23, 3, 5)), Winner(54, List(52, 3, 12, 11, 18, 22)))
   val lotto = Lotto(5, List(2, 45, 34, 23, 7, 5, 3), winners, None)
@@ -20,11 +20,11 @@ object LottoExample extends Specification {
   val json = 
     ("lotto" ->
       ("id" -> lotto.id) ~
-      ("winning-numbers" -> lotto.winningNumbers) ~
-      ("draw-date" -> lotto.drawDate.map(_.toString)) ~
+      ("winning-numbers" -> lotto.`winning-numbers`) ~
+      ("draw-date" -> lotto.`draw-date`.map(_.toString)) ~
       ("winners" ->
         lotto.winners.map { w =>
-          (("winner-id" -> w.id) ~
+          (("winner-id" -> w.`winner-id`) ~
            ("numbers" -> w.numbers))}))
 
   compact(render(json)) mustEqual """{"lotto":{"id":5,"winning-numbers":[2,45,34,23,7,5,3],"winners":[{"winner-id":23,"numbers":[2,45,34,23,3,5]},{"winner-id":54,"numbers":[52,3,12,11,18,22]}]}}"""
