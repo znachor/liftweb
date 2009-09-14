@@ -12,7 +12,7 @@ object BindPlus {
       Helpers.bind(prefix, nodeFailureXform, paramFailureXform, ns, bindParams: _*)
       
     def bindSwitch(prefix: String, choices: Seq[String])(choice: (Int, NodeSeq=>NodeSeq)) =
-      BindPlus.bindSwitch(prefix, xhtml, choices)(choice)
+      BindPlus.bindSwitch(prefix, ns, choices)(choice)
   }
 
   /**
@@ -58,7 +58,7 @@ object BindPlus {
   */
   def bindSwitch(prefix: String, xml: NodeSeq, choices: Seq[String])(choice: (Int, NodeSeq=>NodeSeq)) = {
     var index = 0
-    bind(prefix, xhtml,
+    bind(prefix, xml,
          choices map {c =>
            index += 1
            choice match {
