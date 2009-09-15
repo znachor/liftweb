@@ -358,9 +358,9 @@ object SHtml {
   def jsonText(value: String, cmd: String, json: JsonCall, attrs: (String, String)*): Elem =
   jsonText(value, exp => json(cmd, exp), attrs :_*)
 
-  def ajaxText(value: String, func: String => JsCmd): Elem = ajaxText_*(value, Empty, SFuncHolder(func))
+  def ajaxText(value: String, func: String => JsCmd, attrs: (String, String)*): Elem = ajaxText_*(value, Empty, SFuncHolder(func), attrs :_*)
 
-  def ajaxText(value: String, jsFunc: Call, func: String => JsCmd): Elem = ajaxText_*(value, Full(jsFunc), SFuncHolder(func))
+  def ajaxText(value: String, jsFunc: Call, func: String => JsCmd, attrs: (String, String)*): Elem = ajaxText_*(value, Full(jsFunc), SFuncHolder(func), attrs :_*)
 
   private def ajaxText_*(value: String, jsFunc: Box[Call], func: AFuncHolder, attrs: (String, String)*): Elem = {
     val raw = (funcName: String, value:String) => JsRaw("'" +funcName + "=' + encodeURIComponent(" + value + ".value)")
