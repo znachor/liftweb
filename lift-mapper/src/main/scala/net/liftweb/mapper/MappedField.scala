@@ -539,8 +539,8 @@ trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends Typed
   }
 
   /**
-  * An alternative getter
-  */
+   * An alternative getter
+   */
   def get: FieldType = is
 
   /**
@@ -617,14 +617,40 @@ trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends Typed
 
   def validations: List[FieldType => List[FieldError]] = Nil
 
-  def validate : List[FieldError] = {
+  def validate: List[FieldError] = {
     val cv = is
-    validations.flatMap{
-      case pf: PartialFunction[FieldType, List[FieldError]] =>
-        if (pf.isDefinedAt(cv)) pf(cv)
-        else Nil
-      case f => f(cv)
+    val errorRet: ListBuffer[FieldError] = new ListBuffer
+
+    /*
+     validations.flatMap{
+     case pf: PartialFunction[FieldType, List[FieldError]] =>
+     if (pf.isDefinedAt(cv)) pf(cv)
+     else Nil
+     case f => f(cv)
+     }
+     */
+    
+    def runValidations(validators: List[FieldType => List[FieldError]]) {
+      validators match {
+        case Nil => ()
+        case x :: rest => 
+          val errors = x match {
+            case pf: PartialFunction[FieldType, List[FieldError]] =>
+              if (pf.isDefinedAt(cv)) pf(cv)
+              else Nil
+            case f => f(cv)
+          }
+      
+          (errors, x) match {
+            case (Nil, _) => runValidations(rest)
+            case (errors, e: StopValidationOnError[FieldType]) => errorRet.appendAll(errors)
+            case (errors, _) => errorRet.appendAll(errors)
+              runValidations(rest)
+          }
+      }
     }
+    runValidations(validations)
+    errorRet.toList
   }
 
   final def convertToJDBCFriendly(value: FieldType): Object = real_convertToJDBCFriendly(runFilters(value, setFilter))

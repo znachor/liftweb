@@ -337,3 +337,21 @@ trait KeyedMapper[KeyType, OwnerType<:KeyedMapper[KeyType, OwnerType]] extends M
   }
 }
 
+/**
+* If this trait is mixed into a validation function, the validation for a field
+* will stop if this validation function returns an error
+*/
+trait StopValidationOnError[T] extends Function1[T, List[FieldError]]
+
+object StopValidationOnError {
+  def apply[T](f: T => List[FieldError]): StopValidationOnError[T] =
+  new StopValidationOnError[T] {
+    def apply(in: T): List[FieldError] = f(in)
+  }
+
+  def apply[T](f: PartialFunction[T, List[FieldError]]): PartialFunction[T, List[FieldError]] with StopValidationOnError[T] =
+  new PartialFunction[T, List[FieldError]] with StopValidationOnError[T] {
+    def apply(in: T): List[FieldError] = f(in)
+    def isDefinedAt(in: T): Boolean = f.isDefinedAt(in)
+  }
+}

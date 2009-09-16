@@ -147,11 +147,11 @@ object Mailer {
                 tab match {
                   case PlainMailBodyType(txt) => bp.setText(txt, "UTF-8")
                   case PlainPlusBodyType(txt,charset) => bp.setText(txt, charset)
-                  case XHTMLMailBodyType(html) => bp.setContent(html.toString, "text/html")
+                  case XHTMLMailBodyType(html) => bp.setContent(html.toString, "text/html; charset=UTF-8")
                   case XHTMLPlusImages(html, img @ _*) =>
                     val html_mp = new MimeMultipart("related")
                     val bp2 = new MimeBodyPart
-                    bp2.setContent(html.toString, "text/html")
+                    bp2.setContent(html.toString, "text/html; charset=UTF-8")
                     html_mp.addBodyPart(bp2)
                     img.foreach { i =>
                       val rel_bpi = new MimeBodyPart

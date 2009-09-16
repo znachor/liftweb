@@ -14,15 +14,21 @@ import scala.xml.{NodeSeq, Text}
  * @author nafg
  */
 trait ModelSnippet[T <: Mapper[T]] extends StatefulSnippet {
+  import mapper.view.{ModelView => MV}
+  class ModelView(e: T, snippet: ModelSnippet[T]) extends MV[T](e, snippet) {
+    def this(e: T) {
+      this(e, this)
+    }
+  }
   /**
    * The instance of ModelView that wraps the currently loaded entity
    */
-  val view: ModelView[T]
+  val view: MV[T]
 
   /**
    * Action when save is successful. Defaults to using the ModelView's redirectOnSave
    */
-  var onSave = (view: ModelView[T])=> {
+  var onSave = (view: MV[T])=> {
     view.redirectOnSave.foreach(redirectTo)
   }
 
@@ -42,6 +48,10 @@ trait ModelSnippet[T <: Mapper[T]] extends StatefulSnippet {
     case "edit" =>       edit _
     case "newOrEdit" =>  view.newOrEdit _
   }
+  
+  
+  def editAction(e: T) = TheBindParam("edit", link("edit", ()=>load(e), Text(?("Edit"))))
+  def removeAction(e: T) = TheBindParam("remove", link("list", ()=>e.delete_!, Text(?("Remove"))))
 }
 
 
@@ -121,11 +131,11 @@ class ModelView[T <: Mapper[T]](var entity: T, val snippet: ModelSnippet[T]) {
   /**
    * Returns a BindParam that contains a link to load and edit this entity
    */
-  val editAction = TheBindParam("edit", snippet.link("edit", ()=>load, Text(?("Edit"))))
+  lazy val editAction = TheBindParam("edit", snippet.link("edit", ()=>load, Text(?("Edit"))))
   /**
    * Returns a BindParam that contains a link to delete this entity
    */
-  val removeAction = TheBindParam("remove", snippet.link("list", ()=>remove, Text(?("Remove"))))
+  lazy val removeAction = TheBindParam("remove", snippet.link("list", ()=>remove, Text(?("Remove"))))
   /**
    * Returns a BindParam that binds "name" to the field named "name."
    * If the field has a Full toForm implementation then that is used;

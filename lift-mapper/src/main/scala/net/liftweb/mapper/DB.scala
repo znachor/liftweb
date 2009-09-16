@@ -32,12 +32,15 @@ object DB {
 
   var queryTimeout: Box[Int] = Empty
 
-  private var logFuncs: List[(String, Long) => Any] = Nil
+  type LogFunc = (DBLog,Long) => Any
+  private var logFuncs: List[LogFunc] = Nil
 
-  def addLogFunc(f: (String, Long) => Any): List[(String, Long) => Any] = {
+  def addLogFunc(f: LogFunc): List[LogFunc] = {
     logFuncs = logFuncs ::: List(f)
     logFuncs
   }
+
+  def loggingEnabled_? = ! logFuncs.isEmpty
 
   /**
    * can we get a JDBC connection from JNDI?
@@ -174,28 +177,35 @@ object DB {
     }
   }
 
-  private def runLogger(query: String, time: Long) {
-    logFuncs.foreach(_(query, time))
+  private def runLogger(logged : Statement, time : Long)  = logged match {
+    case st : DBLog => logFuncs.foreach(_(st, time))
+    case _ => // NOP
   }
 
   def statement[T](db : SuperConnection)(f : (Statement) => T) : T =  {
     Helpers.calcTime {
-      val st = db.createStatement
+      val st = 
+        if (loggingEnabled_?) {
+          new LoggedStatement(db.createStatement)
+        } else {
+          db.createStatement
+        }
+
       queryTimeout.foreach(to => st.setQueryTimeout(to))
       try {
-        (st.toString, f(st))
+        (st, f(st))
       } finally {
         st.close
       }
-    } match {case (time, (query, res)) => runLogger(query, time); res}
+    } match {
+        case (time, (query, res)) => runLogger(query, time); res
+    }
   }
 
-  def exec[T](db : SuperConnection, query : String)(f : (ResultSet) => T) : T = {
-    Helpers.calcTime(
+  def exec[T](db : SuperConnection, query : String)(f : (ResultSet) => T) : T = 
       statement(db) {st =>
         f(st.executeQuery(query))
-      }) match {case (time, res) => runLogger(query, time); res}
-  }
+      }
 
 
 
@@ -284,30 +294,85 @@ object DB {
     Helpers.calcTime {
       val rs = statement.executeQuery
       try {
-        (statement.toString, f(rs))
+        (statement, f(rs))
       } finally {
         statement.close
         rs.close
       }} match {case (time, (query, res)) => runLogger(query, time); res}
   }
 
+  /**
+   * Prepares the given statement and then passes it to the given function for use. This method
+   * represents a loan pattern, and will automatically handle creation and closing of the
+   * PreparedStatement.
+   */
   def prepareStatement[T](statement : String, conn: SuperConnection)(f : (PreparedStatement) => T) : T = {
-    Helpers.calcTime {
-      val st = conn.prepareStatement(statement)
-      queryTimeout.foreach(to => st.setQueryTimeout(to))
-      try {
-        (st.toString, f(st))
-      } finally {
-        st.close
-      }} match {case (time, (query, res)) => runLogger(query, time); res}
+    val st = 
+      if (loggingEnabled_?) {
+        new LoggedPreparedStatement(statement, conn.prepareStatement(statement))
+      } else {
+        conn.prepareStatement(statement)
+      }
+    runPreparedStatement(st)(f)    
   }
 
-  def prepareStatement[T](statement : String, keys: Int, conn: SuperConnection)(f : (PreparedStatement) => T) : T = {
+  /**
+   * Prepares the given statement and then passes it to the given function for use. This method
+   * represents a loan pattern, and will automatically handle creation and closing of the
+   * PreparedStatement.
+   *
+   * Retrieval of generated keys is controlled with the autokeys parameter, corresponding to the
+   * constants defined on java.sql.Statement: RETURN_GENERATED_KEYS or NO_GENERATED_KEYS
+   */
+  def prepareStatement[T](statement : String, autokeys: Int, conn: SuperConnection)(f : (PreparedStatement) => T) : T = {
+    val st =
+      if (loggingEnabled_?) {
+        new LoggedPreparedStatement(statement, conn.prepareStatement(statement, autokeys))
+      } else {
+        conn.prepareStatement(statement, autokeys)
+      }
+    runPreparedStatement(st)(f)
+  }
+
+  /**
+   * Prepares the given statement and then passes it to the given function for use. This method
+   * represents a loan pattern, and will automatically handle creation and closing of the
+   * PreparedStatement.
+   *
+   * If the driver supports it, generated keys for the given column indices can be retrieved.
+   */
+  def prepareStatement[T](statement : String, autoColumns: Array[Int], conn: SuperConnection)(f : (PreparedStatement) => T) : T = {
+    val st =
+      if (loggingEnabled_?) {
+        new LoggedPreparedStatement(statement, conn.prepareStatement(statement, autoColumns))
+      } else {
+        conn.prepareStatement(statement, autoColumns)
+      }
+    runPreparedStatement(st)(f)
+  }
+
+  /**
+   * Prepares the given statement and then passes it to the given function for use. This method
+   * represents a loan pattern, and will automatically handle creation and closing of the
+   * PreparedStatement.
+   * 
+   * If the driver supports it, generated keys for the given column names can be retrieved.
+   */
+  def prepareStatement[T](statement : String, autoColumns: Array[String], conn: SuperConnection)(f : (PreparedStatement) => T) : T = {
+    val st =
+      if (loggingEnabled_?) {
+        new LoggedPreparedStatement(statement, conn.prepareStatement(statement, autoColumns))
+      } else {
+        conn.prepareStatement(statement, autoColumns)
+      }
+    runPreparedStatement(st)(f)
+  }
+
+  private def runPreparedStatement[T](st : PreparedStatement)(f : (PreparedStatement) => T) : T = {
     Helpers.calcTime{
-      val st = conn.prepareStatement(statement, keys)
       queryTimeout.foreach(to => st.setQueryTimeout(to))
       try {
-        (st.toString, f(st))
+        (st, f(st))
       } finally {
         st.close
       }} match {case (time, (query, res)) => runLogger(query, time); res}

@@ -4,30 +4,36 @@
 	</head>
 	<h3><table:title /></h3>
 	<table>
-		<tr>
-			<header:fields>
-				<td><field:name /></td>
-			</header:fields>
-			<td><table:insertBtn /></td>
-		</tr>
-		<tr>
-			<td colspan="5">
-			<hr />
-			</td>
-		</tr>
-		<table:items>
+		<thead>
 			<tr>
-				<item:fields>
-					<td style="vertical-align: top"><field:form /></td>
-				</item:fields>
-				<td style="vertical-align: top"><item:removeBtn /></td>
+				<header:fields>
+					<th><field:name /></th>
+				</header:fields>
+				<td><table:insertBtn /></td>
+				<td></td>
 			</tr>
 			<tr>
 				<td colspan="5">
 				<hr />
 				</td>
 			</tr>
-		</table:items>
+		</thead>
+		<tbody>
+			<table:items>
+				<tr>
+					<item:fields>
+						<td style="vertical-align: top"><field:form /></td>
+					</item:fields>
+					<td style="vertical-align: top"><item:removeBtn /></td>
+					<td><item:msg /></td>
+				</tr>
+				<tr>
+					<td colspan="5">
+					<hr />
+					</td>
+				</tr>
+			</table:items>
+		</tbody>
 	</table>
 	<table:saveBtn />
 </lift:children>

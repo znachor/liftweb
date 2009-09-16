@@ -56,7 +56,7 @@ class Paginator[T <: Mapper[T]](val meta: MetaMapper[T], val snippet: ModelSnipp
   /**
    * The number of items on a page
    */
-  var num = 10
+  var num = 20
   /**
    * The query offset of the current page
    */
@@ -109,6 +109,17 @@ class Paginator[T <: Mapper[T]](val meta: MetaMapper[T], val snippet: ModelSnipp
       else
         snippet.link(S.uri, ()=>first=newFirst, ns)
       }
+    def pageLinks(pages: Seq[Int], sep: NodeSeq) = NodeSeq.fromSeq(
+      pages.toList map {n =>
+        linkIfOther(n*num, Text(n+1 toString))
+      } match {
+        case one :: Nil => one
+        case first :: rest => rest.foldLeft(first) {
+          case (a,b) => a ++ sep ++ b
+        }
+        case Nil => Nil
+      }
+    )
     bind("nav",
       bind("sort", xhtml,
            headers.map {
@@ -118,18 +129,16 @@ class Paginator[T <: Mapper[T]](val meta: MetaMapper[T], val snippet: ModelSnipp
       ),
       "first" -> linkIfOther(0, Text(?("<<"))),
       "prev" -> linkIfOther(first-num max 0, prevXml),
-      "allpages" -> {
-        (n:NodeSeq) => NodeSeq.fromSeq(
-          (0 until numPages).toList map {n =>
-            linkIfOther(n*num, Text(n+1 toString))
-          } match {
-            case one :: Nil => one
-            case first :: rest => rest.foldLeft(first) {
-              case (a,b) => a ++ n ++ b
-            }
-            case Nil => Nil
+      "allpages" -> {(n:NodeSeq) => pageLinks(0 until numPages, n)},
+      "zoomedpages" -> {(ns: NodeSeq) =>
+        val curPage = (first / num).toInt
+        println("Current page: " + curPage)
+        val pages = List(curPage - 1020, curPage - 120, curPage - 20) ++
+          (curPage-10 to curPage+10) ++
+          List(curPage + 20, curPage + 120, curPage + 1020) filter { n=>
+            n>=0 && n < numPages
           }
-        )
+        pageLinks(pages, ns)
       },
       "next" -> linkIfOther(first+num min num*(numPages-1), nextXml),
       "last" -> linkIfOther(num*(numPages-1), Text(?(">>"))),
