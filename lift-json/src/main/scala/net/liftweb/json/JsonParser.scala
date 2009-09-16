@@ -21,7 +21,7 @@ package net.liftweb.json
 object JsonParser {
   import JsonAST._
 
-  class ParseException(message: String) extends Exception
+  class ParseException(message: String, cause: Exception) extends Exception(message, cause)
 
   sealed abstract class Token
   case object OpenObj extends Token
@@ -81,12 +81,13 @@ object JsonParser {
     try {
       parse0(s)
     } catch {
-      case e: Exception => throw new ParseException(e.getMessage)
+      case e: ParseException => throw e
+      case e: Exception => throw new ParseException("parsing failed", e)
     }
 
   private def parse0(s: String): JValue = {
     val p = new Parser(s)
-    val vals = new ValStack
+    val vals = new ValStack(p)
     var token: Token = null
     var root: Option[JValue] = None
 
@@ -96,7 +97,10 @@ object JsonParser {
           f.value = v
           val field = vals.pop[MField]
           vals.peek[MObject] += field
-        case Some(o: MObject) => o += v.asInstanceOf[MField]
+        case Some(o: MObject) => v match {
+          case x: MField => o += x
+          case _ => p.fail("expected field but got " + v)
+        }
         case Some(a: MArray) => a += v
         case None => root = Some(v.toJValue)
       }
@@ -133,20 +137,20 @@ object JsonParser {
     root.get
   }
 
-  private class ValStack {
+  private class ValStack(parser: Parser) {
     import java.util.LinkedList
     private[this] val stack = new LinkedList[MValue]()
 
     def pop[A <: MValue] = stack.poll match {
       case x: A => x
-      case x => error("unexpected " + x)
+      case x => parser.fail("unexpected " + x)
     }
 
     def push(v: MValue) = stack.addFirst(v)
 
     def peek[A <: MValue] = stack.peek match {
       case x: A => x
-      case x => error("unexpected " + x)
+      case x => parser.fail("unexpected " + x)
     }
 
     def peekOption = if (stack isEmpty) None else Some(stack.peek)
@@ -158,6 +162,9 @@ object JsonParser {
     private[this] val blocks = new LinkedList[BlockMode]()
     private[this] var fieldNameMode = true
     private[this] var cur = 0 // Pointer which points current parsing location
+
+    def fail(msg: String) = throw new ParseException(
+      msg + "\nNear: " + buf.substring((cur-20) max 0, (cur+20) min (buf.length-1)), null)
 
     def nextToken: Token = {
       def isDelimiter(c: Char) = c == ' ' || c == '\n' || c == ',' || c == '\r' || c == '\t' || c == '}' || c == ']'
