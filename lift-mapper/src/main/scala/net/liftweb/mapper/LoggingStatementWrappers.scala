@@ -312,7 +312,7 @@ class LoggedPreparedStatement (stmt : String, underlying : PreparedStatement) ex
   private def paramified : String = {
       def substitute (in : String, index : Int) : String = in.indexOf('?') match {
           case -1 => in
-          case j => substitute(in.substring(0,j) + paramMap(index) + in.substring(j + 1), index + 1)
+          case j => in.substring(0,j) + paramMap(index) + substitute(in.substring(j + 1), index + 1)
       }
 
       substitute(stmt, 1)
