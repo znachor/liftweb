@@ -45,7 +45,8 @@ private[json] object Meta {
   case class ListOfPrimitives(path: String, elementType: Class[_]) extends Mapping
   case class Optional(mapping: Mapping) extends Mapping
 
-  private val memo = new Memo[Class[_], Mapping]
+  private val mappings = new Memo[Class[_], Mapping]
+  private val unmangledNames = new Memo[String, String]
 
   private[json] def mappingOf(clazz: Class[_]) = {
     import Reflection._
@@ -69,11 +70,11 @@ private[json] object Meta {
           Optional(fieldMapping(name, types._1, types._2))
         } else Optional(fieldMapping(name, typeParameter(genericType), null))
       else makeMapping(Some(name), fieldType, false)
-    memo.memoize(clazz, makeMapping(None, _, false))
+    mappings.memoize(clazz, makeMapping(None, _, false))
   }
 
   private[json] def unmangleName(f: Field) = 
-    operators.foldLeft(f.getName)((n, o) => n.replace(o._1, o._2))
+    unmangledNames.memoize(f.getName, operators.foldLeft(_)((n, o) => n.replace(o._1, o._2)))
 
   val operators = Map("$eq" -> "=", "$greater" -> ">", "$less" -> "<", "$plus" -> "+", "$minus" -> "-",
                       "$times" -> "*", "$div" -> "/", "$bang" -> "!", "$at" -> "@", "$hash" -> "#",
