@@ -259,6 +259,30 @@ solutions for this (see src/test/scala/net/liftweb/json/LottoExample.scala for b
              case x => x
            }
 
+Serialization
+-------------
+
+Case classes can be serialized and deserialized.
+Please see another examples in src/test/scala/net/liftweb/json/SerializationExamples.scala
+
+    scala> import net.liftweb.json.Serialization.{read, write}
+    scala> val ser = write(Child("Mary", 5, None))
+    scala> read[Child](ser)
+    res1: Child = Child(Mary,5,None)
+
+Serialization supports:
+
+* Arbitrarily deep case class graphs
+* All primitive types, including BigInts
+* Lists
+* scala.Option
+* java.util.Date
+
+It does not support:
+
+* Java serialization (classes marked with @serializable annotation etc.)
+* Maps, Sets, Tuples or other collection types, just Lists for now
+
 Kudos
 -----
 
