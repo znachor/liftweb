@@ -105,6 +105,21 @@ object JsonAST {
     def filter(p: JValue => Boolean): List[JValue] = 
       fold(List[JValue]())((acc, e) => if (p(e)) e :: acc else acc).reverse
 
+    def ++(other: JValue) = {
+      def append(value1: JValue, value2: JValue): JValue = (value1, value2) match {
+        case (JNothing, x) => x
+        case (x, JNothing) => x
+        case (JObject(xs), x: JField) => JObject(xs ::: List(x))
+        case (JObject(xs), JObject(ys)) => JObject(xs ::: ys)
+        case (JArray(xs), JArray(ys)) => JArray(xs ::: ys)
+        case (JArray(xs), v: JValue) => JArray(xs ::: List(v))
+        case (f1: JField, f2: JField) => JObject(f1 :: f2 :: Nil)
+        case (JField(n, v1), v2: JValue) => JField(n, append(v1, v2))
+        case (x, y) => JArray(x :: y :: Nil)
+      }
+      append(this, other)
+    }
+
     def extract[A](implicit formats: Formats, mf: scala.reflect.Manifest[A]) = 
       Extraction.extract(this)(formats, mf)
   }
