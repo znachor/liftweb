@@ -178,6 +178,7 @@ Json AST can be queried using XPath like functions. Following REPL session shows
     res8: net.liftweb.json.JsonAST.JValue#Values = Map(person -> Map(name -> Joe, age -> 35, spouse -> Map(person -> Map(name -> Marilyn, age -> 33))))
 
 Indexed path expressions work too, and values can be extracted using for-comprehensions.
+Please see more examples in src/test/scala/net/liftweb/json/QueryExamples.scala
 
     scala> val json = parse("""
              { "name": "joe",
@@ -248,7 +249,7 @@ solutions for this (see src/test/scala/net/liftweb/json/LottoExample.scala for b
 
 1. Use back ticks.
 
-    scala> case class Person(`first-name`: String)
+    scala> case class Person(\`first-name\`: String)
 
 2. Use map function to postprocess AST.
 
