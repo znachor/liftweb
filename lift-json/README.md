@@ -263,7 +263,7 @@ Serialization
 -------------
 
 Case classes can be serialized and deserialized.
-Please see another examples in src/test/scala/net/liftweb/json/SerializationExamples.scala
+Please see other examples in src/test/scala/net/liftweb/json/SerializationExamples.scala
 
     scala> import net.liftweb.json.Serialization.{read, write}
     scala> val ser = write(Child("Mary", 5, None))
