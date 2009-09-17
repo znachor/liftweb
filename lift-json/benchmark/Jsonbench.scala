@@ -4,7 +4,7 @@
  * - jackson-mapper-asl-1.0.0.jar
  * - lift-json-???.jar
  */
-object Jsonbench {
+object Jsonbench extends Benchmark {
   import scala.util.parsing.json.JSON
   import org.codehaus.jackson._
   import org.codehaus.jackson.map._
@@ -14,24 +14,10 @@ object Jsonbench {
     benchmark("Scala std") { JSON.parse(json) }
     val mapper = new ObjectMapper
     benchmark("Jackson") { mapper.readValue(json, classOf[java.util.HashMap[_, _]]) }
-    benchmark("Lift Json") { JsonParser.parse(json) }
+    benchmark("lift-json") { JsonParser.parse(json) }
   }
 
-  def benchmark(name: String)(f: => Any) = {
-    println("warmup")
-    (1 to 50000).foreach(i => f)
-    println("warmup done")
-    val t = time {
-      (1 to 50000).foreach(i => f)
-    }
-    println(name + "\t" + t + "ms")
-  }
-
-  def time(f: => Any): Long = {
-    val start = System.currentTimeMillis
-    f
-    System.currentTimeMillis - start
-  }
+  def benchmark(name: String)(f: => Any) = run(name, 50000, 50000)(f)
 
   val json = """
 {
