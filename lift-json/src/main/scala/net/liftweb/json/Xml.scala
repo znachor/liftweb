@@ -18,7 +18,7 @@ package net.liftweb.json
 
 object Xml {
   import JsonAST._
-  import scala.xml.{Elem, Node, NodeSeq}
+  import scala.xml.{Elem, Node, NodeBuffer, NodeSeq, Text}
 
   def toJson(xml: Node): JValue = {
     def childElems(n: Node) = n.child.filter(_.getClass == classOf[Elem])
@@ -42,5 +42,32 @@ object Xml {
     }
 
     JObject(List(build(xml, Some(xml.label), Nil)(0).asInstanceOf[JField]))
+  }
+
+  // FIXME must be JField or object with 1 field? see above cast
+  // or, object -> NodeSeq, overload?
+  def toXml(json: JField): NodeSeq = {
+    def toXml(name: String, json: JValue): NodeSeq = json match {
+      case JObject(fields) => fields flatMap { f => toXml(f.name, f.value) }
+      case JArray(xs) => xs flatMap { v => new XmlNode(name, toXml(name, v)) }
+      case JField(n, v) => new XmlNode(name, toXml(n, v))
+      case JInt(x) => new XmlElem(name, x.toString)
+      case JDouble(x) => new XmlElem(name, x.toString)
+      case JString(x) => new XmlElem(name, x)
+      case JBool(x) => new XmlElem(name, x.toString)
+      case JNull => new XmlElem(name, "null")
+      case JNothing => error("'nothing' can't be converted to XML")
+    }
+    toXml(json.name, json)
+  }
+
+  private[json] class XmlNode(name: String, children: Seq[Node]) extends Node {
+    override def label = name
+    override def child = children
+  }
+
+  private[json] class XmlElem(name: String, value: String) extends Node {
+    override def label = name
+    override def child = Seq(Text(value))
   }
 }
