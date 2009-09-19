@@ -32,7 +32,7 @@ import auth._
 import _root_.java.util.concurrent.{ConcurrentHashMap => CHash}
 import _root_.scala.reflect.Manifest
 
-object LiftRules extends SimpleInjector {
+object LiftRules extends Factory {
   val noticesContainerId = "lift__noticesContainer__"
 
   type DispatchPF = PartialFunction[Req, () => Box[LiftResponse]];
@@ -731,9 +731,9 @@ object LiftRules extends SimpleInjector {
   private def logSnippetFailure(sf: SnippetFailure) = Log.warn("Snippet Failure: "+sf)
 
   /**
-  * Set to false if you do not want Ajax/Comet requests that are not associated with a session
-  * to cause a page reload
-  */
+   * Set to false if you do not want Ajax/Comet requests that are not associated with a session
+   * to cause a page reload
+   */
   var redirectAjaxOnSessionLoss = true
 
   /**
@@ -781,6 +781,13 @@ object LiftRules extends SimpleInjector {
   val uriNotFound = RulesSeq[URINotFoundPF].prepend(NamedPF("default") {
       case (r, _) => Req.defaultCreateNotFound(r)
     })
+
+  /**
+   * If you use the form attribute in a snippet invocation, what attributes should
+   * be copied from the snippet invocation tag to the form tag.  The
+   * default list is "class", "id", "target", "style", "onsubmit"
+   */
+   val formAttrs: FactoryMaker[List[String]] = new FactoryMaker(() => List("class", "id", "target", "style", "onsubmit")) {}
 
   /**
    * A utility method to convert an exception to a string of stack traces
