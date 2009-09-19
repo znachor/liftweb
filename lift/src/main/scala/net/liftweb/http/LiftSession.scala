@@ -1025,18 +1025,18 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
       case x => new UnprefixedAttribute("enctype", Text("multipart/form-data"), Null)
     }
 
-    def checkAttr(attr_name: String, in: MetaData): MetaData =
+    def checkAttr(attr_name: String, in: MetaData, base: MetaData): MetaData =
     in.filter(_.key == attr_name).toList match {
-      case Nil => Null
+      case Nil => base
       case x => new UnprefixedAttribute(attr_name, Text(x.first.value.text),
-                                        Null)
+                                        base)
     }
 
     if (ret.isEmpty) ret else
     attrs.get("form").map(ft => (
         (<form action={S.uri} method={ft.text.trim.toLowerCase}>{ret}</form> %
-         checkMultiPart(attrs)) %
-         checkAttr("class", attrs)) % checkAttr("id",attrs) % checkAttr("target",attrs) ) getOrElse ret
+         checkMultiPart(attrs)) % LiftRules.formAttrs.vend.foldLeft[MetaData](Null)((base, name) => checkAttr(name, attrs, base))
+      )) getOrElse ret
 
   }
 
