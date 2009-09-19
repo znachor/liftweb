@@ -17,12 +17,12 @@ package net.liftweb.builtin.snippet
 
 import _root_.net.liftweb.http.{S, DispatchSnippet, LiftRules}
 import _root_.net.liftweb.http.js._
-import JsCmds._
-import JE._
 import _root_.net.liftweb.sitemap._
 import _root_.net.liftweb.util._
-import Helpers._
 import _root_.scala.xml._
+import JsCmds._
+import JE._
+import Helpers._
 
 /**
  * <p>This built-in snippet can be used to render a menu representing your SiteMap.

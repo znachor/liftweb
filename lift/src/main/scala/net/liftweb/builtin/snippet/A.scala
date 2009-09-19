@@ -15,10 +15,10 @@
  */
 package net.liftweb.builtin.snippet
 
-import scala.xml._
-import net.liftweb.http._
-import net.liftweb.http.js._
-import net.liftweb.util._
+import _root_.scala.xml._
+import _root_.net.liftweb.http._
+import _root_.net.liftweb.http.js._
+import _root_.net.liftweb.util._
 
 object A extends DispatchSnippet {
 

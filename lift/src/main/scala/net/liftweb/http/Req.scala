@@ -219,7 +219,8 @@ object Req {
              !updated.startsWith("mailto:") &&
              !updated.startsWith("javascript:") &&
              !updated.startsWith("http://") &&
-             !updated.startsWith("https://"))
+             !updated.startsWith("https://") &&
+             !updated.startsWith("#"))
          rewrite.open_!.apply(updated) else updated)
   }
 

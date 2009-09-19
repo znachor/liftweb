@@ -16,8 +16,8 @@
 
 package net.liftweb.builtin.snippet
 
-import scala.xml._
-import net.liftweb.http._
+import _root_.scala.xml._
+import _root_.net.liftweb.http._
 
 object Loc extends DispatchSnippet {
   def dispatch : DispatchIt = {
