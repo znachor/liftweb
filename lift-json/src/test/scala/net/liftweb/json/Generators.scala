@@ -37,7 +37,7 @@ trait NodeGen {
 
   def genElem = for {
     name <- identifier
-    value <- identifier // FIXME: should be arbitrary[String]
+    value <- arbitrary[String]
   } yield new XmlElem(name, value)
 
   private def children = choose(1, 3).sample.get

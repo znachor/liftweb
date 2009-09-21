@@ -18,7 +18,7 @@ package net.liftweb.json
 
 object Xml {
   import JsonAST._
-  import scala.xml.{Elem, Node, NodeBuffer, NodeSeq, Text}
+  import scala.xml.{Elem, Node, NodeSeq, Text, TopScope}
 
   def toJson(xml: Node): JValue = {
     def childElems(n: Node) = n.child.filter(c => classOf[Elem].isAssignableFrom(c.getClass))
@@ -54,7 +54,7 @@ object Xml {
       case JString(x) => new XmlElem(name, x)
       case JBool(x) => new XmlElem(name, x.toString)
       case JNull => new XmlElem(name, "null")
-      case JNothing => scala.xml.Comment("") // FIXME
+      case JNothing => Text("")
     }
 
     json match {
@@ -64,7 +64,7 @@ object Xml {
     }
   }
 
-  private[json] class XmlNode(name: String, children: Seq[Node]) extends Elem(null, name, null, xml.TopScope, children :_*)
+  private[json] class XmlNode(name: String, children: Seq[Node]) extends Elem(null, name, null, TopScope, children :_*)
 
-  private[json] class XmlElem(name: String, value: String) extends Elem(null, name, null, xml.TopScope, Text(value))
+  private[json] class XmlElem(name: String, value: String) extends Elem(null, name, null, TopScope, Text(value))
 }
