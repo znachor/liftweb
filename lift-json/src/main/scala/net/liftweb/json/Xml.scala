@@ -20,14 +20,18 @@ object Xml {
   import JsonAST._
   import scala.xml.{Elem, Node, NodeSeq, Text, TopScope}
 
-  def toJson(xml: Node): JValue = {
+  def toJson(xml: NodeSeq): JValue = {
     def childElems(n: Node) = n.child.filter(c => classOf[Elem].isAssignableFrom(c.getClass))
+    def makeObj(name: String, f: => List[JValue]) = JObject(f map {
+      case f: JField => f
+      case x => JField(name, x)
+    })
 
     def build(root: NodeSeq, fieldName: Option[String], argStack: List[JValue]): List[JValue] = root match {
       case n: Node =>
         if (n.descendant.size == 1) JField(n.label, JString(n.text)) :: argStack
         else {
-          val obj = JObject(build(childElems(n), Some(n.label), Nil).asInstanceOf[List[JField]])
+          val obj = makeObj(n.label, build(childElems(n), Some(n.label), Nil))
           (fieldName match {
             case Some(n) => JField(n, obj)
             case None => obj
@@ -41,7 +45,10 @@ object Xml {
         } else s.toList.flatMap(e => build(e, Some(e.label), Nil))
     }
 
-    JObject(List(build(xml, Some(xml.label), Nil)(0).asInstanceOf[JField]))
+    (xml map { n => makeObj(n.label, build(n, None, Nil)) }).toList match {
+      case List(x) => x
+      case x => JArray(x)
+    }
   }
 
   def toXml(json: JValue): NodeSeq = {
