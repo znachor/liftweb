@@ -58,7 +58,7 @@ class HTTPRequestServlet(req: HttpServletRequest) extends HTTPRequest {
 
   def queryString: Box[String] = Box !! req.getQueryString
 
-  def param(name: String): List[String] = req.getParameterValues(name).toList
+  def param(name: String): List[String] = req.getParameterValues(name) match {case null => Nil case x => x.toList}
 
   def params: List[HTTPParam] = enumToList[String](req.getParameterNames.asInstanceOf[_root_.java.util.Enumeration[String]]).
     map(n => HTTPParam(n, param(n)))
