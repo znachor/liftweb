@@ -44,21 +44,24 @@ object Xml {
     JObject(List(build(xml, Some(xml.label), Nil)(0).asInstanceOf[JField]))
   }
 
-  // FIXME must be JField or object with 1 field? see above cast
-  // or, object -> NodeSeq, overload?
-  def toXml(json: JField): NodeSeq = {
+  def toXml(json: JValue): NodeSeq = {
     def toXml(name: String, json: JValue): NodeSeq = json match {
       case JObject(fields) => fields flatMap { f => toXml(f.name, f.value) }
-      case JArray(xs) => xs flatMap { v => new XmlNode(name, toXml(name, v)) }
+      case JArray(xs) => xs flatMap { v => toXml(name, v) }
       case JField(n, v) => new XmlNode(name, toXml(n, v))
       case JInt(x) => new XmlElem(name, x.toString)
       case JDouble(x) => new XmlElem(name, x.toString)
       case JString(x) => new XmlElem(name, x)
       case JBool(x) => new XmlElem(name, x.toString)
       case JNull => new XmlElem(name, "null")
-      case JNothing => error("'nothing' can't be converted to XML")
+      case JNothing => scala.xml.Comment("") // FIXME
     }
-    toXml(json.name, json)
+
+    json match {
+      case JField(n, v) => toXml(n, v)
+      case JObject(fields) => fields map { f => new XmlNode(f.name, toXml(f.name, f.value)) }
+      case x => toXml("root", x)
+    }
   }
 
   private[json] class XmlNode(name: String, children: Seq[Node]) extends Node {
