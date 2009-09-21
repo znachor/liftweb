@@ -28,7 +28,7 @@ trait NodeGen {
   import Xml.{XmlNode, XmlElem}
   import scala.xml.{Node, NodeSeq, Text}
 
-  def genXml: Gen[Node] = frequency((1, lzy(genNode)), (1, genElem))
+  def genXml: Gen[Node] = frequency((2, lzy(genNode)), (3, genElem))
   
   def genNode = for {
     name <- identifier
@@ -36,8 +36,8 @@ trait NodeGen {
   } yield node
 
   def genElem = for {
-    name <- arbitrary[String]
-    value <- arbitrary[String]
+    name <- identifier
+    value <- identifier // FIXME: should be arbitrary[String]
   } yield new XmlElem(name, value)
 
   private def children = choose(1, 3).sample.get

@@ -21,7 +21,7 @@ object Xml {
   import scala.xml.{Elem, Node, NodeBuffer, NodeSeq, Text}
 
   def toJson(xml: Node): JValue = {
-    def childElems(n: Node) = n.child.filter(_.getClass == classOf[Elem])
+    def childElems(n: Node) = n.child.filter(c => classOf[Elem].isAssignableFrom(c.getClass))
 
     def build(root: NodeSeq, fieldName: Option[String], argStack: List[JValue]): List[JValue] = root match {
       case n: Node =>
@@ -46,7 +46,7 @@ object Xml {
 
   def toXml(json: JValue): NodeSeq = {
     def toXml(name: String, json: JValue): NodeSeq = json match {
-      case JObject(fields) => fields flatMap { f => toXml(f.name, f.value) }
+      case JObject(fields) => new XmlNode(name, fields flatMap { f => toXml(f.name, f.value) })
       case JArray(xs) => xs flatMap { v => toXml(name, v) }
       case JField(n, v) => new XmlNode(name, toXml(n, v))
       case JInt(x) => new XmlElem(name, x.toString)
@@ -59,18 +59,12 @@ object Xml {
 
     json match {
       case JField(n, v) => toXml(n, v)
-      case JObject(fields) => fields map { f => new XmlNode(f.name, toXml(f.name, f.value)) }
+      case JObject(fields) => fields flatMap { f => toXml(f.name, f.value) }
       case x => toXml("root", x)
     }
   }
 
-  private[json] class XmlNode(name: String, children: Seq[Node]) extends Node {
-    override def label = name
-    override def child = children
-  }
+  private[json] class XmlNode(name: String, children: Seq[Node]) extends Elem(null, name, null, xml.TopScope, children :_*)
 
-  private[json] class XmlElem(name: String, value: String) extends Node {
-    override def label = name
-    override def child = Seq(Text(value))
-  }
+  private[json] class XmlElem(name: String, value: String) extends Elem(null, name, null, xml.TopScope, Text(value))
 }
