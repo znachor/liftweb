@@ -90,6 +90,12 @@ object Mailer {
   lazy val properties: Properties = {
     val p = System.getProperties.clone.asInstanceOf[Properties]
     customProperties.foreach{case (name, value) => p.put(name, value)}
+    // allow the properties file to set/override system properties
+
+    Props.props.foreach{
+      case (name, value) =>
+        p.setProperty(name, value)
+    }
     p
   }
 
@@ -117,6 +123,15 @@ object Mailer {
     }
 
     p
+  }
+
+  /**
+   * Set the mail.charset property to something other than UTF-8 for non-UTF-8
+   * mail.
+   */
+  lazy val charSet = properties.getProperty("mail.charset") match {
+    case null => "UTF-8"
+    case x => x
   }
 
   // def host_=(hostname: String) = System.setProperty("mail.smtp.host", hostname)
@@ -147,11 +162,11 @@ object Mailer {
                 tab match {
                   case PlainMailBodyType(txt) => bp.setText(txt, "UTF-8")
                   case PlainPlusBodyType(txt,charset) => bp.setText(txt, charset)
-                  case XHTMLMailBodyType(html) => bp.setContent(html.toString, "text/html; charset=UTF-8")
+                  case XHTMLMailBodyType(html) => bp.setContent(html.toString, "text/html; charset="+charSet)
                   case XHTMLPlusImages(html, img @ _*) =>
                     val html_mp = new MimeMultipart("related")
                     val bp2 = new MimeBodyPart
-                    bp2.setContent(html.toString, "text/html; charset=UTF-8")
+                    bp2.setContent(html.toString, "text/html; charset="+charSet)
                     html_mp.addBodyPart(bp2)
                     img.foreach { i =>
                       val rel_bpi = new MimeBodyPart
