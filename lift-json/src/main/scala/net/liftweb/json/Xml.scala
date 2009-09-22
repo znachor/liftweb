@@ -21,6 +21,8 @@ object Xml {
   import scala.xml.{Elem, Node, NodeSeq, Text, TopScope}
 
   def toJson(xml: NodeSeq): JValue = {
+    def leaf_?(node: Node) = node.descendant.size == 1
+    def array_?(nodeNames: Seq[String]) = nodeNames.size != 1 && nodeNames.toList.removeDuplicates.size == 1
     def childElems(n: Node) = n.child.filter(c => classOf[Elem].isAssignableFrom(c.getClass))
     def makeObj(name: String, f: => List[JValue]) = JObject(f map {
       case f: JField => f
@@ -29,7 +31,7 @@ object Xml {
 
     def build(root: NodeSeq, fieldName: Option[String], argStack: List[JValue]): List[JValue] = root match {
       case n: Node =>
-        if (n.descendant.size == 1) JField(n.label, JString(n.text)) :: argStack
+        if (leaf_?(n)) JField(n.label, JString(n.text)) :: argStack
         else {
           val obj = makeObj(n.label, build(childElems(n), Some(n.label), Nil))
           (fieldName match {
@@ -39,15 +41,15 @@ object Xml {
         }
       case s: NodeSeq => 
         val allLabels = s.map(_.label)
-        if (allLabels.size != 1 && allLabels.toList.removeDuplicates.size == 1) {
-          val arr = JArray(s.flatMap { e => 
-            if (e.descendant.size == 1) JString(e.text) :: Nil
-            else build(e, None, Nil) }.toList)
+        if (array_?(allLabels)) {
+          val arr = JArray(s.toList.flatMap { e => 
+            if (leaf_?(e)) JString(e.text) :: Nil
+            else build(e, None, Nil) })
           JField(allLabels(0), arr) :: argStack
         } else s.toList.flatMap(e => build(e, Some(e.label), Nil))
     }
     
-    (xml map { n => makeObj(n.label, build(n, None, Nil)) }).toList match {
+    (xml map { node => makeObj(node.label, build(node, None, Nil)) }).toList match {
       case List(x) => x
       case x => JArray(x)
     }
