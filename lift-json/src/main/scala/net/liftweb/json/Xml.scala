@@ -40,11 +40,13 @@ object Xml {
       case s: NodeSeq => 
         val allLabels = s.map(_.label)
         if (allLabels.size != 1 && allLabels.toList.removeDuplicates.size == 1) {
-          val arr = JArray(s.flatMap(e => build(e, None, Nil)).toList)
+          val arr = JArray(s.flatMap { e => 
+            if (e.descendant.size == 1) JString(e.text) :: Nil
+            else build(e, None, Nil) }.toList)
           JField(allLabels(0), arr) :: argStack
         } else s.toList.flatMap(e => build(e, Some(e.label), Nil))
     }
-
+    
     (xml map { n => makeObj(n.label, build(n, None, Nil)) }).toList match {
       case List(x) => x
       case x => JArray(x)

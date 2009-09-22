@@ -31,14 +31,15 @@ trait NodeGen {
   def genXml: Gen[Node] = frequency((2, lzy(genNode)), (3, genElem))
   
   def genNode = for {
-    name <- identifier
+    name <- genName
     node <- Gen.containerOfN[List, Node](children, genXml) map { seq => new XmlNode(name, seq) }
   } yield node
 
   def genElem = for {
-    name <- identifier
+    name <- genName
     value <- arbitrary[String]
   } yield new XmlElem(name, value)
 
+  def genName = frequency((2, identifier), (1, value("const")))
   private def children = choose(1, 3).sample.get
 }
