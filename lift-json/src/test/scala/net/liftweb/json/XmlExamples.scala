@@ -10,16 +10,25 @@ object XmlExamples extends Specification {
   import Xml._
 
   "Basic conversion example" in {
-    val json = toJson(xml) 
-    compact(render(json)) mustEqual """{"foos":{"foo":[{"id":"1","name":"Harry"},{"id":"2","name":"David"}]}}"""
+    val json = toJson(users1) 
+    compact(render(json)) mustEqual """{"users":{"user":[{"id":"1","name":"Harry"},{"id":"2","name":"David"}]}}"""
   }
 
-  "Conversion transformation example" in {
-    val json = toJson(xml) map {
+  "Conversion transformation example 1" in {
+    val json = toJson(users1) map {
       case JField("id", JString(s)) => JField("id", JInt(s.toInt))
       case x => x 
     }
-    compact(render(json)) mustEqual """{"foos":{"foo":[{"id":1,"name":"Harry"},{"id":2,"name":"David"}]}}"""
+    compact(render(json)) mustEqual """{"users":{"user":[{"id":1,"name":"Harry"},{"id":2,"name":"David"}]}}"""
+  }
+
+  "Conversion transformation example 2" in {
+    val json = toJson(users2) map {
+      case JField("id", JString(s)) => JField("id", JInt(s.toInt))
+      case JField("user", x: JObject) => JField("user", JArray(x :: Nil))
+      case x => x 
+    }
+    compact(render(json)) mustEqual """{"users":{"user":[{"id":1,"name":"Harry"}]}}"""
   }
 
   "Primitive array example" in {
@@ -53,15 +62,23 @@ object XmlExamples extends Specification {
       </lotto>)
   }
 
-  val xml =
-  <foos>
-    <foo>
-      <id>1</id>
-      <name>Harry</name>
-    </foo>
-    <foo>
-      <id>2</id>
-      <name>David</name>
-    </foo>
-  </foos>   
+  val users1 =
+    <users>
+      <user>
+        <id>1</id>
+        <name>Harry</name>
+      </user>
+      <user>
+        <id>2</id>
+        <name>David</name>
+      </user>
+    </users>   
+
+  val users2 =
+    <users>
+      <user>
+        <id>1</id>
+        <name>Harry</name>
+      </user>
+    </users>   
 }

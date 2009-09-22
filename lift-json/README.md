@@ -283,6 +283,57 @@ It does not support:
 * Java serialization (classes marked with @serializable annotation etc.)
 * Maps, Sets, Tuples or other collection types, just Lists for now
 
+XML support
+-----------
+
+JSON structure can be converted to XML node and vice versa.
+Please see more examples in src/test/scala/net/liftweb/json/XmlExamples.scala
+
+    scala> import net.liftweb.json.Xml.{toJson, toXml}
+    scala> val xml =
+             <users>
+               <user>
+                 <id>1</id>
+                 <name>Harry</name>
+               </user>
+               <user>
+                 <id>2</id>
+                 <name>David</name>
+               </user>
+             </users>   
+
+    scala> val json = toJson(xml)
+    scala> pretty(render(toJson(xml)))
+    res3: {
+      "users":{
+        "user":[{
+          "id":"1",
+          "name":"Harry"
+        },{
+          "id":"2",
+          "name":"David"
+        }]
+      }
+    }
+
+Now, the above example has two problems. First, the id is converted to String while we might want it as an Int. This
+is easy to fix by mapping JString(s) to JInt(s.toInt). The second problem is more subtle. The conversion function
+decides to use JSON array because there's more than one user-element in XML. Therefore a structurally equivalent
+XML document which happens to have just one user-element will generate a JSON document without JSON array. This
+is rarely a desired outcome. These both problems can be fixed by following map function.
+
+    scala> json map {
+             case JField("id", JString(s)) => JField("id", JInt(s.toInt))
+             case JField("user", x: JObject) => JField("user", JArray(x :: Nil))
+             case x => x 
+           }
+
+Other direction is supported too. Converting JSON to XML:
+
+     scala> toXml(json)
+     res5: scala.xml.NodeSeq = <users><user><id>1</id><name>Harry</name></user><user><id>2</id><name>David</name></user></users>
+
+
 Kudos
 -----
 
