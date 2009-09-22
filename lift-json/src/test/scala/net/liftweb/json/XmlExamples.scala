@@ -6,7 +6,7 @@ import _root_.org.specs.runner.{Runner, JUnit}
 class XmlExamplesTest extends Runner(XmlExamples) with JUnit
 object XmlExamples extends Specification {
   import JsonAST._
-  import Printer.compact
+  import JsonDSL._
   import Xml._
 
   "Basic conversion example" in {
@@ -27,6 +27,32 @@ object XmlExamples extends Specification {
     compact(render(toJson(xml))) mustEqual """{"chars":{"char":["a","b","c"]}}"""
   }
 
+  "Lotto example which flattens number arrays into encoded string arrays" in {
+    def flattenArray(nums: List[JValue]) = JString(nums.map(_.values).mkString(","))
+
+    val printer = new scala.xml.PrettyPrinter(100,2)
+    val lotto: JObject = LottoExample.json
+    val xml = toXml(lotto map {
+      case JField("winning-numbers", JArray(nums)) => JField("winning-numbers", flattenArray(nums))
+      case JField("numbers", JArray(nums)) => JField("numbers", flattenArray(nums))
+      case x => x
+    })
+
+    printer.format(xml(0)) mustEqual printer.format(
+      <lotto>
+        <id>5</id>
+        <winning-numbers>2,45,34,23,7,5,3</winning-numbers>
+        <winners>
+          <winner-id>23</winner-id>
+          <numbers>2,45,34,23,3,5</numbers>
+        </winners>
+        <winners>
+          <winner-id>54</winner-id>
+          <numbers>52,3,12,11,18,22</numbers>
+        </winners>
+      </lotto>)
+  }
+
   val xml =
   <foos>
     <foo>
@@ -37,5 +63,5 @@ object XmlExamples extends Specification {
       <id>2</id>
       <name>David</name>
     </foo>
-  </foos> 
+  </foos>   
 }

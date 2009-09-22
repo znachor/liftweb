@@ -73,7 +73,7 @@ object Xml {
     }
   }
 
-  private[json] class XmlNode(name: String, children: Seq[Node]) extends Elem(null, name, null, TopScope, children :_*)
+  private[json] class XmlNode(name: String, children: Seq[Node]) extends Elem(null, name, xml.Null, TopScope, children :_*)
 
-  private[json] class XmlElem(name: String, value: String) extends Elem(null, name, null, TopScope, Text(value))
+  private[json] class XmlElem(name: String, value: String) extends Elem(null, name, xml.Null, TopScope, Text(value))
 }
