@@ -29,6 +29,7 @@ import JsonAST._
  */
 object Extraction {
   import Meta._
+  import Meta.Reflection._
 
   def extract[A](json: JValue)(implicit formats: Formats, mf: Manifest[A]): A = 
     try {
@@ -37,6 +38,21 @@ object Extraction {
       case e: MappingException => throw e
       case e: Exception => throw new MappingException("unknown error", e)
     }
+
+  def decompose(a: Any)(implicit formats: Formats): JValue = a.asInstanceOf[AnyRef] match {
+    case null => JNull
+    case x if primitive_?(x.getClass) => primitive2jvalue(x)(formats)
+    case x: List[_] => JArray(x map decompose)
+    case x: Option[_] => decompose(x getOrElse JNothing)
+    case x => 
+      x.getClass.getDeclaredFields.filter(!static_?(_)).toList.map { f => 
+        f.setAccessible(true)
+        JField(unmangleName(f), decompose(f get x))
+      } match {
+        case Nil => JNothing
+        case fields => JObject(fields)
+      }
+  }
 
   private def extract0[A](json: JValue, formats: Formats, mf: Manifest[A]): A = {
     val mapping = mappingOf(mf.erasure)

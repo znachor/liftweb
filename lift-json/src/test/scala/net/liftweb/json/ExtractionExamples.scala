@@ -65,6 +65,11 @@ object ExtractionExamples extends Specification {
   }
   */
 
+  "Extraction and decomposition are symmetric" in {
+    val person = parse(testJson).extract[Person]
+    Extraction.decompose(person).extract[Person] mustEqual person
+  }
+
   val testJson = 
 """
 { "name": "joe",
