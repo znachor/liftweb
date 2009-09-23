@@ -44,7 +44,10 @@ object Extraction {
     def newInstance(constructor: JConstructor[_], args: List[Any]) = try {
       constructor.newInstance(args.map(_.asInstanceOf[AnyRef]).toArray: _*)
     } catch {
-      case e @ (_:IllegalArgumentException | _:InstantiationException) => fail("Parsed JSON values do not match with class constructor\nargs=" + args.mkString(",") + "\narg types=" + args.map(_.asInstanceOf[AnyRef].getClass.getName).mkString(",")  + "\nconstructor=" + constructor)
+      case e @ (_:IllegalArgumentException | _:InstantiationException) => 
+        fail("Parsed JSON values do not match with class constructor\nargs=" + args.mkString(",") + "\narg types=" + 
+             args.map(arg => if (arg != null) arg.asInstanceOf[AnyRef].getClass.getName else "null").mkString(",")  + 
+             "\nconstructor=" + constructor)
     }
 
     def newPrimitive(elementType: Class[_], elem: JValue) = convert(elem, elementType, formats)

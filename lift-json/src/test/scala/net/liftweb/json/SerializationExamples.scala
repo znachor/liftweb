@@ -16,6 +16,11 @@ object SerializationExamples extends Specification {
     val ser = swrite(project)
     read[Project](ser) mustEqual project
   }
+
+  "Null example" in {
+    val ser = swrite(Nullable(null))
+    read[Nullable](ser) mustEqual Nullable(null)
+  }
   
   case class Project(name: String, startDate: Date, lang: Option[Language], teams: List[Team])
   case class Language(name: String, version: Double)
@@ -35,4 +40,5 @@ object SerializationExamples extends Specification {
     read[Primitives](ser) mustEqual primitives
   }
 
+  case class Nullable(name: String)
 }

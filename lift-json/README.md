@@ -281,7 +281,7 @@ Serialization supports:
 It does not support:
 
 * Java serialization (classes marked with @serializable annotation etc.)
-* Maps, Sets, Tuples or other collection types, just Lists for now
+* Maps, Sets, Tuples or other collection types, just Lists and Options for now
 
 XML support
 -----------
@@ -303,7 +303,7 @@ Please see more examples in src/test/scala/net/liftweb/json/XmlExamples.scala
              </users>   
 
     scala> val json = toJson(xml)
-    scala> pretty(render(toJson(xml)))
+    scala> pretty(render(json))
     res3: {
       "users":{
         "user":[{

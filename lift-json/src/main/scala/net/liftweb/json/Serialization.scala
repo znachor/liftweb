@@ -24,7 +24,7 @@ import JsonParser.parse
 
 /** Functions to serialize and deserialize a case class.
  *
- *  FIXME: Map support
+ *  FIXME: add Map support
  * 
  *  See: SerializationExamples.scala
  */
@@ -39,6 +39,7 @@ object Serialization {
 
   def write[A <: AnyRef, W <: Writer](a: A, out: W): W = {
     def serialize(a: Any): JValue = a.asInstanceOf[AnyRef] match {
+      case null => JNull
       case x if primitive_?(x.getClass) => primitive2jvalue(x)(formats)
       case x: List[_] => JArray(x map serialize)
       case x: Option[_] => serialize(x getOrElse JNothing)
