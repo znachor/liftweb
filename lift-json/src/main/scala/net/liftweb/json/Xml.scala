@@ -18,16 +18,22 @@ package net.liftweb.json
 
 object Xml {
   import JsonAST._
-  import scala.xml.{Elem, Node, NodeSeq}
+  import scala.xml.{Elem, Node, NodeSeq, Text, TopScope}
 
-  def toJson(xml: Node): JValue = {
-    def childElems(n: Node) = n.child.filter(_.getClass == classOf[Elem])
+  def toJson(xml: NodeSeq): JValue = {
+    def leaf_?(node: Node) = node.descendant.size == 1
+    def array_?(nodeNames: Seq[String]) = nodeNames.size != 1 && nodeNames.toList.removeDuplicates.size == 1
+    def childElems(n: Node) = n.child.filter(c => classOf[Elem].isAssignableFrom(c.getClass))
+    def makeObj(name: String, f: => List[JValue]) = JObject(f map {
+      case f: JField => f
+      case x => JField(name, x)
+    })
 
     def build(root: NodeSeq, fieldName: Option[String], argStack: List[JValue]): List[JValue] = root match {
       case n: Node =>
-        if (n.descendant.size == 1) JField(n.label, JString(n.text)) :: argStack
+        if (leaf_?(n)) JField(n.label, JString(n.text)) :: argStack
         else {
-          val obj = JObject(build(childElems(n), Some(n.label), Nil).asInstanceOf[List[JField]])
+          val obj = makeObj(n.label, build(childElems(n), Some(n.label), Nil))
           (fieldName match {
             case Some(n) => JField(n, obj)
             case None => obj
@@ -35,12 +41,41 @@ object Xml {
         }
       case s: NodeSeq => 
         val allLabels = s.map(_.label)
-        if (allLabels.size != 1 && allLabels.toList.removeDuplicates.size == 1) {
-          val arr = JArray(s.flatMap(e => build(e, None, Nil)).toList)
+        if (array_?(allLabels)) {
+          val arr = JArray(s.toList.flatMap { e => 
+            if (leaf_?(e)) JString(e.text) :: Nil
+            else build(e, None, Nil) })
           JField(allLabels(0), arr) :: argStack
         } else s.toList.flatMap(e => build(e, Some(e.label), Nil))
     }
-
-    JObject(List(build(xml, Some(xml.label), Nil)(0).asInstanceOf[JField]))
+    
+    (xml map { node => makeObj(node.label, build(node, None, Nil)) }).toList match {
+      case List(x) => x
+      case x => JArray(x)
+    }
   }
+
+  def toXml(json: JValue): NodeSeq = {
+    def toXml(name: String, json: JValue): NodeSeq = json match {
+      case JObject(fields) => new XmlNode(name, fields flatMap { f => toXml(f.name, f.value) })
+      case JArray(xs) => xs flatMap { v => toXml(name, v) }
+      case JField(n, v) => new XmlNode(name, toXml(n, v))
+      case JInt(x) => new XmlElem(name, x.toString)
+      case JDouble(x) => new XmlElem(name, x.toString)
+      case JString(x) => new XmlElem(name, x)
+      case JBool(x) => new XmlElem(name, x.toString)
+      case JNull => new XmlElem(name, "null")
+      case JNothing => Text("")
+    }
+
+    json match {
+      case JField(n, v) => toXml(n, v)
+      case JObject(fields) => fields flatMap { f => toXml(f.name, f.value) }
+      case x => toXml("root", x)
+    }
+  }
+
+  private[json] class XmlNode(name: String, children: Seq[Node]) extends Elem(null, name, xml.Null, TopScope, children :_*)
+
+  private[json] class XmlElem(name: String, value: String) extends Elem(null, name, xml.Null, TopScope, Text(value))
 }
