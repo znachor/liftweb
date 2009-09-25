@@ -155,6 +155,13 @@ object JE {
   }
 
   /**
+   * Given the id of a checkbox, see if it's checked
+   */
+  case class CheckedById(id: String) extends JsExp {
+    def toJsCmd = "document.getElementById("+id.encJs+").checked"
+  }
+
+  /**
    * gets the element by ID
    */
   case class ElemById(id: String, then: String*) extends JsExp {
