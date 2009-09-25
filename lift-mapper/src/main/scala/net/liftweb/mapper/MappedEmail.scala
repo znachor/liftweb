@@ -23,6 +23,7 @@ import _root_.net.liftweb.util.{FieldError}
 
 object MappedEmail {
   val emailPattern = Pattern.compile("^[a-z0-9._%\\-+]+@(?:[a-z0-9\\-]+\\.)+[a-z]{2,4}$")
+
   def validEmailAddr_?(email: String): Boolean = emailPattern.matcher(email).matches
 }
 
