@@ -8,7 +8,7 @@ import _root_.org.apache.commons.fileupload.ProgressListener
 import _root_.net.liftweb.util._
 import Helpers._
 
-class HTTPRequestServlet(req: HttpServletRequest) extends HTTPRequest {
+class HTTPRequestServlet(val req: HttpServletRequest) extends HTTPRequest {
 
   private val ctx = new HTTPServletContext(req.getSession.getServletContext)
 

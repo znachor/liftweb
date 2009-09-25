@@ -23,10 +23,10 @@ class HTTPResponseServlet(resp: HttpServletResponse) extends HTTPResponse {
   def encodeUrl(url: String): String = resp encodeURL url
 
   def addHeaders(headers: List[HTTPParam]) {
-
+    val appearOnce = Set(LiftRules.overwrittenReponseHeaders.vend.map(_.toLowerCase) :_*)
     for (h <- headers;
          value <- h.values) {
-      if (h.name equalsIgnoreCase "expires") resp.setHeader(h.name, value)
+      if (appearOnce.contains(h.name.toLowerCase)) resp.setHeader(h.name, value)
       else
       resp.addHeader(h.name, value)
     }

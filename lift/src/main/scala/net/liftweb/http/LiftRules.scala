@@ -790,6 +790,13 @@ object LiftRules extends Factory {
    val formAttrs: FactoryMaker[List[String]] = new FactoryMaker(() => List("class", "id", "target", "style", "onsubmit")) {}
 
   /**
+   * By default, Http response headers are appended.  However, there are
+   * some headers that should only appear once (for example "expires").  This
+   * Vendor vends the list of header responses that can only appear once.
+   */
+   val overwrittenReponseHeaders: FactoryMaker[List[String]] = new FactoryMaker(() => List("expires")) {}
+
+  /**
    * A utility method to convert an exception to a string of stack traces
    * @param le the exception
    *
