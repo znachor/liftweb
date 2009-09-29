@@ -28,6 +28,9 @@ trait TypedActor[T, R] extends SimpleActor[T] {
   def !!(param: T): Future[R]
 }
 
+
+trait Future[T]
+
 trait Actor extends SimpleActor[Any] {
   def !(message: Any): Unit
   def !?[T](message: Any): T
