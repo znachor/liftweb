@@ -19,8 +19,9 @@ import _root_.net.liftweb.http._
 import _root_.scala.xml._
 import _root_.net.liftweb.util.Helpers._
 import _root_.net.liftweb.util.Log
-import _root_.net.liftweb.util.{Box, Full, Empty}
 import S._
+import _root_.net.liftweb.base.{Box, Full, Empty}
+
 
 /**
  * This class is a built in snippet that renders the messages (Errors, Warnings, Notices). Typically it is used in templates

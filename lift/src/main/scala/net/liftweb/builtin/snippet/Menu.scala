@@ -19,6 +19,7 @@ import _root_.net.liftweb.http.{S, DispatchSnippet, LiftRules}
 import _root_.net.liftweb.http.js._
 import _root_.net.liftweb.sitemap._
 import _root_.net.liftweb.util._
+import _root_.net.liftweb.base._
 import _root_.scala.xml._
 import JsCmds._
 import JE._
