@@ -186,7 +186,7 @@ object DB {
     Helpers.calcTime {
       val st = 
         if (loggingEnabled_?) {
-          new LoggedStatement(db.createStatement)
+          DBLog.createStatement(db.connection)
         } else {
           db.createStatement
         }
@@ -309,7 +309,7 @@ object DB {
   def prepareStatement[T](statement : String, conn: SuperConnection)(f : (PreparedStatement) => T) : T = {
     val st = 
       if (loggingEnabled_?) {
-        new LoggedPreparedStatement(statement, conn.prepareStatement(statement))
+        DBLog.prepareStatement(conn.connection, statement)
       } else {
         conn.prepareStatement(statement)
       }
@@ -327,7 +327,7 @@ object DB {
   def prepareStatement[T](statement : String, autokeys: Int, conn: SuperConnection)(f : (PreparedStatement) => T) : T = {
     val st =
       if (loggingEnabled_?) {
-        new LoggedPreparedStatement(statement, conn.prepareStatement(statement, autokeys))
+        DBLog.prepareStatement(conn.connection, statement, autokeys)
       } else {
         conn.prepareStatement(statement, autokeys)
       }
@@ -344,7 +344,7 @@ object DB {
   def prepareStatement[T](statement : String, autoColumns: Array[Int], conn: SuperConnection)(f : (PreparedStatement) => T) : T = {
     val st =
       if (loggingEnabled_?) {
-        new LoggedPreparedStatement(statement, conn.prepareStatement(statement, autoColumns))
+        DBLog.prepareStatement(conn.connection, statement, autoColumns)
       } else {
         conn.prepareStatement(statement, autoColumns)
       }
@@ -361,7 +361,7 @@ object DB {
   def prepareStatement[T](statement : String, autoColumns: Array[String], conn: SuperConnection)(f : (PreparedStatement) => T) : T = {
     val st =
       if (loggingEnabled_?) {
-        new LoggedPreparedStatement(statement, conn.prepareStatement(statement, autoColumns))
+        DBLog.prepareStatement(conn.connection, statement, autoColumns)
       } else {
         conn.prepareStatement(statement, autoColumns)
       }

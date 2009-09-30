@@ -7,13 +7,13 @@
 
 package net.liftweb.mapper
 
+import _root_.java.lang.reflect.{InvocationHandler,Method,Proxy}
 import _root_.java.io.{InputStream,Reader}
 import _root_.java.net.URL
-//import _root_.java.sql.{Blob,Clob,Connection,Date,NClob,PreparedStatement,Statement,Time,Timestamp}
 import _root_.java.sql.{Array => SqlArray, _}
 import _root_.java.util.Calendar
 
-import _root_.net.liftweb.util.{Box,Helpers}
+import _root_.net.liftweb.util.{Box,Helpers,Log}
 
 trait DBLogEntry {
   def statement : String
@@ -62,543 +62,478 @@ trait DBLog {
   def allEntries : List[DBLogEntry] = executedStatements.reverse
 }
 
-/**
- * This class corresponds to a logged version of java.sql.Statement. All operations
- * should be supported.
- *
- * To enable logging of DB operations, use DB.addLogFunc
- */
-class LoggedStatement(underlying : Statement) extends Statement with DBLog {
-  private val StatementClazz = classOf[Statement]
-
-  // These are from wrapper and are required
-  def isWrapperFor (clazz : Class[_]) : Boolean = clazz match {
-      case StatementClazz => true
-      case _ => underlying.isWrapperFor(clazz)
+object DBLog {
+  def createStatement (conn : Connection) = {
+    val stmt = conn.createStatement
+    Proxy.newProxyInstance(stmt.getClass.getClassLoader, 
+                           Array(classOf[java.sql.Statement], classOf[DBLog]),
+                           new LoggedStatementHandler(stmt)).asInstanceOf[Statement]
   }
 
-  def unwrap[T] (clazz : Class[T]) : T = clazz match {
-      case StatementClazz => underlying.asInstanceOf[T]
-      case _ => underlying.unwrap(clazz)
+  def prepareStatement (conn : Connection, query : String) =
+    proxyPreparedStatement(conn.prepareStatement(query), query)
+
+  def prepareStatement (conn : Connection, query : String, autoKeys : Int) =
+    proxyPreparedStatement(conn.prepareStatement(query, autoKeys), query)
+
+  def prepareStatement (conn : Connection, query : String, autoKeys : Array[Int]) =
+    proxyPreparedStatement(conn.prepareStatement(query, autoKeys), query)
+
+  def prepareStatement (conn : Connection, query : String, autoKeys : Array[String]) =
+    proxyPreparedStatement(conn.prepareStatement(query, autoKeys), query)
+
+  private def proxyPreparedStatement(stmt : PreparedStatement, query : String) = {
+    Proxy.newProxyInstance(stmt.getClass.getClassLoader,
+                           Array(classOf[java.sql.PreparedStatement], classOf[DBLog]),
+                           new LoggedPreparedStatementHandler(query, stmt)).asInstanceOf[PreparedStatement]
   }
 
-  def addBatch (sql : String) {
-      logStatement("Batched: \"%s\"".format(sql)) {
-        underlying.addBatch(sql)
-      }
-  }
-  def cancel () {
-      logMeta("Cancelled Statement") {
-        underlying.cancel()
-      }
-  }
-  def clearBatch () {
-      logMeta("Cleared Batch") {
-        underlying.clearBatch()
-      }
-  }
-  def clearWarnings () {
-      logMeta("Cleared Warnings") {
-        underlying.clearWarnings()
-      }
-  }
-  def close () {
-      logMeta("Closed Statement") {
-        underlying.close()
-      }
-  }
-  def execute (sql : String) : Boolean = {
-      logStatement({ret : Boolean => "\"%s\" : result = %s".format(sql, ret)}) {
-          underlying.execute(sql)
-      }
-  }
-  def execute (sql : String, autoKeys : Int) : Boolean = {
-      logStatement({ret : Boolean => "Exec \"%s\", Auto-gen keys = %s : result = %s".format(sql, StatementConstantDescriptions.genKeyDescriptions(autoKeys), ret)}) {
-        underlying.execute(sql, autoKeys)
-      }
-  }
-  def execute (sql : String, autoKeyColumns : Array[Int]) : Boolean = {
-      logStatement({ret : Boolean => "Exec \"%s\", Auto-gen keys for columns %s".format(sql, autoKeyColumns.mkString(", "), ret)}) {
-          underlying.execute(sql, autoKeyColumns)
-      }
-  }
-  def execute (sql : String, autoKeyColumns : Array[String]) : Boolean = {
-      logStatement({ret : Boolean => "Exec \"%s\", Auto-gen keys for columns %s".format(sql, autoKeyColumns.mkString(", "))}) {
-          underlying.execute(sql, autoKeyColumns)
-      }
-  }
-  def executeBatch () : Array[Int] = {
-      logStatement({result : Array[Int] => "Exec batch, counts = " + result.mkString("(", ", ", ")")}) {
-          underlying.executeBatch()
-      }
-  }
-  def executeQuery (sql : String) : ResultSet = {
-      logStatement({rs : ResultSet => "Exec query \"%s\" : rs = %s".format(sql,rs)}) {
-          underlying.executeQuery(sql)
-      }
-  }
-  def executeUpdate (sql : String) : Int = {
-      logStatement({count : Int => "Exec update \"%s\" : count = %d".format(sql,count)}) {
-          underlying.executeUpdate(sql)
-      }
-  }
-  def executeUpdate (sql : String, autoKeys : Int) : Int = {
-      logStatement({count : Int => "Exec update \"%s\", Auto-gen keys = %s".format(sql, StatementConstantDescriptions.genKeyDescriptions(autoKeys), count)}) {
-        underlying.executeUpdate(sql, autoKeys)
-      }
-  }
-  def executeUpdate (sql : String, autoKeyColumns : Array[Int]) : Int = {
-      logStatement({count : Int => "Exec update \"%s\", Auto-gen keys for columns %s".format(sql, autoKeyColumns.mkString(", "), count)}) {
-        underlying.executeUpdate(sql, autoKeyColumns)
-      }
-  }
-  def executeUpdate (sql : String, autoKeyColumns : Array[String]) : Int = {
-      logStatement({count : Int => "Exec update \"%s\", Auto-gen keys for columns %s".format(sql, autoKeyColumns.mkString(", "), count)}) {
-          underlying.executeUpdate(sql, autoKeyColumns)
-      }
-  }
-  def getConnection () : Connection = {
-      logMeta("Get underlying Connection") {
-        underlying.getConnection
-      }
-  }
-  def getFetchDirection () : Int = {
-      logMeta({ret : Int => "Get fetch direction : " + StatementConstantDescriptions.fetchDirDescriptions(ret)}) {
-          underlying.getFetchDirection()
-      }
-  }
-  def getFetchSize () : Int = {
-      logMeta({size : Int => "Get fetch size : " + size}) {
-          underlying.getFetchSize()
-      }
-  }
-  def getGeneratedKeys () : ResultSet = {
-      logMeta({rs : ResultSet => "Get generated keys : rs = " + rs}) {
-          underlying.getGeneratedKeys()
-      }
-  }
-  def getMaxFieldSize () : Int = {
-      logMeta({size : Int => "Get max field size : " + size}) {
-          underlying.getMaxFieldSize()
-      }
-  }
-  def getMaxRows () : Int = {
-      logMeta({maxRows : Int => "Get max rows : " + maxRows}) {
-          underlying.getMaxRows()
-      }
-  }
-  def getMoreResults () : Boolean = {
-      logMeta({hasMore : Boolean => "Get more results : " + hasMore}) {
-          underlying.getMoreResults()
-      }
-  }
-  def getMoreResults (current : Int) : Boolean = {
-      logMeta({ret : Boolean => "Get more results (%s) : %s".format(StatementConstantDescriptions.getMoreResultsDescriptions(current), ret)}) {
-          underlying.getMoreResults(current)
-      }
-  }
-  def getQueryTimeout () : Int = {
-      logMeta({timeout : Int => "Get query timeout : %d seconds ".format(timeout)}) {
-          underlying.getQueryTimeout()
-      }
-  }
-  def getResultSet () : ResultSet = {
-      logMeta({rs : ResultSet => "Get result set : " + rs}) {
-          underlying.getResultSet()
-      }
-  }
-  def getResultSetConcurrency () : Int = {
-      logMeta({ret : Int => "Get result set concurrency : " + StatementConstantDescriptions.resultSetConcurrencyDescs(ret)}) {
-          underlying.getResultSetConcurrency()
-      }
-  }
-  def getResultSetHoldability () : Int = {
-      logMeta({ret : Int => "Get ResultSet holdability : " + StatementConstantDescriptions.resultSetHoldabilityDescs(ret)}) {
-          underlying.getResultSetHoldability()
-      }
-  }
-  def getResultSetType () : Int = {
-      logMeta({ret : Int => "Get ResultSet type : " + StatementConstantDescriptions.resultSetTypeDescs(ret)}) {
-          underlying.getResultSetType()
-      }
-  }
-  def getUpdateCount () : Int = {
-      logMeta({count : Int => "Get update count : " + count}) {
-          underlying.getUpdateCount()
-      }
-  }
-  def getWarnings () : SQLWarning = {
-      logMeta({ret : SQLWarning => "Get SQL Warnings: " + Box.!!(ret).map(_.toString).openOr("None")}) {
-          underlying.getWarnings()
-      }
-  }
-  def isClosed () : Boolean = {
-      logMeta({ret : Boolean => "Check isClosed : " + ret}) {
-          underlying.isClosed()
-      }
-  }
-  def isPoolable () : Boolean = {
-      logMeta({ret : Boolean => "Check isPoolable : " + ret}) {
-          underlying.isPoolable()
-      }
-  }
-  def setCursorName (name : String) {
-      logMeta("Set cursor name = %s" + name) {
-          underlying.setCursorName(name)
-      }
-  }
-  def setEscapeProcessing (enable : Boolean) {
-      logMeta("Set escape processing = " + enable) {
-          underlying.setEscapeProcessing(enable)
-      }
-  }
-  def setFetchDirection (direction : Int) {
-      logMeta("Set fetch direction = " + StatementConstantDescriptions.fetchDirDescriptions(direction)) {
-          underlying.setFetchDirection(direction)
-      }
-  }
-  def setFetchSize (size : Int) {
-      logMeta("Set fetch size = " + size) {
-          underlying.setFetchSize(size)
-      }
-  }
-  def setMaxFieldSize (size : Int) {
-      logMeta("Set max field size = " + size) {
-          underlying.setMaxFieldSize(size)
-      }
-  }
-  def setMaxRows (count : Int) {
-      logMeta("Set max rows = " + count) {
-          underlying.setMaxRows(count)
-      }
-  }
-  def setPoolable (poolable : Boolean) {
-      logMeta("Set poolable = " + poolable) {
-          underlying.setPoolable(poolable)
-      }
-  }
-  def setQueryTimeout (timeout : Int) {
-      logMeta("Set query timeout = " + timeout) {
-          underlying.setQueryTimeout(timeout)
-      }
-  }
+  /**
+   * This class corresponds to a logged version of java.sql.Statement. All operations
+   * are supported via dynamic dispatch. This is done so that we can support both
+   * JDBC3 and JDBC4 without having two code trees.
+   *
+   * To enable logging of DB operations, use DB.addLogFunc
+   */
+  sealed private[DBLog] class LoggedStatementHandler(underlying : Statement) extends InvocationHandler with DBLog {
+    val underlyingClassname = "java.sql.Statement"
+    val representative : Class[_] = Class.forName(underlyingClassname)
 
-  override def toString = executedStatements.reverse.mkString("\n")
-}
 
-/**
- * This class corresponds to a logged version of java.sql.PreparedStatement. All operations
- * should be supported.
- *
- * To enable logging of DB operations, use DB.addLogFunc
- */
-class LoggedPreparedStatement (stmt : String, underlying : PreparedStatement) extends LoggedStatement(underlying) with PreparedStatement {
-  private var paramMap = Map.empty[Int,Any]
+    def invoke (proxy : Object, method : Method, args : Array[Object]) : Object = method.getName match {
+      // Handle DBLog methods first. We have to do this since the end user expects a DBLog interface
+      // via the proxy.
+      case "statementEntries" => this.statementEntries
+      case "metaEntries" => this.metaEntries
+      case "allEntries" => this.allEntries
 
-  private val PreparedStatementClazz = classOf[PreparedStatement]
-
-  // These are from wrapper and are required
-  override def isWrapperFor (clazz : Class[_]) : Boolean = clazz match {
-      case PreparedStatementClazz => true
-      case _ => super.isWrapperFor(clazz) || underlying.isWrapperFor(clazz)
-  }
-
-  override def unwrap[T] (clazz : Class[T]) : T = clazz match {
-      case PreparedStatementClazz => underlying.asInstanceOf[T]
-      case _ => if (super.isWrapperFor(clazz)) super.unwrap(clazz) else underlying.unwrap(clazz)
-  }
-
-  // utility method to fill in params
-  private def paramified : String = {
-      def substitute (in : String, index : Int) : String = in.indexOf('?') match {
-          case -1 => in
-          case j => in.substring(0,j) + paramMap(index) + substitute(in.substring(j + 1), index + 1)
+      // The rest are from Statement
+      case "addBatch" => {
+        logStatement("Batched: \"%s\"".format(args(0))) {
+          chain(method,  args)
+        }
+      }
+      case "cancel" => {
+        logMeta("Cancelled Statement") {
+          chain(method,  Array())
+        }
+      }
+      case "clearBatch" => {
+        logMeta("Cleared Batch") {
+          chain(method,  Array())
+        }
+      }
+      case "clearWarnings" => {
+        logMeta("Cleared Warnings") {
+          chain(method,  Array())
+        }
+      }
+      case "close" => {
+        logMeta("Closed Statement") {
+          chain(method,  Array())
+        }
+      }
+      case "execute" if args.length == 1 => {
+        logStatement({ret : Object => "\"%s\" : result = %s".format(args(0), ret)}) {
+            chain(method,  args)
+        }
+      }
+      case "execute" if args(1).getClass == classOf[Int]  => {
+        logStatement({ret : Object => "Exec \"%s\", Auto-gen keys = %s : result = %s".format(args(0), StatementConstantDescriptions.genKeyDescriptions(args(1).asInstanceOf[Int]), ret)}) {
+          chain(method,  args)
+        }
+      }
+      case "execute" => {
+        logStatement({ret : Object => "Exec \"%s\", Auto-gen keys for columns %s".format(args(0), args(1).asInstanceOf[Array[_]].mkString(", "), ret)}) {
+            chain(method,  args)
+        }
+      }
+      case "executeBatch" => {
+        logStatement({result : Object => "Exec batch, counts = " + result.asInstanceOf[Array[Int]].mkString("(", ", ", ")")}) {
+            chain(method,  Array())
+        }
+      }
+      case "executeQuery" => {
+        logStatement({rs : Object => "Exec query \"%s\" : rs = %s".format(args(0),rs)}) {
+            chain(method,  args)
+        }
+      }
+      case "executeUpdate" if args.length == 1 => {
+        logStatement({count : Object => "Exec update \"%s\" : count = %d".format(args(0),count)}) {
+            chain(method,  args)
+        }
+      }
+      case "executeUpdate" if args(1).getClass == classOf[Int] => {
+        logStatement({count : Object => "Exec update \"%s\", Auto-gen keys = %s".format(args(0), StatementConstantDescriptions.genKeyDescriptions(args(1).asInstanceOf[Int]), count)}) {
+          chain(method,  args)
+        }
+      }
+      case "executeUpdate" => {
+        logStatement({count : Object => "Exec update \"%s\", Auto-gen keys for columns %s".format(args(0), args(1).asInstanceOf[Array[_]].mkString(", "), count)}) {
+          chain(method,  args)
+        }
+      }
+      case "getConnection" => {
+        logMeta("Get underlying Connection") {
+          chain(method,  Array())
+        }
+      }
+      case "getFetchDirection" => {
+        logMeta({ret : Object => "Get fetch direction : " + StatementConstantDescriptions.fetchDirDescriptions(ret.asInstanceOf[Int])}) {
+            chain(method,  Array())
+        }
+      }
+      case "getFetchSize" => {
+        logMeta({size : Object => "Get fetch size : " + size}) {
+            chain(method,  Array())
+        }
+      }
+      case "getGeneratedKeys" => {
+        logMeta({rs : Object => "Get generated keys : rs = " + rs}) {
+            chain(method,  Array())
+        }
+      }
+      case "getMaxFieldSize" => {
+        logMeta({size : Object => "Get max field size : " + size}) {
+            chain(method,  Array())
+        }
+      }
+      case "getMaxRows" => {
+        logMeta({maxRows : Object => "Get max rows : " + maxRows}) {
+            chain(method,  Array())
+        }
+      }
+      case "getMoreResults" if args.length == 0 => {
+        logMeta({hasMore : Object => "Get more results : " + hasMore}) {
+            chain(method,  Array())
+        }
+      }
+      case "getMoreResults" => {
+        logMeta({ret : Object => "Get more results (%s) : %s".format(StatementConstantDescriptions.getMoreResultsDescriptions(args(0).asInstanceOf[Int]), ret)}) {
+            chain(method,  args)
+        }
+      }
+      case "getQueryTimeout" => {
+        logMeta({timeout : Object => "Get query timeout : %d seconds ".format(timeout)}) {
+            chain(method,  Array())
+        }
+      }
+      case "getResultSet" => {
+        logMeta({rs : Object => "Get result set : " + rs}) {
+            chain(method,  Array())
+        }
+      }
+      case "getResultSetConcurrency" => {
+        logMeta({ret : Object => "Get result set concurrency : " + StatementConstantDescriptions.resultSetConcurrencyDescs(ret.asInstanceOf[Int])}) {
+            chain(method,  Array())
+        }
+      }
+      case "getResultSetHoldability" => {
+        logMeta({ret : Object => "Get ResultSet holdability : " + StatementConstantDescriptions.resultSetHoldabilityDescs(ret.asInstanceOf[Int])}) {
+            chain(method,  Array())
+        }
+      }
+      case "getResultSetType" => {
+        logMeta({ret : Object => "Get ResultSet type : " + StatementConstantDescriptions.resultSetTypeDescs(ret.asInstanceOf[Int])}) {
+            chain(method,  Array())
+        }
+      }
+      case "getUpdateCount" => {
+        logMeta({count : Object => "Get update count : " + count}) {
+            chain(method,  Array())
+        }
+      }
+      case "getWarnings" => {
+        logMeta({ret : Object => "Get SQL Warnings: " + Box.!!(ret).map(_.toString).openOr("None")}) {
+            chain(method,  Array())
+        }
+      }
+      case "isClosed" => {
+        logMeta({ret : Object => "Check isClosed : " + ret}) {
+            chain(method,  Array())
+        }
+      }
+      case "isPoolable" => {
+        logMeta({ret : Object => "Check isPoolable : " + ret}) {
+            chain(method,  Array())
+        }
+      }
+      case "setCursorName" => {
+        logMeta("Set cursor name = %s" + args(0)) {
+            chain(method,  args)
+        }
+      }
+      case "setEscapeProcessing" => {
+        logMeta("Set escape processing = " + args(0)) {
+            chain(method,  args)
+        }
+      }
+      case "setFetchDirection" => {
+        logMeta("Set fetch direction = " + StatementConstantDescriptions.fetchDirDescriptions(args(0).asInstanceOf[Int])) {
+            chain(method,  args)
+        }
+      }
+      case "setFetchSize" => {
+        logMeta("Set fetch size = " + args(0)) {
+            chain(method,  args)
+        }
+      }
+      case "setMaxFieldSize" => {
+        logMeta("Set max field size = " + args(0)) {
+            chain(method,  args)
+        }
+      }
+      case "setMaxRows" => {
+        logMeta("Set max rows = " + args(0)) {
+            chain(method,  args)
+        }
+      }
+      case "setPoolable" => {
+        logMeta("Set poolable = " + args(0)) {
+            chain(method,  args)
+        }
+      }
+      case "setQueryTimeout" => {
+        logMeta("Set query timeout = " + args(0)) {
+            chain(method,  args)
+        }
+      }
+      // These are from wrapper and are required
+    case "isWrapperFor" => args(0).getClass match {
+        case `representative` => Boolean.box(true)
+        case _ => chain(method,  args)
+      }
+      case "unwrap" => args(0).getClass match {
+        case `representative` => underlying
+        case _ => chain(method,  args)
       }
 
-      substitute(stmt, 1)
+      case methodName => throw new NoSuchMethodException(methodName + " is not implemented here")
+    }
+
+    protected def chain(method : Method, args : Array[Object]) : Object =
+    try {
+      val m = representative.getMethod(method.getName, method.getParameterTypes : _*)
+
+      m.invoke(underlying, args : _*)
+    } catch {
+      case nsme : NoSuchMethodException => Log.fatal("Could not locate method %s for %s : %s".format(method.getName, underlyingClassname, nsme.getMessage))
+    }
+
+    override def toString = executedStatements.reverse.mkString("\n")
   }
 
-  def addBatch () {
-      logStatement("Batching \"%s\"".format(paramified)) {
-          underlying.addBatch()
+  /**
+   * This class corresponds to a logged version of java.sql.PreparedStatement. All operations
+   * should be supported.
+   *
+   * To enable logging of DB operations, use DB.addLogFunc
+   */
+  sealed private[DBLog] class LoggedPreparedStatementHandler (stmt : String, underlying : PreparedStatement) extends LoggedStatementHandler(underlying) {
+    override val underlyingClassname = "java.sql.PreparedStatement"
+
+    private var paramMap = Map.empty[Int,Any]
+
+    // utility method to fill in params
+    private def paramified : String = {
+        def substitute (in : String, index : Int) : String = in.indexOf('?') match {
+            case -1 => in
+            case j => in.substring(0,j) + paramMap(index) + substitute(in.substring(j + 1), index + 1)
+        }
+
+        substitute(stmt, 1)
+    }
+
+    override def invoke (proxy : Object, method : Method, args : Array[Object]) : Object = {
+      method.getName match {
+        // All of the simple cases can be handled in one spot
+        case "setArray" | "setBigDecimal" | "setBoolean" | "setByte" |
+             "setBytes" | "setDouble" | "setFloat" | "setInt" | "setLong" |
+             "setNString" | "setRef" | "setRowId" | "setShort" | "setSQLXML"
+             => {
+          chain(method,  args)
+          paramMap += args(0).asInstanceOf[Int] -> args(1)
+        }
+
+        // Everything else gets special treatment
+
+        case "addBatch" => {
+          logStatement("Batching \"%s\"".format(paramified)) {
+              chain(method,  Array())
+          }
+        }
+
+        case "clearParameters" => {
+          logMeta("Clear parameters") {
+              chain(method,  Array())
+          }
+          paramMap = Map.empty[Int,Any]
+        }
+
+        case "execute" => {
+          logStatement({ret : Object => "Exec \"%s\" : %s".format(paramified, ret)}) {
+              chain(method,  Array())
+          }
+        }
+
+        case "executeQuery" => {
+          logStatement({rs : Object => "Exec query \"%s\" : %s".format(paramified, rs)}) {
+              chain(method,  Array())
+          }
+        }
+
+        case "executeUpdate" => {
+          logStatement({ret : Object => "Exec update \"%s\" : updated %d rows".format(paramified, ret)}) {
+              chain(method,  Array())
+          }
+        }
+
+        case "getMetaData" => {
+          logMeta({ret : Object => "Get metadata : " + ret}) {
+              chain(method,  Array())
+          }
+        }
+
+        case "getParameterMetaData" => {
+          logMeta({ret : Object => "Get param metadata : " + ret}) {
+              chain(method,  Array())
+          }
+        }
+
+        case "setAsciiStream" if args.length == 2 => {
+            chain(method,  args)
+            paramMap += args(0).asInstanceOf[Int] -> "(Ascii Stream: %s)".format(args(1))
+        }
+
+        case "setAsciiStream" => {
+            chain(method,  args)
+            paramMap += args(0).asInstanceOf[Int] -> "(Ascii Stream: %s (%d bytes))".format(args(1), args(2))
+        }
+
+        case "setBinaryStream" if args.length == 2 => {
+            chain(method,  args)
+            paramMap += args(0).asInstanceOf[Int] -> "(Binary Stream: %s)".format(args(1))
+        }
+
+        case "setBinaryStream" => {
+            chain(method,  args)
+            paramMap += args(0).asInstanceOf[Int] -> "(Binary Stream: %s (%d bytes))".format(args(1), args(2))
+        }
+
+        case "setBlob" if args.length == 2 => {
+            chain(method,  args)
+            paramMap += args(0).asInstanceOf[Int] -> "(Blob : %s)".format(args(1))
+        }
+
+        case "setBlob" => {
+            chain(method,  args)
+            paramMap += args(0).asInstanceOf[Int] -> "(Blob : %s (%d bytes))".format(args(1), args(2))
+        }
+
+        case "setCharacterStream" if args.length == 2 => {
+            chain(method,  args)
+            paramMap += args(0).asInstanceOf[Int] -> "(Char stream : %s)".format(args(1))
+        }
+
+        case "setCharacterStream" => {
+            chain(method,  args)
+            paramMap += args(0).asInstanceOf[Int] -> "(Char stream : %s (%d bytes))".format(args(1), args(2))
+        }
+
+        case "setClob" if args.length == 2 => {
+            chain(method,  args)
+            paramMap += args(0).asInstanceOf[Int] -> "(Clob : %s)".format(args(1))
+        }
+
+        case "setClob" => {
+            chain(method,  args)
+            paramMap += args(0).asInstanceOf[Int] -> "(Clob : %s (%d bytes))".format(args(1), args(2))
+        }
+
+        case "setDate" if args.length == 2 => {
+            chain(method,  args)
+            paramMap += args(0).asInstanceOf[Int] -> args(1)
+        }
+
+        case "setDate" => {
+            chain(method,  args)
+            paramMap += args(0).asInstanceOf[Int] -> (args(1) + ":" + args(2))
+        }
+
+        case "setNCharacterStream" if args.length == 2 => {
+            chain(method,  args)
+            paramMap += args(0).asInstanceOf[Int] -> "(NChar Stream : %s)".format(args(1))
+        }
+
+        case "setNCharacterStream" => {
+            chain(method,  args)
+            paramMap += args(0).asInstanceOf[Int] -> "(NChar Stream : %s (%d bytes))".format(args(1), args(2))
+        }
+
+        case "setNClob" if args.length == 2 => {
+            chain(method,  args)
+            paramMap += args(0).asInstanceOf[Int] -> "(NClob : %s)".format(args(1))
+        }
+
+        case "setNClob" => {
+            chain(method,  args)
+            paramMap += args(0).asInstanceOf[Int] -> "(NClob : %s (%d bytes))".format(args(1), args(2))
+        }
+
+        case "setNull" => {
+            chain(method,  args)
+            paramMap += args(0).asInstanceOf[Int] -> "NULL"
+        }
+
+        case "setObject" if args.length == 2 => {
+            chain(method, args)
+            paramMap += args(0).asInstanceOf[Int] -> args(1)
+        }
+
+        case "setObject" if args.length >= 3 => {
+            chain(method, args)
+            paramMap += args(0).asInstanceOf[Int] -> "%s (scale %d)".format(args(1), args(2))
+        }
+
+        case "setString" => {
+            chain(method,  args)
+            paramMap += args(0).asInstanceOf[Int] -> "\"%s\"".format(args(1))
+        }
+
+        case "setTime" if args.length == 2 => {
+            chain(method,  args)
+            paramMap += args(0).asInstanceOf[Int] -> args(1)
+        }
+
+        case "setTime" => {
+            chain(method,  args)
+            paramMap += args(0).asInstanceOf[Int] -> (args(1) + ":" + args(2))
+        }
+
+        case "setTimestamp" if args.length == 2 => {
+            chain(method,  args)
+            paramMap += args(0).asInstanceOf[Int] -> args(1)
+        }
+
+        case "setTimestamp" => {
+            chain(method,  args)
+            paramMap += args(0).asInstanceOf[Int] -> (args(1) + ":" + args(2))
+        }
+
+        case "setUnicodeStream" => {
+            chain(method,  args)
+            paramMap += args(0).asInstanceOf[Int] -> "(Unicode Stream : %s (%d bytes))".format(args(1), args(2))
+        }
+
+        case "setURL" => {
+            chain(method,  args)
+            paramMap += args(0).asInstanceOf[Int] -> "\"%s\"".format(args(1))
+        }
+
+        // Chain up to LoggedStatement if we don't handle it here
+        case _ => super.invoke(proxy, method, args)
       }
-  }
-
-  def clearParameters () {
-      logMeta("Clear parameters") {
-          underlying.clearParameters()
-      }
-      paramMap = Map.empty[Int,Any]
-  }
-
-  def execute () : Boolean = {
-      logStatement({ret : Boolean => "Exec \"%s\" : %s".format(paramified, ret)}) {
-          underlying.execute()
-      }
-  }
-
-  def executeQuery () : ResultSet = {
-      logStatement({rs : ResultSet => "Exec query \"%s\" : %s".format(paramified, rs)}) {
-          underlying.executeQuery()
-      }
-  }
-
-  def executeUpdate () : Int = {
-      logStatement({ret : Int => "Exec update \"%s\" : updated %d rows".format(paramified, ret)}) {
-          underlying.executeUpdate()
-      }
-  }
-
-  def getMetaData () : ResultSetMetaData = {
-      logMeta({ret : ResultSetMetaData => "Get metadata : " + ret}) {
-          underlying.getMetaData()
-      }
-  }
-
-  def getParameterMetaData() : ParameterMetaData = {
-      logMeta({ret : ParameterMetaData => "Get param metadata : " + ret}) {
-          underlying.getParameterMetaData()
-      }
-  }
-
-  def setArray (index : Int, x : SqlArray) {
-      underlying.setArray(index, x)
-      paramMap += index -> x
-  }
-
-  def setAsciiStream (index : Int, x : InputStream) {
-      underlying.setAsciiStream(index, x)
-      paramMap += index -> "(Ascii Stream: %s)".format(x)
-  }
-
-  def setAsciiStream (index : Int, x : InputStream, length : Int) {
-      underlying.setAsciiStream(index, x, length)
-      paramMap += index -> "(Ascii Stream: %s (%d bytes))".format(x, length)
-  }
-
-  def setAsciiStream (index : Int, x : InputStream, length : Long) {
-      underlying.setAsciiStream(index, x, length)
-      paramMap += index -> "(Ascii Stream: %s (%d bytes))".format(x, length)
-  }
-
-  def setBigDecimal (index : Int, x : java.math.BigDecimal) {
-      underlying.setBigDecimal(index, x)
-      paramMap += index -> x
-  }
-
-  def setBinaryStream (index : Int, x : InputStream) {
-      underlying.setBinaryStream(index, x)
-      paramMap += index -> "(Binary Stream: %s)".format(x)
-  }
-
-  def setBinaryStream (index : Int, x : InputStream, length : Int) {
-      underlying.setBinaryStream(index, x, length)
-      paramMap += index -> "(Binary Stream: %s (%d bytes))".format(x, length)
-  }
-
-  def setBinaryStream (index : Int, x : InputStream, length : Long) {
-      underlying.setBinaryStream(index, x, length)
-      paramMap += index -> "(Binary Stream: %s (%d bytes))".format(x, length)
-  }
-
-  def setBlob (index : Int, x : Blob) {
-      underlying.setBlob(index, x)
-      paramMap += index -> "(Blob : %s)".format(x)
-  }
-
-  def setBlob (index : Int, x : InputStream) {
-      underlying.setBlob(index, x)
-      paramMap += index -> "(Blob : %s)".format(x)
-  }
-
-  def setBlob (index : Int, x : InputStream, length : Long) {
-      underlying.setBlob(index, x, length)
-      paramMap += index -> "(Blob : %s (%d bytes))".format(x, length)
-  }
-
-  def setBoolean (index : Int, x : Boolean) {
-      underlying.setBoolean(index, x)
-      paramMap += index -> x
-  }
-
-  def setByte (index : Int, x : Byte) {
-      underlying.setByte(index, x)
-      paramMap += index -> x
-  }
-
-  def setBytes (index : Int, x : Array[Byte]) {
-      underlying.setBytes(index, x)
-      paramMap += index -> x
-  }
-
-  def setCharacterStream (index : Int, x : Reader) {
-      underlying.setCharacterStream(index, x)
-      paramMap += index -> "(Char stream : %s)".format(x)
-  }
-
-  def setCharacterStream (index : Int, x : Reader, length : Int) {
-      underlying.setCharacterStream(index, x, length)
-      paramMap += index -> "(Char stream : %s (%d bytes))".format(x, length)
-  }
-
-  def setCharacterStream (index : Int, x : Reader, length : Long) {
-      underlying.setCharacterStream(index, x, length)
-      paramMap += index -> "(Char stream : %s (%d bytes))".format(x, length)
-  }
-
-  def setClob (index : Int, x : Clob) {
-      underlying.setClob(index, x)
-      paramMap += index -> "(Clob : %s)".format(x)
-  }
-
-  def setClob (index : Int, x : Reader) {
-      underlying.setClob(index, x)
-      paramMap += index -> "(Clob : %s)".format(x)
-  }
-
-  def setClob (index : Int, x : Reader, length : Long) {
-      underlying.setClob(index, x, length)
-      paramMap += index -> "(Clob : %s (%d bytes))".format(x, length)
-  }
-
-  def setDate (index : Int, x : Date) {
-      underlying.setDate(index, x)
-      paramMap += index -> x
-  }
-
-  def setDate (index : Int, x : Date, cal : Calendar) {
-      underlying.setDate(index, x, cal)
-      paramMap += index -> (x + ":" + cal)
-  }
-
-  def setDouble (index : Int, x : Double) {
-      underlying.setDouble(index, x)
-      paramMap += index -> x
-  }
-
-  def setFloat (index : Int, x : Float) {
-      underlying.setFloat(index, x)
-      paramMap += index -> x
-  }
-
-  def setInt (index : Int, x : Int) {
-      underlying.setInt(index, x)
-      paramMap += index -> x
-  }
-
-  def setLong (index : Int, x : Long) {
-      underlying.setLong(index, x)
-      paramMap += index -> x
-  }
-
-  def setNCharacterStream (index : Int, x : Reader) {
-      underlying.setNCharacterStream(index, x)
-      paramMap += index -> "(NChar Stream : %s)".format(x)
-  }
-
-  def setNCharacterStream (index : Int, x : Reader, length : Long) {
-      underlying.setNCharacterStream(index, x, length)
-      paramMap += index -> "(NChar Stream : %s (%d bytes))".format(x, length)
-  }
-
-  def setNClob (index : Int, x : NClob) {
-      underlying.setNClob(index, x)
-      paramMap += index -> "(NClob : %s)".format(x)
-  }
-
-  def setNClob (index : Int, x : Reader) {
-      underlying.setNClob(index, x)
-      paramMap += index -> "(NClob : %s)".format(x)
-  }
-
-  def setNClob (index : Int, x : Reader, length : Long) {
-      underlying.setNClob(index, x, length)
-      paramMap += index -> "(NClob : %s (%d bytes))".format(x, length)
-  }
-
-  def setNString (index : Int, x : String) {
-      underlying.setNString(index, x)
-      paramMap += index -> x
-  }
-
-  def setNull (index : Int, sqlType : Int) {
-      underlying.setNull(index, sqlType)
-      paramMap += index -> "NULL"
-  }
-
-  def setNull (index : Int, sqlType : Int, typeName : String) {
-      underlying.setNull(index, sqlType, typeName)
-      paramMap += index -> "NULL"
-  }
-
-  def setObject (index : Int, x : Object) {
-      underlying.setObject(index, x)
-      paramMap += index -> x
-  }
-
-  def setObject (index : Int, x : Object, sqlType : Int) {
-      underlying.setObject(index, x, sqlType)
-      paramMap += index -> x
-  }
-
-  def setObject (index : Int, x : Object, sqlType : Int, scale : Int) {
-      underlying.setObject(index, x, sqlType, scale)
-      paramMap += index -> "%s (scale %d)".format(x, scale)
-  }
-
-  def setRef (index : Int, x : Ref) {
-      underlying.setRef(index, x)
-      paramMap += index -> x
-  }
-
-  def setRowId (index : Int, x : RowId) {
-      underlying.setRowId(index, x)
-      paramMap += index -> x
-  }
-
-  def setShort (index : Int, x : Short) {
-      underlying.setShort(index, x)
-      paramMap += index -> x
-  }
-
-  def setSQLXML (index : Int, x : SQLXML) {
-      underlying.setSQLXML(index, x)
-      paramMap += index -> x
-  }
-
-  def setString (index : Int, x : String) {
-      underlying.setString(index, x)
-      paramMap += index -> "\"%s\"".format(x)
-  }
-
-  def setTime (index : Int, x : Time) {
-      underlying.setTime(index, x)
-      paramMap += index -> x
-  }
-
-  def setTime (index : Int, x : Time, cal : Calendar) {
-      underlying.setTime(index, x, cal)
-      paramMap += index -> (x + ":" + cal)
-  }
-
-  def setTimestamp (index : Int, x : Timestamp) {
-      underlying.setTimestamp(index, x)
-      paramMap += index -> x
-  }
-
-  def setTimestamp (index : Int, x : Timestamp, cal : Calendar) {
-      underlying.setTimestamp(index, x, cal)
-      paramMap += index -> (x + ":" + cal)
-  }
-
-  def setUnicodeStream (index : Int, x : InputStream, length : Int) {
-      underlying.setUnicodeStream(index, x, length)
-      paramMap += index -> "(Unicode Stream : %s (%d bytes))".format(x, length)
-  }
-
-  def setURL (index : Int, x : URL) {
-      underlying.setURL(index, x)
-      paramMap += index -> "\"%s\"".format(x)
+    }
   }
 }
 
