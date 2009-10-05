@@ -11,7 +11,7 @@ object XmlExamples extends Specification {
 
   "Basic conversion example" in {
     val json = toJson(users1) 
-    compact(render(json)) mustEqual """{"users":{"user":[{"id":"1","name":"Harry"},{"id":"2","name":"David"}]}}"""
+    compact(render(json)) mustEqual """{"users":{"count":"2","user":[{"disabled":"true","id":"1","name":"Harry"},{"id":"2","name":"David","nickname":"Dave"}]}}"""
   }
 
   "Conversion transformation example 1" in {
@@ -19,7 +19,7 @@ object XmlExamples extends Specification {
       case JField("id", JString(s)) => JField("id", JInt(s.toInt))
       case x => x 
     }
-    compact(render(json)) mustEqual """{"users":{"user":[{"id":1,"name":"Harry"},{"id":2,"name":"David"}]}}"""
+    compact(render(json)) mustEqual """{"users":{"count":"2","user":[{"disabled":"true","id":1,"name":"Harry"},{"id":2,"name":"David","nickname":"Dave"}]}}"""
   }
 
   "Conversion transformation example 2" in {
@@ -63,14 +63,14 @@ object XmlExamples extends Specification {
   }
 
   val users1 =
-    <users>
-      <user>
+    <users count="2">
+      <user disabled="true">
         <id>1</id>
         <name>Harry</name>
       </user>
       <user>
         <id>2</id>
-        <name>David</name>
+        <name nickname="Dave">David</name>
       </user>
     </users>   
 

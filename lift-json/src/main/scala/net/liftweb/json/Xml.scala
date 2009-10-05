@@ -18,7 +18,7 @@ package net.liftweb.json
 
 object Xml {
   import JsonAST._
-  import scala.xml.{Elem, Node, NodeSeq, Text, TopScope}
+  import scala.xml.{Elem, MetaData, Node, NodeSeq, Text, TopScope}
 
   def toJson(xml: NodeSeq): JValue = {
     def leaf_?(node: Node) = node.descendant.size == 1
@@ -28,25 +28,27 @@ object Xml {
       case f: JField => f
       case x => JField(name, x)
     })
+    def makeField(name: String, value: String) = JField(name, JString(value))
+    def buildAttrs(n: Node) = n.attributes.map((a: MetaData) => makeField(a.key, a.value.text)).toList
 
     def build(root: NodeSeq, fieldName: Option[String], argStack: List[JValue]): List[JValue] = root match {
       case n: Node =>
-        if (leaf_?(n)) JField(n.label, JString(n.text)) :: argStack
+        if (leaf_?(n)) makeField(n.label, n.text) :: argStack
         else {
-          val obj = makeObj(n.label, build(childElems(n), Some(n.label), Nil))
+          val obj = makeObj(n.label, buildAttrs(n) ::: build(childElems(n), Some(n.label), Nil))
           (fieldName match {
             case Some(n) => JField(n, obj)
             case None => obj
           }) :: argStack
         }
-      case s: NodeSeq => 
-        val allLabels = s.map(_.label)
+      case nodes: NodeSeq => 
+        val allLabels = nodes.map(_.label)
         if (array_?(allLabels)) {
-          val arr = JArray(s.toList.flatMap { e => 
-            if (leaf_?(e)) JString(e.text) :: Nil
-            else build(e, None, Nil) })
+          val arr = JArray(nodes.toList.flatMap { n => 
+            if (leaf_?(n)) JString(n.text) :: Nil
+            else build(n, None, Nil) })
           JField(allLabels(0), arr) :: argStack
-        } else s.toList.flatMap(e => build(e, Some(e.label), Nil))
+        } else nodes.toList.flatMap(n => build(n, Some(n.label), buildAttrs(n)))
     }
     
     (xml map { node => makeObj(node.label, build(node, None, Nil)) }).toList match {
