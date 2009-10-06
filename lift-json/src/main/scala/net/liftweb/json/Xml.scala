@@ -32,14 +32,11 @@ object Xml {
     def nameOf(n: Node) = (if (n.prefix ne null) n.prefix + ":" else "") + n.label
     def makeField(name: String, value: String) = JField(name, JString(value))
     def buildAttrs(n: Node) = n.attributes.map((a: MetaData) => makeField(a.key, a.value.text)).toList
-    def childElements(n: Node): List[Node] = n match {
-      case g: Group => List(Text(g.text))
-      case n: Node =>
-        n.child.toList.flatMap { 
-          case x: Elem => x :: childElements(x)
-          case x: Text => x :: childElements(x)
-          case x => childElements(x)
-        }
+    def childElements(n: Node): List[Node] = n.child.toList.flatMap { 
+      case x: Elem => x :: childElements(x)
+      case x: Text => x :: Nil
+      case x: Group => Text(x.text) :: Nil
+      case _ => Nil
     }
 
     def build(root: NodeSeq, rootName: Option[String], argStack: List[JValue]): List[JValue] = root match {
