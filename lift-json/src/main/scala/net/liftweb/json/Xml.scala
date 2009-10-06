@@ -24,12 +24,12 @@ object Xml {
     def empty_?(node: Node) = childElements(node).size == 0
     def leaf_?(node: Node) = childElements(node).size == 1
     def array_?(nodeNames: Seq[String]) = nodeNames.size != 1 && nodeNames.toList.removeDuplicates.size == 1
-    def directChildren(n: Node) = n.child.filter(c => classOf[Elem].isAssignableFrom(c.getClass))
+    def directChildren(n: Node) = n.child.filter(c => c.isInstanceOf[Elem])
     def makeObj(name: String, f: => List[JValue]) = JObject(f map {
       case f: JField => f
       case x => JField(name, x)
     })
-    def nameOf(n: Node) = (if (n.prefix != null) n.prefix + ":" else "") + n.label
+    def nameOf(n: Node) = (if (n.prefix ne null) n.prefix + ":" else "") + n.label
     def makeField(name: String, value: String) = JField(name, JString(value))
     def buildAttrs(n: Node) = n.attributes.map((a: MetaData) => makeField(a.key, a.value.text)).toList
     def childElements(n: Node): List[Node] = n match {
