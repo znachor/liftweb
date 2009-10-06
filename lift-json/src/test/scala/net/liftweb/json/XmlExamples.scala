@@ -8,6 +8,7 @@ object XmlExamples extends Specification {
   import JsonAST._
   import JsonDSL._
   import Xml._
+  import scala.xml.{Group, Text}
 
   "Basic conversion example" in {
     val json = toJson(users1) 
@@ -67,6 +68,11 @@ object XmlExamples extends Specification {
     compact(render(json)) mustEqual """{"b:band":{"name":"The Fall","genre":"rock","influence":null}}"""
   }
 
+  "Grouped text example" in {
+    val json = toJson(groupedText)
+    compact(render(json)) mustEqual """{"g":{"group":"foobar","url":"http://example.com/test"}}"""
+  }
+
   val users1 =
     <users count="2">
       <user disabled="true">
@@ -93,4 +99,11 @@ object XmlExamples extends Specification {
       <genre>rock</genre>
       <influence/>
     </b:band>
+
+  val url = "test"
+  val groupedText =
+    <g>
+      <group>{ Group(List(Text("foo"), Text("bar"))) }</group>
+      <url>http://example.com/{ url }</url>
+    </g>
 }

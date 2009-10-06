@@ -18,28 +18,37 @@ package net.liftweb.json
 
 object Xml {
   import JsonAST._
-  import scala.xml.{Elem, MetaData, Node, NodeSeq, Text, TopScope}
+  import scala.xml.{Elem, Group, MetaData, Node, NodeSeq, Text, TopScope}
 
   def toJson(xml: NodeSeq): JValue = {
-    def empty_?(node: Node) = node.descendant.size == 0
-    def leaf_?(node: Node) = node.descendant.size == 1
+    def empty_?(node: Node) = childElements(node).size == 0
+    def leaf_?(node: Node) = childElements(node).size == 1
     def array_?(nodeNames: Seq[String]) = nodeNames.size != 1 && nodeNames.toList.removeDuplicates.size == 1
-    def childElems(n: Node) = n.child.filter(c => classOf[Elem].isAssignableFrom(c.getClass))
+    def directChildren(n: Node) = n.child.filter(c => classOf[Elem].isAssignableFrom(c.getClass))
     def makeObj(name: String, f: => List[JValue]) = JObject(f map {
       case f: JField => f
       case x => JField(name, x)
     })
-    def fieldName(n: Node) = (if (n.prefix != null) n.prefix + ":" else "") + n.label
+    def nameOf(n: Node) = (if (n.prefix != null) n.prefix + ":" else "") + n.label
     def makeField(name: String, value: String) = JField(name, JString(value))
-    def buildAttrs(n: Node) = n.attributes.map((a: MetaData) => makeField(a.key, a.value.text)).toList    
-
-    def build(root: NodeSeq, currentFieldName: Option[String], argStack: List[JValue]): List[JValue] = root match {
+    def buildAttrs(n: Node) = n.attributes.map((a: MetaData) => makeField(a.key, a.value.text)).toList
+    def childElements(n: Node): List[Node] = n match {
+      case g: Group => List(Text(g.text))
       case n: Node =>
-        if (empty_?(n)) JField(fieldName(n), JNull) :: argStack
-        else if (leaf_?(n)) makeField(fieldName(n), n.text) :: argStack
+        n.child.toList.flatMap { 
+          case x: Elem => x :: childElements(x)
+          case x: Text => x :: childElements(x)
+          case x => childElements(x)
+        }
+    }
+
+    def build(root: NodeSeq, rootName: Option[String], argStack: List[JValue]): List[JValue] = root match {
+      case n: Node =>
+        if (empty_?(n)) JField(nameOf(n), JNull) :: argStack
+        else if (leaf_?(n)) makeField(nameOf(n), n.text) :: argStack
         else {
-          val obj = makeObj(fieldName(n), buildAttrs(n) ::: build(childElems(n), Some(fieldName(n)), Nil))
-          (currentFieldName match {
+          val obj = makeObj(nameOf(n), buildAttrs(n) ::: build(directChildren(n), Some(nameOf(n)), Nil))
+          (rootName match {
             case Some(n) => JField(n, obj)
             case None => obj
           }) :: argStack
@@ -51,10 +60,10 @@ object Xml {
             if (leaf_?(n)) JString(n.text) :: Nil
             else build(n, None, Nil) })
           JField(allLabels(0), arr) :: argStack
-        } else nodes.toList.flatMap(n => build(n, Some(fieldName(n)), buildAttrs(n)))
+        } else nodes.toList.flatMap(n => build(n, Some(nameOf(n)), buildAttrs(n)))
     }
     
-    (xml map { n => makeObj(fieldName(n), build(n, None, Nil)) }).toList match {
+    (xml map { n => makeObj(nameOf(n), build(n, None, Nil)) }).toList match {
       case List(x) => x
       case x => JArray(x)
     }
