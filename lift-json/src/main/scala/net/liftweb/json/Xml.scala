@@ -44,7 +44,7 @@ object Xml {
 
     def build(root: NodeSeq, rootName: Option[String], argStack: List[JValue]): List[JValue] = root match {
       case n: Node =>
-        if (empty_?(n)) JField(nameOf(n), JNull) :: argStack
+        if (empty_?(n) && rootName.isDefined) JField(nameOf(n), JNull) :: argStack
         else if (leaf_?(n)) makeField(nameOf(n), n.text) :: argStack
         else {
           val obj = makeObj(nameOf(n), buildAttrs(n) ::: build(directChildren(n), Some(nameOf(n)), Nil))

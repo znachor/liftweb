@@ -65,7 +65,21 @@ object XmlExamples extends Specification {
 
   "Band example with namespaces and empty tag" in {
     val json = toJson(band)
-    compact(render(json)) mustEqual """{"b:band":{"name":"The Fall","genre":"rock","influence":null}}"""
+    Printer.pretty(render(json)) mustEqual """{
+  "b:band":{
+    "name":"The Fall",
+    "genre":"rock",
+    "influence":null,
+    "playlists":{
+      "playlist":[{
+        "name":"empty"
+      },{
+        "name":"mid 80s",
+        "song":["Eat your self fitter","My new house"]
+      }]
+    }
+  }
+}"""
   }
 
   "Grouped text example" in {
@@ -98,6 +112,13 @@ object XmlExamples extends Specification {
       <name>The Fall</name>
       <genre>rock</genre>
       <influence/>
+      <playlists>
+        <playlist name="empty" />
+        <playlist name="mid 80s">
+          <song>Eat your self fitter</song>
+          <song>My new house</song>
+        </playlist>
+      </playlists>
     </b:band>
 
   val url = "test"
