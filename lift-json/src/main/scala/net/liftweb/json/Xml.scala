@@ -21,6 +21,7 @@ object Xml {
   import scala.xml.{Elem, MetaData, Node, NodeSeq, Text, TopScope}
 
   def toJson(xml: NodeSeq): JValue = {
+    def empty_?(node: Node) = node.descendant.size == 0
     def leaf_?(node: Node) = node.descendant.size == 1
     def array_?(nodeNames: Seq[String]) = nodeNames.size != 1 && nodeNames.toList.removeDuplicates.size == 1
     def childElems(n: Node) = n.child.filter(c => classOf[Elem].isAssignableFrom(c.getClass))
@@ -28,15 +29,17 @@ object Xml {
       case f: JField => f
       case x => JField(name, x)
     })
+    def fieldName(n: Node) = (if (n.prefix != null) n.prefix + ":" else "") + n.label
     def makeField(name: String, value: String) = JField(name, JString(value))
-    def buildAttrs(n: Node) = n.attributes.map((a: MetaData) => makeField(a.key, a.value.text)).toList
+    def buildAttrs(n: Node) = n.attributes.map((a: MetaData) => makeField(a.key, a.value.text)).toList    
 
-    def build(root: NodeSeq, fieldName: Option[String], argStack: List[JValue]): List[JValue] = root match {
+    def build(root: NodeSeq, currentFieldName: Option[String], argStack: List[JValue]): List[JValue] = root match {
       case n: Node =>
-        if (leaf_?(n)) makeField(n.label, n.text) :: argStack
+        if (empty_?(n)) JField(fieldName(n), JNull) :: argStack
+        else if (leaf_?(n)) makeField(fieldName(n), n.text) :: argStack
         else {
-          val obj = makeObj(n.label, buildAttrs(n) ::: build(childElems(n), Some(n.label), Nil))
-          (fieldName match {
+          val obj = makeObj(fieldName(n), buildAttrs(n) ::: build(childElems(n), Some(fieldName(n)), Nil))
+          (currentFieldName match {
             case Some(n) => JField(n, obj)
             case None => obj
           }) :: argStack
@@ -48,10 +51,10 @@ object Xml {
             if (leaf_?(n)) JString(n.text) :: Nil
             else build(n, None, Nil) })
           JField(allLabels(0), arr) :: argStack
-        } else nodes.toList.flatMap(n => build(n, Some(n.label), buildAttrs(n)))
+        } else nodes.toList.flatMap(n => build(n, Some(fieldName(n)), buildAttrs(n)))
     }
     
-    (xml map { node => makeObj(node.label, build(node, None, Nil)) }).toList match {
+    (xml map { n => makeObj(fieldName(n), build(n, None, Nil)) }).toList match {
       case List(x) => x
       case x => JArray(x)
     }

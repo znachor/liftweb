@@ -62,6 +62,11 @@ object XmlExamples extends Specification {
       </lotto>)
   }
 
+  "Band example with namespaces and empty tag" in {
+    val json = toJson(band)
+    compact(render(json)) mustEqual """{"b:band":{"name":"The Fall","genre":"rock","influence":null}}"""
+  }
+
   val users1 =
     <users count="2">
       <user disabled="true">
@@ -80,5 +85,12 @@ object XmlExamples extends Specification {
         <id>1</id>
         <name>Harry</name>
       </user>
-    </users>   
+    </users>
+
+  val band =
+    <b:band>
+      <name>The Fall</name>
+      <genre>rock</genre>
+      <influence/>
+    </b:band>
 }
