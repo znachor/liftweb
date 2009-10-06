@@ -32,6 +32,7 @@ import _root_.java.util.Locale
 import js._
 import scala.reflect.Manifest
 import provider._
+import _root_.net.liftweb.actor._
 
 object LiftSession {
 
@@ -223,7 +224,7 @@ object RenderVersion {
  */
 @serializable
 class LiftSession(val _contextPath: String, val uniqueId: String,
-                  val httpSession: Box[HTTPSession]) {
+                  val httpSession: Box[HTTPSession]) extends LiftMerge {
   import TemplateFinder._
 
   type AnyActor = {def !(in: Any): Unit}
@@ -453,7 +454,6 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
     }
 
     done.foreach(_.apply())
-
   }
 
   /**
@@ -465,192 +465,6 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
        template <- loc.template) yield template
 
   def contextPath = (LiftRules.calcContextPath(this) or S.curRequestContextPath) openOr _contextPath
-
-  /**
-   * Manages the merge phase of the rendering pipeline
-   */
-
-  private def merge(xhtml: NodeSeq, req: Req): Node = {
-  val hasHtmlHeadAndBody: Boolean = xhtml.find {
-    case e: Elem if e.label == "html" =>
-      e.child.find {
-        case e: Elem if e.label == "head" => true
-        case _ => false
-      }.isDefined &&
-       e.child.find {
-        case e: Elem if e.label == "body" => true
-        case _ => false
-      }.isDefined
-    case _ => false
-  }.isDefined
-
-  if (!hasHtmlHeadAndBody) {
-    req.fixHtml(xhtml).find {
-      case e: Elem => true
-      case _ => false
-    } getOrElse Text("")
-  } else {
- var htmlTag = <html xmlns="http://www.w3.org/1999/xhtml" xmlns:lift='http://liftweb.net'/>
-    var headTag = <head/>
-    var bodyTag = <body/>
-    val headChildren = new ListBuffer[Node]
-    val bodyChildren = new ListBuffer[Node]
-    val addlHead = new ListBuffer[Node]
-    val addlTail = new ListBuffer[Node]
-    val cometTimes = new ListBuffer[CometVersionPair]
-    val rewrite = URLRewriter.rewriteFunc
-    val fixHref = Req.fixHref
-
-    val contextPath: String = this.contextPath
-
-    def fixAttrs(original: MetaData, toFix : String, attrs : MetaData, fixURL: Boolean) : MetaData = attrs match {
-      case Null => Null
-      case p: PrefixedAttribute if p.key == "when" && p.pre == "lift" =>
-        val when = p.value.text
-        original.find(a => !a.isPrefixed && a.key == "id").map {
-          id =>
-          cometTimes += CVP(id.value.text, when.toLong)
-        }
-        fixAttrs(original, toFix, p.next, fixURL)
-      case u: UnprefixedAttribute if u.key == toFix =>
-        new UnprefixedAttribute(toFix, fixHref(contextPath, attrs.value, fixURL, rewrite),fixAttrs(original, toFix, attrs.next, fixURL))
-      case _ => attrs.copy(fixAttrs(original, toFix, attrs.next, fixURL))
-
-    }
-
-    def _fixHtml(in: NodeSeq, _inHtml: Boolean, _inHead: Boolean, _justHead: Boolean, _inBody: Boolean, _justBody: Boolean, _bodyHead: Boolean, _bodyTail: Boolean): NodeSeq = {
-      in.map{
-        v =>
-        var inHtml = _inHtml
-        var inHead = _inHead
-        var justHead = false
-        var justBody = false
-        var inBody = _inBody
-        var bodyHead = false
-        var bodyTail = false
-
-        v match {
-          case e: Elem if e.label == "html" && !inHtml => htmlTag = e; inHtml = true
-          case e: Elem if e.label == "head" && inHtml && !inBody => headTag = e; inHead = true; justHead = true
-          case e: Elem if e.label == "head" && inHtml && inBody => bodyHead = true 
-          case e: Elem if e.label == "tail" && inHtml && inBody => bodyTail = true
-          case e: Elem if e.label == "body" && inHtml => bodyTag = e; inBody = true; justBody = true
-
-          case _ =>
-        }
-
-        val ret: Node = v match {
-          case Group(nodes) => Group(_fixHtml( nodes, inHtml, inHead, justHead, inBody, justBody, bodyHead, bodyTail))
-          case e: Elem if e.label == "form" => Elem(v.prefix, v.label, fixAttrs(v.attributes, "action", v.attributes, true), v.scope, _fixHtml(v.child, inHtml, inHead, justHead, inBody, justBody, bodyHead, bodyTail) : _* )
-          case e: Elem if e.label == "script" => Elem(v.prefix, v.label, fixAttrs(v.attributes, "src", v.attributes, false), v.scope, _fixHtml(v.child, inHtml, inHead, justHead, inBody, justBody, bodyHead, bodyTail) : _* )
-          case e: Elem if e.label == "a" => Elem(v.prefix, v.label, fixAttrs(v.attributes, "href", v.attributes, true), v.scope, _fixHtml( v.child, inHtml, inHead, justHead, inBody, justBody, bodyHead, bodyTail) : _* )
-          case e: Elem if e.label == "link" => Elem(v.prefix, v.label, fixAttrs(v.attributes, "href", v.attributes, false), v.scope, _fixHtml( v.child, inHtml, inHead, justHead, inBody, justBody, bodyHead, bodyTail) : _* )
-          case e: Elem => Elem(v.prefix, v.label, fixAttrs(v.attributes, "src", v.attributes, true), v.scope, _fixHtml( v.child, inHtml, inHead, justHead, inBody, justBody, bodyHead, bodyTail) : _*)
-          case _ => v
-        }
-        if (_justHead) headChildren += ret
-        else if (_justBody && !bodyHead && !bodyTail) bodyChildren += ret
-        else if (_bodyHead) addlHead += ret
-        else if (_bodyTail) addlTail += ret
-
-        if (bodyHead || bodyTail) Text("")
-        else ret
-      }
-    }
-    _fixHtml(xhtml, false, false, false, false, false, false,false)
-
-    val htmlKids = new ListBuffer[Node]
-
-    val nl = Text("\n")
-
-    for {
-      node <- HeadHelper.removeHtmlDuplicates(addlHead.toList)
-    } {
-      headChildren += node
-      headChildren += nl
-    }
-
-    /**
-     * Appends ajax stript to body
-     */
-
-    if (LiftRules.autoIncludeAjax(this)) {
-      headChildren += <script src={S.encodeURL(contextPath+"/"+
-                                               LiftRules.ajaxPath +
-                                               "/" + LiftRules.ajaxScriptName())}
-        type="text/javascript"/>
-      headChildren += nl
-    }
-  
-    val cometList = cometTimes.toList
-
-    /**
-     * Appends comet stript reference to head
-     */
-    if (!cometList.isEmpty &&  LiftRules.autoIncludeComet(this)) {
-      headChildren += <script src={S.encodeURL(contextPath+"/"+
-                                               LiftRules.cometPath +
-                                               "/" + urlEncode(this.uniqueId) +
-                                               "/" + LiftRules.cometScriptName())}
-        type="text/javascript"/>
-      headChildren += nl
-    }
-
-    for {
-      node <- HeadHelper.removeHtmlDuplicates(addlTail.toList)
-    } bodyChildren += node
-
-    bodyChildren += nl
-
-    if (!cometList.isEmpty &&  LiftRules.autoIncludeComet(this)) {
-      bodyChildren +=  JsCmds.Script(LiftRules.renderCometPageContents(this, cometList))
-      bodyChildren += nl
-    }
-
-    if (LiftRules.enableLiftGC) {
-      import js._
-      import JsCmds._
-      import JE._
-
-      bodyChildren += JsCmds.Script(OnLoad(JsRaw("liftAjax.lift_successRegisterGC()")) &
-                                    JsCrVar("lift_page", RenderVersion.get))
-    }
-
-    htmlKids += nl
-    htmlKids += Elem(headTag.prefix, headTag.label, headTag.attributes, headTag.scope, headChildren.toList :_*)
-    htmlKids += nl
-    htmlKids += Elem(bodyTag.prefix, bodyTag.label, bodyTag.attributes, bodyTag.scope, bodyChildren.toList :_*)
-    htmlKids += nl
-
-    val tmpRet = Elem(htmlTag.prefix, htmlTag.label, htmlTag.attributes, htmlTag.scope, htmlKids.toList :_*)
-
-    val ret: Node = if (Props.devMode) {
-      LiftRules.xhtmlValidator.toList.flatMap(_(tmpRet)) match {
-        case Nil => tmpRet
-        case xs =>
-          import _root_.scala.xml.transform._
-
-          val errors: NodeSeq = xs.map(e =>
-            <div style="border: red solid 2px">
-              XHTML Validation error: {e.msg} at line {e.line + 1} and column {e.col}
-            </div>)
-
-          val rule = new RewriteRule {
-            override def transform(n: Node) = n match {
-              case e: Elem if e.label == "body" =>
-                Elem(e.prefix, e.label, e.attributes, e.scope,e.child ++ errors :_*)
-
-              case x => super.transform(x)
-            }
-          }
-          (new RuleTransformer(rule)).transform(tmpRet)(0)
-      }
-
-    } else tmpRet
-
-    ret
-  }
-  }
 
   private[http] def processRequest(request: Req): Box[LiftResponse] = {
     ieMode.is // make sure this is primed
@@ -685,7 +499,7 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
                 cleanUpBeforeRender
 
                 PageName(request.uri+" -> "+request.path)
-
+                LiftRules.allowParallelSnippets.doWith(() => !Props.inGAE) {
                 (request.location.flatMap(_.earlyResponse) or
                  LiftRules.earlyResponse.firstFull(request)) or {
                   ((locTemplate or findVisibleTemplate(request.path, request)).
@@ -714,6 +528,7 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
                         }
                       case _ => if (LiftRules.passNotFoundToChain) Empty else Full(request.createNotFound)
                     })
+                   }
                 }
 
               case Right(Full(resp)) => Full(resp)
@@ -947,6 +762,12 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
     }
   }
 
+  private final def findNSAttr(attrs: MetaData, prefix: String, key: String): Option[Seq[Node]] =
+  attrs match {
+    case Null => Empty
+    case p: PrefixedAttribute if p.pre == prefix && p.key == key => Some(p.value)
+    case x => findNSAttr(x.next, prefix, key)
+  }
 
   private def processSnippet(page: String, snippetName: Box[String],
                              attrs: MetaData,
@@ -954,7 +775,9 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
                              passedKids: NodeSeq): NodeSeq = {
     val isForm = !attrs.get("form").toList.isEmpty
 
-    val eagerEval: Boolean = attrs.get("eager_eval").map(toBoolean) getOrElse false
+    val eagerEval: Boolean = (attrs.get("eager_eval").map(toBoolean) or
+                              findNSAttr(attrs, "lift", "eager_eval").map(toBoolean)
+                              ) getOrElse false
 
     val kids = if (eagerEval) processSurroundAndInclude(page, passedKids) else passedKids
 
@@ -1094,6 +917,86 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
 
   private def asNodeSeq(in: Seq[Node]): NodeSeq = in
 
+  private[http] object deferredSnippets extends RequestVar[HashMap[String, Box[NodeSeq]]](new HashMap)
+
+  private class DeferredProcessor extends SpecializedLiftActor[ProcessSnippet] {
+    protected def messageHandler = {
+      case ProcessSnippet(f) => f()
+    }
+  }
+
+  private case class ProcessSnippet(f: () => Unit)
+
+  // if the "lift:parallel" attribute is part of the snippet, create an
+  // actor and send the message off to that actor
+  private def processOrDefer(node: Elem)(f: => NodeSeq): NodeSeq = {
+    val isLazy = LiftRules.allowParallelSnippets() &&
+    node.attributes.find{
+      case p: PrefixedAttribute => p.pre == "lift" && (p.key == "parallel")
+      case _ => false}.isDefined
+
+    if (isLazy) {
+      // name the node
+      val nodeId = randomString(20)
+
+      val theNode = <lift_deferred:node id={nodeId}/>
+
+      // take a snapshot of the hashmap used to communicate between threads
+      val hash = deferredSnippets.is
+
+      // insert an empty node
+      hash.synchronized {
+        hash(nodeId) = Empty
+      }
+
+      // create a function that will restore our RequestVars
+      val reqVarCallback = deferredSnippets.generateSnapshotRestorer[NodeSeq]()
+
+      // create a new actor
+      val actor = new DeferredProcessor
+
+      // snapshot the current Req
+      val req = S.request
+
+      // send the ProcessSnippet message to the Actor
+      actor ! ProcessSnippet(() => {
+
+          // do the actual processing
+          def doProcessing() {
+            // process the message
+            val bns = tryo{reqVarCallback(() => f)}
+
+            // set the node
+            hash.synchronized{
+              hash(nodeId) = bns match {
+                case Empty => Failure("Weird Empty Node", Empty, Empty)
+                case x => x
+              }
+
+              // and notify listeners
+              hash.notify()
+            }
+          }
+
+          // init the stack frame and process the message
+          req match {
+            case Full(req) =>
+              S.init(req, this) {
+                doProcessing()
+              }
+              
+            case _ =>
+              S.initIfUninitted(this) {
+                doProcessing()
+              }
+          }
+        })
+
+      theNode
+    }
+    else f
+  }
+
   /**
    * Processes the surround tag and other lift tags
    */
@@ -1105,13 +1008,14 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
         Group(processSurroundAndInclude(page, nodes))
 
       case elm: Elem if elm.prefix == "lift" || elm.prefix == "l"=>
-        S.doSnippet(elm.label){
-          S.withAttrs(elm.attributes) {
-            S.setVars(elm.attributes){
-              processSurroundAndInclude(page, NamedPF((elm.label, elm, elm.attributes,
-                                                       asNodeSeq(elm.child), page),
-                                                      liftTagProcessing))
-            }}}
+        processOrDefer(elm) {
+          S.doSnippet(elm.label){
+            S.withAttrs(elm.attributes) {
+              S.setVars(elm.attributes){
+                processSurroundAndInclude(page, NamedPF((elm.label, elm, elm.attributes,
+                                                         asNodeSeq(elm.child), page),
+                                                        liftTagProcessing))
+              }}}}
 
       case elm: Elem =>
         Elem(v.prefix, v.label, processAttributes(v.attributes),
