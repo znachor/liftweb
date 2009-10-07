@@ -314,7 +314,7 @@ trait MetaMegaProtoUser[ModelType <: MegaProtoUser[ModelType]] extends KeyedMeta
 
   def signupXhtml(user: ModelType) = {
     (<form method="post" action={S.uri}><table><tr><td
-              colspan="2">Sign Up</td></tr>
+              colspan="2">{ S.??("Sign Up") }</td></tr>
           {localForm(user, false)}
           <tr><td>&nbsp;</td><td><user:submit/></td></tr>
                                         </table></form>)
