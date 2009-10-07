@@ -102,7 +102,7 @@ trait CRUDify[KeyType, CrudType <: KeyedMapper[KeyType, CrudType]] {
          */
         val text = new Loc.LinkText(calcLinkText _)
 
-        def calcLinkText(in: CrudType): NodeSeq = Text("Edit")
+        def calcLinkText(in: CrudType): NodeSeq = Text(S.??("crudify.menu.view.displayName", displayName))
 
         /**
          * Rewrite the request and emit the type-safe parameter
@@ -161,7 +161,7 @@ trait CRUDify[KeyType, CrudType <: KeyedMapper[KeyType, CrudType]] {
            */
           val text = new Loc.LinkText(calcLinkText _)
 
-          def calcLinkText(in: CrudType): NodeSeq = Text("Edit")
+          def calcLinkText(in: CrudType): NodeSeq = Text(S.??("crudify.menu.edit.displayName", displayName))
 
           /**
            * Rewrite the request and emit the type-safe parameter
@@ -262,7 +262,7 @@ trait CRUDify[KeyType, CrudType <: KeyedMapper[KeyType, CrudType]] {
            */
           val text = new Loc.LinkText(calcLinkText _)
 
-          def calcLinkText(in: CrudType): NodeSeq = Text("Delete")
+          def calcLinkText(in: CrudType): NodeSeq = Text(S.??("crudify.menu.delete.displayName", displayName))
 
           /**
            * Rewrite the request and emit the type-safe parameter
@@ -430,7 +430,7 @@ trait CRUDify[KeyType, CrudType <: KeyedMapper[KeyType, CrudType]] {
   private def mp(in: List[String]) = in.mkString("/", "/", "")
 
   def menus: List[Menu] =
-  List(showAllMenuLoc, viewMenuLoc, createMenuLoc,
+  List(showAllMenuLoc, createMenuLoc, viewMenuLoc,
        editMenuLoc, deleteMenuLoc).flatMap(x => x)
 
   def findForList(start: Long, count: Int): List[CrudType] =
