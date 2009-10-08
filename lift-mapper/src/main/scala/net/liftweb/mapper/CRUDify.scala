@@ -450,12 +450,12 @@ trait CRUDify[KeyType, CrudType <: KeyedMapper[KeyType, CrudType]] {
 
     def doCrudAll(in: NodeSeq): NodeSeq = {
       val first = S.param("first").map(toLong) openOr 0L
-      val list = findForList(first, 21)
+      val list = findForList(first, 20)
 
-      def prev(in: NodeSeq) = if (first < 21) <xml:group>&nbsp;</xml:group>
+      def prev(in: NodeSeq) = if (first < 20) <xml:group>&nbsp;</xml:group>
       else <a href={listPathString+"?first="+(0L max (first - 20L))}>{in}</a>
 
-      def next(in: NodeSeq) = if (list.length < 21) <xml:group>&nbsp;</xml:group>
+      def next(in: NodeSeq) = if (list.length < 20) <xml:group>&nbsp;</xml:group>
       else <a href={listPathString+"?first="+(first + 20L)}>{in}</a>
 
       def doHeaderItems(in: NodeSeq): NodeSeq =
