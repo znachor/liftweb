@@ -1249,6 +1249,10 @@ object By {
   import OprEnum._
 
   def apply[O <: Mapper[O], T, U <% T](field: MappedField[T, O], value: U) = Cmp[O,T](field, Eql, Full(value), Empty, Empty)
+  def apply[O <: Mapper[O], T](field: MappedNullableField[T, O], value: Box[T]) = value match {
+    case Full(x) => Cmp[O,Box[T]](field, Eql, Full(value), Empty, Empty)
+    case _ => NullRef(field)
+  }
   def apply[O <: Mapper[O],T,  Q <: KeyedMapper[T, Q]](field: MappedForeignKey[T, O, Q], value: Q) =
   Cmp[O,T](field, Eql, Full(value.primaryKeyField.is), Empty, Empty)
 
@@ -1263,6 +1267,12 @@ object NotBy {
   import OprEnum._
 
   def apply[O <: Mapper[O], T, U <% T](field: MappedField[T, O], value: U) = Cmp[O,T](field, <>, Full(value), Empty, Empty)
+
+  def apply[O <: Mapper[O], T](field: MappedNullableField[T, O], value: Box[T]) = value match {
+    case Full(x) => Cmp[O,Box[T]](field, <>, Full(value), Empty, Empty)
+    case _ => NotNullRef(field)
+  }
+
   def apply[O <: Mapper[O],T,  Q <: KeyedMapper[T, Q]](field: MappedForeignKey[T, O, Q], value: Q) =
   Cmp[O,T](field, <>, Full(value.primaryKeyField.is), Empty, Empty)
   def apply[O <: Mapper[O],T, Q <: KeyedMapper[T, Q]](field: MappedForeignKey[T, O, Q], value: Box[Q]) =
