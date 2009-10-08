@@ -98,7 +98,7 @@ object MapperSpecs extends Specification {
           SampleModel.create.firstName("fruit").moose(Full(77L)).save
 
           SampleModel.findAll(By(SampleModel.moose, Empty)).length must_== 3L
-           SampleModel.findAll(NotBy(SampleModel.moose, Empty)).length must_== 2L
+          SampleModel.findAll(NotBy(SampleModel.moose, Empty)).length must_== 2L
           SampleModel.findAll(NotNullRef(SampleModel.moose)).length must_== 2L
           SampleModel.findAll(NullRef(SampleModel.moose)).length must_== 3L
         }
@@ -112,6 +112,22 @@ object MapperSpecs extends Specification {
 
           val oo = SampleTag.findAll(By(SampleTag.tag, "Meow"),
                                      PreCache(SampleTag.model))
+
+          (oo.length > 0) must beTrue
+
+          for (t <- oo)
+	  t.model.cached_? must beTrue
+        }
+
+        "Non-deterministic Precache works" in {
+          try { provider.setupDB } catch { case e => skip(e.getMessage) }
+
+          Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag)
+          Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag)
+
+
+          val oo = SampleTag.findAll(By(SampleTag.tag, "Meow"),
+                                     PreCache(SampleTag.model, false))
 
           (oo.length > 0) must beTrue
 
