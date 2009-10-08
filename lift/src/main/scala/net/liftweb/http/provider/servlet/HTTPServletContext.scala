@@ -8,7 +8,7 @@ import _root_.net.liftweb.http.provider._
 import _root_.net.liftweb.util._
 import Helpers._
 
-class HTTPServletContext(ctx: ServletContext) extends HTTPContext {
+class HTTPServletContext(val ctx: ServletContext) extends HTTPContext {
 
   def path: String = ctx.getContextPath
 
