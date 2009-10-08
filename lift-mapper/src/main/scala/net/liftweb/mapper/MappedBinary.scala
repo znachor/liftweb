@@ -86,7 +86,7 @@ class MappedBinary[T<:Mapper[T]](val fieldOwner: T) extends MappedField[Array[By
   /**
   * Given the driver type, return the string required to create the column in the database
   */
-  def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.binaryColumnType
+  def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.binaryColumnType + notNullAppender()
 }
 
 class MappedText[T<:Mapper[T]](val fieldOwner: T) extends MappedField[String, T] {
@@ -170,7 +170,7 @@ class MappedText[T<:Mapper[T]](val fieldOwner: T) extends MappedField[String, T]
   /**
   * Given the driver type, return the string required to create the column in the database
   */
-  def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.clobColumnType
+  def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.clobColumnType + notNullAppender()
 }
 
 class MappedFakeClob[T<:Mapper[T]](val fieldOwner: T) extends MappedField[String, T] {
@@ -253,5 +253,5 @@ class MappedFakeClob[T<:Mapper[T]](val fieldOwner: T) extends MappedField[String
   /**
   * Given the driver type, return the string required to create the column in the database
   */
-  def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.binaryColumnType
+  def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.binaryColumnType + notNullAppender()
 }

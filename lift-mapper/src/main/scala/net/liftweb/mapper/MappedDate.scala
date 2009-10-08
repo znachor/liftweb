@@ -125,7 +125,7 @@ class MappedDate[T<:Mapper[T]](val fieldOwner: T) extends MappedField[Date, T] {
   /**
    * Given the driver type, return the string required to create the column in the database
    */
-  def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.dateColumnType
+  def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.dateColumnType + notNullAppender()
 
   def inFuture_? = data.get match {
     case null => false

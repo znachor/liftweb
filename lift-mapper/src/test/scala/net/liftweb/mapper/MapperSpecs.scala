@@ -103,6 +103,23 @@ object MapperSpecs extends Specification {
           SampleModel.findAll(NullRef(SampleModel.moose)).length must_== 3L
         }
 
+        "enforce NOT NULL" in {
+          try { provider.setupDB } catch { case e => skip(e.getMessage) }
+
+          Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag)
+          Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag)
+
+
+          val nullString: String = null
+          try {
+            SampleModel.create.firstName("Not Null").notNull(nullString).save
+            0 must_== 1
+          } catch {
+            case e: java.sql.SQLException =>
+          }
+        }
+
+
         "Precache works" in {
           try { provider.setupDB } catch { case e => skip(e.getMessage) }
 
@@ -176,4 +193,7 @@ class SampleModel extends KeyedMapper[Long, SampleModel] {
   object id extends MappedLongIndex(this)
   object firstName extends MappedString(this, 32)
   object moose extends MappedNullableLong(this)
+  object notNull extends MappedString(this, 32) {
+    override def dbNotNull_? = true
+  }
 }

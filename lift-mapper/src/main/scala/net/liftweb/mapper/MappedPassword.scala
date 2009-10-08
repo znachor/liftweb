@@ -182,5 +182,5 @@ extends MappedField[String, T] {
   /**
    * Given the driver type, return the string required to create the column in the database
    */
-  def fieldCreatorString(dbType: DriverType, colName: String): String = if (colName.endsWith("_pw")) colName+" VARCHAR(48)" else colName+" VARCHAR(20)"
+  def fieldCreatorString(dbType: DriverType, colName: String): String = (if (colName.endsWith("_pw")) colName+" VARCHAR(48)" else colName+" VARCHAR(20)")  + notNullAppender()
 }
