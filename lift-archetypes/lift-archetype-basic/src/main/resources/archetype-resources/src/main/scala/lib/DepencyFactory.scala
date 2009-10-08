@@ -14,6 +14,17 @@ import _root_.java.util.Date
  */
 object DependencyFactory extends Factory {
   implicit object time extends FactoryMaker(Helpers.now _)
+
+  /**
+   * objects in Scala are lazily created.  The init()
+   * method creates a List of all the objects.  This
+   * results in all the objects getting initialized and
+   * registering their types with the dependency injector
+   */
+  private def init() {
+    List(time)
+  }
+  init()
 }
 
 /*
