@@ -86,7 +86,6 @@ object MapperSpecs extends Specification {
             t.model.obj
             t.model.cached_? must beTrue
           }
-
         }
 
         "Nullable Long works" in {
@@ -112,7 +111,7 @@ object MapperSpecs extends Specification {
 
           val nullString: String = null
           try {
-            SampleModel.create.firstName("Not Null").notNull(nullString).save
+            SampleModel.create.firstName("Not Null").cnotNull(nullString).save
             0 must_== 1
           } catch {
             case e: java.sql.SQLException =>
@@ -120,8 +119,12 @@ object MapperSpecs extends Specification {
         }
 
 
+
         "Precache works" in {
           try { provider.setupDB } catch { case e => skip(e.getMessage) }
+
+          Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag)
+          Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag)
 
           Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag)
           Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag)
@@ -150,6 +153,27 @@ object MapperSpecs extends Specification {
 
           for (t <- oo)
 	  t.model.cached_? must beTrue
+        }
+
+        "Save flag works" in {
+          try { provider.setupDB } catch { case e => skip(e.getMessage) }
+
+          Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag)
+          Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag)
+
+          val elwood = SampleModel.find(By(SampleModel.firstName, "Elwood")).open_!
+
+          elwood.firstName.is must_== "Elwood"
+
+          elwood.firstName("Frog").save
+
+          val frog = SampleModel.find(By(SampleModel.firstName, "Frog")).open_!
+
+          frog.firstName.is must_== "Frog"
+
+          SampleModel.findAll().length must_== 4
+
+          SampleModel.find(By(SampleModel.firstName, "Elwood")).isEmpty must_== true
         }
       }
     })
@@ -193,7 +217,7 @@ class SampleModel extends KeyedMapper[Long, SampleModel] {
   object id extends MappedLongIndex(this)
   object firstName extends MappedString(this, 32)
   object moose extends MappedNullableLong(this)
-  object notNull extends MappedString(this, 32) {
+  object cnotNull extends MappedString(this, 32) {
     override def dbNotNull_? = true
   }
 }
