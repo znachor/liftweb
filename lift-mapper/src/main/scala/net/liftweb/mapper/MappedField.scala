@@ -55,6 +55,8 @@ trait MixableMappedField {
 
   def dbIndexed_? : Boolean
 
+  def dbNotNull_? : Boolean
+
   def dbPrimaryKey_? : Boolean
 
   /**
@@ -149,6 +151,11 @@ trait BaseMappedField extends SelectableField with Bindable with MixableMappedFi
    * Should the field be indexed?
    */
   def dbIndexed_? : Boolean
+
+  /**
+  * Set to true if the field should be created as NOT NULL
+  */
+  def dbNotNull_? : Boolean = false
 
   /**
    * Is the field the table's primary key
@@ -300,6 +307,16 @@ trait TypedField[FieldType] {
 }
 
 /**
+* A Mapped field that is Nullable in the database.  Will return Empty box for NULL values and Full for non-null values
+*/
+trait MappedNullableField[NullableFieldType <: Any,OwnerType <: Mapper[OwnerType]] extends MappedField[Box[NullableFieldType], OwnerType] {
+  /**
+  * All fields of this type are NULLable
+  */
+  override final def dbNotNull_? : Boolean = false
+}
+
+/**
  * The strongly typed field that's mapped to a column (or many columns) in the database.
  * FieldType is the type of the field and OwnerType is the Owner of the field
  */
@@ -338,6 +355,8 @@ trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends Typed
    * Given the driver type, return a list of SQL creation strings for the columns represented by this field
    */
   def fieldCreatorString(dbType: DriverType): List[String] = dbColumnNames(name).map{c => fieldCreatorString(dbType, c)}
+
+  def notNullAppender() = if (dbNotNull_?) " NOT NULL " else ""
 
   /**
    * Is the field dirty
@@ -392,7 +411,6 @@ trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends Typed
   /**
    * Assignment from the underlying type.  It's ugly, but:<br />
    * field() = new_value <br />
-   * field := new_value <br />
    * field set new_value <br />
    * field.set(new_value) <br />
    * are all the same
@@ -405,6 +423,16 @@ trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends Typed
     this.set(v)
     fieldOwner
   }
+
+
+  /**
+   * Set the field to the value
+   */
+  def set(value: FieldType): FieldType = {
+    if (safe_? || writePermission_?) i_set_!(value)
+    else throw new Exception("Do not have permissions to set this field")
+  }
+
 
   private var _name : String = null
 
@@ -440,12 +468,6 @@ trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends Typed
     if (safe_?) dirty_?(false)
   }
 
-  /**
-   * pascal-style assignment for syntactic sugar
-   */
-  /*
-   def ::=(v : Any) : T
-   */
 
   /**
    *  Attempt to figure out what the incoming value is and set the field to that value.  Return true if
@@ -479,14 +501,6 @@ trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends Typed
     Full(<input type='text' id={fieldId}
         name={funcName}
         value={is match {case null => "" case s => s.toString}}/>)
-  }
-
-  /**
-   * Set the field to the value
-   */
-  def set(value: FieldType): FieldType = {
-    if (safe_? || writePermission_?) i_set_!(value)
-    else throw new Exception("Do not have permissions to set this field")
   }
 
   /**
@@ -587,6 +601,11 @@ trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends Typed
 
 
   def dbIndexed_? : Boolean = false
+
+  /**
+  * Set to true if the field should be created as NOT NULL
+  */
+  override def dbNotNull_? : Boolean = false
 
   def dbPrimaryKey_? : Boolean = false
 

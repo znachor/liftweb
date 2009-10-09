@@ -160,9 +160,9 @@ class MappedDecimal[T <: Mapper[T]] (val fieldOwner : T, val context : MathConte
       ""
     } else {
       "(" + context.getPrecision + "," + scale + ")"
-    }
+    } 
 
-    colName + " DECIMAL" + suffix
+    colName + " DECIMAL" + suffix + notNullAppender()
   }
 }
 

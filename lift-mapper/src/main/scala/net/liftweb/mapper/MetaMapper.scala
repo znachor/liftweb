@@ -80,10 +80,10 @@ object MapperRules {
 
 
   val quoteTableName: String => String =
-    s => if (s.indexOf(' ') >= 0) '"'+s+'"' else s
+  s => if (s.indexOf(' ') >= 0) '"'+s+'"' else s
 
-    val quoteColumnName: String => String =
-    s => if (s.indexOf(' ') >= 0) '"'+s+'"' else s
+  val quoteColumnName: String => String =
+  s => if (s.indexOf(' ') >= 0) '"'+s+'"' else s
 
 }
 
@@ -229,20 +229,35 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
       type FT = j.field.FieldType
       type MT = T forSome {type T <: KeyedMapper[FT, T]}
 
+      val ol: List[MT] = if (!j.deterministic) {
+        def filter(in: Seq[FT]): Seq[FT] = 
+        in.flatMap{
+          case null => Nil
+          case x: Number if x.longValue == 0L => Nil
+          case x => List(x)
+        }
 
-      val ol: List[MT] = j.field.dbKeyToTable.
-      asInstanceOf[MetaMapper[A]].
-      findAll(new InThing[A]{
-          type JoinType = FT
-          type InnerType = A
+        val lst: Set[FT] = Set(filter(ret.map(v => v.getSingleton.getActualField(v, j.field).is.asInstanceOf[FT])) :_*)
 
-          val outerField: MappedField[JoinType, A] =
-          j.field.dbKeyToTable.primaryKeyField.asInstanceOf[MappedField[JoinType, A]]
-          val innerField: MappedField[JoinType, A] = j.field.asInstanceOf[MappedField[JoinType, A]]
-          val innerMeta: MetaMapper[A] = j.field.fieldOwner.getSingleton
+        j.field.dbKeyToTable.
+        asInstanceOf[MetaMapper[A]].
+        findAll(ByList(j.field.dbKeyToTable.primaryKeyField.
+                       asInstanceOf[MappedField[FT, A]], lst.toList)).asInstanceOf[List[MT]]
+      } else {
+        j.field.dbKeyToTable.
+        asInstanceOf[MetaMapper[A]].
+        findAll(new InThing[A]{
+            type JoinType = FT
+            type InnerType = A
 
-          val queryParams: List[QueryParam[A]] = by.toList
-        }.asInstanceOf[QueryParam[A]] ).asInstanceOf[List[MT]]
+            val outerField: MappedField[JoinType, A] =
+            j.field.dbKeyToTable.primaryKeyField.asInstanceOf[MappedField[JoinType, A]]
+            val innerField: MappedField[JoinType, A] = j.field.asInstanceOf[MappedField[JoinType, A]]
+            val innerMeta: MetaMapper[A] = j.field.fieldOwner.getSingleton
+
+            val queryParams: List[QueryParam[A]] = by.toList
+          }.asInstanceOf[QueryParam[A]] ).asInstanceOf[List[MT]]
+      }
 
       val map: Map[FT, MT] =
       Map(ol.map(v => (v.primaryKeyField.is, v)) :_*)
@@ -365,16 +380,9 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
               // For vals, add "AND $fieldname = ? [OR $fieldname = ?]*" to the query. The number
               // of fields you add onto the query is equal to vals.length
             case ByList(field, vals) =>
-              vals match {
-                case Nil =>
-                  updatedWhat = updatedWhat + whereOrAnd + " 0 = 1 "
-
-                case _ => {
-                    updatedWhat = updatedWhat +
-                    vals.map(v => MapperRules.quoteColumnName(field.dbColumnName)+ " = ?").mkString(whereOrAnd+" (", " OR ", ")")
-                  }
-              }
-
+              if (vals.isEmpty) updatedWhat = updatedWhat + whereOrAnd + " 0 = 1 "
+              else updatedWhat = updatedWhat +
+              vals.map(v => MapperRules.quoteColumnName(field.dbColumnName)+ " = ?").mkString(whereOrAnd+" (", " OR ", ")")
 
             case in: InRaw[A, _] =>
               updatedWhat = updatedWhat + whereOrAnd + (in.rawSql match {
@@ -386,11 +394,11 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
               updatedWhat = updatedWhat + whereOrAnd +
               MapperRules.quoteColumnName(in.outerField.dbColumnName)+
               " IN ("+in.innerMeta.addEndStuffs(in.innerMeta.addFields("SELECT "+
-                                             in.distinct+
-                                             MapperRules.quoteColumnName(in.innerField.dbColumnName)+
-                                             " FROM "+
-                                             MapperRules.quoteTableName(in.innerMeta.dbTableName)+" ",false,
-                                             in.queryParams, conn), in.queryParams, conn)._1+" ) "
+                                                                       in.distinct+
+                                                                       MapperRules.quoteColumnName(in.innerField.dbColumnName)+
+                                                                       " FROM "+
+                                                                       MapperRules.quoteTableName(in.innerMeta.dbTableName)+" ",false,
+                                                                       in.queryParams, conn), in.queryParams, conn)._1+" ) "
 
               // Executes a subquery with {@code query}
             case BySql(query, _,  _*) =>
@@ -703,7 +711,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
           }
 
           ret
-      }
+        }
     }
   }
 
@@ -1138,7 +1146,7 @@ final case class Cmp[O<:Mapper[O], T](field: MappedField[T,O], opr: OprEnum.Valu
                                       otherField: Box[MappedField[T, O]], dbFunc: Box[String]) extends QueryParam[O]
 
 final case class OrderBy[O<:Mapper[O], T](field: MappedField[T,O],
-                                    order: AscOrDesc) extends QueryParam[O]
+                                          order: AscOrDesc) extends QueryParam[O]
 
 trait AscOrDesc {
   def sql: String
@@ -1155,7 +1163,7 @@ case object Descending extends AscOrDesc {
 final case class Distinct[O <: Mapper[O]]() extends QueryParam[O]
 
 final case class OrderBySql[O <: Mapper[O]](sql: String,
-                                      checkedBy: IHaveValidatedThisSQL) extends QueryParam[O]
+                                            checkedBy: IHaveValidatedThisSQL) extends QueryParam[O]
 
 final case class ByList[O<:Mapper[O], T](field: MappedField[T,O], vals: List[T]) extends QueryParam[O]
 /**
@@ -1165,8 +1173,8 @@ final case class ByList[O<:Mapper[O], T](field: MappedField[T,O], vals: List[T])
  * java.sql.Date, java.sql.Time, or java.sql.Timestamp classes.
  */
 final case class BySql[O<:Mapper[O]](query: String,
-                               checkedBy: IHaveValidatedThisSQL,
-                               params: Any*) extends QueryParam[O]
+                                     checkedBy: IHaveValidatedThisSQL,
+                                     params: Any*) extends QueryParam[O]
 final case class MaxRows[O<:Mapper[O]](max: Long) extends QueryParam[O]
 final case class StartAt[O<:Mapper[O]](start: Long) extends QueryParam[O]
 final case class Ignore[O <: Mapper[O]]() extends QueryParam[O]
@@ -1187,13 +1195,26 @@ sealed abstract class InThing[OuterType <: Mapper[OuterType]] extends QueryParam
   }
 }
 
-final case class PreCache[TheType <: Mapper[TheType]](field: MappedForeignKey[_, TheType, _])
+/**
+ * This QueryParam can be put in a query and will cause the given foreign key field
+ * to be precached.
+ * @param field - the field to precache
+ * @param deterministic - true if the query is deterministic.  Will be more efficient.
+ * false if the query is not deterministic.  In this case, a SELECT * FROM FK_TABLE WHERE primary_key in (xxx) will
+ * be generated
+ */
+final case class PreCache[TheType <: Mapper[TheType]](field: MappedForeignKey[_, TheType, _], deterministic: Boolean)
 extends QueryParam[TheType]
 
+object PreCache {
+  def apply[TheType <: Mapper[TheType]](field: MappedForeignKey[_, TheType, _]) =
+  new PreCache(field, true)
+}
+
 final case class InRaw[TheType <:
-                 Mapper[TheType], T](field: MappedField[T, TheType],
-                                     rawSql: String,
-                                     checkedBy: IHaveValidatedThisSQL)
+                       Mapper[TheType], T](field: MappedField[T, TheType],
+                                           rawSql: String,
+                                           checkedBy: IHaveValidatedThisSQL)
 extends QueryParam[TheType]
 
 object In {
@@ -1249,6 +1270,10 @@ object By {
   import OprEnum._
 
   def apply[O <: Mapper[O], T, U <% T](field: MappedField[T, O], value: U) = Cmp[O,T](field, Eql, Full(value), Empty, Empty)
+  def apply[O <: Mapper[O], T](field: MappedNullableField[T, O], value: Box[T]) = value match {
+    case Full(x) => Cmp[O,Box[T]](field, Eql, Full(value), Empty, Empty)
+    case _ => NullRef(field)
+  }
   def apply[O <: Mapper[O],T,  Q <: KeyedMapper[T, Q]](field: MappedForeignKey[T, O, Q], value: Q) =
   Cmp[O,T](field, Eql, Full(value.primaryKeyField.is), Empty, Empty)
 
@@ -1263,6 +1288,12 @@ object NotBy {
   import OprEnum._
 
   def apply[O <: Mapper[O], T, U <% T](field: MappedField[T, O], value: U) = Cmp[O,T](field, <>, Full(value), Empty, Empty)
+
+  def apply[O <: Mapper[O], T](field: MappedNullableField[T, O], value: Box[T]) = value match {
+    case Full(x) => Cmp[O,Box[T]](field, <>, Full(value), Empty, Empty)
+    case _ => NotNullRef(field)
+  }
+
   def apply[O <: Mapper[O],T,  Q <: KeyedMapper[T, Q]](field: MappedForeignKey[T, O, Q], value: Q) =
   Cmp[O,T](field, <>, Full(value.primaryKeyField.is), Empty, Empty)
   def apply[O <: Mapper[O],T, Q <: KeyedMapper[T, Q]](field: MappedForeignKey[T, O, Q], value: Box[Q]) =

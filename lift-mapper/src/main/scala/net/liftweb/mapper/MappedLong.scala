@@ -75,7 +75,7 @@ extends MappedLong[T](theOwner) with MappedForeignKey[Long,T,O] with BaseForeign
   /**
    * Given the driver type, return the string required to create the column in the database
    */
-  override def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.longForeignKeyColumnType
+  override def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.longForeignKeyColumnType  + notNullAppender()
 
 }
 
@@ -116,7 +116,7 @@ class MappedLongIndex[T<:Mapper[T]](theOwner: T) extends MappedLong[T](theOwner)
     else tryo(convertKey(in.toString)).flatMap(s => s)
   }
 
-  override def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.longIndexColumnType
+  override def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.longIndexColumnType  + notNullAppender()
 
 }
 
@@ -204,7 +204,7 @@ class MappedEnumList[T<:Mapper[T], ENUM <: Enumeration](val fieldOwner: T, val e
   /**
    * Given the driver type, return the string required to create the column in the database
    */
-  def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.enumListColumnType
+  def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.enumListColumnType + notNullAppender()
 
   /**
    * Create an input field for the item
@@ -219,6 +219,96 @@ class MappedEnumList[T<:Mapper[T], ENUM <: Enumeration](val fieldOwner: T, val e
 trait DefaultMillis extends TypedField[Long] {
   override def defaultValue = millis
 }
+
+
+class MappedNullableLong[T<:Mapper[T]](val fieldOwner: T) extends MappedNullableField[Long, T] {
+  private var data: Box[Long] = defaultValue
+  private var orgData: Box[Long] = defaultValue
+
+  def defaultValue: Box[Long] = Empty
+  def dbFieldClass = classOf[Box[Long]]
+
+  /**
+   * Get the JDBC SQL Type for this field
+   */
+  def targetSQLType = Types.BIGINT
+
+  protected def i_is_! = data
+  protected def i_was_! = orgData
+  /**
+   * Called after the field is saved to the database
+   */
+  override protected[mapper] def doneWithSave() {
+    orgData = data
+  }
+
+  protected def real_i_set_!(value: Box[Long]): Box[Long] = {
+    if (value != data) {
+      data = value
+      dirty_?(true)
+    }
+    data
+  }
+
+  def asJsExp = is.map(v => JE.Num(v)) openOr JE.JsNull
+
+  override def readPermission_? = true
+  override def writePermission_? = true
+
+  def real_convertToJDBCFriendly(value: Box[Long]): Object = value match {
+    case Full(value) => new _root_.java.lang.Long(value)
+    case _ => null
+  }
+
+  // def asJsExp = JE.Num(is)
+
+  def jdbcFriendly(field : String) = real_convertToJDBCFriendly(i_is_!)
+  override def jdbcFriendly = real_convertToJDBCFriendly(i_is_!)
+
+  override def setFromAny(in: Any): Box[Long] = {
+    in match {
+      case n: Long => this.set(Full(n))
+      case n: Number => this.set(Full(n.longValue))
+      case (n: Number) :: _ => this.set(Full(n.longValue))
+      case Some(n: Number) => this.set(Full(n.longValue))
+      case Full(n: Number) => this.set(Full(n.longValue))
+      case Empty | Failure(_, _, _) => this.set(Empty)
+      case None => this.set(Empty)
+      case (s: String) :: _ => this.set(Helpers.asLong(s))
+      case null => this.set(Empty)
+      case s: String => this.set(Helpers.asLong(s))
+      case o => this.set(Helpers.asLong(o))
+    }
+  }
+
+  protected def i_obscure_!(in: Box[Long]) = defaultValue
+
+  private def st(in: Box[Long]) {
+    data = in
+    orgData = in
+  }
+
+  def buildSetActualValue(accessor: Method, data: AnyRef, columnName: String) : (T, AnyRef) => Unit =
+  (inst, v) => doField(inst, accessor, {case f: MappedNullableLong[T] => f.st(asLong(v))})
+
+  def buildSetLongValue(accessor: Method, columnName : String) : (T, Long, Boolean) => Unit =
+  (inst, v, isNull) => doField(inst, accessor, {case f: MappedNullableLong[T] => f.st(if (isNull) Empty else Full(v))})
+
+  def buildSetStringValue(accessor: Method, columnName: String): (T, String) => Unit =
+  (inst, v) => doField(inst, accessor, {case f: MappedNullableLong[T] => f.st(asLong(v))})
+
+  def buildSetDateValue(accessor : Method, columnName : String) : (T, Date) => Unit =
+  (inst, v) => doField(inst, accessor, {case f: MappedNullableLong[T] => f.st(if (v == null) Empty else Full(v.getTime))})
+
+  def buildSetBooleanValue(accessor : Method, columnName : String) : (T, Boolean, Boolean) => Unit = null
+
+  /**
+   * Given the driver type, return the string required to create the column in the database
+   */
+  def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.longColumnType + notNullAppender()
+}
+
+
 
 class MappedLong[T<:Mapper[T]](val fieldOwner: T) extends MappedField[Long, T] {
   private var data: Long = defaultValue
@@ -301,6 +391,6 @@ class MappedLong[T<:Mapper[T]](val fieldOwner: T) extends MappedField[Long, T] {
   /**
    * Given the driver type, return the string required to create the column in the database
    */
-  def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.longColumnType
+  def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.longColumnType + notNullAppender()
 }
 

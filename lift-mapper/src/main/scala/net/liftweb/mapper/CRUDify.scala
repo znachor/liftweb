@@ -149,7 +149,7 @@ trait CRUDify[KeyType, CrudType <: KeyedMapper[KeyType, CrudType]] {
           def name = "Edit "+Prefix
 
           override val snippets: SnippetTest = {
-            case ("crud.edit", Full(wp: CrudType)) => crudDoForm(wp, S.??("Edited"))
+            case ("crud.edit", Full(wp: CrudType)) => crudDoForm(wp, S.??("Save"))
           }
 
           def defaultParams = Empty
@@ -220,7 +220,7 @@ trait CRUDify[KeyType, CrudType <: KeyedMapper[KeyType, CrudType]] {
     </table>
   </lift:crud.edit>
 
-  def editButton = S.??("Edit")
+  def editButton = S.??("Save")
 
   /**
    * The menu item for deleting an item (make this "Empty" to disable)

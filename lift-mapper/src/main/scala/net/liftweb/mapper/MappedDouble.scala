@@ -108,6 +108,6 @@ class MappedDouble[T<:Mapper[T]](val fieldOwner: T) extends MappedField[Double, 
 	def buildSetActualValue(accessor: Method, data: AnyRef, columnName: String) : (T, AnyRef) =>
 		Unit = (inst, v) => doField(inst, accessor, {case f: MappedDouble[T] => f.st(toDouble(v))})
 
-	def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.doubleColumnType
+	def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.doubleColumnType + notNullAppender()
 }
 

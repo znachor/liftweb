@@ -128,6 +128,26 @@ trait BasicTypesHelpers { self: StringHelpers with ControlHelpers =>
    */
   def asLong(in: String): Box[Long] = tryo(in.toLong)
 
+/**
+   * Convert any object to an "equivalent" Long depending on its value
+   */
+  def asLong(in: Any): Box[Long] = {
+    in match {
+      case null => Empty
+      case i: Int => Full(i.toLong)
+      case n: Long => Full(n)
+      case d: _root_.java.util.Date => Full(d.getTime)
+      case n : Number => Full(n.longValue)
+      case (n: Number) :: _ => Full(n.longValue)
+      case Some(n) => asLong(n)
+      case Full(n) => asLong(n)
+      case None | Empty | Failure(_, _, _) => Empty
+      case s: String => asLong(s)
+      case x :: xs => asLong(x)
+      case o => asLong(o.toString)
+    }
+  }
+
   /**
    * Convert any object to an "equivalent" Int depending on its value
    */
