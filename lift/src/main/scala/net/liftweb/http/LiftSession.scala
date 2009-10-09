@@ -920,6 +920,7 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
   private def reportSnippetError(page: String,
                                  snippetName: Box[String],
                                  why: LiftRules.SnippetFailures.Value,
+                                 addlMsg: NodeSeq,
                                  whole: NodeSeq): NodeSeq =
   {
     for {
@@ -930,7 +931,7 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
     Props.mode match {
       case Props.RunModes.Development =>
         <div style="display: block; margin: 8px; border: 2px solid red">
-          Error processing snippet {snippetName openOr "N/A"}.  Reason: {why}
+          Error processing snippet {snippetName openOr "N/A"}.  Reason: {why} {addlMsg}
           XML causing this error:
           <br/>
           <pre>
@@ -985,38 +986,54 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
                   res
                 } else reportSnippetError(page, snippetName,
                                           LiftRules.SnippetFailures.StatefulDispatchNotMatched,
+                                          NodeSeq.Empty,
                                           wholeTag)
 
               case Full(inst: DispatchSnippet) =>
                 if (inst.dispatch.isDefinedAt(method)) inst.dispatch(method)(kids)
                 else reportSnippetError(page, snippetName,
                                         LiftRules.SnippetFailures.StatefulDispatchNotMatched,
+                                        NodeSeq.Empty,
                                         wholeTag)
 
               case Full(inst) => {
+
                   val ar: Array[AnyRef] = List(Group(kids)).toArray
-                  ((invokeMethod(inst.getClass, inst, method, ar)) or invokeMethod(inst.getClass, inst, method)) match {
+                  ((Helpers.invokeMethod(inst.getClass, inst, method, ar)) or
+                   Helpers.invokeMethod(inst.getClass, inst, method)) match {
                     case CheckNodeSeq(md) => md
                     case it =>
+                      val intersection = if (Props.devMode) {
+                        val methodNames = inst.getClass.getMethods().map(_.getName).toList.removeDuplicates
+                        val methodAlts = List(method, Helpers.camelCase(method),
+                        Helpers.camelCaseMethod(method))
+                        methodNames intersect methodAlts
+                      }  else Nil
+
                       reportSnippetError(page, snippetName,
                                          LiftRules.SnippetFailures.MethodNotFound,
+                                         if (intersection.isEmpty) NodeSeq.Empty else
+                                         <div>There are possible matching methods ({intersection}),
+                                         but none has the required signature: <pre>def {method}(in: NodeSeq): NodeSeq</pre></div>,
                                          wholeTag)
                   }
                 }
               case Failure(_, Full(exception), _) => Log.warn("Snippet instantiation error", exception)
                 reportSnippetError(page, snippetName,
                                    LiftRules.SnippetFailures.InstantiationException,
+                                   NodeSeq.Empty,
                                    wholeTag)
-
 
               case _ => reportSnippetError(page, snippetName,
                                            LiftRules.SnippetFailures.ClassNotFound,
+                                           NodeSeq.Empty,
                                            wholeTag)
 
             }
           }))).openOr{
       reportSnippetError(page, snippetName,
                          LiftRules.SnippetFailures.NoNameSpecified,
+                         NodeSeq.Empty,
                          wholeTag)
     }
 
