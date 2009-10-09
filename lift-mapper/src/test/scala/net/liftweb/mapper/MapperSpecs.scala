@@ -31,79 +31,101 @@ object MapperSpecs extends Specification {
   def providers = DBProviders.asList
 
   providers.foreach(provider => {
-    ("Mapper for " + provider.name) should {
+      ("Mapper for " + provider.name) should {
 
-      "schemify" in {
-        try { provider.setupDB } catch { case e => skip(e.getMessage) }
+        "schemify" in {
+          try { provider.setupDB } catch { case e => skip(e.getMessage) }
 
-        Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag)
-        Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag)
+          Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag)
+          Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag)
 
-        val elwood = SampleModel.find(By(SampleModel.firstName, "Elwood")).open_!
-        val madeline = SampleModel.find(By(SampleModel.firstName, "Madeline")).open_!
-        val archer = SampleModel.find(By(SampleModel.firstName, "Archer")).open_!
+          val elwood = SampleModel.find(By(SampleModel.firstName, "Elwood")).open_!
+          val madeline = SampleModel.find(By(SampleModel.firstName, "Madeline")).open_!
+          val archer = SampleModel.find(By(SampleModel.firstName, "Archer")).open_!
 
-        elwood.firstName.is must_== "Elwood"
-        madeline.firstName.is must_== "Madeline"
-        archer.firstName.is must_== "Archer"
+          elwood.firstName.is must_== "Elwood"
+          madeline.firstName.is must_== "Madeline"
+          archer.firstName.is must_== "Archer"
 
-	val meow = SampleTag.find(By(SampleTag.tag, "Meow")).open_!
+          val meow = SampleTag.find(By(SampleTag.tag, "Meow")).open_!
 
-	meow.tag.is must_== "Meow"
+          meow.tag.is must_== "Meow"
 
-        elwood.id.is must be_<(madeline.id.is)
-      }
+          elwood.id.is must be_<(madeline.id.is)
+        }
 
-      "Like works" in {
-        try { provider.setupDB } catch { case e => skip(e.getMessage) }
+        "Like works" in {
+          try { provider.setupDB } catch { case e => skip(e.getMessage) }
 
-        Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag)
-        Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag)
+          Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag)
+          Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag)
 
-	val oo = SampleTag.findAll(Like(SampleTag.tag, "%oo%"))
+          val oo = SampleTag.findAll(Like(SampleTag.tag, "%oo%"))
 
-	(oo.length > 0) must beTrue
+          (oo.length > 0) must beTrue
 
-	for (t <- oo)
+          for (t <- oo)
 	  (t.tag.is.indexOf("oo") >= 0) must beTrue
 
-	for (t <- oo)
+          for (t <- oo)
 	  t.model.cached_? must beFalse
 
-	val mm = SampleTag.findAll(Like(SampleTag.tag, "M%"))
+          val mm = SampleTag.findAll(Like(SampleTag.tag, "M%"))
 
-	(mm.length > 0) must beTrue
+          (mm.length > 0) must beTrue
 
-	for (t <- mm)
+          for (t <- mm)
 	  (t.tag.is.startsWith("M")) must beTrue
 
-	for (t <- mm) {
-	  t.model.cached_? must beFalse
-	  t.model.obj
+          for (t <- mm) {
+            t.model.cached_? must beFalse
+            t.model.obj
+            t.model.cached_? must beTrue
+          }
+
+        }
+
+        "Precache works" in {
+          try { provider.setupDB } catch { case e => skip(e.getMessage) }
+
+          Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag)
+          Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag)
+
+
+          val oo = SampleTag.findAll(By(SampleTag.tag, "Meow"),
+                                     PreCache(SampleTag.model))
+
+          (oo.length > 0) must beTrue
+
+          for (t <- oo)
 	  t.model.cached_? must beTrue
-	}
+        }
 
+
+        "Save flag works" in {
+          try { provider.setupDB } catch { case e => skip(e.getMessage) }
+
+          Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag)
+          Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag)
+
+          val elwood = SampleModel.find(By(SampleModel.firstName, "Elwood")).open_!
+
+          elwood.firstName.is must_== "Elwood"
+
+          elwood.firstName("Frog").save
+
+          val frog = SampleModel.find(By(SampleModel.firstName, "Frog")).open_!
+
+          frog.firstName.is must_== "Frog"
+
+          SampleModel.findAll().length must_== 3
+
+          SampleModel.find(By(SampleModel.firstName, "Elwood")).isEmpty must_== true
+        }
       }
+    })
 
-      "Precache works" in {
-        try { provider.setupDB } catch { case e => skip(e.getMessage) }
-
-        Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag)
-        Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag)
-
-
-	val oo = SampleTag.findAll(By(SampleTag.tag, "Meow"),
-				   PreCache(SampleTag.model))
-
-	(oo.length > 0) must beTrue
-
-	for (t <- oo)
-	  t.model.cached_? must beTrue
-      }
-    }
- })
-
- private def ignoreLogger(f: => AnyRef): Unit = ()
+  private def ignoreLogger(f: => AnyRef): Unit = ()
 }
 
 object SampleTag extends SampleTag with LongKeyedMetaMapper[SampleTag] {

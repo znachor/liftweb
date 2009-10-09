@@ -536,11 +536,12 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
   toSave match {
     case x: MetaMapper[_] => throw new MapperException("Cannot test the MetaMapper singleton for saved status")        
 
-    case _ =>
+    case _ => toSave.persisted_?
+      /*
       indexMap match {
         case Full(im) => (for (indF <- indexedField(toSave)) yield (indF.dbIndexFieldIndicatesSaved_?)).openOr(true)
         case _ => false
-      }
+      }*/
   }
 
 
@@ -687,6 +688,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
               }
 
               _afterCreate(toSave)
+              toSave.persisted_? = true
               ret
             }
             _afterSave(toSave)
@@ -778,14 +780,15 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
   }
 
   def createInstance(dbId: ConnectionIdentifier, rs : ResultSet, colCnt: Int, mapFuncs: Array[(ResultSet,Int,A) => Unit]) : A = {
-    val ret = createInstance.connectionIdentifier(dbId)
-    val ra = ret// .asInstanceOf[Mapper[A]]
-
+    val ret: A = createInstance.connectionIdentifier(dbId)
+    
+    ret.persisted_? = true
+    
     var pos = 1
     while (pos <= colCnt) {
       mapFuncs(pos) match {
         case null =>
-        case f => f(rs, pos, ra)
+        case f => f(rs, pos, ret)
       }
       pos = pos + 1
     }
