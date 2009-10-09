@@ -108,6 +108,23 @@ object ToHeadUsages extends Specification {
         }
       )
     }
+
+    "Exclude from context rewriting" >> {
+      val first = net.liftweb.http.Req.fixHtml("/wombat", <span><a href="/foo" id="foo">foo</a>
+      <a href="/bar" id="bar">bar</a></span>)
+
+      def excludeBar(in: String): Boolean = in.startsWith("/bar")
+
+      val second = net.liftweb.http.LiftRules.excludePathFromContextPathRewriting.doWith(excludeBar _)
+      {net.liftweb.http.Req.fixHtml("/wombat", <span><a href="/foo" id="foo">foo</a>
+      <a href="/bar" id="bar">bar</a></span>)
+      }
+
+      ((first \\ "a").filter(e => (e \ "@id").text == "foo") \ "@href").text must_== "/wombat/foo"
+      ((first \\ "a").filter(e => (e \ "@id").text == "bar") \ "@href").text must_== "/wombat/bar"
+      ((second \\ "a").filter(e => (e \ "@id").text == "foo") \ "@href").text must_== "/wombat/foo"
+      ((second \\ "a").filter(e => (e \ "@id").text == "bar") \ "@href").text must_== "/bar"
+    }
   }
 
   //  JettyTestServer.stop()

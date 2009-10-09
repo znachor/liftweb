@@ -474,6 +474,13 @@ object LiftRules extends Factory {
   val allowParallelSnippets: FactoryMaker[Boolean] = new FactoryMaker(() => false) {}
 
   /**
+  * Update the function here that calculates particular paths to
+  * exclused from context path rewriting
+  */
+  val excludePathFromContextPathRewriting: FactoryMaker[String => Boolean] =
+  new FactoryMaker(() => ((s: String) => false)) {}
+
+  /**
    * If a deferred snippet has a failure during render,
    * what should we display?
    */
