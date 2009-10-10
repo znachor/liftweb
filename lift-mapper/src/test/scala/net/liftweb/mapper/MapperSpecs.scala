@@ -31,152 +31,124 @@ object MapperSpecs extends Specification {
   def providers = DBProviders.asList
 
   providers.foreach(provider => {
-      ("Mapper for " + provider.name) should {
+    ("Mapper for " + provider.name) should {
 
-        "schemify" in {
-          try { provider.setupDB } catch { case e => skip(e.getMessage) }
+      doBefore {
+        try { provider.setupDB } catch { case e => skip(e.getMessage) }
 
-          Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag)
-          Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag)
+        Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag)
+        Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag)
+      }
 
-          val elwood = SampleModel.find(By(SampleModel.firstName, "Elwood")).open_!
-          val madeline = SampleModel.find(By(SampleModel.firstName, "Madeline")).open_!
-          val archer = SampleModel.find(By(SampleModel.firstName, "Archer")).open_!
-          val notNull = SampleModel.find(By(SampleModel.firstName, "NotNull")).open_!
+      "schemify" in {
+        val elwood = SampleModel.find(By(SampleModel.firstName, "Elwood")).open_!
+        val madeline = SampleModel.find(By(SampleModel.firstName, "Madeline")).open_!
+        val archer = SampleModel.find(By(SampleModel.firstName, "Archer")).open_!
+        val notNull = SampleModel.find(By(SampleModel.firstName, "NotNull")).open_!
 
-          elwood.firstName.is must_== "Elwood"
-          madeline.firstName.is must_== "Madeline"
-          archer.firstName.is must_== "Archer"
+        elwood.firstName.is must_== "Elwood"
+        madeline.firstName.is must_== "Madeline"
+        archer.firstName.is must_== "Archer"
 
-          archer.moose.is must_== Empty
-          notNull.moose.is must_== Full(99L)
+        archer.moose.is must_== Empty
+        notNull.moose.is must_== Full(99L)
 
-          val meow = SampleTag.find(By(SampleTag.tag, "Meow")).open_!
+        val meow = SampleTag.find(By(SampleTag.tag, "Meow")).open_!
 
-          meow.tag.is must_== "Meow"
+        meow.tag.is must_== "Meow"
 
-          elwood.id.is must be_<(madeline.id.is)
-        }
+        elwood.id.is must be_<(madeline.id.is)
+      }
 
-        "Like works" in {
-          try { provider.setupDB } catch { case e => skip(e.getMessage) }
+      "Like works" in {
+        val oo = SampleTag.findAll(Like(SampleTag.tag, "%oo%"))
 
-          Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag)
-          Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag)
+        (oo.length > 0) must beTrue
 
-          val oo = SampleTag.findAll(Like(SampleTag.tag, "%oo%"))
+        for (t <- oo)
+          (t.tag.is.indexOf("oo") >= 0) must beTrue
 
-          (oo.length > 0) must beTrue
+        for (t <- oo)
+          t.model.cached_? must beFalse
 
-          for (t <- oo)
-	  (t.tag.is.indexOf("oo") >= 0) must beTrue
+        val mm = SampleTag.findAll(Like(SampleTag.tag, "M%"))
 
-          for (t <- oo)
-	  t.model.cached_? must beFalse
+        (mm.length > 0) must beTrue
 
-          val mm = SampleTag.findAll(Like(SampleTag.tag, "M%"))
+        for (t <- mm)
+          (t.tag.is.startsWith("M")) must beTrue
 
-          (mm.length > 0) must beTrue
-
-          for (t <- mm)
-	  (t.tag.is.startsWith("M")) must beTrue
-
-          for (t <- mm) {
-            t.model.cached_? must beFalse
-            t.model.obj
-            t.model.cached_? must beTrue
-          }
-        }
-
-        "Nullable Long works" in {
-          try { provider.setupDB } catch { case e => skip(e.getMessage) }
-
-          Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag)
-          Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag)
-          
-          SampleModel.create.firstName("fruit").moose(Full(77L)).save
-
-          SampleModel.findAll(By(SampleModel.moose, Empty)).length must_== 3L
-          SampleModel.findAll(NotBy(SampleModel.moose, Empty)).length must_== 2L
-          SampleModel.findAll(NotNullRef(SampleModel.moose)).length must_== 2L
-          SampleModel.findAll(NullRef(SampleModel.moose)).length must_== 3L
-        }
-
-        "enforce NOT NULL" in {
-          try { provider.setupDB } catch { case e => skip(e.getMessage) }
-
-          Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag)
-          Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag)
-
-
-          val nullString: String = null
-          try {
-            SampleModel.create.firstName("Not Null").cnotNull(nullString).save
-            0 must_== 1
-          } catch {
-            case e: java.sql.SQLException =>
-          }
-        }
-
-
-
-        "Precache works" in {
-          try { provider.setupDB } catch { case e => skip(e.getMessage) }
-
-          Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag)
-          Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag)
-
-          Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag)
-          Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag)
-
-
-          val oo = SampleTag.findAll(By(SampleTag.tag, "Meow"),
-                                     PreCache(SampleTag.model))
-
-          (oo.length > 0) must beTrue
-
-          for (t <- oo)
-	  t.model.cached_? must beTrue
-        }
-
-        "Non-deterministic Precache works" in {
-          try { provider.setupDB } catch { case e => skip(e.getMessage) }
-
-          Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag)
-          Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag)
-
-
-          val oo = SampleTag.findAll(By(SampleTag.tag, "Meow"),
-                                     PreCache(SampleTag.model, false))
-
-          (oo.length > 0) must beTrue
-
-          for (t <- oo)
-	  t.model.cached_? must beTrue
-        }
-
-        "Save flag works" in {
-          try { provider.setupDB } catch { case e => skip(e.getMessage) }
-
-          Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag)
-          Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag)
-
-          val elwood = SampleModel.find(By(SampleModel.firstName, "Elwood")).open_!
-
-          elwood.firstName.is must_== "Elwood"
-
-          elwood.firstName("Frog").save
-
-          val frog = SampleModel.find(By(SampleModel.firstName, "Frog")).open_!
-
-          frog.firstName.is must_== "Frog"
-
-          SampleModel.findAll().length must_== 4
-
-          SampleModel.find(By(SampleModel.firstName, "Elwood")).isEmpty must_== true
+        for (t <- mm) {
+          t.model.cached_? must beFalse
+          t.model.obj
+          t.model.cached_? must beTrue
         }
       }
-    })
+
+      "Nullable Long works" in {
+        SampleModel.create.firstName("fruit").moose(Full(77L)).save
+
+        SampleModel.findAll(By(SampleModel.moose, Empty)).length must_== 3L
+        SampleModel.findAll(NotBy(SampleModel.moose, Empty)).length must_== 2L
+        SampleModel.findAll(NotNullRef(SampleModel.moose)).length must_== 2L
+        SampleModel.findAll(NullRef(SampleModel.moose)).length must_== 3L
+      }
+
+      "enforce NOT NULL" in {
+        val nullString: String = null
+        try {
+          SampleModel.create.firstName("Not Null").cnotNull(nullString).save
+          0 must_== 1
+        } catch {
+          case e: java.sql.SQLException =>
+        }
+      }
+
+      "Precache works" in {
+        val oo = SampleTag.findAll(By(SampleTag.tag, "Meow"),
+                                   PreCache(SampleTag.model))
+
+        (oo.length > 0) must beTrue
+
+        for (t <- oo)
+          t.model.cached_? must beTrue
+      }
+
+      "Non-deterministic Precache works" in {
+        val oo = SampleTag.findAll(By(SampleTag.tag, "Meow"),
+                                   PreCache(SampleTag.model, false))
+
+        (oo.length > 0) must beTrue
+
+        for (t <- oo)
+          t.model.cached_? must beTrue
+      }
+
+      "Save flag works" in {
+        val elwood = SampleModel.find(By(SampleModel.firstName, "Elwood")).open_!
+
+        elwood.firstName.is must_== "Elwood"
+
+        elwood.firstName("Frog").save
+
+        val frog = SampleModel.find(By(SampleModel.firstName, "Frog")).open_!
+
+        frog.firstName.is must_== "Frog"
+
+        SampleModel.findAll().length must_== 4
+
+        SampleModel.find(By(SampleModel.firstName, "Elwood")).isEmpty must_== true
+      }
+
+      "accept a Seq[T] as argument to ByList query parameter" in {
+        // See http://github.com/dpp/liftweb/issues#issue/77 for original request
+        val seq: Seq[String] = List("Elwood", "Archer")
+        val result = SampleModel.findAll(ByList(SampleModel.firstName, seq))
+        result.length must_== 2
+      }
+
+    }
+ })
 
   private def ignoreLogger(f: => AnyRef): Unit = ()
 }
@@ -186,9 +158,9 @@ object SampleTag extends SampleTag with LongKeyedMetaMapper[SampleTag] {
   private def populate {
     val samp = SampleModel.findAll()
     val tags = List("Hello", "Moose", "Frog", "WooHoo", "Sloth",
-		    "Meow", "Moof")
+                    "Meow", "Moof")
     for (t <- tags;
-	 m <- samp) SampleTag.create.tag(t).model(m).save
+         m <- samp) SampleTag.create.tag(t).model(m).save
   }
 }
 
