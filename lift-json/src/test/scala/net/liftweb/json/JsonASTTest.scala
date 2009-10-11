@@ -29,8 +29,8 @@ object JsonASTSpec extends Specification with JValueGen with ScalaCheck {
 
   "Monoid associativity" in {
     val assocProp = (x: JValue, y: JValue, z: JValue) => x ++ (y ++ z) == (x ++ y) ++ z
-    forAll(assocProp) must pass    
+    forAll(assocProp) must pass
   }
 
-  implicit def arbJValue: Arbitrary[JValue] = Arbitrary(genObject)
+  implicit def arbJValue: Arbitrary[JValue] = Arbitrary(genJValue)
 }

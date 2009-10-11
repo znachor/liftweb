@@ -110,9 +110,10 @@ object JsonAST {
         case (JNothing, x) => x
         case (x, JNothing) => x
         case (JObject(xs), x: JField) => JObject(xs ::: List(x))
-        case (JObject(xs), JObject(ys)) => JObject(xs ::: ys)
+        case (x: JObject, y: JObject) => JArray(x :: y :: Nil)
         case (JArray(xs), JArray(ys)) => JArray(xs ::: ys)
         case (JArray(xs), v: JValue) => JArray(xs ::: List(v))
+        case (v: JValue, JArray(xs)) => JArray(v :: xs)
         case (f1: JField, f2: JField) => JObject(f1 :: f2 :: Nil)
         case (JField(n, v1), v2: JValue) => JField(n, append(v1, v2))
         case (x, y) => JArray(x :: y :: Nil)
