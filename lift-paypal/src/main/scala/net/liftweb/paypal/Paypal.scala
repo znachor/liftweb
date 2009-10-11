@@ -95,9 +95,9 @@ object PaypalTransactionStatus extends Enumeration {
  * A paramater set that takes request paramaters (from Req) and assigns them
  * to properties of this class
  *
- * @param params The paramaters from the incooming request
+ * @param params The paramaters from the incomming request
  */
-class PayPalInfo(val params: HasParams) {
+class PayPalInfo(params: HasParams) {
   private val r = params
   val itemName = r.param("item_name")
   val business = r.param("business")
