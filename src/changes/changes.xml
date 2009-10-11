@@ -17,8 +17,9 @@
   -->
 
     <release version="1.1-SNAPSHOT" date="" description="">
-        <action dev="Alex Boisvert" type="update">Issue 57: Improve error message if database is not supported</action>
-        <action dev="Alex Boisvert" type="update">Issue 77: Change net.liftweb.mapper.ByList to take a Seq[T] instead of a List[T]</action>
+      <action dev="Alex Boisvert" type="update">Issue 57: Improve error message if database is not supported</action>
+      <action dev="Alex Boisvert" type="update">Issue 77: Change net.liftweb.mapper.ByList to take a Seq[T] instead of a List[T]</action>
+      <action dev="Timothy Perrett" type="update">Issue 88: Boxed payment status so that IPN cancelations appear as Empty. Breaking API change for implementors.</action>
     </release>
     <release version="1.1-M6" date="2009-09-08" description="Lift 1.1 Milestone 6"/>
     <release version="1.1-M5" date="2009-09-08" description="Lift 1.1 Milestone 5"/>
