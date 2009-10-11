@@ -85,7 +85,7 @@ object Examples extends Specification {
   "Example which collects all integers and forms a new JSON" in {
     val json = parse(person)
     val ints = json.fold(JNothing: JValue) { (a, v) => v match {
-      case x: JInt => a ++ v
+      case x: JInt => a ++ x
       case _ => a
     }}
     compact(render(ints)) mustEqual """[35,33]"""
