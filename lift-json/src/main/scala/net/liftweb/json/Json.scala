@@ -20,6 +20,8 @@ object JsonAST {
   import scala.text.Document
   import scala.text.Document._
 
+  def concat(xs: JValue*) = xs.foldLeft(JNothing: JValue)(_ ++ _)  
+
   sealed abstract class JValue {
     type Values
 
@@ -110,7 +112,6 @@ object JsonAST {
         case (JNothing, x) => x
         case (x, JNothing) => x
         case (JObject(xs), x: JField) => JObject(xs ::: List(x))
-        case (x: JObject, y: JObject) => JArray(x :: y :: Nil)
         case (JArray(xs), JArray(ys)) => JArray(xs ::: ys)
         case (JArray(xs), v: JValue) => JArray(xs ::: List(v))
         case (v: JValue, JArray(xs)) => JArray(v :: xs)
@@ -203,7 +204,8 @@ object JsonAST {
     }).mkString
 }
 
-object JsonDSL extends Printer {
+object Implicits extends Implicits
+trait Implicits {
   import JsonAST._
 
   implicit def int2jvalue(x: Int) = JInt(x)
@@ -213,6 +215,11 @@ object JsonDSL extends Printer {
   implicit def bigdecimal2jvalue(x: BigDecimal) = JDouble(x.doubleValue)
   implicit def boolean2jvalue(x: Boolean) = JBool(x)
   implicit def string2jvalue(x: String) = JString(x)
+}
+
+object JsonDSL extends Implicits with Printer {
+  import JsonAST._
+
   implicit def seq2jvalue[A <% JValue](s: Seq[A]) = JArray(s.toList.map { a => val v: JValue = a; v })
   implicit def option2jvalue[A <% JValue](opt: Option[A]): JValue = opt match {
     case Some(x) => x
