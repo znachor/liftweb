@@ -31,16 +31,19 @@ object MapperSpecs extends Specification {
   def providers = DBProviders.asList
 
   providers.foreach(provider => {
+
+    def cleanup() {
+      try { provider.setupDB } catch { case e=> skip("Provider %s not available: %s".format(provider, e)) }
+
+      Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag)
+      Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag)
+    }
+
     ("Mapper for " + provider.name) should {
 
-      doBefore {
-        try { provider.setupDB } catch { case e => skip(e.getMessage) }
-
-        Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag)
-        Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag)
-      }
-
       "schemify" in {
+        cleanup()
+
         val elwood = SampleModel.find(By(SampleModel.firstName, "Elwood")).open_!
         val madeline = SampleModel.find(By(SampleModel.firstName, "Madeline")).open_!
         val archer = SampleModel.find(By(SampleModel.firstName, "Archer")).open_!
@@ -61,6 +64,8 @@ object MapperSpecs extends Specification {
       }
 
       "Like works" in {
+        cleanup()
+
         val oo = SampleTag.findAll(Like(SampleTag.tag, "%oo%"))
 
         (oo.length > 0) must beTrue
@@ -86,6 +91,8 @@ object MapperSpecs extends Specification {
       }
 
       "Nullable Long works" in {
+        cleanup()
+
         SampleModel.create.firstName("fruit").moose(Full(77L)).save
 
         SampleModel.findAll(By(SampleModel.moose, Empty)).length must_== 3L
@@ -95,6 +102,8 @@ object MapperSpecs extends Specification {
       }
 
       "enforce NOT NULL" in {
+        cleanup()
+
         val nullString: String = null
         try {
           SampleModel.create.firstName("Not Null").cnotNull(nullString).save
@@ -105,6 +114,8 @@ object MapperSpecs extends Specification {
       }
 
       "Precache works" in {
+        cleanup()
+
         val oo = SampleTag.findAll(By(SampleTag.tag, "Meow"),
                                    PreCache(SampleTag.model))
 
@@ -115,6 +126,8 @@ object MapperSpecs extends Specification {
       }
 
       "Non-deterministic Precache works" in {
+        cleanup()
+
         val oo = SampleTag.findAll(By(SampleTag.tag, "Meow"),
                                    PreCache(SampleTag.model, false))
 
@@ -125,6 +138,8 @@ object MapperSpecs extends Specification {
       }
 
       "Save flag works" in {
+        cleanup()
+
         val elwood = SampleModel.find(By(SampleModel.firstName, "Elwood")).open_!
 
         elwood.firstName.is must_== "Elwood"
@@ -142,6 +157,7 @@ object MapperSpecs extends Specification {
 
       "accept a Seq[T] as argument to ByList query parameter" in {
         // See http://github.com/dpp/liftweb/issues#issue/77 for original request
+        cleanup()
         val seq: Seq[String] = List("Elwood", "Archer")
         val result = SampleModel.findAll(ByList(SampleModel.firstName, seq))
         result.length must_== 2
