@@ -30,6 +30,26 @@ object MapperSpecsRunner extends ConsoleRunner(MapperSpecs)
 object MapperSpecs extends Specification {
   def providers = DBProviders.asList
 
+  /*
+   private def logDBStuff(log: DBLog, len: Long) {
+   println(" in log stuff "+log.getClass.getName)
+   log match {
+   case null =>
+   case _ => println(log.allEntries)
+   }
+   }
+
+   DB.addLogFunc(logDBStuff)
+   */
+
+  def dbSetup() {
+    Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag, 
+				Dog, User)
+    Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag,
+                        User,
+                        Dog)
+  }
+
   providers.foreach(provider => {
 
       def cleanup() {
@@ -115,6 +135,7 @@ object MapperSpecs extends Specification {
         }
 
         "Precache works" in {
+
           cleanup()
 
           val oo = SampleTag.findAll(By(SampleTag.tag, "Meow"),
@@ -152,8 +173,6 @@ object MapperSpecs extends Specification {
           cleanup()
 
           val dogs = Dog.findAll(By(Dog.name,"fido"), PreCache(Dog.owner, false))
-
-
           val oo = SampleTag.findAll(By(SampleTag.tag, "Meow"),
                                      PreCache(SampleTag.model, false))
 
@@ -274,7 +293,7 @@ object User extends User with MetaMegaProtoUser[User] {
   // comment this line out to require email validations
   override def skipEmailValidation = true
 }
-
+ 
 /**
  * An O-R mapped "User" class that includes first name, last name, password and we add a "Personal Essay" to it
  */
@@ -288,7 +307,6 @@ class User extends MegaProtoUser[User] {
     override def displayName = "Personal Essay"
   }
 }
-
 
 class Dog extends LongKeyedMapper[Dog] with IdPK {
   def getSingleton = Dog
