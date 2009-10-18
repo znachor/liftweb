@@ -179,26 +179,6 @@ object JE {
     def toJsCmd = (ElemById(id) ~> Parent).toJsCmd 
   }
 
-  /**
-   * Replaces the node having the provided id with the markup given by node
-   * 
-   * @param id - the id of the node that will be replaces
-   * @param node - the new node
-   */
-  case class Replace(id: String, node: NodeSeq) extends JsExp {
-    def toJsCmd = {
-      val funcName = "f_" + Helpers.nextFuncName
-      val toBeReplaced = "v_" + Helpers.nextFuncName
-      
-      (JsCmds.JsCrVar(funcName, Jx(node).toJs) & 
-       JsCmds.JsCrVar(toBeReplaced, ElemById(id)) &
-       JE.JsRaw(toBeReplaced + ".parentNode.insertBefore(" + funcName + ", " +  toBeReplaced +");").cmd &
-       JE.JsRaw(toBeReplaced + ".parentNode.removeChild(" + toBeReplaced +");").cmd
-       ).toJsCmd
-      }
-  }
-
-
   object LjSwappable {
     def apply(visible: JsExp, hidden: JsExp): JxBase = {
       new JxNodeBase {
@@ -447,13 +427,15 @@ object JE {
 
 trait HtmlFixer {
   /**
-  * Super important... call fixHtml at instance creation time and only once
-  * This method must be run in the context of the thing creating the XHTML
-  * to capture the bound functions
-  */
+   * Super important... call fixHtml at instance creation time and only once
+   * This method must be run in the context of the thing creating the XHTML
+   * to capture the bound functions
+   */
   protected def fixHtml(uid: String, content: NodeSeq): String =
-  AltXML.toXML(Group(S.session.map(s => s.fixHtml(s.processSurroundAndInclude("JS SetHTML id: "+uid, content))).openOr(content)),
-               false, true, S.ieMode).encJs
+  AltXML.toXML(fixHtmlAxXml(uid, content), false, true, S.ieMode).encJs
+
+  protected def fixHtmlAxXml(uid: String, content: NodeSeq): Node =
+  Group(S.session.map(s => s.fixHtml(s.processSurroundAndInclude("JS SetHTML id: "+uid, content))).openOr(content))
 
 }
 
@@ -482,6 +464,25 @@ object JsCmds {
   def JsHideId(what: String): JsCmd = LiftRules.jsArtifacts.hide(what).cmd
 
   def JsShowId(what: String): JsCmd = LiftRules.jsArtifacts.show(what).cmd
+
+  /**
+   * Replaces the node having the provided id with the markup given by node
+   * 
+   * @param id - the id of the node that will be replaces
+   * @param node - the new node
+   */
+  case class Replace(id: String, content: NodeSeq) extends JsCmd with HtmlFixer{
+     override val toJsCmd = {
+      val funcName = "f_" + Helpers.nextFuncName
+      val toBeReplaced = "v_" + Helpers.nextFuncName
+      
+      (JsCmds.JsCrVar(funcName, Jx(fixHtmlAxXml("inline", content)).toJs) & 
+       JsCmds.JsCrVar(toBeReplaced, JE.ElemById(id)) &
+       JE.JsRaw(toBeReplaced + ".parentNode.insertBefore(" + funcName + ", " +  toBeReplaced +");").cmd &
+       JE.JsRaw(toBeReplaced + ".parentNode.removeChild(" + toBeReplaced +");").cmd
+       ).toJsCmd
+      }
+  }
 
   case class SetHtml(uid: String, content: NodeSeq) extends JsCmd {
     def toJsCmd = LiftRules.jsArtifacts.setHtml(uid, content).toJsCmd

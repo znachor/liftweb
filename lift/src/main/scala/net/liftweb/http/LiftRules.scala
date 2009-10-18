@@ -369,7 +369,8 @@ object LiftRules extends Factory {
           "SkipDocType" -> SkipDocType,
           "skip_doc_type" -> SkipDocType,
           "xml_group" -> XmlGroup,
-          "XmlGroup" -> XmlGroup
+          "XmlGroup" -> XmlGroup,
+          "lazy-load" -> LazyLoad
       ))
   }
   setupSnippetDispatch()
