@@ -102,10 +102,16 @@ object TimeHelpersSpec extends Specification with TimeHelpers with TimeAmountsGe
       weeks(3) must_== 3 * 7 * 24 * 60 * 60 * 1000
     }
     "provide a noTime function on Date objects to transform a date into a date at the same day but at 00:00" in {
-      hourFormat(timeNow.noTime) must_== "00:00:00"
+      hourFormat(now.noTime) must_== "00:00:00"
     }
     "provide a day function returning the day of month corresponding to a given date (relative to UTC)" in {
       day(today.setTimezone(utc).setDay(3).getTime) must_== 3
+    }
+    "provide a day function returning the day of month corresponding to a given date (relative to UTC)" in {
+      day(today.setTimezone(utc).setDay(1).getTime) must_== 1
+    }
+    "provide a day function returning the day of month corresponding to a given date (relative to UTC)" in {
+      day(today.setTimezone(utc).setDay(28).getTime) must_== 28
     }
     "provide a month function returning the month corresponding to a given date" in {
       month(today.setTimezone(utc).setMonth(4).getTime) must_== 4
