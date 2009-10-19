@@ -108,7 +108,7 @@ object TimeRules {
   /** The default formatting handles null values as if they were the Epoch time */
   def defaultFormatFunc(formatter : DateTimeFormatter, in : DateTime) : String =
     in match {
-      case null => defaultFormatFunc(formatter, JodaTimeHelpers.epoch)
+      case null => defaultFormatFunc(formatter, TimeHelpers.epoch)
       case s => formatter.print(in)
     }
 
@@ -223,6 +223,14 @@ trait TimeHelpers { self: ControlHelpers =>
     /** @return a Date as the amount of time represented by the TimeSpan before now */
     def ago = TimeSpan(outer.millis - millis).date
 
+  /*
+      /** @return a DateTime representing our duration after the given DateTime */
+    def after (instant : DateTime) : DateTime = instant.plus(duration)
+
+    /** @return a DateTime representing our duration before the given DateTime */
+    def before (instant : DateTime) : DateTime = instant.minus(duration)
+*/
+
     /** @return true if this instant is after the other instant */
     def after (other : DateTime) = new DateTime(millis).isAfter(other)
 
@@ -244,6 +252,8 @@ trait TimeHelpers { self: ControlHelpers =>
 
     /** override the toString method to display a readable amount of time */
     override def toString = TimeSpan.format(millis)
+
+  def duration = new Duration(millis)
   }
 
   /**
@@ -352,11 +362,16 @@ trait TimeHelpers { self: ControlHelpers =>
    */
   def timeNow = new Date
 
+
+def jtNow = new DateTime()
+
   /**
    * @deprecated use today instead
    * @return the current Day as a Date object
    */
   def dayNow: Date = now.noTime
+
+def jtDayNow = new ExtendedDateTime(jtNow).noTime
 
   /** alias for new Date(millis) */
   def time(when: Long) = new Date(when)
@@ -374,11 +389,17 @@ trait TimeHelpers { self: ControlHelpers =>
   /** The UTC TimeZone */
   val utc = DateTimeZone.UTC.toTimeZone
 
+  /** The UTC TimeZone */
+  val jtUtc = DateTimeZone.UTC
+
   /** @return the number of days since epoch converted from millis */
   def millisToDays(millis: Long): Long = millis / (1000L * 60L * 60L * 24L)
 
   /** @return the number of days since epoch */
   def daysSinceEpoch: Long = millisToDays(millis)
+
+  /** @return a DateTime representing the start of Epoch time (UTC). */
+  def epoch = new DateTime(0L, DateTimeZone.UTC)
 
   /** @return the time taken to evaluate f in millis and the result */
   def calcTime[T](f: => T): (Long, T) = {
@@ -407,7 +428,7 @@ trait TimeHelpers { self: ControlHelpers =>
    * @return the formatted time for a given Date
    * @deprecated use TimeRules.formatTime instead
    */
-  def hourFormat(in: Date): String = TimeRules.defaultTimeFormat.print(new DateTime(in))
+  def hourFormat(in: Date): String = hourFormat.format(in)
 
   /** @return a standard format for the date yyyy/MM/dd
       @deprecated use TimeRules.dateFormat instead */
@@ -419,11 +440,11 @@ trait TimeHelpers { self: ControlHelpers =>
 
   /** @return today's date formatted as yyyy/MM/dd
       @deprecated use TimeRules.formatDate instead*/
-  def formattedDateNow = TimeRules.defaultDateFormat.print(new DateTime(now))
+  def formattedDateNow = TimeRules.defaultDateFormat.print(jtNow)
 
   /** @return now's time formatted as HH:mm zzz
       @deprecated use TimeRules.formatTimeWithZone instead */
-  def formattedTimeNow = TimeRules.defaultTimeWithZoneFormat.print(new DateTime(now))
+  def formattedTimeNow = TimeRules.defaultTimeWithZoneFormat.print(jtNow)
 
   /** @return a formatter for internet dates including: the day of week,
    *          the month, day of month, time and time zone
@@ -447,6 +468,9 @@ trait TimeHelpers { self: ControlHelpers =>
   /** @return a date formatted with the internet format
    *  @deprecated use TimeRules.formatInternetDate instead */
   def toInternetDate(in: Date): String = TimeRules.formatInternetDate(new DateTime(in))
+
+
+  def toInternetDate(in: DateTime): String = TimeRules.formatInternetDate(in)
 
   /** @return a date formatted with the internet format (from a number of millis)
    *  @deprecated use TimeRules.formatInternetDate instead */
@@ -474,9 +498,185 @@ trait TimeHelpers { self: ControlHelpers =>
       case e => Log.debug("Error parsing date "+in, e); Failure("Bad date: "+in, Full(e), Empty)
     }
   }
+
+  // TODO: This will go away when we refactor TimeSpan
+  // implicit def timeSpanToJodaSpan(in: TimeSpan) = new JodaSpan(new Duration(in.millis))
+
+  // This lets you use the DSL for JodaTime API constructs, like now plus (3 seconds)
+  implicit def jodaSpanToDuration(in : TimeSpan) : Duration = new Duration(in.millis)
+  implicit def durationToJodaSpan(in : Duration) : TimeSpan = new TimeSpan(in.getMillis)
+  implicit def periodToJodaSpan(in : Period) : TimeSpan = new TimeSpan(in.toStandardDuration.getMillis)
+
+/*
+  class JodaSpan (val duration : Duration) {
+    /** @return a new DateTime representing the current duration after Epoch time. */
+    def date : DateTime = epoch.plus(duration)
+
+    /** @return a DateTime as the amount of time represented by the JodaSpan after now */
+    def later : DateTime = now.plus(duration)
+
+    /** @return a DateTime as the amount of time represented by the TimeSpan before now */
+    def ago : DateTime = now.minus(duration)
+
+    /** @return a DateTime representing our duration after the given DateTime */
+    def after (instant : DateTime) : DateTime = instant.plus(duration)
+
+    /** @return a DateTime representing our duration before the given DateTime */
+    def before (instant : DateTime) : DateTime = instant.minus(duration)
+
+    /** @return a JodaSpan representing the addition of 2 TimeSpans */
+    def +(in: JodaSpan) = new JodaSpan(duration.plus(in.duration))
+
+    /** An alias for "+" */
+    def and (in : JodaSpan) = this + in
+
+    /** @return a JodaSpan representing the substraction of 2 TimeSpans */
+    def -(in: JodaSpan) = new JodaSpan(duration.minus(in.duration))
+
+    /** override the equals method so that TimeSpans can be compared to long, int and TimeSpan */
+    override def equals(cmp: Any) = {
+      cmp match {
+        case lo: Long => lo == this.duration.getMillis
+        case i: Int => i == this.duration.getMillis
+        case ts: TimeHelpers#TimeSpan => ts.millis == this.duration.getMillis
+        case ti: JodaSpan => ti.duration == this.duration
+        case du: Duration => du == this.duration
+        case _ => false
+      }
+    }
+
+    /** override the toString method to display a readable amount of time */
+    override def toString = TimeRules.formatPeriod(duration.toPeriod)
+  }
+
+  object JodaSpan {
+    def apply(in : Long) = new JodaSpan(new Duration(in))
+  }
+*/
+  /* ========================================================================
+   * This section defines some convenience methods to extend DateTime
+   * ======================================================================== */
+  implicit def dateTimeToExtendedDateTime(in : DateTime) = new ExtendedDateTime(in)
+
+  implicit def dateTimePropertyToInt(in : DateTime.Property) : Int = in.get
+
+  implicit def dateTimePropertyToString(in : DateTime.Property) : String = in.getAsString
+
+  /** This class enhances a DateTime with some more scala-ish syntax for things */
+  class ExtendedDateTime(date : DateTime) {
+    /** @return the date with time fields (h:m:s.ms) set to zero */
+    def midnight : DateTime = date.withFields(LocalTime.MIDNIGHT)
+
+    /** An alias for midnight */
+    def noTime : DateTime = midnight
+
+    /** @return an ExtendedDateTime representing the date in the UTC zone */
+    def utc = date.withZone(TimeHelpers.jtUtc)
+
+    /** Alias for dayOfMonth (to be relatively similar to TimeHelpers' usage) */
+    def day : Int = date.dayOfMonth
+
+    /** Alias for withDayOfMonth */
+    def withDay (day : Int) = date.withDayOfMonth(day)
+
+    /** @return the hour of the day, 0 based */
+    def hour = date.hourOfDay
+
+    /** Alias for DateTime.getMillis. Returns the number of millis since epoch, UTC. */
+    def millis = date.getMillis
+
+    /** Alias for DateTime.minuteOfHour */
+    def minute = date.minuteOfHour
+
+    /** @return the month corresponding to today (1 based, relative to local zone) */
+    def month = date.monthOfYear
+
+    /** Alias for withMonthOfYear */
+    def withMonth (month : Int) = date.withMonthOfYear(month)
+
+    /** @return the week of the year */
+    def week = date.weekOfWeekyear
+
+    /** Takes another DateTime and computes the duration between them. This method
+        does not validate that the arguments are ordered chronologically, so you
+        may get a negative value. */
+    def to (end : DateTime) : Duration = new Duration(date, end)
+
+    /** @return a new DateTime representing this DateTime plus the given time span */
+    def + (span : TimeSpan) : DateTime = date.plus(span.duration)
+
+    /** @return a new DateTime representing this DateTime plus the given time span */
+    def + (span : ReadableDuration) : DateTime = date.plus(span)
+
+    /** @return a new DateTime representing this DateTime plus the given time span */
+    def + (span : ReadablePeriod) : DateTime = date.plus(span)
+
+    /** @return a new DateTime representing this DateTime minus the given time span */
+    def - (span : TimeSpan) : DateTime = date.minus(span.duration)
+
+    /** @return a new DateTime representing this DateTime minus the given time span */
+    def - (span : ReadableDuration) : DateTime = date.minus(span)
+
+    /** @return a new DateTime representing this DateTime minus the given time span */
+    def - (span : ReadablePeriod) : DateTime = date.minus(span)
+  }
+
+  /* ========================================================================
+   * This section defines some convenience methods for points in time
+   * ======================================================================== */
+  /** @return the DateTime object for now */
+  // def now : DateTime = new DateTime
+
+  /** @return the DateTime object for today (the TimeZone is the local TimeZone).
+   *  Its time is 00:00:00.000 */
+  def jtToday : DateTime = jtNow.withFields(LocalTime.MIDNIGHT)
+
+  /** @return a DateTime representing the start of Epoch time (UTC). */
+  // def epoch = new DateTime(0, DateTimeZone.UTC)
+
+  /* ========================================================================
+   * This section defines some convenience methods for field extraction
+   * ======================================================================== */
+  /** alias for new Date(millis) */
+  def jtTime(when: Long) = new DateTime(when)
+
+  /** @return the month corresponding to today (0 based, relative to UTC)
+   *  @deprecated The ExtendedDateTime wrapper providers direct accessors on a DateTime object */
+  // Joda Time is 1 based on month, so we need to offset
+  def month(in: DateTime): Int = in.withZone(jtUtc).monthOfYear.get
+
+  /** @return the year corresponding to today (relative to UTC)
+      @deprecated The ExtendedDateTime wrapper providers direct accessors on a DateTime object*/
+  def year(in: DateTime): Int =  in.withZone(jtUtc).year.get
+
+  /** @return the day of month corresponding to the input date (1 based, relative to UTC)
+   *  @deprecated The ExtendedDateTime wrapper providers direct accessors on a DateTime object */
+  def day(in: DateTime): Int =  in.withZone(jtUtc).dayOfMonth.get
+
+  /** @return a Full(DateTime) or a failure if the input couldn't be
+   *  translated to date (or Empty if the input is null)*/
+  def toJTDate(in: Any): Box[DateTime] = {
+    try {
+      in match {
+        case null => Empty
+        case d: Date => Full(new DateTime(d))
+        case d: DateTime => Full(d)
+        case lng: Long => Full(new DateTime(lng))
+        case lng: Number => Full(new DateTime(lng.longValue))
+        case Nil | Empty | None | Failure(_, _, _) => Empty
+        case Full(v) => toJTDate(v)
+        case Some(v) => toJTDate(v)
+        case v :: vs => toJTDate(v)
+        case s : String => TimeRules.parseInternetDate(s) orElse TimeRules.parseDate(s)
+        case o => toJTDate(o.toString)
+      }
+    } catch {
+      case e => Log.debug("Error parsing date "+in, e); Failure("Bad date: "+in, Full(e), Empty)
+    }
+  }
 }
 
-
+/*
 object JodaTimeHelpers extends JodaTimeHelpers {
 
 }
@@ -688,3 +888,4 @@ trait JodaTimeHelpers {
     }
   }
 }
+*/
