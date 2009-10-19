@@ -515,7 +515,7 @@ trait MetaMegaProtoUser[ModelType <: MegaProtoUser[ModelType]] extends KeyedMeta
   def lostPassword = {
     bind("user", lostPasswordXhtml,
          "email" -> SHtml.text("", sendPasswordReset _),
-         "submit" -> <input type="Submit" value={S.??("send.it")} />)
+         "submit" -> <input type="submit" value={S.??("send.it")} />)
   }
 
   def passwordResetXhtml = {
