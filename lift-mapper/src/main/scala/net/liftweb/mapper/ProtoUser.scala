@@ -546,7 +546,7 @@ trait MetaMegaProtoUser[ModelType <: MegaProtoUser[ModelType]] extends KeyedMeta
            "pwd" -> SHtml.password_*("",(p: List[String]) =>
           user.password.setList(p)),
            "submit" -> SHtml.submit(S.??("set.password"), finishSet _))
-    case _ => S.error(S.??("pasword.link.invalid")); S.redirectTo(homePage)
+    case _ => S.error(S.??("password.link.invalid")); S.redirectTo(homePage)
   }
 
   def changePasswordXhtml = {
@@ -570,7 +570,7 @@ trait MetaMegaProtoUser[ModelType <: MegaProtoUser[ModelType]] extends KeyedMeta
       else {
         user.password.setFromAny(newPassword)
         user.validate match {
-          case Nil => user.save; S.notice(S.??("pasword.changed")); S.redirectTo(homePage)
+          case Nil => user.save; S.notice(S.??("password.changed")); S.redirectTo(homePage)
           case xs => S.error(xs)
         }
       }
