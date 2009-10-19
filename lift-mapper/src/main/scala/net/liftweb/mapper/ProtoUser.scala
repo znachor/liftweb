@@ -324,17 +324,17 @@ trait MetaMegaProtoUser[ModelType <: MegaProtoUser[ModelType]] extends KeyedMeta
   def signupMailBody(user: ModelType, validationLink: String) = {
     (<html>
         <head>
-          <title>Sign Up Confirmation</title>
+          <title>{S.??("sign.up.confirmation")}</title>
         </head>
         <body>
-          <p>Dear {user.firstName},
+          <p>{S.??("dear")} {user.firstName},
             <br/>
             <br/>
-            Click on this link to complete signup
+            {S.??("sign.up.validation.link")}
             <br/><a href={validationLink}>{validationLink}</a>
             <br/>
             <br/>
-            Thanks
+            {S.??("thank.you")}
           </p>
         </body>
      </html>)
