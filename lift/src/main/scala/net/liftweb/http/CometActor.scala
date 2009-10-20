@@ -135,12 +135,12 @@ trait StatefulComet extends CometActor {
   def render = state.render
 }
 
-object CurrentCometActor extends ThreadGlobal[Box[CometActor]] {
+object CurrentCometActor extends ThreadGlobal[Box[LiftCometActor]] {
   this.set(Empty)
 }
 
-case class AddAListener(who: Actor)
-case class RemoveAListener(who: Actor)
+case class AddAListener(who: SimpleActor[Any])
+case class RemoveAListener(who: SimpleActor[Any])
 
 /**
  * This trait manages a set of Actors in a publish/subscribe pattern. When you extend your Actor with
@@ -150,8 +150,8 @@ case class RemoveAListener(who: Actor)
  * the message that you want sent to all subscribers.
  */
 trait ListenerManager {
-  self: LiftActor =>
-  private var listeners: List[Actor] = Nil
+  self: SimpleActor[Any] =>
+  private var listeners: List[SimpleActor[Any]] = Nil
 
    protected def messageHandler: PartialFunction[Any, Unit] =
       highPriority orElse mediumPriority orElse
@@ -186,7 +186,7 @@ trait CometListener extends CometListenee
 
 trait CometListenee extends CometActor {
 
-  protected def registerWith: Actor
+  protected def registerWith: SimpleActor[Any]
 
   override protected def localSetup() {
     registerWith ! AddAListener(this)
@@ -199,13 +199,41 @@ trait CometListenee extends CometActor {
   }
 }
 
-trait LiftCometActor extends SimplestActor
+trait LiftCometActor extends TypedActor[Any, Any] with ForwardableActor[Any, Any] {
+  def uniqueId: String
+
+  private[http] def callInitCometActor(theSession: LiftSession,
+				       theType: Box[String],
+				       name: Box[String],
+				       defaultXml: NodeSeq,
+					 attributes: Map[String, String]) {
+    initCometActor(theSession, theType, name, defaultXml, attributes)
+  }
+
+  protected def initCometActor(theSession: LiftSession,
+                               theType: Box[String],
+                               name: Box[String],
+                               defaultXml: NodeSeq,
+                               attributes: Map[String, String]): Unit
+
+  def jsonCall: JsonCall
+
+  def theType: Box[String]
+  
+  def name: Box[String]
+
+  def hasOuter: Boolean
+
+  def buildSpan(time: Long, xml: NodeSeq): NodeSeq
+
+  def parentTag: Elem
+}
 
 /**
  * Takes care of the plumbing for building Comet-based Web Apps
  */
 @serializable
-trait CometActor extends LiftCometActor with LiftActor with BindHelpers {
+trait CometActor extends LiftActor with LiftCometActor with BindHelpers {
   val uniqueId = Helpers.nextFuncName
   private var spanId = uniqueId
   private var lastRenderTime = Helpers.nextNum
@@ -214,8 +242,8 @@ trait CometActor extends LiftCometActor with LiftActor with BindHelpers {
   private var wasLastFullRender = false
   @transient
   private var listeners: List[(ListenerId, AnswerRender => Unit)] = Nil
-  private var askingWho: Box[CometActor] = Empty
-  private var whosAsking: Box[CometActor] = Empty
+  private var askingWho: Box[LiftCometActor] = Empty
+  private var whosAsking: Box[LiftCometActor] = Empty
   private var answerWith: Box[Any => Any] = Empty
   private var deltas: List[Delta] = Nil
   private var jsonHandlerChain: PartialFunction[Any, JsCmd] = Map.empty
@@ -239,11 +267,11 @@ trait CometActor extends LiftCometActor with LiftActor with BindHelpers {
 
   def lifespan: Box[TimeSpan] = Empty
 
-  private[http] def initCometActor(theSession: LiftSession,
-                                   theType: Box[String],
-                                   name: Box[String],
-                                   defaultXml: NodeSeq,
-                                   attributes: Map[String, String]) {
+  protected def initCometActor(theSession: LiftSession,
+                               theType: Box[String],
+                               name: Box[String],
+                               defaultXml: NodeSeq,
+                               attributes: Map[String, String]) {
     lastRendering = RenderOut(Full(defaultXml),
                               Empty, Empty, Empty, false)
     this._theType = theType
@@ -566,8 +594,8 @@ trait CometActor extends LiftCometActor with LiftActor with BindHelpers {
   def bind(prefix: String, vals: BindParam *): NodeSeq = bind(prefix, _defaultXml, vals :_*)
   def bind(vals: BindParam *): NodeSeq = bind(_defaultPrefix, vals :_*)
 
-  protected def ask(who: CometActor, what: Any)(answerWith: Any => Unit) {
-    who.initCometActor(theSession, Full(who.uniqueId), name, defaultXml, attributes)
+  protected def ask(who: LiftCometActor, what: Any)(answerWith: Any => Unit) {
+    who.callInitCometActor(theSession, Full(who.uniqueId), name, defaultXml, attributes)
     theSession.addCometActor(who)
     // who.link(this)
     who ! PerformSetupComet
@@ -698,10 +726,10 @@ private [http] class XmlOrJsCmd(val id: String,
 
 case class PartialUpdateMsg(cmd: () => JsCmd) extends CometMessage
 case object AskRender extends CometMessage
-case class AnswerRender(response: XmlOrJsCmd, who: CometActor, when: Long, displayAll: Boolean) extends CometMessage
+case class AnswerRender(response: XmlOrJsCmd, who: LiftCometActor, when: Long, displayAll: Boolean) extends CometMessage
 case object PerformSetupComet extends CometMessage
 case object ShutdownIfPastLifespan extends CometMessage
-case class AskQuestion(what: Any, who: CometActor, listeners: List[(ListenerId, AnswerRender => Unit)]) extends CometMessage
+case class AskQuestion(what: Any, who: LiftCometActor, listeners: List[(ListenerId, AnswerRender => Unit)]) extends CometMessage
 case class AnswerQuestion(what: Any, listeners: List[(ListenerId, AnswerRender => Unit)]) extends CometMessage
 case class Listen(when: Long, uniqueId: ListenerId, action: AnswerRender => Unit) extends CometMessage
 case class Unlisten(uniqueId: ListenerId) extends CometMessage

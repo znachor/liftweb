@@ -18,7 +18,7 @@ package net.liftweb.actor
 
 import base._
 
-class LAFuture[T] extends Future[T] {
+class LAFuture[T] /*extends Future[T]*/ {
   @volatile private[this] var item: T = _
   @volatile private[this] var satisfied = false
 

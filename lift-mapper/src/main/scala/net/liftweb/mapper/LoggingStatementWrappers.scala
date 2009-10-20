@@ -13,7 +13,7 @@ import _root_.java.net.URL
 import _root_.java.sql.{Array => SqlArray, _}
 import _root_.java.util.Calendar
 
-import _root_.net.liftweb.util.{Helpers}
+import _root_.net.liftweb.util._
 import _root_.net.liftweb.base.{Box}
 
 trait DBLogEntry {

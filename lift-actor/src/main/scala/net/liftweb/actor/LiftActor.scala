@@ -182,15 +182,28 @@ trait SpecializedLiftActor[T] extends SimpleActor[T]  {
 
 private final case class MsgWithResp(msg: Any, future: LAFuture[Any])
 
-trait LiftActor extends SpecializedLiftActor[Any] with Actor {
+trait LiftActor extends SpecializedLiftActor[Any] 
+with GenericActor[Any] 
+with ForwardableActor[Any, Any] {
   @volatile
   private[this] var responseFuture: LAFuture[Any] = null
 
 
 
-  protected final def forwardMessageTo(msg: Any, forwardTo: LiftActor) {
-    if (null ne responseFuture) forwardTo ! MsgWithResp(msg, responseFuture)
-    else forwardTo ! msg
+  protected final def forwardMessageTo(msg: Any, forwardTo: TypedActor[Any, Any]) {
+    if (null ne responseFuture) {
+      forwardTo match {
+	case la: LiftActor => la ! MsgWithResp(msg, responseFuture)
+	case other =>
+	  reply(other !? msg)
+      }
+    } else forwardTo ! msg
+  }
+
+  def !<(msg: Any): LAFuture[Any] = {
+    val future = new LAFuture[Any]
+    this ! MsgWithResp(msg, future)
+    future
   }
 
   def !?(msg: Any): Any = {
@@ -199,16 +212,23 @@ trait LiftActor extends SpecializedLiftActor[Any] with Actor {
     future.get
   }
 
-  def !?(timeout: Long, msg: Any): Option[Any] = {
+  /**
+   * Compatible with Scala Actors' !? method
+   */
+  def !?(timeout: Long, message: Any): Box[Any] = 
+  this !! (message, timeout)
+
+
+  def !!(msg: Any, timeout: Long): Box[Any] = {
     val future = new LAFuture[Any]
     this ! MsgWithResp(msg, future)
     future.get(timeout)
   }
 
-  def !!(msg: Any): LAFuture[Any] = {
+  def !!(msg: Any): Box[Any] = {
     val future = new LAFuture[Any]
     this ! MsgWithResp(msg, future)
-    future
+    Full(future.get)
   }
 
   override protected def testTranslate[R](f: Any => R)(v: Any) = v match {

@@ -347,12 +347,12 @@ trait MetaProtoStateMachine [MyType <: ProtoStateMachine[MyType, StateType],
       case object Ping
     }
 
-  val timedEventManager: Actor = {
+  val timedEventManager: LiftActor = {
     val ret = new TimedEventManager(getSingleton)
     ret
   }
 
-  val timedEventHandler: Actor = {
+  val timedEventHandler: LiftActor = {
     val ret = new TimedEventHandler(getSingleton)
     ret
   }

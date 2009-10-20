@@ -36,7 +36,7 @@ object Comet extends DispatchSnippet {
     }
   }
 
-  private def buildSpan(timeb: Box[Long], xml: NodeSeq, cometActor: CometActor, spanId: String): NodeSeq =
+  private def buildSpan(timeb: Box[Long], xml: NodeSeq, cometActor: LiftCometActor, spanId: String): NodeSeq =
   Elem(cometActor.parentTag.prefix, cometActor.parentTag.label, cometActor.parentTag.attributes,
        cometActor.parentTag.scope, Group(xml)) %
   (new UnprefixedAttribute("id", Text(spanId), Null)) %
@@ -50,11 +50,11 @@ object Comet extends DispatchSnippet {
        try {
          ctx.findComet(theType, name, kids, S.attrsFlattenToMap).map(c =>
 
-            (c !? (26600, AskRender)) match {
-              case Some(AnswerRender(response, _, when, _)) if c.hasOuter =>
+            (c.!?(26600L, AskRender)) match {
+              case Full(AnswerRender(response, _, when, _)) if c.hasOuter =>
                 buildSpan(Empty, c.buildSpan(when, response.inSpan) ++ response.outSpan, c, c.uniqueId+"_outer")
 
-              case Some(AnswerRender(response, _, when, _)) =>
+              case Full(AnswerRender(response, _, when, _)) =>
                 c.buildSpan(when, response.inSpan)
 
               case _ => 

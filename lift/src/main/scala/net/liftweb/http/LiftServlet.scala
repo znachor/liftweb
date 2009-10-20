@@ -316,7 +316,7 @@ class LiftServlet {
    * An actor that manages continuations from container (Jetty style)
    */
   class ContinuationActor(request: Req, session: LiftSession,
-                          actors: List[(CometActor, Long)],
+                          actors: List[(LiftCometActor, Long)],
                           onBreakout: List[AnswerRender] => Unit) extends LiftActor {
     private var answers: List[AnswerRender] = Nil
     private var done = false
@@ -348,7 +348,7 @@ class LiftServlet {
 
   private lazy val cometTimeout: Long = (LiftRules.cometRequestTimeout openOr 120) * 1000L
 
-  private def setupContinuation(request: Req, session: LiftSession, actors: List[(CometActor, Long)]): Nothing = {
+  private def setupContinuation(request: Req, session: LiftSession, actors: List[(LiftCometActor, Long)]): Nothing = {
     val cont = new ContinuationActor(request, session, actors,
                                      answers => LiftRules.resumeRequest(
         (request, S.init(request, session)
@@ -367,7 +367,7 @@ class LiftServlet {
   }
 
   private def handleComet(requestState: Req, sessionActor: LiftSession): Box[LiftResponse] = {
-    val actors: List[(CometActor, Long)] =
+    val actors: List[(LiftCometActor, Long)] =
     requestState.params.toList.flatMap{case (name, when) =>
         sessionActor.getAsyncComponent(name).toList.map(c => (c, toLong(when)))}
 
@@ -381,7 +381,7 @@ class LiftServlet {
     }
   }
 
-  private def convertAnswersToCometResponse(session: LiftSession, ret: Seq[AnswerRender], actors: List[(CometActor, Long)]): LiftResponse = {
+  private def convertAnswersToCometResponse(session: LiftSession, ret: Seq[AnswerRender], actors: List[(LiftCometActor, Long)]): LiftResponse = {
     val ret2: List[AnswerRender] = ret.toList
     val jsUpdateTime = ret2.map(ar => "lift_toWatch['"+ar.who.uniqueId+"'] = '"+ar.when+"';").mkString("\n")
     val jsUpdateStuff = ret2.map{
@@ -402,7 +402,7 @@ class LiftServlet {
     (new JsCommands(JsCmds.Run(jsUpdateTime) :: jsUpdateStuff)).toResponse
   }
 
-  private def handleNonContinuationComet(request: Req, session: LiftSession, actors: List[(CometActor, Long)]): Box[LiftResponse] = {
+  private def handleNonContinuationComet(request: Req, session: LiftSession, actors: List[(LiftCometActor, Long)]): Box[LiftResponse] = {
     val f = new LAFuture[List[AnswerRender]]
     val cont = new ContinuationActor(request, session, actors,
                                      answers => f.satisfy(answers))

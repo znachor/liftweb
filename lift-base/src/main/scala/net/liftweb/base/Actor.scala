@@ -1,4 +1,4 @@
-  /*
+/*
  * Copyright 2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,51 +24,39 @@ trait SimplestActor extends SimpleActor[Any]
 
 trait TypedActor[T, R] extends SimpleActor[T] {
   def !?(param: T): R
-  def !?(param: T, timeout: Long): Option[R]
-  def !!(param: T): Future[R]
-}
 
-trait Future[T]
+  /**
+   * Compatible with Scala Actors' !? method
+   */
+  def !?(timeout: Long, message: Any): Box[R]
+
+
+  /**
+   * Asynchronous message send. Send-and-receive eventually. Waits on a Future for the reply message.
+   * If recevied within the Actor default timeout interval then it returns Some(result) and if a timeout
+   * has occured None.
+   */
+  def !!(message: T): Box[R]
+
+  /**
+   * Asynchronous message send. Send-and-receive eventually. Waits on a Future for the reply message.
+   * If recevied within timout interval that is specified then it returns Some(result) and if a timeout
+   * has occured None.
+   */
+  def !!(message: T, timeout: Long): Box[R]
+
+}
 
 /**
  * Generic Actor interface. Can send and receive any type of message.
  */
-trait GenericActor extends SimpleActor[Any] {
-  /**
-   * Asynchronous message send. Fire-and-forget.
-   */
+trait GenericActor[R] extends TypedActor[Any, R]  
 
-  def !(message: Any): Unit
+trait ForwardableActor[From, To] {
+  self: TypedActor[From, To] =>
 
-  /**
-   * Emulates a synchronous call. Waits indefinitely on a Future for the reply.
-   */
-  def !?[R](message: Any): R
+  protected def forwardMessageTo(msg: From,
+                                 forwardTo: TypedActor[From, To]): Unit
 
-  /**
-   * Asynchronous message send. Send-and-receive eventually. Waits on a Future for the reply message. 
-   * If recevied within the Actor default timeout interval then it returns Some(result) and if a timeout 
-   * has occured None. 
-   */
-  def !![R](message: Any): Option[R]
-
-  /**
-   * Asynchronous message send. Send-and-receive eventually. Waits on a Future for the reply message. 
-   * If recevied within timout interval that is specified then it returns Some(result) and if a timeout 
-   * has occured None. 
-   */
-  def !![R](message: Any, timeout: Long): Option[R]
-
-  /**
-   * Starts the Actor.
-   */
-  def start: Unit
-
-  /**
-   * Stops the Actor.
-   */
-  def stop: Unit
+  protected def reply(msg: To): Unit
 }
-
-trait Future[T]
-

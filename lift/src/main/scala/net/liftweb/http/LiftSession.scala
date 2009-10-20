@@ -102,15 +102,7 @@ object SessionMaster extends LiftActor {
    * every 10 seconds with the current list of sessions:
    * SessionWatcherInfo
    */
-  @deprecated
-  @volatile var sessionWatchers: List[Actor] = Nil
-
-  /**
-   * Put an Actor in this list and the Actor will receive a message
-   * every 10 seconds with the current list of sessions:
-   * SessionWatcherInfo
-   */
-  @volatile var liftSessionWatchers: List[LiftActor] = Nil
+  @volatile var sessionWatchers: List[LiftActor] = Nil
 
   /**
    * Returns a LiftSession or Empty if not found
@@ -174,7 +166,6 @@ object SessionMaster extends LiftActor {
       }
       if (!Props.inGAE) {
         sessionWatchers.foreach(_ ! SessionWatcherInfo(ses))
-        liftSessionWatchers.foreach(_ ! SessionWatcherInfo(ses))
         doPing()
       }
   }
@@ -249,9 +240,9 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
 
   private[http] var notices: Seq[(NoticeType.Value, NodeSeq, Box[String])] = Nil
 
-  private var asyncComponents = new HashMap[(Box[String], Box[String]), CometActor]()
+  private var asyncComponents = new HashMap[(Box[String], Box[String]), LiftCometActor]()
 
-  private var asyncById = new HashMap[String, CometActor]()
+  private var asyncById = new HashMap[String, LiftCometActor]()
 
   private var myVariables: Map[String, Any] = Map.empty
 
@@ -343,8 +334,8 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
         // if it's going to a CometActor, batch up the commands
         case Full(id) if asyncById.contains(id) =>
           asyncById.get(id).toList.
-          flatMap(a => a !? (5000, ActionMessageSet(f.map(i => buildFunc(i)), state)) match {
-              case Some(li: List[_]) => li
+          flatMap(a => a.!?(5000L, ActionMessageSet(f.map(i => buildFunc(i)), state)) match {
+              case Full(li: List[_]) => li
               case li: List[_] => li
               case other => Nil
             })
@@ -478,195 +469,6 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
 
   def contextPath = (LiftRules.calcContextPath(this) or S.curRequestContextPath) openOr _contextPath
 
-<<<<<<< HEAD:lift/src/main/scala/net/liftweb/http/LiftSession.scala
-=======
-  /**
-   * Manages the merge phase of the rendering pipeline
-   */
-
-  private def merge(xhtml: NodeSeq, req: Req): Node = {
-    val hasHtmlHeadAndBody: Boolean = xhtml.find {
-      case e: Elem if e.label == "html" =>
-        e.child.find {
-          case e: Elem if e.label == "head" => true
-          case _ => false
-        }.isDefined &&
-        e.child.find {
-          case e: Elem if e.label == "body" => true
-          case _ => false
-        }.isDefined
-      case _ => false
-    }.isDefined
-
-    if (!hasHtmlHeadAndBody) {
-      req.fixHtml(xhtml).find {
-        case e: Elem => true
-        case _ => false
-      } getOrElse Text("")
-    } else {
-      var htmlTag = <html xmlns="http://www.w3.org/1999/xhtml" xmlns:lift='http://liftweb.net'/>
-      var headTag = <head/>
-      var bodyTag = <body/>
-      val headChildren = new ListBuffer[Node]
-      val bodyChildren = new ListBuffer[Node]
-      val addlHead = new ListBuffer[Node]
-      val addlTail = new ListBuffer[Node]
-      val cometTimes = new ListBuffer[CometVersionPair]
-      val rewrite = URLRewriter.rewriteFunc
-      val fixHref = Req.fixHref
-
-      val contextPath: String = this.contextPath
-
-      def fixAttrs(original: MetaData, toFix : String, attrs : MetaData, fixURL: Boolean) : MetaData = attrs match {
-        case Null => Null
-        case p: PrefixedAttribute if p.key == "when" && p.pre == "lift" =>
-          val when = p.value.text
-          original.find(a => !a.isPrefixed && a.key == "id").map {
-            id =>
-            cometTimes += CVP(id.value.text, when.toLong)
-          }
-          fixAttrs(original, toFix, p.next, fixURL)
-        case u: UnprefixedAttribute if u.key == toFix =>
-          new UnprefixedAttribute(toFix, fixHref(contextPath, attrs.value, fixURL, rewrite),fixAttrs(original, toFix, attrs.next, fixURL))
-        case _ => attrs.copy(fixAttrs(original, toFix, attrs.next, fixURL))
-
-      }
-
-      def _fixHtml(in: NodeSeq, _inHtml: Boolean, _inHead: Boolean, _justHead: Boolean, _inBody: Boolean, _justBody: Boolean, _bodyHead: Boolean, _bodyTail: Boolean): NodeSeq = {
-        in.map{
-          v =>
-          var inHtml = _inHtml
-          var inHead = _inHead
-          var justHead = false
-          var justBody = false
-          var inBody = _inBody
-          var bodyHead = false
-          var bodyTail = false
-
-          v match {
-            case e: Elem if e.label == "html" && !inHtml => htmlTag = e; inHtml = true
-            case e: Elem if e.label == "head" && inHtml && !inBody => headTag = e; inHead = true; justHead = true
-            case e: Elem if e.label == "head" && inHtml && inBody => bodyHead = true
-            case e: Elem if e.label == "tail" && inHtml && inBody => bodyTail = true
-            case e: Elem if e.label == "body" && inHtml => bodyTag = e; inBody = true; justBody = true
-
-            case _ =>
-          }
-
-          val ret: Node = v match {
-            case Group(nodes) => Group(_fixHtml( nodes, inHtml, inHead, justHead, inBody, justBody, bodyHead, bodyTail))
-            case e: Elem if e.label == "form" => Elem(v.prefix, v.label, fixAttrs(v.attributes, "action", v.attributes, true), v.scope, _fixHtml(v.child, inHtml, inHead, justHead, inBody, justBody, bodyHead, bodyTail) : _* )
-            case e: Elem if e.label == "script" => Elem(v.prefix, v.label, fixAttrs(v.attributes, "src", v.attributes, false), v.scope, _fixHtml(v.child, inHtml, inHead, justHead, inBody, justBody, bodyHead, bodyTail) : _* )
-            case e: Elem if e.label == "a" => Elem(v.prefix, v.label, fixAttrs(v.attributes, "href", v.attributes, true), v.scope, _fixHtml( v.child, inHtml, inHead, justHead, inBody, justBody, bodyHead, bodyTail) : _* )
-            case e: Elem if e.label == "link" => Elem(v.prefix, v.label, fixAttrs(v.attributes, "href", v.attributes, false), v.scope, _fixHtml( v.child, inHtml, inHead, justHead, inBody, justBody, bodyHead, bodyTail) : _* )
-            case e: Elem => Elem(v.prefix, v.label, fixAttrs(v.attributes, "src", v.attributes, true), v.scope, _fixHtml( v.child, inHtml, inHead, justHead, inBody, justBody, bodyHead, bodyTail) : _*)
-            case _ => v
-          }
-          if (_justHead) headChildren += ret
-          else if (_justBody && !bodyHead && !bodyTail) bodyChildren += ret
-          else if (_bodyHead) addlHead += ret
-          else if (_bodyTail) addlTail += ret
-
-          if (bodyHead || bodyTail) Text("")
-          else ret
-        }
-      }
-      _fixHtml(xhtml, false, false, false, false, false, false,false)
-
-      val htmlKids = new ListBuffer[Node]
-
-      val nl = Text("\n")
-
-      for {
-        node <- HeadHelper.removeHtmlDuplicates(addlHead.toList)
-      } {
-        headChildren += node
-        headChildren += nl
-      }
-
-      /**
-       * Appends ajax stript to body
-       */
-
-      if (LiftRules.autoIncludeAjax(this)) {
-        headChildren += <script src={S.encodeURL(contextPath+"/"+
-                                                 LiftRules.ajaxPath +
-                                                 "/" + LiftRules.ajaxScriptName())}
-          type="text/javascript"/>
-        headChildren += nl
-      }
-  
-      val cometList = cometTimes.toList
-
-      /**
-       * Appends comet stript reference to head
-       */
-      if (!cometList.isEmpty &&  LiftRules.autoIncludeComet(this)) {
-        headChildren += <script src={S.encodeURL(contextPath+"/"+
-                                                 LiftRules.cometPath +
-                                                 "/" + urlEncode(this.uniqueId) +
-                                                 "/" + LiftRules.cometScriptName())}
-          type="text/javascript"/>
-        headChildren += nl
-      }
-
-      for {
-        node <- HeadHelper.removeHtmlDuplicates(addlTail.toList)
-      } bodyChildren += node
-
-      bodyChildren += nl
-
-      if (!cometList.isEmpty &&  LiftRules.autoIncludeComet(this)) {
-        bodyChildren +=  JsCmds.Script(LiftRules.renderCometPageContents(this, cometList))
-        bodyChildren += nl
-      }
-
-      if (LiftRules.enableLiftGC) {
-        import js._
-        import JsCmds._
-        import JE._
-
-        bodyChildren += JsCmds.Script(OnLoad(JsRaw("liftAjax.lift_successRegisterGC()")) &
-                                      JsCrVar("lift_page", RenderVersion.get))
-      }
-
-      htmlKids += nl
-      htmlKids += Elem(headTag.prefix, headTag.label, headTag.attributes, headTag.scope, headChildren.toList :_*)
-      htmlKids += nl
-      htmlKids += Elem(bodyTag.prefix, bodyTag.label, bodyTag.attributes, bodyTag.scope, bodyChildren.toList :_*)
-      htmlKids += nl
-
-      val tmpRet = Elem(htmlTag.prefix, htmlTag.label, htmlTag.attributes, htmlTag.scope, htmlKids.toList :_*)
-
-      val ret: Node = if (Props.devMode) {
-        LiftRules.xhtmlValidator.toList.flatMap(_(tmpRet)) match {
-          case Nil => tmpRet
-          case xs =>
-            import _root_.scala.xml.transform._
-
-            val errors: NodeSeq = xs.map(e =>
-              <div style="border: red solid 2px">
-                XHTML Validation error: {e.msg} at line {e.line + 1} and column {e.col}
-              </div>)
-
-            val rule = new RewriteRule {
-              override def transform(n: Node) = n match {
-                case e: Elem if e.label == "body" =>
-                  Elem(e.prefix, e.label, e.attributes, e.scope,e.child ++ errors :_*)
-
-                case x => super.transform(x)
-              }
-            }
-            (new RuleTransformer(rule)).transform(tmpRet)(0)
-        }
-
-      } else tmpRet
-
-      ret
-    }
-  }
-
->>>>>>> More work to rid Lift of Scala Actors:lift/src/main/scala/net/liftweb/http/LiftSession.scala
   private[http] def processRequest(request: Req): Box[LiftResponse] = {
     ieMode.is // make sure this is primed
     S.oldNotices(notices)
@@ -1073,13 +875,8 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
     if (ret.isEmpty) ret else
     attrs.get("form").map(ft => (
         (<form action={S.uri} method={ft.text.trim.toLowerCase}>{ret}</form> %
-<<<<<<< HEAD:lift/src/main/scala/net/liftweb/http/LiftSession.scala
          checkMultiPart(attrs)) % LiftRules.formAttrs.vend.foldLeft[MetaData](Null)((base, name) => checkAttr(name, attrs, base))
       )) getOrElse ret
-=======
-         checkMultiPart(attrs)) %
-        checkAttr("class", attrs)) % checkAttr("id",attrs) % checkAttr("target",attrs) ) getOrElse ret
->>>>>>> More work to rid Lift of Scala Actors:lift/src/main/scala/net/liftweb/http/LiftSession.scala
 
   }
 
@@ -1239,7 +1036,7 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
   /**
    * Finds all Comet actors by type
    */
-  def findComet(theType: String): List[CometActor] = synchronized {
+  def findComet(theType: String): List[LiftCometActor] = synchronized {
     asyncComponents.elements.filter{case ((Full(name), _), _) => name == theType case _ => false}.toList.map{case (_, value) => value}
   }
 
@@ -1250,7 +1047,7 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
     cometSetup((Full(theType) -> name, msg) :: cometSetup.is)
   }
 
-  private[liftweb] def findComet(theType: Box[String], name: Box[String], defaultXml: NodeSeq, attributes: Map[String, String]): Box[CometActor] =
+  private[liftweb] def findComet(theType: Box[String], name: Box[String], defaultXml: NodeSeq, attributes: Map[String, String]): Box[LiftCometActor] =
   {
     val what = (theType -> name)
     val ret = synchronized {
@@ -1283,19 +1080,19 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
   /**
    * Finds a Comet actor by ID
    */
-  def getAsyncComponent(id: String): Box[CometActor] = synchronized(asyncById.get(id))
+  def getAsyncComponent(id: String): Box[LiftCometActor] = synchronized(asyncById.get(id))
 
   /**
    * Adds a new COmet actor to this session
    */
-  private[http] def addCometActor(act: CometActor): Unit = synchronized {
+  private[http] def addCometActor(act: LiftCometActor): Unit = synchronized {
     asyncById(act.uniqueId) = act
   }
 
   /**
    * Remove a Comet actor
    */
-  private [http] def removeCometActor(act: CometActor): Unit = synchronized {
+  private [http] def removeCometActor(act: LiftCometActor): Unit = synchronized {
     asyncById -= act.uniqueId
     messageCallback -= act.jsonCall.funcId
     asyncComponents -= (act.theType -> act.name)
@@ -1309,25 +1106,25 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
     }
   }
 
-  private def findCometByType(contType: String, name: Box[String], defaultXml: NodeSeq, attributes: Map[String, String]): Box[CometActor] = {
-    findType[CometActor](contType, LiftRules.buildPackage("comet") ::: ("lift.app.comet" :: Nil)).flatMap{
+  private def findCometByType(contType: String, name: Box[String], defaultXml: NodeSeq, attributes: Map[String, String]): Box[LiftCometActor] = {
+    findType[LiftCometActor](contType, LiftRules.buildPackage("comet") ::: ("lift.app.comet" :: Nil)).flatMap{
       cls =>
       tryo((e: Throwable) => e match {case e: _root_.java.lang.NoSuchMethodException => ()
           case e => Log.info("Comet find by type Failed to instantiate "+cls.getName, e)}) {
         val constr = cls.getConstructor()
-        val ret = constr.newInstance().asInstanceOf[CometActor]
-        ret.initCometActor(this, Full(contType), name, defaultXml, attributes)
+        val ret = constr.newInstance().asInstanceOf[LiftCometActor]
+        ret.callInitCometActor(this, Full(contType), name, defaultXml, attributes)
 
         // ret.link(this)
         ret ! PerformSetupComet
-        ret.asInstanceOf[CometActor]
+        ret.asInstanceOf[LiftCometActor]
       }  or tryo((e: Throwable) => Log.info("Comet find by type Failed to instantiate "+cls.getName, e)) {
         val constr = cls.getConstructor(this.getClass , classOf[Box[String]], classOf[NodeSeq], classOf[Map[String, String]])
-        val ret = constr.newInstance(this, name, defaultXml, attributes).asInstanceOf[CometActor];
+        val ret = constr.newInstance(this, name, defaultXml, attributes).asInstanceOf[LiftCometActor];
         //  ret.start
         // ret.link(this)
         ret ! PerformSetupComet
-        ret.asInstanceOf[CometActor]
+        ret.asInstanceOf[LiftCometActor]
       }
     }
   }
