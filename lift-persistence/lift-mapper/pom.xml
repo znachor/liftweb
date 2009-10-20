@@ -16,14 +16,14 @@
     </dependency>
     <dependency>
       <!-- need net.liftweb.util net.liftweb.http-->
-      <groupId>${project.groupId}</groupId>
+      <groupId>${pom.groupId}</groupId>
       <artifactId>lift-webkit</artifactId>
-      <version>${project.version}</version>
+      <version>${pom.version}</version>
     </dependency>
     <dependency>
-      <groupId>${project.groupId}</groupId>
+      <groupId>${pom.groupId}</groupId>
       <artifactId>lift-widgets</artifactId>
-      <version>${project.version}</version>
+      <version>${pom.version}</version>
     </dependency>
     <dependency>
       <groupId>mysql</groupId>
