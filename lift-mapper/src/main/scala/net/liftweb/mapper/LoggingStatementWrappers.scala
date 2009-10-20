@@ -486,14 +486,14 @@ object DBLog {
             paramMap += args(0).asInstanceOf[Int] -> "NULL"
         }
 
-        case "setObject" if args.length == 2 => {
+        case "setObject" if (args.length >= 2 && args.length < 4) => {
             chain(method, args)
             paramMap += args(0).asInstanceOf[Int] -> args(1)
         }
 
-        case "setObject" if args.length >= 3 => {
+        case "setObject" if args.length == 4 => {
             chain(method, args)
-            paramMap += args(0).asInstanceOf[Int] -> "%s (scale %d)".format(args(1), args(2))
+            paramMap += args(0).asInstanceOf[Int] -> "%s (scale %d)".format(args(1), args(3))
         }
 
         case "setString" => {

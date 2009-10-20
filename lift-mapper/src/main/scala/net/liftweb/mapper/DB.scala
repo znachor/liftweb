@@ -370,13 +370,12 @@ object DB {
   }
 
   private def runPreparedStatement[T](st : PreparedStatement)(f : (PreparedStatement) => T) : T = {
-    Helpers.calcTime{
-      queryTimeout.foreach(to => st.setQueryTimeout(to))
-      try {
-        (st, f(st))
-      } finally {
-        st.close
-      }} match {case (time, (query, res)) => runLogger(query, time); res}
+    queryTimeout.foreach(to => st.setQueryTimeout(to))
+    try {
+      f(st)
+    } finally {
+      st.close
+    }
   }
 
   /**
