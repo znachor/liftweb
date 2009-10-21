@@ -66,7 +66,7 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
    * @param reloadFunc A function that returns a sequence of children from storage.
    * @param foreign A function that gets the MappedForeignKey on the child that refers to this parent
    */
-  class MappedOneToManyBase[O <: AnyRef{def save(): Boolean}](val reloadFunc: ()=>Seq[O],
+  class MappedOneToManyBase[O <: Mapper[_]](val reloadFunc: ()=>Seq[O],
                                       val foreign: O => MappedForeignKey[K,_,T]) extends scala.collection.mutable.Buffer[O] {
     private var inited = false
     private var _delegate: List[O] = _
@@ -198,7 +198,7 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
   /**
    * Adds behavior to delete orphaned fields before save.
    */
-  trait Owned[O<: {def save(): Boolean; def delete_! : Boolean}] extends MappedOneToManyBase[O] {
+  trait Owned[O<:Mapper[_]] extends MappedOneToManyBase[O] {
     var removed: List[O] = Nil
     override def unown(e: O) = {
       removed = e :: removed
@@ -222,7 +222,7 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
    * Trait that indicates that the children represented
    * by this field should be deleted when the parent is deleted.
    */
-  trait Cascade[O<: {def save(): Boolean; def delete_! : Boolean}] extends MappedOneToManyBase[O] {
+  trait Cascade[O<:Mapper[_]] extends MappedOneToManyBase[O] {
     def delete_! = {
       delegate.forall { e =>
           if(foreign(e).is ==

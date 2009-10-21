@@ -2,8 +2,8 @@ package net.liftweb.mapper.view
 
 import net.liftweb.http.{SHtml, S, DispatchSnippet}
 import S.?
-import net.liftweb.util.BindPlus._
-import net.liftweb.util.{Box, Full, Empty, Helpers, BindHelpers}
+import net.liftweb.util.{Box, Full, Empty, Helpers, BindPlus}
+import BindPlus._
 import Helpers._
 
 import net.liftweb.mapper.{Mapper,
@@ -12,7 +12,6 @@ import net.liftweb.mapper.{Mapper,
                            MappedField}
 
 import Util._
-
 
 import scala.xml.{NodeSeq, Text}
 
