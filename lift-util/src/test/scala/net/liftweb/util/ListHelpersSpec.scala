@@ -1,7 +1,7 @@
 package net.liftweb.util
 import _root_.org.specs._
 import _root_.org.specs.runner._
-import base._
+import common._
 
 object ListHelpersSpec extends Specification with ListHelpers {
   "The ListHelpers first_? function" should {

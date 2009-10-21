@@ -14,7 +14,7 @@ package net.liftweb.util
 */
 
 import Helpers._
-import base._
+import common._
 
 /**
  * A simple fixed-point currency representation

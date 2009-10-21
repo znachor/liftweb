@@ -15,8 +15,8 @@ package net.liftweb.util
 
 import _root_.java.util.concurrent._
 import Helpers.TimeSpan
-import _root_.net.liftweb.base._
-import base._
+import _root_.net.liftweb.common._
+import common._
 
 /**
  * The ActorPing object schedules an actor to be ping-ed with a given message at specific intervals.

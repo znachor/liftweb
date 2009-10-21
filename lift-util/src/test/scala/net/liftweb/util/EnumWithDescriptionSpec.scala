@@ -19,7 +19,7 @@ package net.liftweb.util
 import _root_.java.util.GregorianCalendar
 import _root_.org.specs.runner._
 import _root_.org.specs._
-import base._
+import common._
 
 object Title2 extends EnumWithDescription {
     val mr = Value("MR", "Mr")

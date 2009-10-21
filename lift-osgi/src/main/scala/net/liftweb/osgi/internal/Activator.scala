@@ -21,7 +21,7 @@ import _root_.java.util.concurrent.atomic.AtomicReference
 import _root_.javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 import _root_.net.liftweb.http.LiftFilter
 import _root_.net.liftweb.util.{ClassHelpers, Log, Slf4jLogBoot}
-import _root_.net.liftweb.base.{Box}
+import _root_.net.liftweb.common.{Box}
 import _root_.org.ops4j.pax.swissbox.extender._
 import _root_.org.ops4j.pax.web.service.WebContainer
 import _root_.org.osgi.framework.{Bundle, BundleActivator, BundleContext}

@@ -16,7 +16,7 @@
 
 package net.liftweb.actor
 
-import base._
+import common._
 
 class LAFuture[T] /*extends Future[T]*/ {
   @volatile private[this] var item: T = _

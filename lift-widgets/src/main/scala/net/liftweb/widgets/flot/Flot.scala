@@ -27,7 +27,7 @@ import JsCmds._
 import JE._
 import JqJE._
 import _root_.net.liftweb.util._
-import _root_.net.liftweb.base._
+import _root_.net.liftweb.common._
 import Helpers._
 
 /**

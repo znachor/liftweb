@@ -16,7 +16,7 @@
 
 package net.liftweb.http
 
-import _root_.net.liftweb.base._
+import _root_.net.liftweb.common._
 import util._
 import _root_.scala.reflect.Manifest
 

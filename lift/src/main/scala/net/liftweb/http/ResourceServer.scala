@@ -15,7 +15,7 @@
  */
 package net.liftweb.http
 
-import _root_.net.liftweb.base.{Box, Full, Empty}
+import _root_.net.liftweb.common.{Box, Full, Empty}
 import _root_.net.liftweb.util._
 import Helpers._
 import _root_.java.net.{URLConnection, JarURLConnection}

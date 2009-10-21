@@ -24,7 +24,7 @@ import _root_.net.liftweb.http.{S}
 import S._
 import _root_.net.liftweb.http.js._
 import _root_.net.liftweb.util.{FieldError}
-import _root_.net.liftweb.base.{Box, Empty, Full, Failure}
+import _root_.net.liftweb.common.{Box, Empty, Full, Failure}
 
 trait BaseMapper {
   type MapperType <: Mapper[MapperType]

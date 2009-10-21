@@ -1,4 +1,4 @@
-package net.liftweb.base
+package net.liftweb.common
 
 /*
  * Copyright 2007-2009 WorldWide Conferencing, LLC

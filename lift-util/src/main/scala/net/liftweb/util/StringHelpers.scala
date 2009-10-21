@@ -2,7 +2,7 @@ package net.liftweb.util
 import _root_.java.util.regex._
 import _root_.java.lang.Character._
 import _root_.scala.xml.NodeSeq
-import base._
+import common._
 
 /*
  * Copyright 2006-2009 WorldWide Conferencing, LLC

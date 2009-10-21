@@ -15,7 +15,7 @@ package net.liftweb.record
 
 import net.liftweb._
 import util._
-import base._
+import common._
 import scala.xml._
 import net.liftweb.http.js.{JsExp, JE}
 import net.liftweb.http.{SHtml}

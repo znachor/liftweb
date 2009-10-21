@@ -16,7 +16,7 @@
 package net.liftweb.util
 
 import _root_.org.slf4j.{Logger, LoggerFactory}
-import base._
+import common._
 
 /**
  * Object use to configure lift to use slf4j for as internal logging.

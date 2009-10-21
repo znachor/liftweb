@@ -2,7 +2,7 @@ package net.liftweb.util
 
 import scala.xml.{NodeSeq, PrefixedAttribute, MetaData}
 import Helpers.{bind, BindParam, FuncBindParam, TheBindParam}
-import base._
+import common._
 
 object BindPlus {
   

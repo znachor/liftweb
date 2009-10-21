@@ -18,7 +18,7 @@ package net.liftweb.mapper
 
 import _root_.net.liftweb._
 import _root_.net.liftweb.http.provider._
-import base._
+import common._
 import util._
 import http._
 import Helpers._

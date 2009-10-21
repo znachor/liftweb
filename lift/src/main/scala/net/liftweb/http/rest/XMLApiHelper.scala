@@ -16,7 +16,7 @@
 
 package net.liftweb.http.rest
 
-import _root_.net.liftweb.base._
+import _root_.net.liftweb.common._
 import _root_.net.liftweb._
 import util._
 import Helpers._

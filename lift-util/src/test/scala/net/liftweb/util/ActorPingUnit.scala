@@ -20,7 +20,7 @@ import _root_.org.specs.runner._
 import _root_.org.specs.util.WaitFor
 import _root_.java.util.concurrent._
 import Helpers._
-import base._
+import common._
 
 class ActorPingUnitTest extends JUnit4(ActorPingUnit)
 object ActorPingUnit extends Specification with PingedService with WaitFor {

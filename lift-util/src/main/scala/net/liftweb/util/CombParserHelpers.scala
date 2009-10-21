@@ -15,7 +15,7 @@ package net.liftweb.util;
 import Helpers._
 import _root_.scala.util.parsing.combinator.{Parsers, ImplicitConversions}
 import _root_.scala.util.parsing.input.Reader
-import base._
+import common._
 
 /**
  * The CombParserHelpers trait provides parser combinators helpers

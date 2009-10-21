@@ -14,7 +14,7 @@
  * and limitations under the License.
  */
 
-package net.liftweb.base
+package net.liftweb.common
 
 trait SimpleActor[T] {
   def !(param: T): Unit

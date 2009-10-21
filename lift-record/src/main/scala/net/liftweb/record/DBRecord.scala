@@ -14,7 +14,7 @@
 package net.liftweb.record
 
 import net.liftweb._
-import base._
+import common._
 import util._
 import scala.xml._
 import net.liftweb.mapper.{ConnectionIdentifier, Safe, DefaultConnectionIdentifier, DB, KeyObfuscator}

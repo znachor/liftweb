@@ -26,7 +26,7 @@ import _root_.java.util.Date
 import _root_.net.liftweb.http.{S}
 import _root_.net.liftweb.http.S._
 import _root_.net.liftweb.util._
-import _root_.net.liftweb.base._
+import _root_.net.liftweb.common._
 
 object MappedPassword {
   val blankPw = "*******"

@@ -19,7 +19,7 @@ package net.liftweb.mapper
 import _root_.java.sql.{ResultSet, Types}
 import _root_.java.lang.reflect.Method
 import _root_.net.liftweb.util.{FatLazy}
-import _root_.net.liftweb.base.{Box, Full, Empty, Failure}
+import _root_.net.liftweb.common.{Box, Full, Empty, Failure}
 import _root_.java.util.Date
 import _root_.java.util.regex._
 import _root_.scala.xml.{NodeSeq, Text, Elem}

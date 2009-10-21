@@ -13,7 +13,7 @@
 
 package net.liftweb.util
 
-import base._
+import common._
 
 /**
  * Holds the implicit conversions from/to MonadicCondition

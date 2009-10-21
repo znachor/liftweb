@@ -20,7 +20,7 @@ import sitemap._
 import Loc._
 import http._
 import util._
-import base._
+import common._
 import Helpers._
 
 import _root_.scala.xml._

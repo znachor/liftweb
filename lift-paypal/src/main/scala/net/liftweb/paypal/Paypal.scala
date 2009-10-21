@@ -16,7 +16,7 @@ package net.liftweb.paypal
 import _root_.net.liftweb.util.Helpers
 import Helpers._
 import _root_.net.liftweb.util._
-import _root_.net.liftweb.base._
+import _root_.net.liftweb.common._
 import _root_.net.liftweb.actor._
 import _root_.net.liftweb.http._
 import _root_.org.apache.commons.httpclient._

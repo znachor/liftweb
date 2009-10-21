@@ -18,7 +18,7 @@ import _root_.javax.mail._
 import _root_.javax.mail.internet._
 import _root_.javax.naming.{Context, InitialContext}
 import _root_.java.util.Properties
-import base._
+import common._
 import actor._
 
 /**

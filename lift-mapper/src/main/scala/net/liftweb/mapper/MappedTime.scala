@@ -22,7 +22,7 @@ import _root_.java.lang.reflect.Method
 
 import _root_.net.liftweb._
 import util._
-import base._
+import common._
 import Helpers._
 import http._
 import S._

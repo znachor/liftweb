@@ -10,7 +10,7 @@ import _root_.net.liftweb.mapper._
 import _root_.net.liftweb.util.Helpers._
 import _root_.scala.collection.mutable.{Queue, HashMap}
 import _root_.net.liftweb.util._
-import _root_.net.liftweb.base._
+import _root_.net.liftweb.common._
 import _root_.net.liftweb.actor._
 
 /**

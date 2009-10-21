@@ -7,7 +7,7 @@ import _root_.net.liftweb.util._
 import Map._
 import Helpers._
 import ActorPing._
-import base._
+import common._
 
 /**
  * Companion module that has the role of monitoring garbage collected references and remove the orphaned

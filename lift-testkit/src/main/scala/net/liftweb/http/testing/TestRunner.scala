@@ -2,7 +2,7 @@ package net.liftweb.http.testing;
 
 
 import _root_.net.liftweb.util.Helpers._
-import _root_.net.liftweb.base.{ Box, Full, Empty, Failure}
+import _root_.net.liftweb.common.{ Box, Full, Empty, Failure}
 import _root_.net.liftweb.util.{Helpers}
 import _root_.scala.collection.mutable.ListBuffer
 

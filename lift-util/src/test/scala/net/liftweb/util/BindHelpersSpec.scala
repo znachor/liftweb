@@ -2,7 +2,7 @@ package net.liftweb.util
 import _root_.org.specs._
 import _root_.org.specs.runner._
 import _root_.scala.xml._
-import base._
+import common._
 
 object BindHelpersSpec extends Specification with BindHelpers {
   "the mixinAttributes function" should {

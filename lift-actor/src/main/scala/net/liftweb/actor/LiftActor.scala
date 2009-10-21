@@ -15,7 +15,7 @@
  */
 
 package net.liftweb.actor
-import base._
+import common._
 
 trait ILAExecute {
   def execute(f: () => Unit): Unit

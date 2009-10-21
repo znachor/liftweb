@@ -4,7 +4,7 @@ import net.liftweb.mapper.{Mapper,
                            MappedField
 }
 
-import net.liftweb.base.{Full, Box}
+import net.liftweb.common.{Full, Box}
 import net.liftweb.util.{Helpers, BindHelpers}
 
 import Helpers._

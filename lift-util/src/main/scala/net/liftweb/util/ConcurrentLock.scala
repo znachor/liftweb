@@ -13,7 +13,7 @@
 
 package net.liftweb.util
 
-import base._
+import common._
 
 import _root_.java.util.concurrent.locks._
 

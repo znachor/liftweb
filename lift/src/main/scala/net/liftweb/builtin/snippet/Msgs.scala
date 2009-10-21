@@ -20,7 +20,7 @@ import _root_.scala.xml._
 import _root_.net.liftweb.util.Helpers._
 import _root_.net.liftweb.util.Log
 import S._
-import _root_.net.liftweb.base.{Box, Full, Empty}
+import _root_.net.liftweb.common.{Box, Full, Empty}
 
 
 /**

@@ -14,7 +14,7 @@ import _root_.java.sql.{Array => SqlArray, _}
 import _root_.java.util.Calendar
 
 import _root_.net.liftweb.util._
-import _root_.net.liftweb.base.{Box}
+import _root_.net.liftweb.common.{Box}
 
 trait DBLogEntry {
   def statement : String

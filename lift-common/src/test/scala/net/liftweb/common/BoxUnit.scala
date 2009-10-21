@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package net.liftweb.base
+package net.liftweb.common
 
 import _root_.org.specs._
-import _root_.net.liftweb.base.Box._
+import _root_.net.liftweb.common.Box._
 import _root_.org.specs.runner._
 import _root_.org.specs.Sugar._
 import _root_.org.specs.ScalaCheck

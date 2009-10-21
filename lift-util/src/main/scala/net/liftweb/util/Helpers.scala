@@ -1,6 +1,6 @@
 package net.liftweb.util
 import _root_.scala.xml._
-import base._
+import common._
 
 /*
  * Copyright 2006-2009 WorldWide Conferencing, LLC

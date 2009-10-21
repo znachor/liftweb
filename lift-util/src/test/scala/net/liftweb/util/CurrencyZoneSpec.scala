@@ -18,7 +18,7 @@ package net.liftweb.util
 
 import _root_.org.specs.runner._
 import _root_.org.specs._
-import base._
+import common._
 
 class CurrencyZoneSpecTest extends JUnit4(CurrencyZoneSpec)
 object CurrencyZoneSpec extends Specification {

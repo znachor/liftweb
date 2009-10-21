@@ -13,7 +13,7 @@ package net.liftweb.util
  * limitations under the License.
  */
 
-import base._
+import common._
 
 
 /**

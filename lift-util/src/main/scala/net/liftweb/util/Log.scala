@@ -17,7 +17,7 @@ import _root_.java.util.Properties
 import Helpers._
 import _root_.org.apache.log4j._
 import _root_.org.apache.log4j.xml._
-import base._
+import common._
 
 /**
  * A thin wrapper around log4j.

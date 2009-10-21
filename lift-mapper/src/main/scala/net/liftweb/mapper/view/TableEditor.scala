@@ -4,7 +4,7 @@ import net.liftweb.http.{SHtml, S, DispatchSnippet}
 import S.?
 import net.liftweb.util.BindPlus._
 import net.liftweb.util.{Helpers, BindHelpers}
-import net.liftweb.base.{Box, Full, Empty}
+import net.liftweb.common.{Box, Full, Empty}
 import Helpers._
 
 import net.liftweb.mapper.{Mapper,
