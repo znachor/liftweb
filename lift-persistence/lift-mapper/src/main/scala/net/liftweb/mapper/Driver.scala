@@ -125,6 +125,10 @@ abstract class DriverType(val name : String) {
   def primaryKeySetup(tableName : String, columnName : String) : List[String] = {
       List("ALTER TABLE "+tableName+" ADD CONSTRAINT "+tableName+"_PK PRIMARY KEY("+columnName+")")
   }
+
+  /** This defines the syntax for adding a column in an alter. This is
+   *  used because some DBs (Oracle, for one) use slightly different syntax. */
+  def alterAddColumn = "ADD COLUMN"
 }
 
 object DriverType {
@@ -369,6 +373,9 @@ object OracleDriver extends DriverType("Oracle") {
         stmt.executeUpdate
         handler(Left(stmt.getGeneratedKeys))
     }
+
+  // Oracle doesn't use "COLUMN" syntax when adding a column to a table
+  override def alterAddColumn = "ADD"
 }
 
 object MaxDbDriver extends DriverType("MaxDB") {

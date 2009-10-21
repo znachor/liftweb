@@ -205,7 +205,7 @@ object Schemifier {
       (field.dbColumnNames(field.name) -- cols).foreach {
         colName =>
         cmds += maybeWrite(performWrite, logFunc, connection) {
-          () => "ALTER TABLE "+table.dbTableName+" ADD COLUMN "+field.fieldCreatorString(connection.driverType, colName)
+          () => "ALTER TABLE "+table.dbTableName+" "+connection.driverType.alterAddColumn+" "+field.fieldCreatorString(connection.driverType, colName)
         }
         if ((!connection.driverType.pkDefinedByIndexColumn_?) && field.dbPrimaryKey_?) {
           // Add primary key only when it has not been created by the index field itself.
