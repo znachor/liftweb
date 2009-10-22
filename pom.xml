@@ -193,8 +193,10 @@ Lift is a scala web framework.
     <module>lift-core</module>
     <module>lift-jta</module>
     <module>lift-jpa</module>
+    <!--
     <module>lift-archetypes</module>
     <module>examples</module>
+    -->
   </modules>
   <pluginRepositories>
     <pluginRepository>
