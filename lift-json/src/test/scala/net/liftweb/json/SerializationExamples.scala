@@ -4,9 +4,11 @@ import java.util.Date
 import _root_.org.specs.Specification
 import _root_.org.specs.runner.{Runner, JUnit}
 
-class SerializationExamplesTest extends Runner(SerializationExamples) with JUnit
+class SerializationExamplesTest extends Runner(SerializationExamples, ShortTypeHintExamples, FullTypeHintExamples) with JUnit
 object SerializationExamples extends Specification {
   import Serialization.{read, write => swrite}
+
+  implicit val formats = Serialization.formats(NoTypeHints)
 
   val project = Project("test", new Date, Some(Language("Scala", 2.75)), List(
     Team("QA", List(Employee("John Doe", 5), Employee("Mike", 3))),
@@ -17,16 +19,18 @@ object SerializationExamples extends Specification {
     read[Project](ser) mustEqual project
   }
 
-  "Null example" in {
-    val ser = swrite(Nullable(null))
-    read[Nullable](ser) mustEqual Nullable(null)
-  }
-  
   case class Project(name: String, startDate: Date, lang: Option[Language], teams: List[Team])
   case class Language(name: String, version: Double)
   case class Team(role: String, members: List[Employee])
   case class Employee(name: String, experience: Int)
 
+  "Null example" in {
+    val ser = swrite(Nullable(null))
+    read[Nullable](ser) mustEqual Nullable(null)
+  }
+
+  case class Nullable(name: String)
+  
   "Lotto serialization example" in {
     import LottoExample.{Lotto, lotto}
 
@@ -39,6 +43,44 @@ object SerializationExamples extends Specification {
     val ser = swrite(primitives)
     read[Primitives](ser) mustEqual primitives
   }
-
-  case class Nullable(name: String)
 }
+
+object ShortTypeHintExamples extends TypeHintExamples {
+  implicit val formats = Serialization.formats(ShortTypeHints(classOf[Fish] :: classOf[Dog] :: Nil))
+}
+
+object FullTypeHintExamples extends TypeHintExamples {
+  implicit val formats = Serialization.formats(FullTypeHints(classOf[Animal] :: Nil))
+}
+
+trait TypeHintExamples extends Specification {
+  import Serialization.{read, write => swrite}
+
+  implicit val formats: Formats
+
+  "Polymorphic List serialization example" in {
+    val animals = Animals(Dog("pluto") :: Fish(1.2) :: Dog("devil") :: Nil, Dog("pluto"))
+    val ser = swrite(animals)
+    read[Animals](ser) mustEqual animals
+  }
+
+  "Parameterized type serialization example" in {
+    val objs = Objs(Obj(Fish(1.2)) :: Obj(Dog("pluto")) :: Nil)
+    val ser = swrite(objs)
+    read[Objs](ser) mustEqual objs
+  }
+
+  "Tuple serialization example" in {
+    val t: (Animal, Animal) = (Fish(1.5), Dog("pluto"))
+    val ser = swrite(t)
+    read[(Animal, Animal)](ser) mustEqual t
+  }
+}
+
+case class Animals(animals: List[Animal], pet: Animal)
+trait Animal
+case class Dog(name: String) extends Animal
+case class Fish(weight: Double) extends Animal
+
+case class Objs(objects: List[Obj[_]])
+case class Obj[A](a: A)

@@ -39,46 +39,67 @@ object Extraction {
       case e: Exception => throw new MappingException("unknown error", e)
     }
 
-  def decompose(a: Any)(implicit formats: Formats): JValue = a.asInstanceOf[AnyRef] match {
-    case null => JNull
-    case x if primitive_?(x.getClass) => primitive2jvalue(x)(formats)
-    case x: List[_] => JArray(x map decompose)
-    case x: Option[_] => decompose(x getOrElse JNothing)
-    case x => 
-      x.getClass.getDeclaredFields.filter(!static_?(_)).toList.map { f => 
-        f.setAccessible(true)
-        JField(unmangleName(f), decompose(f get x))
-      } match {
-        case Nil => JNothing
-        case fields => JObject(fields)
-      }
+  def decompose(a: Any)(implicit formats: Formats): JValue = {
+    def mkObject(clazz: Class[_], fields: List[JField]) = formats.typeHints.containsHint_?(clazz) match {
+      case true => JObject(JField("jsonClass", JString(formats.typeHints.hintFor(clazz))) :: fields)
+      case false => JObject(fields)
+    }
+ 
+    a.asInstanceOf[AnyRef] match {
+      case null => JNull
+      case x if primitive_?(x.getClass) => primitive2jvalue(x)(formats)
+      case x: List[_] => JArray(x map decompose)
+      case x: Option[_] => decompose(x getOrElse JNothing)
+      case x => 
+        x.getClass.getDeclaredFields.filter(!static_?(_)).toList.map { f => 
+          f.setAccessible(true)
+          JField(unmangleName(f), decompose(f get x))
+        } match {
+          case Nil => JNothing
+          case fields => mkObject(x.getClass, fields)
+        }
+    }
   }
 
   private def extract0[A](json: JValue, formats: Formats, mf: Manifest[A]): A = {
     val mapping = mappingOf(mf.erasure)
 
-    def newInstance(constructor: JConstructor[_], args: List[Any]) = try {
-      constructor.newInstance(args.map(_.asInstanceOf[AnyRef]).toArray: _*)
-    } catch {
-      case e @ (_:IllegalArgumentException | _:InstantiationException) => 
-        fail("Parsed JSON values do not match with class constructor\nargs=" + args.mkString(",") + "\narg types=" + 
-             args.map(arg => if (arg != null) arg.asInstanceOf[AnyRef].getClass.getName else "null").mkString(",")  + 
-             "\nconstructor=" + constructor)
+    def newInstance(targetType: Class[_], args: => List[Any], json: JValue) = {
+      def instantiate(constructor: JConstructor[_], args: List[Any]) = 
+        try {
+          constructor.newInstance(args.map(_.asInstanceOf[AnyRef]).toArray: _*)
+        } catch {
+          case e @ (_:IllegalArgumentException | _:InstantiationException) => 
+            fail("Parsed JSON values do not match with class constructor\nargs=" + args.mkString(",") + 
+                 "\narg types=" + args.map(arg => if (arg != null) arg.asInstanceOf[AnyRef].getClass.getName else "null").mkString(",")  + 
+                 "\nconstructor=" + constructor)
+        }
+
+      def instantiateUsingTypeHint(typeHint: String, fields: List[JField]) = {
+        val concreteClass = formats.typeHints.classFor(typeHint) getOrElse fail("Do not know how to deserialize '" + typeHint + "'")
+        build(JObject(fields), mappingOf(concreteClass), Nil)(0)
+      }
+
+      json match {
+        case JObject(JField("jsonClass", JString(t)) :: xs) => instantiateUsingTypeHint(t, xs)
+        case JField(_, JObject(JField("jsonClass", JString(t)) :: xs)) => instantiateUsingTypeHint(t, xs)
+        case _ => instantiate(primaryConstructorOf(targetType), args)
+      }
     }
 
     def newPrimitive(elementType: Class[_], elem: JValue) = convert(elem, elementType, formats)
 
     def build(root: JValue, mapping: Mapping, argStack: List[Any]): List[Any] = mapping match {
       case Value(path, targetType) => convert(fieldValue(root, path), targetType, formats) :: argStack
-      case Constructor(path, classname, args) => 
+      case Constructor(path, targetType, args) => 
         val newRoot = path match {
           case Some(p) => root \ p
           case None => root
         }
-        newInstance(classname, args.flatMap(build(newRoot, _, argStack))) :: Nil
-      case ListConstructor(path, classname, args) => 
+        newInstance(targetType, args.flatMap(build(newRoot, _, argStack)), newRoot) :: Nil
+      case ListConstructor(path, targetType, args) => 
         val arr = fieldValue(root, path).asInstanceOf[JArray]
-        arr.arr.map(elem => newInstance(classname, args.flatMap(build(elem, _, argStack)))) :: argStack
+        arr.arr.map(elem => newInstance(targetType, args.flatMap(build(elem, _, argStack)), elem)) :: argStack
       case ListOfPrimitives(path, elementType) =>
         val arr = fieldValue(root, path).asInstanceOf[JArray]
         arr.arr.map(elem => newPrimitive(elementType, elem)) :: argStack
@@ -116,11 +137,5 @@ object Extraction {
     case JNothing => fail("Did not find value which can be converted into " + targetType.getName)
     case _ => value.values
   }
-
-  private def fail(msg: String) = throw new MappingException(msg)
-}
-
-class MappingException(msg: String, cause: Exception) extends Exception(msg, cause) {
-  def this(msg: String) = this(msg, null)
 }
 
