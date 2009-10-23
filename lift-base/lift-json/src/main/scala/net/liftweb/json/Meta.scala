@@ -40,8 +40,8 @@ private[json] object Meta {
    */
   sealed abstract class Mapping
   case class Value(path: String, targetType: Class[_]) extends Mapping
-  case class Constructor(path: Option[String], constructor: JConstructor[_], args: List[Mapping]) extends Mapping
-  case class ListConstructor(path: String, constructor: JConstructor[_], args: List[Mapping]) extends Mapping
+  case class Constructor(path: Option[String], targetType: Class[_], args: List[Mapping]) extends Mapping
+  case class ListConstructor(path: String, targetType: Class[_], args: List[Mapping]) extends Mapping
   case class ListOfPrimitives(path: String, elementType: Class[_]) extends Mapping
   case class Optional(mapping: Mapping) extends Mapping
 
@@ -52,9 +52,9 @@ private[json] object Meta {
     import Reflection._
 
     def makeMapping(path: Option[String], clazz: Class[_], isList: Boolean): Mapping = isList match {
-      case false => Constructor(path, clazz.getDeclaredConstructors()(0), constructorArgs(clazz))
+      case false => Constructor(path, clazz, constructorArgs(clazz))
       case true if primitive_?(clazz) => ListOfPrimitives(path.get, clazz)
-      case true => ListConstructor(path.get, clazz.getDeclaredConstructors()(0), constructorArgs(clazz))
+      case true => ListConstructor(path.get, clazz, constructorArgs(clazz))
     }
 
     def constructorArgs(clazz: Class[_]) = clazz.getDeclaredFields.filter(!static_?(_)).map { f =>
@@ -70,13 +70,16 @@ private[json] object Meta {
           Optional(fieldMapping(name, types._1, types._2))
         } else Optional(fieldMapping(name, typeParameter(genericType), null))
       else makeMapping(Some(name), fieldType, false)
+
     mappings.memoize(clazz, makeMapping(None, _, false))
   }
 
   private[json] def unmangleName(f: Field) = 
     unmangledNames.memoize(f.getName, operators.foldLeft(_)((n, o) => n.replace(o._1, o._2)))
 
-  val operators = Map("$eq" -> "=", "$greater" -> ">", "$less" -> "<", "$plus" -> "+", "$minus" -> "-",
+  private[json] def fail(msg: String) = throw new MappingException(msg)
+
+  private val operators = Map("$eq" -> "=", "$greater" -> ">", "$less" -> "<", "$plus" -> "+", "$minus" -> "-",
                       "$times" -> "*", "$div" -> "/", "$bang" -> "!", "$at" -> "@", "$hash" -> "#",
                       "$percent" -> "%", "$up" -> "^", "$amp" -> "&", "$tilde" -> "~", "$qmark" -> "?",
                       "$bar" -> "|", "$bslash" -> "\\")
@@ -103,9 +106,18 @@ private[json] object Meta {
                                    classOf[java.lang.Byte], classOf[java.lang.Boolean], 
                                    classOf[java.lang.Short], classOf[Date])
 
+    def primaryConstructorOf[A](cl: Class[A]): JConstructor[A] = cl.getDeclaredConstructors.toList match {
+      case Nil => fail("Can't find primary constructor for class " + cl)
+      case x :: xs => x
+    }
+
     def typeParameter(t: Type): Class[_] = {
       val ptype = t.asInstanceOf[ParameterizedType]
-      ptype.getActualTypeArguments()(0).asInstanceOf[Class[_]]
+      ptype.getActualTypeArguments()(0) match {
+        case c: Class[_] => c
+        case p: ParameterizedType => p.getRawType.asInstanceOf[Class[_]]
+        case x => fail("do not know how to get type parameter from " + x)
+      }
     }
 
     def containerTypes(t: Type): (Class[_], Type) = {
@@ -141,4 +153,8 @@ private[json] object Meta {
       case _ => error("not a primitive " + a.asInstanceOf[AnyRef].getClass)
     }
   }
+}
+
+class MappingException(msg: String, cause: Exception) extends Exception(msg, cause) {
+  def this(msg: String) = this(msg, null)
 }
