@@ -549,7 +549,7 @@
         <artifactId>maven-changes-plugin</artifactId>
         <configuration>
           <issueLinkTemplatePerSystem>
-            <github>%URL%/#issue/%ISSUE%</github>
+            <github>%URL%/%ISSUE%/find</github>
           </issueLinkTemplatePerSystem>
         </configuration>
         <reportSets>
