@@ -1,0 +1,119 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>net.liftweb</groupId>
+    <artifactId>lift-modules</artifactId>
+    <version>1.1-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>lift-jta</artifactId>
+  <name>Lift JTA</name>
+  <description>Monadic Java Transaction API (JTA) implementation for Lift</description>
+
+  <url>http://liftweb.net</url>
+
+  <organization>
+    <name>Scalable Solutions AB</name>
+    <url>http://scalablesolutions.se</url>
+  </organization>
+
+  <!--licenses>
+    <license>
+      <name>the Apache License, ASL Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses-->
+
+  <developers>
+    <developer>
+      <id>jboner</id>
+      <name>Jonas Bon&#233;r</name>
+      <timezone>+1</timezone>
+      <email>jonas AT jonasboner DOT com</email>
+      <roles>
+        <role>hacker</role>
+      </roles>
+    </developer>
+  </developers>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-library</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>lift-util</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+
+	<!-- COMPILE/RUNTIME -->
+    <dependency>
+      <groupId>org.scala-libs</groupId>
+      <artifactId>scalajpa</artifactId>
+      <version>1.1</version>
+    </dependency>
+    <dependency>
+      <groupId>com.atomikos</groupId>
+      <artifactId>transactions</artifactId>
+      <version>3.2.3</version>
+    </dependency>
+    <dependency>
+      <groupId>com.atomikos</groupId>
+      <artifactId>transactions-jta</artifactId>
+      <version>3.2.3</version>
+    </dependency>
+    <dependency>
+      <groupId>com.atomikos</groupId>
+      <artifactId>transactions-api</artifactId>
+      <version>3.2.3</version>
+    </dependency>
+    <dependency>
+      <groupId>com.atomikos</groupId>
+      <artifactId>atomikos-util</artifactId>
+      <version>3.2.3</version>
+    </dependency>
+    <dependency>
+     <groupId>org.apache.geronimo.specs</groupId>
+      <artifactId>geronimo-jta_1.1_spec</artifactId>
+      <version>1.1.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.hibernate</groupId>
+      <artifactId>hibernate-entitymanager</artifactId>
+      <version>3.2.1.ga</version>
+      <exclusions>
+	<exclusion>
+	  <groupId>javax.transaction</groupId>
+	  <artifactId>jta</artifactId>
+	</exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>javax.persistence</groupId>
+      <artifactId>persistence-api</artifactId>
+      <version>1.0</version>
+    </dependency>
+
+    <!-- TESTING --> 
+    <dependency>
+      <groupId>org.scala-tools.testing</groupId>
+      <artifactId>scalatest</artifactId>
+      <version>0.9.5</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.5</version>
+      <scope>test</scope>
+    </dependency>
+    <!--dependency>
+      <groupId>com.jteigen.scalatest</groupId>
+      <artifactId>junit4runner</artifactId>
+      <version>1.0</version>
+      <scope>test</scope>
+    </dependency-->    
+  </dependencies>
+</project>
