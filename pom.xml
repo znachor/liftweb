@@ -53,6 +53,7 @@
          http://maven.apache.org/guides/introduction/introduction-to-the-pom.html#Available_Variables -->
     <!--<maven.build.timestamp.format/>-->
 
+    <!--<scala.version>[2.7.5,2.7.6),(2.7.6,2.7.7]</scala.version>-->
     <scala.version>2.7.5</scala.version>
     <slf4j.version>[1.5.6,)</slf4j.version>
   </properties>
@@ -71,10 +72,10 @@
   <inceptionYear>2006</inceptionYear>
   <licenses>
     <license>
-      <name>The Apache Software License, Version 2.0</name>
+      <name>Apache License, Version 2.0</name>
       <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
       <distribution>repo</distribution>
-      <comments>Standard Apache Software License applicable by default</comments>
+      <comments>Lift open source software is licensed under an Apache 2.0 license.</comments>
     </license>
   </licenses>
   <organization>
@@ -180,7 +181,7 @@
         <role>Advanced Localization</role>
       </roles>
     </developer>
-   <developer>
+    <developer>
       <id>dchenbecker</id>
       <name>Derek Chen-Becker</name>
       <email>java [at] chen-becker.org</email>
@@ -226,26 +227,31 @@
   </ciManagement>
   <mailingLists>
     <mailingList>
-      <name>User and Developer Discussion Group</name>
+      <name>User and Developer Discussion List</name>
       <archive>http://groups.google.com/group/liftweb</archive>
       <post>liftweb@googlegroups.com</post>
       <subscribe>liftweb+subscribe@googlegroups.com</subscribe>
       <unsubscribe>liftweb+unsubscribe@googlegroups.com</unsubscribe>
     </mailingList>
-    <!--
     <mailingList>
-      <name>Committer Group</name>
+      <name>Committer Discussion List</name>
       <archive>http://groups.google.com/group/lift-committers</archive>
-      <post>lift-committers@googlegroups.com</post>
-      <subscribe>lift-committers+subscribe@googlegroups.com</subscribe>
-      <unsubscribe>lift-committers+unsubscribe@googlegroups.com</unsubscribe>
+      <!-- <post>lift-committers@googlegroups.com</post> -->
+      <!-- <subscribe>lift-committers+subscribe@googlegroups.com</subscribe> -->
+      <!-- <unsubscribe>lift-committers+unsubscribe@googlegroups.com</unsubscribe> -->
     </mailingList>
-    -->
+    <mailingList>
+      <name>Announcement List</name>
+      <archive>http://groups.google.com/group/lift-announce</archive>
+      <!-- <post>lift-announce@googlegroups.com</post> -->
+      <subscribe>lift-announce+subscribe@googlegroups.com</subscribe>
+      <unsubscribe>lift-announce+unsubscribe@googlegroups.com</unsubscribe>
+    </mailingList>
   </mailingLists>
   <scm>
     <connection>scm:git:git://github.com/dpp/liftweb.git</connection>
     <developerConnection>scm:git:git@github.com:dpp/liftweb.git</developerConnection>
-    <url>http://github.com/dpp/liftweb</url>
+    <url>http://github.com/dpp/liftweb/tree/master</url>
   </scm>
   <repositories>
     <repository>
@@ -294,7 +300,6 @@
       <dependency>
         <groupId>org.scala-lang</groupId>
         <artifactId>scala-library</artifactId>
-        <!--<version>[2.7.5,2.7.6),(2.7.6,2.7.7]</version>-->
         <version>${scala.version}</version>
       </dependency>
       <dependency>
@@ -378,6 +383,7 @@
       <extension>
         <groupId>org.apache.maven.wagon</groupId>
         <artifactId>wagon-webdav</artifactId>
+        <version>1.0-beta-2</version>
       </extension>
     </extensions>
     <pluginManagement>
@@ -414,7 +420,9 @@
           </executions>
         </plugin>
         <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-jar-plugin</artifactId>
+          <version>2.2</version>
           <configuration>
             <archive>
               <manifest>
@@ -446,13 +454,17 @@
           <!--<executions></executions>-->
         </plugin>
         <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-idea-plugin</artifactId>
+          <version>2.2</version>
           <configuration>
             <downloadSources>true</downloadSources>
           </configuration>
         </plugin>
         <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-eclipse-plugin</artifactId>
+          <version>2.7</version>
           <configuration>
             <downloadSources>true</downloadSources>
             <additionalProjectnatures>
@@ -475,13 +487,36 @@
     ~ Reporting Settings
   -->
   <reporting>
+    <excludeDefaults>true</excludeDefaults>
     <plugins>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-project-info-reports-plugin</artifactId>
+        <version>2.1.2</version>
+        <reportSets>
+          <reportSet>
+            <reports>
+              <report>cim</report>
+              <report>dependencies</report>
+              <report>dependency-convergence</report>
+              <!--<report>dependency-management</report>-->
+              <report>index</report>
+              <report>issue-tracking</report>
+              <report>license</report>
+              <report>mailing-list</report>
+              <!--<report>plugin-management</report>-->
+              <report>plugins</report>
+              <report>project-team</report>
+              <report>scm</report>
+              <report>summary</report>
+            </reports>
+          </reportSet>
+        </reportSets>
       </plugin>
       <plugin>
         <groupId>org.scala-tools</groupId>
         <artifactId>maven-scala-plugin</artifactId>
+        <version>2.12.2</version>
         <configuration>
           <charset>${project.build.sourceEncoding}</charset>
           <vscaladocVersion>1.2-SNAPSHOT</vscaladocVersion>
@@ -506,47 +541,35 @@
         </configuration>
       </plugin>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.6</version>
         <configuration>
           <detectLinks>true</detectLinks>
-          <!--TODO: remove custom tags since low probability of having *.java in Lift -->
-          <tags>
-            <tag>
-              <name>.todo</name>
-              <!-- Should be a combination of the letters Xaoptcmf -->
-              <placement>a</placement>
-              <head>TODO:</head>
-            </tag>
-            <tag>
-              <name>.fixme</name>
-              <!-- Should be a combination of the letters Xaoptcmf -->
-              <placement>a</placement>
-              <head>FIXME:</head>
-            </tag>
-          </tags>
         </configuration>
-        <!--TODO: Update later-->
-        <!--
         <reportSets>
           <reportSet>
             <reports>
               <report>javadoc</report>
-              &lt;!&ndash;<report>aggregate</report>&ndash;&gt;
+              <!--<report>aggregate</report>-->
               <report>test-javadoc</report>
             </reports>
           </reportSet>
         </reportSets>
-        -->
       </plugin>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jxr-plugin</artifactId>
+        <version>2.1</version>
         <configuration>
           <inputEncoding>${project.build.sourceEncoding}</inputEncoding>
           <outputEncoding>${project.build.sourceEncoding}</outputEncoding>
         </configuration>
       </plugin>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-changes-plugin</artifactId>
+        <version>2.1</version>
         <configuration>
           <issueLinkTemplatePerSystem>
             <github>%URL%/%ISSUE%/find</github>
@@ -561,7 +584,9 @@
         </reportSets>
       </plugin>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-report-plugin</artifactId>
+        <version>2.4.3</version>
         <reportSets>
           <reportSet>
             <reports>
@@ -586,7 +611,7 @@
   -->
   <profiles>
     <profile>
-      <id>release</id>
+      <id>lift-release</id>
       <!--
       <build>
         <plugins>
@@ -624,7 +649,7 @@
       </distributionManagement>
     </profile>
     <profile>
-      <id>hudson</id>
+      <id>env-hudson</id>
       <distributionManagement>
         <repository>
           <id>hudson.scala-tools.org</id>
