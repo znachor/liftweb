@@ -56,7 +56,6 @@
     ~ Dependency Settings
   -->
   <!-- <dependencyManagement/> -->
-
   <dependencies>
     <dependency>
       <groupId>org.scala-lang</groupId>
