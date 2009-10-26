@@ -25,6 +25,9 @@
       <action dev="dpp" type="fix" issue="94" due-to="vdichev">
 	Textile parser outputs non-valid output.  Changed some null to Null.
       </action>
+      <action dev="dpp" type="add">
+	Enhanced the documentation for an type signatures for Actors
+      </action>
       <action dev="dpp" type="add" >
 	Revised Lift to use LiftActors and be compatible with
 	Akka Actors
