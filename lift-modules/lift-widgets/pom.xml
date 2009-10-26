@@ -11,35 +11,21 @@
   <description>A Set of Widgets to use in a lift's webapp</description>
   <dependencies>
     <dependency>
-      <groupId>org.scala-lang</groupId>
-      <artifactId>scala-library</artifactId>
-    </dependency>
-    <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>lift-webkit</artifactId>
       <version>${project.version}</version>
     </dependency>
-    <dependency>
-      <groupId>javax.servlet</groupId>
-      <artifactId>servlet-api</artifactId>
-      <scope>provided</scope>
-    </dependency>
+    <!--<dependency>-->
+      <!--<groupId>javax.servlet</groupId>-->
+      <!--<artifactId>servlet-api</artifactId>-->
+      <!--<scope>provided</scope>-->
+    <!--</dependency>-->
   </dependencies>
   <build>
     <plugins>
       <plugin>
         <groupId>net.sf.alchim</groupId>
         <artifactId>yuicompressor-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <goals>
-              <goal>compress</goal>
-            </goals>
-            <configuration>
-              <nosuffix>true</nosuffix>
-            </configuration>
-          </execution>
-        </executions>
         <configuration>
            <excludes>
               <exclude>**/sparklines*.js</exclude>
