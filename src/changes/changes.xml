@@ -54,8 +54,16 @@
         honor javax.activation being transitively pulled up my javax.mail
       </action>
 
-      <action dev="dchenbecker" type="enhancement" issue="148" system="github">
+      <action dev="dchenbecker" type="add" issue="148" system="github">
         Add ability to call JS code after AJAX form submit
+      </action>
+
+      <action dev="dchenbecker" type="add" issue="181">
+        Add AJAX editable field generator to SHtml, add AjaxEditableField to Mapper.
+      </action>
+
+      <action dev="dchenbecker" type="fix" issue="16" system="github">
+        Fixed SQL Server drivers to use version-appropriate unicode columns for text.
       </action>
 
     </release>
@@ -113,14 +121,6 @@
 
       <action dev="indrajitr" type="update" issue="127" system="github">
         Restructured Lift codebase (now categorized into lift-base, lift-persistence, lift-modules, lift-archetypes and lift-examples).
-      </action>
-
-      <action dev="dchenbecker" type="add" issue="148">
-        Add ability to call JS code after AJAX form submit
-      </action>
-
-      <action dev="dchenbecker" type="add" issue="181">
-        Add AJAX editable field generator to SHtml, add AjaxEditableField to Mapper.
       </action>
 
     </release>
