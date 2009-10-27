@@ -1,5 +1,15 @@
 Parsing and formatting utilities for JSON.
 
+Parsing JSON
+============
+
+Any valid json can be parsed into internal AST format.
+
+    scala> import net.liftweb.json.JsonParser._
+    scala> parse(""" { "numbers" : [1, 2, 3, 4] } """)
+    res0: net.liftweb.json.JsonAST.JValue = 
+          JObject(List(JField(numbers,JArray(List(JInt(1), JInt(2), JInt(3), JInt(4))))))
+
 Producing JSON
 ==============
 
@@ -93,18 +103,91 @@ Example produces following pretty printed JSON. Notice that draw-date field is n
       }
     }
 
-Parsing JSON
-============
+Merging
+-------
 
-Any valid json can be parsed into internal AST format.
+Two JSONs can be merged with each other.
+Please see more examples in src/test/scala/net/liftweb/json/MergeExamples.scala
 
-    scala> import net.liftweb.json.JsonParser._
-    scala> parse(""" { "numbers" : [1, 2, 3, 4] } """)
-    res0: net.liftweb.json.JsonAST.JValue = 
-          JObject(List(JField(numbers,JArray(List(JInt(1), JInt(2), JInt(3), JInt(4))))))
+    scala> import net.liftweb.json.JsonParser.parse
+    scala> import net.liftweb.json.JsonAST._
+    scala> import net.liftweb.json.Printer.pretty
+
+    scala> val lotto1 = parse("""{
+             "lotto":{
+               "lotto-id":5,
+               "winning-numbers":[2,45,34,23,7,5,3]
+               "winners":[{
+                 "winner-id":23,
+                 "numbers":[2,45,34,23,3,5]
+               }]
+             }
+           }""")
+
+    scala> val lotto2 = parse("""{
+             "lotto":{ 
+               "winners":[{
+                 "winner-id":54,
+                 "numbers":[52,3,12,11,18,22]
+               }]
+             }
+           }""")
+
+    scala> pretty(render(lotto1 merge lotto2))
+    res0: String = 
+    {
+      "lotto":{
+        "lotto-id":5,
+        "winning-numbers":[2,45,34,23,7,5,3],
+        "winners":[{
+          "winner-id":23,
+          "numbers":[2,45,34,23,3,5]
+        },{
+          "winner-id":54,
+          "numbers":[52,3,12,11,18,22]
+        }]
+      }
+    }
 
 Querying JSON
 =============
+
+"LINQ" style
+------------
+
+JSON values can be extracted using for-comprehensions.
+Please see more examples in src/test/scala/net/liftweb/json/QueryExamples.scala
+
+    scala> import net.liftweb.json.JsonParser.parse
+    scala> import net.liftweb.json.JsonAST._
+    scala> val json = parse("""
+             { "name": "joe",
+               "children": [
+                 {
+                   "name": "Mary",
+                   "age": 5
+                 },
+                 {
+                   "name": "Mazy",
+                   "age": 3
+                 }
+               ]
+             }
+           """)
+
+    scala> for { JField("age", JInt(age)) <- json } yield age
+    res0: List[BigInt] = List(5, 3)
+
+    scala> for { 
+             JObject(child) <- json
+             JField("name", JString(name)) <- child 
+             JField("age", JInt(age)) <- child 
+             if age > 4
+           } yield (name, age)
+    res1: List[(String, BigInt)] = List((Mary,5))
+
+XPath + HOFs
+------------
 
 Json AST can be queried using XPath like functions. Following REPL session shows the usage of 
 '\\', '\\\\', 'find', 'filter', 'map' and 'values' functions. 
@@ -180,8 +263,7 @@ Json AST can be queried using XPath like functions. Following REPL session shows
     scala> json.values
     res8: net.liftweb.json.JsonAST.JValue#Values = Map(person -> Map(name -> Joe, age -> 35, spouse -> Map(person -> Map(name -> Marilyn, age -> 33))))
 
-Indexed path expressions work too, and values can be extracted using for-comprehensions.
-Please see more examples in src/test/scala/net/liftweb/json/QueryExamples.scala
+Indexed path expressions work too.
 
     scala> val json = parse("""
              { "name": "joe",
@@ -203,12 +285,6 @@ Please see more examples in src/test/scala/net/liftweb/json/QueryExamples.scala
 
     scala> (json \ "children")(1) \ "name"
     res1: net.liftweb.json.JsonAST.JValue = JField(name,JString(Mazy))
-
-    scala> for { JField("age", y) <- json } yield y
-    res2: List[net.liftweb.json.JsonAST.JValue] = List(JInt(5), JInt(3))
-
-    scala> for { JField("age", JInt(y)) <- json } yield y
-    res3: List[BigInt] = List(5, 3)
 
 Extracting values
 =================
