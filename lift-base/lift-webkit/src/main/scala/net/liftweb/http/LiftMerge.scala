@@ -17,7 +17,7 @@
 package net.liftweb.http
 
 import _root_.scala.collection.mutable.{HashMap, ArrayBuffer, ListBuffer}
-import _root_.scala.xml.{Node, Text, NodeSeq, Elem, MetaData, Null, UnprefixedAttribute, PrefixedAttribute, Comment, Group}
+import _root_.scala.xml._
 import _root_.net.liftweb.util._
 import _root_.net.liftweb.common._
 import _root_.net.liftweb.http.js._
@@ -33,7 +33,7 @@ private[http] trait LiftMerge {
   private[http] def merge(xhtml: NodeSeq, req: Req): Node = {
     val snippetHashs: HashMap[String, Box[NodeSeq]] = this.deferredSnippets.is
     val waitUntil = millis + LiftRules.lazySnippetTimeout.vend.millis
-    val stripComments: Boolean = LiftRules.stripComments.vend()
+    val stripComments: Boolean = LiftRules.stripComments.vend
 
     def waitUntilSnippetsDone() {
       val myMillis = millis

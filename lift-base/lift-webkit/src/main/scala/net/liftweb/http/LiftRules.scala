@@ -510,33 +510,32 @@ object LiftRules extends Factory {
    * If a deferred snippet has a failure during render,
    * what should we display?
    */
-  val deferredSnippetTimeout: FactoryMaker[() => NodeSeq] =
-  new FactoryMaker(() => {
-    () => {
-      if (Props.devMode)
-        <div style="border: red solid 2px">A deferred snippet timed out during render.
 
-        <i>note: this error is displayed in the browser because
-        your application is running in "development" mode.If you
-        set the system property run.mode=production, this error will not
-        be displayed, but there will be errors in the output logs.
-        </i>
+  val deferredSnippetTimeout: FactoryMaker[NodeSeq] =
+  new FactoryMaker(() => {
+        if (Props.devMode)
+        <div style="border: red solid 2px">
+          A deferred snippet timed out during render.
+
+          <i>note: this error is displayed in the browser because
+            your application is running in "development" mode.  If you
+            set the system property run.mode=production, this error will not
+            be displayed, but there will be errors in the output logs.
+          </i>
         </div>
-      else NodeSeq.Empty
-    }
-  }) {}
+        else NodeSeq.Empty
+      }) {}
+
 
   /**
    * Should comments be stripped from the served XHTML
    */
-  val stripComments: FactoryMaker[() => Boolean] =
+  val stripComments: FactoryMaker[Boolean] =
   new FactoryMaker(() => {
-    () => {
-      if (Props.devMode)
+        if (Props.devMode)
         false
-      else true
-    }
-  }) {}
+        else true
+      }) {}
 
 
   private[http] var ending = false
