@@ -4,7 +4,7 @@ import java.util.Date
 import _root_.org.specs.Specification
 import _root_.org.specs.runner.{Runner, JUnit}
 
-class SerializationExamplesTest extends Runner(SerializationExamples, ShortTypeHintExamples, FullTypeHintExamples) with JUnit
+class SerializationExamplesTest extends Runner(SerializationExamples, ShortTypeHintExamples, FullTypeHintExamples, CustomClassExamples) with JUnit
 object SerializationExamples extends Specification {
   import Serialization.{read, write => swrite}
 
@@ -84,3 +84,30 @@ case class Fish(weight: Double) extends Animal
 
 case class Objs(objects: List[Obj[_]])
 case class Obj[A](a: A)
+
+object CustomClassExamples extends Specification {
+  import Serialization.{read, write => swrite}
+  import JsonAST._
+
+  val hints = new ShortTypeHints(classOf[DateTime] :: Nil) {
+    override def serialize: PartialFunction[Any, JObject] = {
+      case t: DateTime => JObject(JField("t", JInt(t.time)) :: Nil)
+    }
+
+    override def deserialize: PartialFunction[(String, JObject), Any] = {
+      case ("DateTime", JObject(JField("t", JInt(t)) :: Nil)) => new DateTime(t.longValue)
+    }
+  }
+  implicit val formats = Serialization.formats(hints)
+
+  "Custom class serialization using provided serialization and deserialization functions" in {
+    val m = Meeting("The place", new DateTime(1256681210802L))
+    val ser = swrite(m)
+    val m2 = read[Meeting](ser)
+    m.place mustEqual m2.place
+    m.time.time mustEqual m2.time.time
+  }
+}
+
+case class Meeting(place: String, time: DateTime)
+class DateTime(val time: Long)

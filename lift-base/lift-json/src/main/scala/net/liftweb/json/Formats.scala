@@ -17,6 +17,7 @@ package net.liftweb.json
  */
 
 import java.util.{Date, TimeZone}
+import JsonAST.JObject
 
 trait Formats {
   val dateFormat: DateFormat
@@ -34,6 +35,8 @@ trait TypeHints {
   def classFor(hint: String): Option[Class[_]]
 
   def containsHint_?(clazz: Class[_]) = hints exists (_ isAssignableFrom clazz)
+  def deserialize: PartialFunction[(String, JObject), Any] = Map()
+  def serialize: PartialFunction[Any, JObject] = Map()
 }
 
 case object NoTypeHints extends TypeHints {

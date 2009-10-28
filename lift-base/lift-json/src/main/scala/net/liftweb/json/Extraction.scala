@@ -40,25 +40,32 @@ object Extraction {
     }
 
   def decompose(a: Any)(implicit formats: Formats): JValue = {
+    def prependTypeHint(clazz: Class[_], o: JObject) = 
+      JField("jsonClass", JString(formats.typeHints.hintFor(clazz))) ++ o
+
     def mkObject(clazz: Class[_], fields: List[JField]) = formats.typeHints.containsHint_?(clazz) match {
-      case true => JObject(JField("jsonClass", JString(formats.typeHints.hintFor(clazz))) :: fields)
+      case true => prependTypeHint(clazz, JObject(fields))
       case false => JObject(fields)
     }
  
-    a.asInstanceOf[AnyRef] match {
-      case null => JNull
-      case x if primitive_?(x.getClass) => primitive2jvalue(x)(formats)
-      case x: List[_] => JArray(x map decompose)
-      case x: Option[_] => decompose(x getOrElse JNothing)
-      case x => 
-        x.getClass.getDeclaredFields.filter(!static_?(_)).toList.map { f => 
-          f.setAccessible(true)
-          JField(unmangleName(f), decompose(f get x))
-        } match {
-          case Nil => JNothing
-          case fields => mkObject(x.getClass, fields)
-        }
-    }
+    val serializer = formats.typeHints.serialize
+    val any = a.asInstanceOf[AnyRef]
+    if (!serializer.isDefinedAt(a)) {
+      any match {
+        case null => JNull
+        case x if primitive_?(x.getClass) => primitive2jvalue(x)(formats)
+        case x: List[_] => JArray(x map decompose)
+        case x: Option[_] => decompose(x getOrElse JNothing)
+        case x => 
+          x.getClass.getDeclaredFields.filter(!static_?(_)).toList.map { f => 
+            f.setAccessible(true)
+            JField(unmangleName(f), decompose(f get x))
+          } match {
+            case Nil => JNothing
+            case fields => mkObject(x.getClass, fields)
+          }
+      }
+    } else prependTypeHint(any.getClass, serializer(any))
   }
 
   private def extract0[A](json: JValue, formats: Formats, mf: Manifest[A]): A = {
@@ -71,13 +78,17 @@ object Extraction {
         } catch {
           case e @ (_:IllegalArgumentException | _:InstantiationException) => 
             fail("Parsed JSON values do not match with class constructor\nargs=" + args.mkString(",") + 
-                 "\narg types=" + args.map(arg => if (arg != null) arg.asInstanceOf[AnyRef].getClass.getName else "null").mkString(",")  + 
+                 "\narg types=" + args.map(arg => if (arg != null) arg.asInstanceOf[AnyRef].getClass.getName else "null").mkString(",") + 
                  "\nconstructor=" + constructor)
         }
 
       def instantiateUsingTypeHint(typeHint: String, fields: List[JField]) = {
-        val concreteClass = formats.typeHints.classFor(typeHint) getOrElse fail("Do not know how to deserialize '" + typeHint + "'")
-        build(JObject(fields), mappingOf(concreteClass), Nil)(0)
+        val obj = JObject(fields)
+        val deserializer = formats.typeHints.deserialize
+        if (!deserializer.isDefinedAt(typeHint, obj)) {
+          val concreteClass = formats.typeHints.classFor(typeHint) getOrElse fail("Do not know how to deserialize '" + typeHint + "'")
+          build(obj, mappingOf(concreteClass), Nil)(0)
+        } else deserializer(typeHint, obj)
       }
 
       json match {
