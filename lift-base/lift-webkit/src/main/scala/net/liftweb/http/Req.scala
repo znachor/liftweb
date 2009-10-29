@@ -207,7 +207,18 @@ object Req {
     toList.map(_.trim).filter(_.length > 0)
 
     val last = orgLst.last
-    val idx = last.indexOf(".")
+    val idx: Int = {
+      val firstDot = last.indexOf(".")
+      val len = last.length
+      if (firstDot + 1 == len) -1 // if the dot is the last character, don't split
+      else {
+        if (last.indexOf(".", firstDot + 1) != -1) -1 // if there are multiple dots, don't split out
+        else {
+          if (len - firstDot > 5) -1 // if the "suffix" is more than 5 chars long, don't split it out
+          else firstDot
+        }
+      }
+    }
 
     val (lst, suffix) = if (idx == -1) (orgLst, "")
     else (orgLst.dropRight(1) ::: List(last.substring(0, idx)),
