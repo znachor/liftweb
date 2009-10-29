@@ -347,6 +347,12 @@ solutions for this (see src/test/scala/net/liftweb/json/LottoExample.scala for b
              case x => x
            }
 
+DateFormat can be changed by overriding 'DefaultFormats' (or by implmenting trait 'Formats').
+
+    scala> implicit val formats = new DefaultFormats {
+             override def dateFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+           }
+
 Serialization
 =============
 
@@ -414,7 +420,7 @@ by providing following functions.
                case ("DateTime", JObject(JField("t", JInt(t)) :: Nil)) => new DateTime(t.longValue)
              }
            }
-           implicit val formats = Serialization.formats(hints)
+    scala> implicit val formats = Serialization.formats(hints)
 
 Function 'serialize' creates a JSON object to hold serialized data. Function 'deserialize' knows how
 to construct serialized object by pattern matching against serialized type hint and data.
