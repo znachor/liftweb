@@ -51,7 +51,7 @@ private[http] trait LiftMerge {
     val processedSnippets: Map[String, NodeSeq] = Map(snippetHashs.toList.flatMap {
       case (name, Full(value)) => List((name, value))
       case (name, f: Failure) => List((name, LiftRules.deferredSnippetFailure.vend(f)))
-      case (name, Empty) => List((name, LiftRules.deferredSnippetTimeout.vend()))
+      case (name, Empty) => List((name, LiftRules.deferredSnippetTimeout.vend))
       case _ => Nil
     }: _*)
 
