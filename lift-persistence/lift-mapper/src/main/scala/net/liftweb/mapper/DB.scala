@@ -879,12 +879,13 @@ trait ProtoDBVendor extends ConnectionManager {
 
         case Nil => wait(100L); newConnection(name)
 
-        case x :: xs => try {
+        case x :: xs =>
+          pool = xs
+          try {
           this.testConnection(x)
           Full(x)
         } catch {
           case e => try {
-            pool = xs
             poolSize = poolSize - 1
             tryo(x.close)
             newConnection(name)
