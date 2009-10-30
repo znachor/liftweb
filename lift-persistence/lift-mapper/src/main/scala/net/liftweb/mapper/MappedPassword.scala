@@ -41,7 +41,7 @@ extends MappedField[String, T] {
 
   override lazy val dbSelectString =
   dbColumnNames(name).
-  map(cn => fieldOwner.getSingleton.dbTableName + "." + cn).
+  map(cn => fieldOwner.getSingleton._dbTableNameLC + "." + cn).
   mkString(", ")
 
 

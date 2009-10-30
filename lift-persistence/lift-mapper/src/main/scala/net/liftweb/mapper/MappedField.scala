@@ -88,7 +88,7 @@ trait BaseMappedField extends SelectableField with Bindable with MixableMappedFi
   def dbDisplay_? = true
 
   def dbIncludeInForm_? = dbDisplay_?
-  
+
 
   /**
    * Get a JDBC friendly representation of the named field (this is used for MappedFields that correspond to more than
@@ -149,7 +149,12 @@ trait BaseMappedField extends SelectableField with Bindable with MixableMappedFi
   def dbColumnName: String
 
   /**
-   * Should the field be indexed?
+   * The forced lower case column names
+   */
+  final def _dbColumnNameLC = dbColumnName.toLowerCase
+
+  /**
+   *  Should the field be indexed?
    */
   def dbIndexed_? : Boolean
 
@@ -486,7 +491,7 @@ trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends Typed
   new PrefixedAttribute("lift", "field_name", Text(calcFieldName), Null)
   else Null
 
-  def calcFieldName: String = fieldOwner.getSingleton._dbTableName+":"+name
+  def calcFieldName: String = fieldOwner.getSingleton.internal_dbTableName+":"+name
 
 
   def toForm: Box[NodeSeq] = {
@@ -595,7 +600,7 @@ trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends Typed
 
   def dbColumnCount = 1
 
-  def dbColumnNames(in : String) = if (dbColumnCount == 1) List(dbColumnName) else List(in.toLowerCase)
+  def dbColumnNames(in : String) = if (dbColumnCount == 1) List(_dbColumnNameLC) else List(in.toLowerCase)
 
   def dbColumnName = name.toLowerCase match {
     case name if DB.reservedWords.contains(name) => name+"_c"
@@ -603,7 +608,7 @@ trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends Typed
   }
 
   lazy val dbSelectString = fieldOwner.getSingleton.
-  dbTableName + "." + dbColumnName
+  _dbTableNameLC + "." + _dbColumnNameLC
 
 
   def dbIndexed_? : Boolean = false
@@ -622,7 +627,7 @@ trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends Typed
 
   def jdbcFriendly(field : String) : Object
 
-  def jdbcFriendly: Object = jdbcFriendly(dbColumnName)
+  def jdbcFriendly: Object = jdbcFriendly(_dbColumnNameLC)
 
   /**
    * Get the JDBC SQL Type for this field
@@ -654,18 +659,18 @@ trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends Typed
      case f => f(cv)
      }
      */
-    
+
     def runValidations(validators: List[FieldType => List[FieldError]]) {
       validators match {
         case Nil => ()
-        case x :: rest => 
+        case x :: rest =>
           val errors = x match {
             case pf: PartialFunction[FieldType, List[FieldError]] =>
               if (pf.isDefinedAt(cv)) pf(cv)
               else Nil
             case f => f(cv)
           }
-      
+
           (errors, x) match {
             case (Nil, _) => runValidations(rest)
             case (errors, e: StopValidationOnError[FieldType]) => errorRet.appendAll(errors)
