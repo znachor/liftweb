@@ -15,8 +15,6 @@
  */
 package net.liftweb.http
 
-;
-
 import S._
 import _root_.net.liftweb.common._
 import _root_.net.liftweb.util._
@@ -27,11 +25,15 @@ import JE._
 import JsCmds._
 import _root_.scala.xml._
 
+/**
+ * The SHtml object defines a suite of XHTML element generator methods
+ * to simplify the creation of markup, particularly with forms and AJAX.
+ */
 object SHtml {
 
   /**
    * Invokes the Ajax request
-   * @param in -- the JsExp that returns the request data
+   * @param in the JsExp that returns the request data
    */
   def makeAjaxCall(in: JsExp): JsExp = new JsExp {
     def toJsCmd = "liftAjax.lift_ajaxHandler(" + in.toJsCmd + ", null, null, null)"
@@ -39,8 +41,8 @@ object SHtml {
 
   /**
    * Invokes the Ajax request
-   * @param in -- the JsExp that returns the request data
-   * @context -- defined the response callback functions and the response type (JavaScript or JSON)
+   * @param in the JsExp that returns the request data
+   * @param context defines the response callback functions and the response type (JavaScript or JSON)
    */
   def makeAjaxCall(in: JsExp, context: AjaxContext): JsExp = new JsExp {
     def toJsCmd = "liftAjax.lift_ajaxHandler(" + in.toJsCmd + ", " + (context.success openOr "null") +
@@ -51,26 +53,47 @@ object SHtml {
 
   /**
    * Build a JavaScript function that will perform an AJAX call based on a value calculated in JavaScript
-   * @param jsCalcValue -- the JavaScript to calculate the value to be sent to the server
-   * @param func -- the function to call when the data is sent
+   * 
+   * @param jsCalcValue the JavaScript that will be executed on the client to calculate the value to be sent to the server
+   * @param func the function to call when the data is sent
    *
-   * @return the JavaScript that makes the call
+   * @return the function ID and JavaScript that makes the call
    */
   def ajaxCall(jsCalcValue: JsExp, func: String => JsCmd): (String, JsExp) = ajaxCall_*(jsCalcValue, SFuncHolder(func))
 
+  /**
+   * Build a JavaScript function that will perform an AJAX call based on a value calculated in JavaScript
+   * 
+   * @param jsCalcValue the JavaScript that will be executed on the client to calculate the value to be sent to the server
+   * @param jsContext the context instance that defines JavaScript to be executed on call success or failure
+   * @param func the function to call when the data is sent
+   *
+   * @return the function ID and JavaScript that makes the call
+   */
   def ajaxCall(jsCalcValue: JsExp, jsContext: JsContext, func: String => JsCmd): (String, JsExp) =
     ajaxCall_*(jsCalcValue, jsContext, SFuncHolder(func))
 
   /**
-   * Build a JavaScript function that will perform an AJAX call based on a value calculated in JavaScript
-   * @param jsCalcValue -- the JavaScript to calculate the value to be sent to the server
-   * @param func -- the function to call when the data is sent
+   * Build a JavaScript function that will perform a JSON call based on a value calculated in JavaScript
+   * 
+   * @param jsCalcValue the JavaScript to calculate the value to be sent to the server
+   * @param jsContext the context instance that defines JavaScript to be executed on call success or failure
+   * @param func the function to call when the data is sent
    *
-   * @return the JavaScript that makes the call
+   * @return the function ID and JavaScript that makes the call
    */
   def jsonCall(jsCalcValue: JsExp, func: Any => JsCmd): (String, JsExp) =
     jsonCall_*(jsCalcValue, SFuncHolder(s => JSONParser.parse(s).map(func) openOr Noop))
 
+  /**
+   * Build a JavaScript function that will perform a JSON call based on a value calculated in JavaScript
+   * 
+   * @param jsCalcValue the JavaScript to calculate the value to be sent to the server
+   * @param jsContext the context instance that defines JavaScript to be executed on call success or failure
+   * @param func the function to call when the data is sent
+   *
+   * @return the function ID and JavaScript that makes the call
+   */
   def jsonCall(jsCalcValue: JsExp, jsContext: JsContext, func: Any => JsCmd): (String, JsExp) =
     jsonCall_*(jsCalcValue, jsContext, SFuncHolder(s => JSONParser.parse(s).map(func) openOr Noop))
 
@@ -80,7 +103,7 @@ object SHtml {
    * @param jsCalcValue -- the JavaScript to calculate the value to be sent to the server
    * @param func -- the function to call when the data is sent
    *
-   * @return the JavaScript that makes the call
+   * @return the function ID and JavaScript that makes the call
    */
   private def jsonCall_*(jsCalcValue: JsExp, func: AFuncHolder): (String, JsExp) =
     fmapFunc(contextFuncBuilder(func))(name =>
@@ -92,7 +115,7 @@ object SHtml {
    * @param ajaxContext -- the context defining the javascript callback functions and the response type
    * @param func -- the function to call when the data is sent
    *
-   * @return the JavaScript that makes the call
+   * @return the function ID and JavaScript that makes the call
    */
   private def jsonCall_*(jsCalcValue: JsExp,
                          ajaxContext: AjaxContext,
