@@ -433,11 +433,8 @@ trait HtmlFixer {
    * to capture the bound functions
    */
   protected def fixHtml(uid: String, content: NodeSeq): String =
-  AltXML.toXML(fixHtmlAxXml(uid, content), false, true, S.ieMode).encJs
-
-  protected def fixHtmlAxXml(uid: String, content: NodeSeq): Node =
-  Group(S.session.map(s => s.fixHtml(s.processSurroundAndInclude("JS SetHTML id: "+uid, content))).openOr(content))
-
+  AltXML.toXML(Group(S.session.map(s => s.fixHtml(s.processSurroundAndInclude("JS SetHTML id: "+uid, content))).openOr(content)), 
+               false, true, S.ieMode).encJs
 }
 
 trait JsCmd extends HtmlFixer with ToJsCmd {
@@ -472,17 +469,19 @@ object JsCmds {
    * @param id - the id of the node that will be replaces
    * @param node - the new node
    */
-  case class Replace(id: String, content: NodeSeq) extends JsCmd with HtmlFixer{
+  case class Replace(id: String, content: NodeSeq) extends JsCmd with HtmlFixer {
      override val toJsCmd = {
-      val funcName = "f_" + Helpers.nextFuncName
-      val toBeReplaced = "v_" + Helpers.nextFuncName
-      
-      (JsCmds.JsCrVar(funcName, Jx(fixHtmlAxXml("inline", content)).toJs) & 
-       JsCmds.JsCrVar(toBeReplaced, JE.ElemById(id)) &
-       JE.JsRaw(toBeReplaced + ".parentNode.insertBefore(" + funcName + ", " +  toBeReplaced +");").cmd &
-       JE.JsRaw(toBeReplaced + ".parentNode.removeChild(" + toBeReplaced +");").cmd
-       ).toJsCmd
-      }
+       val html = fixHtml("inline", content);
+"""
+  var parent = document.getElementById(""" + id.encJs + """);
+  for (var i = 0; i < parent.childNodes.length; i++) { 
+    var node = parent.childNodes[i];
+    parent.parentNode.insertBefore(node.cloneNode(true), parent);
+  }
+  parent.parentNode.removeChild(parent);
+"""
+
+     }
   }
 
   case class SetHtml(uid: String, content: NodeSeq) extends JsCmd {
