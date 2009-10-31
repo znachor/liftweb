@@ -35,7 +35,7 @@ trait CRUDify[KeyType, CrudType <: KeyedMapper[KeyType, CrudType]] {
   lazy val EditItem = calcEditItem
   lazy val DeleteItem = calcDeleteItem
 
-  def calcPrefix = List(dbTableName)
+  def calcPrefix = List(_dbTableNameLC)
 
   def calcListItems = "list"
 
