@@ -648,6 +648,16 @@ object SHtml {
    */
   def submitAjaxForm(formId: String):JsCmd = SHtml.makeAjaxCall(LiftRules.jsArtifacts.serialize(formId))
 
+  /**
+   * Having a regular form, this method can be used to send the serialized content of the form.
+   * 
+   * @oaram formId - the id of the form
+   * @param postSubmit - the function that needs to be called after a successfull request
+   */
+  def submitAjaxForm(formId: String, postSubmit: Call):JsCmd = 
+    SHtml.makeAjaxCall(LiftRules.jsArtifacts.serialize(formId), AjaxContext.js(Full(postSubmit.toJsCmd)))
+
+
   private def secureOptions[T](options: Seq[(T, String)], default: Box[T],
                                onSubmit: T => Unit): (Seq[(String, String)], Box[String], AFuncHolder) = {
     val secure = options.map {case (obj, txt) => (obj, randomString(20), txt)}
