@@ -28,7 +28,7 @@
   This includes a standard release profile that all projects can use.
   If the profile is not appropriate for your project, define your own release profile
   and change the release plugin configuration parameter <arguments> </arguments> to
-  activate your profile instead of the lift-release profile.
+  activate your profile instead of the "release" profile.
 
   Dependencies and plugins are also pre-configured with standard settings,
   these may be overridden by individual projects as well.
@@ -49,12 +49,13 @@
     <maven.compiler.target>${maven.compiler.source}</maven.compiler.target>
     <!-- Necessary until we move to maven-compiler-plugin-2.1 (MCOMPILER-70) -->
     <maven.compiler.encoding>${project.build.sourceEncoding}</maven.compiler.encoding>
+    <project.reporting.outputEncoding>${project.build.sourceEncoding}</project.reporting.outputEncoding>
     <!-- TODO: for lift-build_date.
          http://maven.apache.org/guides/introduction/introduction-to-the-pom.html#Available_Variables -->
     <!--<maven.build.timestamp.format/>-->
 
     <!--<scala.version>[2.7.5,2.7.6),(2.7.6,2.7.7]</scala.version>-->
-    <scala.version>2.7.7</scala.version>
+    <scala.version>2.7.5</scala.version>
     <slf4j.version>[1.5.6,)</slf4j.version>
   </properties>
 
@@ -189,7 +190,7 @@
     </developer>
     <developer>
       <id>jboner</id>
-      <name>Jonas Bonér</name>
+      <name>Jonas Bon&#233;r</name>
       <email>jonas [at] jonasboner [dot] com</email>
       <timezone>+1</timezone>
     </developer>
@@ -278,17 +279,13 @@
     </pluginRepository>
   </pluginRepositories>
   <distributionManagement>
-    <repository>
-      <id>scala-tools.dist.release</id>
-      <name>Scala-Tools Release Distribution Repository</name>
-      <url>scp://scala-tools.org/TODO</url>
-    </repository>
     <snapshotRepository>
-      <id>scala-tools.dist.release</id>
+      <id>scala-tools.dist.snapshot</id>
       <name>Scala-Tools Snapshot Distribution Repository</name>
-      <url>scp://scala-tools.org/TODO</url>
+      <url>http://nexus.scala-tools.org/content/repositories/snapshots</url>
+      <uniqueVersion>false</uniqueVersion>
     </snapshotRepository>
-    <!-- Site omitted, each project must provide their own -->
+    <!-- Site omitted, each project/profile must provide their own -->
     <!--<site />-->
   </distributionManagement>
 
@@ -486,7 +483,7 @@
               <jvmArg>-Xmx1024m</jvmArg>
             </jvmArgs>
             <args>
-              <!-- <arg>-unchecked</arg> -->
+              <arg>-unchecked</arg>
               <arg>-deprecation</arg>
               <arg>-Xno-varargs-conversion</arg>
             </args>
@@ -606,6 +603,25 @@
             </classpathContainers>
           </configuration>
         </plugin>
+        <plugin>
+          <groupId>org.apache.rat</groupId>
+          <artifactId>apache-rat-plugin</artifactId>
+          <version>0.6</version>
+          <configuration>
+            <excludes>
+              <exclude>*.log</exclude>
+              <exclude>packageLinkDefs.properties</exclude>
+            </excludes>
+          </configuration>
+          <executions>
+            <execution>
+              <phase>verify</phase>
+              <goals>
+                <goal>check</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
       </plugins>
     </pluginManagement>
     <plugins>
@@ -652,14 +668,16 @@
         <version>2.12.2</version>
         <configuration>
           <charset>${project.build.sourceEncoding}</charset>
+          <!--<bottom>Copyright &#169; {inceptionYear}-{currentYear} {organizationName}. All Rights Reserved.</bottom>-->
           <vscaladocVersion>1.2-SNAPSHOT</vscaladocVersion>
           <jvmArgs>
             <jvmArg>-Xmx1024m</jvmArg>
-            <!--TODO: Set packageLinkDefs -->
-            <!--<jvmArg>-DpackageLinkDefs=</jvmArg>-->
+            <jvmArg>-DpackageLinkDefs=file://${project.basedir}/packageLinkDefs.properties</jvmArg>
           </jvmArgs>
           <args>
-            <!-- <arg>-unchecked</arg> -->
+            <arg>-unchecked</arg>
+            <arg>-deprecation</arg>
+            <arg>-Xno-varargs-conversion</arg>
           </args>
           <!--FIXME: see that sxr plugin works -->
           <!--
@@ -676,9 +694,10 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.6</version>
+        <version>2.6.1</version>
         <configuration>
           <detectLinks>true</detectLinks>
+          <linksource>true</linksource>
         </configuration>
         <reportSets>
           <reportSet>
@@ -703,6 +722,7 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-changes-plugin</artifactId>
         <version>2.1</version>
+        <inherited>false</inherited>
         <configuration>
           <issueLinkTemplatePerSystem>
             <github>%URL%/%ISSUE%/find</github>
@@ -728,14 +748,6 @@
           </reportSet>
         </reportSets>
       </plugin>
-      <!-- TODO: Configure -->
-      <!--
-      No need for report, probably enabling rat:check build plugin suffices
-      <plugin>
-        <groupId>org.apache.rat</groupId>
-        <artifactId>apache-rat-plugin</artifactId>
-      </plugin>
-      -->
     </plugins>
   </reporting>
 
@@ -745,6 +757,14 @@
   <profiles>
     <profile>
       <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.rat</groupId>
+            <artifactId>apache-rat-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
       <!--
       <build>
         <plugins>
@@ -771,11 +791,13 @@
       -->
       <distributionManagement>
         <repository>
-          <id>scala-tools.org</id>
+          <id>scala-tools.dist.release</id>
+          <name>Scala-Tools Release Distribution Repository</name>
           <url>http://nexus.scala-tools.org/content/repositories/releases</url>
         </repository>
         <site>
-          <id>scala-tools.org</id>
+          <id>scala-tools.dist.site</id>
+          <!-- dav protocol isn't optimized for site-deploy (very long for api) -->
           <!--url>dav:http://dav.scala-tools.org/mvnsites/liftweb</url-->
           <url>file://${user.home}/.m2/mvnsites/liftweb</url>
         </site>
@@ -784,17 +806,19 @@
     <profile>
       <id>hudson</id>
       <distributionManagement>
+        <!--
         <repository>
-          <id>hudson.scala-tools.org</id>
+          <id>hudson.scala-tools.dist.release</id>
           <url>file:///home/scala-tools.org/www/repo-snapshots</url>
         </repository>
+        -->
         <snapshotRepository>
-          <id>hudson.scala-tools.org</id>
+          <id>scala-tools.dist.snapshot</id>
           <url>file:///home/scala-tools.org/www/repo-snapshots</url>
           <uniqueVersion>false</uniqueVersion>
         </snapshotRepository>
         <site>
-          <id>hudson.scala-tools.org</id>
+          <id>scala-tools.dist.site</id>
           <url>file:///home/scala-tools.org/www/mvnsites-snapshots/liftweb</url>
         </site>
       </distributionManagement>
