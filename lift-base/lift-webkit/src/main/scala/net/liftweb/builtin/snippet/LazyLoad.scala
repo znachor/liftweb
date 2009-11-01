@@ -20,10 +20,10 @@ object LazyLoad extends DispatchSnippet {
     val id = "lazy_"+ Helpers.nextFuncName;
     
     val (name, exp) = ajaxInvoke(() => {
-      S.session.map(session => Replace("id", xhtml)) openOr Noop
+      S.session.map(session => Replace(id, xhtml)) openOr Noop
     })
     
-    <lift:tail>{Script(OnLoad(exp.cmd))}</lift:tail> ++ <div id={id}></div>
+    <tail>{Script(OnLoad(exp.cmd))}</tail> ++ <div id={id}></div>
   }
   
 }
