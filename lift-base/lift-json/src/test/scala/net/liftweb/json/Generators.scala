@@ -16,11 +16,11 @@ trait JValueGen {
     arbitrary[String].map(JString(_)))
 
   def genArray: Gen[JValue] = for (l <- genList) yield JArray(l)
-  def genObject: Gen[JValue] = for (l <- genFieldList) yield JObject(l)
+  def genObject: Gen[JObject] = for (l <- genFieldList) yield JObject(l)
 
   def genList = Gen.containerOfN[List, JValue](listSize, genJValue)
   def genFieldList = Gen.containerOfN[List, JField](listSize, genField)
-  def genField = for (name <- identifier; value <- genJValue) yield JField(name, value)
+  def genField = for (name <- identifier; value <- genJValue; id <- choose(0, 1000000)) yield JField(name+id, value)
   def listSize = choose(0, 5).sample.get
 }
 

@@ -32,5 +32,47 @@ object JsonASTSpec extends Specification with JValueGen with ScalaCheck {
     forAll(assocProp) must pass
   }
 
+  "Merge identity" in {
+    val identityProp = (json: JValue) => (json merge JNothing) == json && (JNothing merge json) == json
+    forAll(identityProp) must pass
+  }
+
+  "Merge idempotency" in {
+    val idempotencyProp = (x: JValue) => (x merge x) == x
+    forAll(idempotencyProp) must pass
+  }
+
+  "Diff identity" in {
+    val identityProp = (json: JValue) => 
+      (json diff JNothing) == Diff(JNothing, JNothing, json) && 
+      (JNothing diff json) == Diff(JNothing, json, JNothing)
+
+    forAll(identityProp) must pass
+  }
+
+  "Diff with self is empty" in {
+    val emptyProp = (x: JValue) => (x diff x) == Diff(JNothing, JNothing, JNothing)
+    forAll(emptyProp) must pass
+  }
+
+  "Diff is subset of originals" in {
+    val subsetProp = (x: JObject, y: JObject) => {
+      val Diff(c, a, d) = x diff y
+      y == (y merge (c merge a))
+    }
+    forAll(subsetProp) must pass
+  }
+
+  "Diff result is same when fields are reordered" in {
+    val reorderProp = (x: JObject) => (x diff reorderFields(x)) == Diff(JNothing, JNothing, JNothing)
+    forAll(reorderProp) must pass
+  } 
+
+  private def reorderFields(json: JValue) = json map {
+    case JObject(xs) => JObject(xs.reverse)
+    case x => x
+  }
+
   implicit def arbJValue: Arbitrary[JValue] = Arbitrary(genJValue)
+  implicit def arbJObject: Arbitrary[JObject] = Arbitrary(genObject)
 }

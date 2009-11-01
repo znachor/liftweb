@@ -20,10 +20,12 @@
       <action dev="Alex Boisvert" type="update">Issue 57: Improve error message if database is not supported</action>
       <action dev="Alex Boisvert" type="update">Issue 77: Change net.liftweb.mapper.ByList to take a Seq[T] instead of a List[T]</action>
       <action dev="Timothy Perrett" type="update">Issue 88: Boxed payment status so that IPN cancelations appear as Empty. Breaking API change for implementors.</action>
-    </release>
-    <release version="1.1-M6" date="2009-09-08" description="Lift 1.1 Milestone 6"/>
+
       <action dev="dpp" type="fix" issue="94" due-to="vdichev">
 	Textile parser outputs non-valid output.  Changed some null to Null.
+      </action>
+      <action dev="dpp" type="add">
+	Enhanced the documentation for an type signatures for Actors
       </action>
       <action dev="dpp" type="add" >
 	Revised Lift to use LiftActors and be compatible with
@@ -48,6 +50,21 @@
       <action dev="dpp" type="fix" issue="122">
 	StatefulSnippets generate invalid markup
       </action>
+
+      <action dev="dpp" type="update" issue="142">
+	Updated Lift to use Scala 2.7.7
+      </action>
+
+      <action dev="dpp" type="fix" issue="143">
+	Stacked URL Rewriting correctly deals with params
+      </action>
+
+      <action dev="dpp" type="fix" issue="141">
+	Simplified Factory signatures in LiftRules
+      </action>
+
+    </release>
+    <release version="1.1-M6" date="2009-09-08" description="Lift 1.1 Milestone 6"/>
 
 
 

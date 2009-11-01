@@ -34,11 +34,11 @@ class HasManyThrough[From <: KeyedMapper[ThroughType, From],
   private val others = FatLazy[List[To]] {
     DB.use(owner.connectionIdentifier) {
       conn =>
-	val query = "SELECT DISTINCT "+otherSingleton.dbTableName+".* FROM "+otherSingleton.dbTableName+","+
-      through.dbTableName+" WHERE "+
-      otherSingleton.dbTableName+"."+otherSingleton.indexedField(otherSingleton.asInstanceOf[To]).open_!.dbColumnName+" = "+
-      through.dbTableName+"."+throughToField.dbColumnName+" AND "+
-      through.dbTableName+"."+throughFromField.dbColumnName+" = ?"
+	val query = "SELECT DISTINCT "+otherSingleton._dbTableNameLC+".* FROM "+otherSingleton._dbTableNameLC+","+
+      through._dbTableNameLC+" WHERE "+
+      otherSingleton._dbTableNameLC+"."+otherSingleton.indexedField(otherSingleton.asInstanceOf[To]).open_!._dbColumnNameLC+" = "+
+      through._dbTableNameLC+"."+throughToField._dbColumnNameLC+" AND "+
+      through._dbTableNameLC+"."+throughFromField._dbColumnNameLC+" = ?"
       DB.prepareStatement(query, conn) {
 	st =>
 	  owner.getSingleton.indexedField(owner).map {
