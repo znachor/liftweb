@@ -73,16 +73,7 @@
   -->
   <build>
     <!-- <pluginManagement/> -->
-    <plugins>
-      <plugin>
-        <groupId>org.scala-tools</groupId>
-        <artifactId>maven-scala-plugin</artifactId>
-      </plugin>
-      <!--<plugin>-->
-        <!--<groupId>org.apache.felix</groupId>-->
-        <!--<artifactId>maven-bundle-plugin</artifactId>-->
-      <!--</plugin>-->
-    </plugins>
+    <!-- <plugins/> -->
   </build>
 
   <!--
