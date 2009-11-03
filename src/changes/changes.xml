@@ -63,13 +63,9 @@
 	Simplified Factory signatures in LiftRules
       </action>
 
-      <action dev="joni" type="add" >
-        JSON diff and merge
-      </action>
-
-      <action dev="joni" type="update" >
-        Generalized JSON serialization
-      </action>
+      <action dev="joni" type="add">JSON diff and merge</action>
+      <action dev="joni" type="update">Generalized JSON serialization</action>
+      <action dev="joni" type="fix">Use paranamer to find out case class constructor argument names</action>
 
       <action dev="Heiko Seeberger" type="fix" issue="84">Enhance CRUDify i18n</action>
       <action dev="Heiko Seeberger" type="add" issue="82">Add parameterized ?? to S</action>
