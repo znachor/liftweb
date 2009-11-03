@@ -71,6 +71,14 @@
         Generalized JSON serialization
       </action>
 
+      <action dev="Heiko Seeberger" type="fix" issue="84">Enhance CRUDify i18n</action>
+      <action dev="Heiko Seeberger" type="add" issue="82">Add parameterized ?? to S</action>
+      <action dev="Heiko Seeberger" type="fix" issue="87">Inaccurate ranges for previous and next (page) in CRUDify</action>
+      <action dev="Heiko Seeberger" type="fix" issue="81">No i18n for "Sign Up" in MetaMegaProtoUser.signupXhtm</action>
+      <action dev="Heiko Seeberger" type="fix" issue="111">Lost password submit button is not rendered correctly</action>
+      <action dev="Heiko Seeberger" type="fix" issue="113">Signup mail body not i18ned</action>
+      <action dev="Heiko Seeberger" type="fix" issue="114">Misspelled Key "pasword.changed" in ProtoUser.scala</action>
+      <action dev="Heiko Seeberger" type="fix" issue="123">Enhance Msgs snippet to optionally show all messages</action>
     </release>
     <release version="1.1-M6" date="2009-09-08" description="Lift 1.1 Milestone 6"/>
 
