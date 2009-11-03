@@ -227,6 +227,7 @@ object JsonDSL extends Implicits with Printer {
     case None => JNothing
   }
 
+  implicit def symbol2jvalue(x: Symbol) = JString(x.name)
   implicit def pair2jvalue[A <% JValue](t: (String, A)) = JObject(List(JField(t._1, t._2)))
   implicit def list2jvalue(l: List[JField]) = JObject(l)
   implicit def jobject2assoc(o: JObject) = new JsonListAssoc(o.obj)
