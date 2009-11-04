@@ -57,6 +57,8 @@
     <!--<scala.version>[2.7.5,2.7.6),(2.7.6,2.7.7]</scala.version>-->
     <scala.version>2.7.5</scala.version>
     <slf4j.version>[1.5.6,)</slf4j.version>
+
+    <vscaladoc.links.liftweb.baseurl>http://scala-tools.org/mvnsites-snapshots/liftweb</vscaladoc.links.liftweb.baseurl>
   </properties>
 
   <!--
@@ -536,7 +538,34 @@
           </executions>
         </plugin>
         <plugin>
-          <groupId>org.apache.felix</groupId>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-resources-plugin</artifactId>
+          <version>2.4.1</version>
+          <executions>
+            <execution>
+              <id>default-copy-resources</id>
+              <phase>pre-site</phase>
+              <goals>
+                <goal>copy-resources</goal>
+              </goals>
+              <configuration>
+                <overwrite>true</overwrite>
+                <outputDirectory>${project.build.directory}</outputDirectory>
+                <resources>
+                  <resource>
+                    <directory>${project.basedir}/src</directory>
+                    <includes>
+                      <include>packageLinkDefs.properties</include>
+                    </includes>
+                    <filtering>true</filtering>
+                  </resource>
+                </resources>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+        <groupId>org.apache.felix</groupId>
           <artifactId>maven-bundle-plugin</artifactId>
           <version>2.0.1</version>
           <extensions>true</extensions>
@@ -680,7 +709,7 @@
           <vscaladocVersion>1.2-SNAPSHOT</vscaladocVersion>
           <jvmArgs>
             <jvmArg>-Xmx1024m</jvmArg>
-            <jvmArg>-DpackageLinkDefs=file://${project.basedir}/packageLinkDefs.properties</jvmArg>
+            <jvmArg>-DpackageLinkDefs=file://${project.build.directory}/packageLinkDefs.properties</jvmArg>
           </jvmArgs>
           <args>
             <arg>-unchecked</arg>
@@ -765,6 +794,9 @@
   <profiles>
     <profile>
       <id>release</id>
+      <properties>
+        <vscaladoc.links.liftweb.baseurl>http://scala-tools.org/mvnsites/liftweb</vscaladoc.links.liftweb.baseurl>
+      </properties>
       <build>
         <plugins>
           <plugin>
