@@ -75,6 +75,7 @@
       <action dev="Heiko Seeberger" type="fix" issue="113">Signup mail body not i18ned</action>
       <action dev="Heiko Seeberger" type="fix" issue="114">Misspelled Key "pasword.changed" in ProtoUser.scala</action>
       <action dev="Heiko Seeberger" type="fix" issue="123">Enhance Msgs snippet to optionally show all messages</action>
+      <action dev="Heiko Seeberger" type="fix" issue="157">MappedPassword contains misspelled key for unset password</action>
     </release>
     <release version="1.1-M6" date="2009-09-08" description="Lift 1.1 Milestone 6"/>
 

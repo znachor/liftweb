@@ -90,7 +90,7 @@ extends MappedField[String, T] {
   override def validate : List[FieldError] = {
     if (!invalidPw && password.get != "*") Nil
     else if (invalidPw) List(FieldError(this, Text(invalidMsg)))
-    else List(FieldError(this, Text(S.??("password.must.set"))))
+    else List(FieldError(this, Text(S.??("password.must.be.set"))))
   }
 
   def real_convertToJDBCFriendly(value: String): Object = hash("{"+value+"} salt={"+salt_i.get+"}")
