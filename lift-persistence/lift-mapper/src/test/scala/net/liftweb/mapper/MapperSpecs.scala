@@ -45,25 +45,23 @@ object MapperSpecs extends Specification {
 
   def dbSetup() {
     Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag, 
-				Dog, User)
+                                Dog, User, Mixer, Dog2)
     Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag,
-                        User,
-                        Dog)
+                        User, Dog, Mixer, Dog2)
   }
 
   providers.foreach(provider => {
 
       def cleanup() {
-        try { provider.setupDB } catch { case e=> skip("Provider %s not available: %s".format(provider, e)) }
+        try { provider.setupDB } catch { case e if !provider.required_? => skip("Provider %s not available: %s".format(provider, e)) }
 
-        Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag, User, Dog)
-        Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag, User, Dog)
+        Schemifier.destroyTables_!!(ignoreLogger _, SampleModel, SampleTag, User, Dog, Mixer, Dog2)
+        Schemifier.schemify(true, ignoreLogger _, SampleModel, SampleTag, User, Dog, Mixer, Dog2)
       }
 
       ("Mapper for " + provider.name) should {
-
         "schemify" in {
-	  cleanup()
+          cleanup()
 
           val elwood = SampleModel.find(By(SampleModel.firstName, "Elwood")).open_!
           val madeline = SampleModel.find(By(SampleModel.firstName, "Madeline")).open_!
@@ -93,17 +91,17 @@ object MapperSpecs extends Specification {
           (oo.length > 0) must beTrue
 
           for (t <- oo)
-	  (t.tag.is.indexOf("oo") >= 0) must beTrue
+          (t.tag.is.indexOf("oo") >= 0) must beTrue
 
           for (t <- oo)
-	  t.model.cached_? must beFalse
+          t.model.cached_? must beFalse
 
           val mm = SampleTag.findAll(Like(SampleTag.tag, "M%"))
 
           (mm.length > 0) must beTrue
 
           for (t <- mm)
-	  (t.tag.is.startsWith("M")) must beTrue
+          (t.tag.is.startsWith("M")) must beTrue
 
           for (t <- mm) {
             t.model.cached_? must beFalse
@@ -145,18 +143,18 @@ object MapperSpecs extends Specification {
           (oo.length > 0) must beTrue
 
           for (t <- oo)
-	  t.model.cached_? must beTrue
+          t.model.cached_? must beTrue
         }
 
         "Precache works with OrderBy" in {
           if ((provider ne DBProviders.DerbyProvider)
               && (provider ne DBProviders.MySqlProvider)) { // this doesn't work for Derby, but it's a derby bug
-	    // nor does it work in MySQL, but it's a MySQL limitation
+            // nor does it work in MySQL, but it's a MySQL limitation
             //  try { provider.setupDB } catch { case e => skip(e.getMessage) }
 
             cleanup()
 
-	    val dogs = Dog.findAll(By(Dog.name,"fido"),OrderBy(Dog.name,Ascending),
+            val dogs = Dog.findAll(By(Dog.name,"fido"),OrderBy(Dog.name,Ascending),
                                    PreCache(Dog.owner))
 
             val oo = SampleTag.findAll(OrderBy(SampleTag.tag, Ascending),
@@ -180,7 +178,7 @@ object MapperSpecs extends Specification {
           (oo.length > 0) must beTrue
 
           for (t <- oo)
-	  t.model.cached_? must beTrue
+          t.model.cached_? must beTrue
         }
 
         "Non-deterministic Precache works with OrderBy" in {
@@ -196,9 +194,124 @@ object MapperSpecs extends Specification {
           (oo.length > 0) must beTrue
 
           for (t <- oo)
-	  t.model.cached_? must beTrue
+          t.model.cached_? must beTrue
         }
-      
+
+
+        "work with Mixed case" in {
+          cleanup()
+
+          val elwood = Mixer.find(By(Mixer.name, "Elwood")).open_!
+          val madeline = Mixer.find(By(Mixer.name, "Madeline")).open_!
+          val archer = Mixer.find(By(Mixer.name, "Archer")).open_!
+
+          elwood.name.is must_== "Elwood"
+          madeline.name.is must_== "Madeline"
+          archer.name.is must_== "Archer"
+
+          elwood.weight.is must_== 33
+          madeline.weight.is must_== 44
+          archer.weight.is must_== 105
+        }
+
+        "work with Mixed case update and delete" in {
+          cleanup()
+
+          
+          val elwood = Mixer.find(By(Mixer.name, "Elwood")).open_!
+
+
+          elwood.name.is must_== "Elwood"
+
+          elwood.name("FruitBar").weight(966).save
+
+          val fb = Mixer.find(By(Mixer.weight, 966)).open_!
+
+          fb.name.is must_== "FruitBar"
+
+          fb.weight.is must_== 966
+
+          fb.delete_!
+
+          Mixer.find(By(Mixer.weight, 966)).isDefined must_== false
+          Mixer.find(By(Mixer.name, "FruitBar")).isDefined must_== false
+          Mixer.find(By(Mixer.name, "Elwood")).isDefined must_== false
+         
+        }
+
+        "work with Mixed case update and delete for Dog2" in {
+          cleanup()
+
+          val elwood = Dog2.find(By(Dog2.name, "Elwood")).open_!
+
+          elwood.name.is must_== "Elwood"
+
+          elwood.name("FruitBar").actualAge(966).save
+
+          val fb = Dog2.find(By(Dog2.actualAge, 966)).open_!
+
+          fb.name.is must_== "FruitBar"
+
+          fb.actualAge.is must_== 966
+         
+          fb.delete_!
+
+          Dog2.find(By(Dog2.actualAge, 966)).isDefined must_== false
+          Dog2.find(By(Dog2.name, "FruitBar")).isDefined must_== false
+          Dog2.find(By(Dog2.name, "Elwood")).isDefined must_== false
+        }
+
+        "Precache works with OrderBy with Mixed Case" in {
+          if ((provider ne DBProviders.DerbyProvider)
+              && (provider ne DBProviders.MySqlProvider)) { // this doesn't work for Derby, but it's a derby bug
+            // nor does it work in MySQL, but it's a MySQL limitation
+            //  try { provider.setupDB } catch { case e => skip(e.getMessage) }
+
+            cleanup()
+
+            val dogs = Dog2.findAll(By(Dog2.name,"fido"),OrderBy(Dog2.name,Ascending),
+                                    PreCache(Dog2.owner))
+
+            val oo = SampleTag.findAll(OrderBy(SampleTag.tag, Ascending),
+                                       MaxRows(2),
+                                       PreCache(SampleTag.model))
+
+            (oo.length > 0) must beTrue
+
+            for (t <- oo)
+            t.model.cached_? must beTrue
+          }
+        }
+
+        "Non-deterministic Precache works with Mixed Case" in {
+          cleanup()
+
+          val dogs = Dog2.findAll(By(Dog2.name,"fido"), PreCache(Dog2.owner, false))
+          val oo = SampleTag.findAll(By(SampleTag.tag, "Meow"),
+                                     PreCache(SampleTag.model, false))
+
+          (oo.length > 0) must beTrue
+
+          for (t <- oo)
+          t.model.cached_? must beTrue
+        }
+
+        "Non-deterministic Precache works with OrderBy with Mixed Case" in {
+          cleanup()
+
+          val dogs = Dog2.findAll(By(Dog2.name,"fido"),OrderBy(Dog2.name,Ascending),
+                                  PreCache(Dog2.owner, false))
+
+          val oo = SampleTag.findAll(OrderBy(SampleTag.tag, Ascending),
+                                     MaxRows(2),
+                                     PreCache(SampleTag.model, false))
+
+          (oo.length > 0) must beTrue
+
+          for (t <- oo)
+          t.model.cached_? must beTrue
+        }
+
 
         "Save flag works" in {
           cleanup()
@@ -237,9 +350,9 @@ object SampleTag extends SampleTag with LongKeyedMetaMapper[SampleTag] {
   private def populate {
     val samp = SampleModel.findAll()
     val tags = List("Hello", "Moose", "Frog", "WooHoo", "Sloth",
-		    "Meow", "Moof")
+                    "Meow", "Moof")
     for (t <- tags;
-	 m <- samp) SampleTag.create.tag(t).model(m).save
+         m <- samp) SampleTag.create.tag(t).model(m).save
   }
 }
 
@@ -325,5 +438,79 @@ object Dog extends Dog with LongKeyedMetaMapper[Dog] {
     create.name("Madeline").save
     create.name("Archer").save
     create.name("fido").owner(User.find(By(User.firstName, "Elwood"))).save
+  }
+}
+
+class Mixer extends LongKeyedMapper[Mixer] with IdPK {
+  def getSingleton = Mixer
+
+
+  object name extends MappedPoliteString(this, 128) {
+    override def dbColumnName = "NaM_E"
+    override def defaultValue = "wrong"
+  }
+  object weight extends MappedInt(this) {
+    override def dbColumnName = "WEIGHT"
+    override def defaultValue = -99
+  }
+
+}
+
+object Mixer extends Mixer with LongKeyedMetaMapper[Mixer] {
+  override def dbAddTable = Full(populate _)
+
+  override def dbTableName = "MIXME_UP"
+
+  private def populate {
+    create.name("Elwood").weight(33).save
+    create.name("Madeline").weight(44).save
+    create.name("Archer").weight(105).save
+  }
+}
+
+class Dog2 extends LongKeyedMapper[Dog2] {
+  def getSingleton = Dog2
+
+  override def primaryKeyField = dog2id
+
+  object dog2id extends MappedLongIndex[Dog2](this.asInstanceOf[MapperType]) {
+    override def dbColumnName = "DOG2_Id"
+  }
+
+  object name extends MappedPoliteString(this, 128)
+  object weight extends MappedInt(this)
+  object owner extends MappedLongForeignKey(this,User)
+  object actualAge extends MappedInt(this) {
+    override def dbColumnName = "ACTUAL_AGE"
+    override def defaultValue = 1
+    override def dbIndexed_? = true
+  }
+  object isDog extends MappedBoolean(this) {
+    override def dbColumnName = "is_a_dog"
+    override def defaultValue = false
+    override def dbIndexed_? = true
+  }
+  object createdTime extends MappedDateTime(this) {
+    override def dbColumnName = "CreatedTime"
+    override def defaultValue = new _root_.java.util.Date()
+    override def dbIndexed_? = true
+  }
+}
+
+object Dog2 extends Dog2 with LongKeyedMetaMapper[Dog2] {
+  override def dbTableName = "DOG2"
+  override def dbAddTable = Full(populate _)
+
+  private def populate {
+    create.name("Elwood").actualAge(66).save
+    create.name("Madeline").save
+    create.name("Archer").save
+    create.name("fido").owner(User.find(By(User.firstName, "Elwood"))).isDog(true).save
+    create.name("toto").owner(User.find(By(User.firstName, "Archer"))).actualAge(3).isDog(true).createdTime(Dog2.getRefDate).save
+  }
+
+  // Get new instance of fixed point-in-time reference date
+  def getRefDate: _root_.java.util.Date = {
+    new _root_.java.util.Date(1257089309453L)
   }
 }
