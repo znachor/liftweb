@@ -23,7 +23,7 @@
    </action>
    see http://maven.apache.org/plugins/maven-changes-plugin/usage.html for full guide
    -->
-    <!--<release version="1.1-SNAPSHOT" date="" description="Lift 1.1 Snapshot"/>-->
+    <release version="1.1-SNAPSHOT" date="" description="Lift 1.1 Snapshot"/>
 
     <release version="1.1-M7" date="2009-11-07" description="Lift 1.1 Milestone 7">
       <action dev="alex.boisvert" type="update" issue="57" system="github">
