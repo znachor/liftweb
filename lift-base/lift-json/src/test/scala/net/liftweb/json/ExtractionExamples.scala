@@ -35,7 +35,7 @@ object ExtractionExamples extends Specification {
 
   "Primitive extraction example" in {
     val json = parse(primitives)
-    json.extract[Primitives] mustEqual Primitives(124, 123L, 126.5, 127.5.floatValue, "128", 125, 129.byteValue, true)
+    json.extract[Primitives] mustEqual Primitives(124, 123L, 126.5, 127.5.floatValue, "128", 'symb, 125, 129.byteValue, true)
   }
 
   "Null extraction example" in {
@@ -101,7 +101,8 @@ object ExtractionExamples extends Specification {
   "f": 127.5,
   "s": "128",
   "b": 129,
-  "bool": true
+  "bool": true,
+  "sym":"symb"
 }
 """
 
@@ -116,7 +117,7 @@ case class SimplePerson(name: String, address: Address)
 
 case class Name(name: String)
 
-case class Primitives(i: Int, l: Long, d: Double, f: Float, s: String, sh: Short, b: Byte, bool: Boolean)
+case class Primitives(i: Int, l: Long, d: Double, f: Float, s: String, sym: Symbol, sh: Short, b: Byte, bool: Boolean)
 
 case class OChild(name: Option[String], age: Int, mother: Option[Parent], father: Option[Parent])
 case class Parent(name: String)
