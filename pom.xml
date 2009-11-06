@@ -806,16 +806,16 @@
       <id>hudson</id>
       <distributionManagement>
         <repository>
-          <id>hudson.scala-tools.org</id>
-          <url>file:///home/scala-tools.org/www/repo-snapshots</url>
+          <id>nexus.scala-tools.org</id>
+          <url>http://nexus.scala-tools.org/content/repositories/releases</url>
         </repository>
         <snapshotRepository>
-          <id>hudson.scala-tools.org</id>
-          <url>file:///home/scala-tools.org/www/repo-snapshots</url>
+          <id>nexus.scala-tools.org</id>
+          <url>http://nexus.scala-tools.org/content/repositories/snapshots</url>
           <uniqueVersion>false</uniqueVersion>
         </snapshotRepository>
         <site>
-          <id>hudson.scala-tools.org</id>
+          <id>nexus.scala-tools.org</id>
           <url>file:///home/scala-tools.org/www/mvnsites-snapshots/liftweb</url>
         </site>
       </distributionManagement>
