@@ -33,6 +33,7 @@ trait ServletFilterProvider extends Filter with HTTPProvider {
    * Executes the Lift filter component.
    */
   def doFilter(req: ServletRequest, res: ServletResponse, chain: FilterChain) = {
+    UnboundRequestVarHandler(Empty,
     RequestVarHandler(Empty,
       (req, res) match {
         case (httpReq: HttpServletRequest, httpRes: HttpServletResponse) =>
@@ -43,7 +44,7 @@ trait ServletFilterProvider extends Filter with HTTPProvider {
             chain.doFilter(req, res)
           }
         case _ => chain.doFilter(req, res)
-      })
+      }))
   }
 
 

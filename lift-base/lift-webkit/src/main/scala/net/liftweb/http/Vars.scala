@@ -97,6 +97,45 @@ abstract class RequestVar[T](dflt: => T) extends AnyVar[T, RequestVar[T]](dflt) 
   def logUnreadVal = true
 }
 
+/**
+ * Keep request-local information around without the nastiness of naming session variables
+ * or the type-unsafety of casting the results.
+ * RequestVars share their value through the scope of the current HTTP
+ * request.  They have no value at the beginning of request servicing
+ * and their value is discarded at the end of request processing.  They
+ * are helpful to share values across many snippets.
+ *
+ * @param dflt - the default value of the session variable
+ */
+private[http] abstract class UnboundRequestVar[T](dflt: => T) extends AnyVar[T, UnboundRequestVar[T]](dflt) {
+  type CleanUpParam = Box[LiftSession]
+
+  override protected def findFunc(name: String): Box[T] = UnboundRequestVarHandler.get(name)
+
+  override protected def setFunc(name: String, value: T): Unit = UnboundRequestVarHandler.set(name, this, value)
+
+  override protected def clearFunc(name: String): Unit = UnboundRequestVarHandler.clear(name)
+
+  override protected def wasInitialized(name: String): Boolean = {
+    val bn = name + VarConstants.initedSuffix
+    val old: Boolean = UnboundRequestVarHandler.get(bn) openOr false
+    UnboundRequestVarHandler.set(bn, this, true)
+    old
+  }
+
+  override protected def registerCleanupFunc(in: Box[LiftSession] => Unit): Unit =
+    UnboundRequestVarHandler.addCleanupFunc(in)
+
+  /**
+   * This defines whether or not Lift will log when a RequestVar is set but then not read within
+   * the same request cycle. Change this to false to turn off logging. Logging can also be turned
+   * off globally via LiftRules.logUnreadRequestVars.
+   *
+   * @see LiftRules#logUnreadRequestVars
+   */
+  def logUnreadVal = true
+}
+
 trait CleanRequestVarOnSessionTransition {
   self: RequestVar[_] =>
 }
@@ -194,6 +233,101 @@ private[http] object RequestVarHandler {
     )
   }
 }
+
+private[http] object UnboundRequestVarHandler {
+  // This maps from the RV name to (RV instance, value, set-but-not-read flag)
+  private val vals: ThreadGlobal[HashMap[String, (UnboundRequestVar[_], Any, Boolean)]] = new ThreadGlobal
+  private val cleanup: ThreadGlobal[ListBuffer[Box[LiftSession] => Unit]] = new ThreadGlobal
+  private val isIn: ThreadGlobal[String] = new ThreadGlobal
+  private val sessionThing: ThreadGlobal[Box[LiftSession]] = new ThreadGlobal
+
+
+  /**
+   * Generate a function that will take a snapshot of the current RequestVars
+   * such that they can be restored
+   */
+  final def generateSnapshotRestorer[T](): Function1[Function0[T], T] =
+    {
+      val myVals = vals.value
+      val mySessionThing = sessionThing.value
+
+      f => isIn.doWith("in")(
+        vals.doWith(myVals)(
+          cleanup.doWith(new ListBuffer) {
+            sessionThing.doWith(mySessionThing) {
+              val ret: T = f()
+
+              cleanup.value.toList.foreach(clean => Helpers.tryo(clean(sessionThing.value)))
+
+              ret
+            }
+          }
+          ))
+    }
+
+  private[http] def get[T](name: String): Box[T] =
+    for (ht <- Box.legacyNullTest(vals.value);
+         (rvInstance,value,unread) <- ht.get(name)) yield {
+           if (unread) {
+             // Flag the variable as no longer being set-but-unread
+             ht(name) = (rvInstance : UnboundRequestVar[_], value.asInstanceOf[T], false)
+           }
+           value.asInstanceOf[T]
+         }
+
+  private[http] def set[T](name: String, from: UnboundRequestVar[_], value: T): Unit =
+  for (ht <- Box.legacyNullTest(vals.value))
+  ht(name) = (from, value, true)
+
+  private[http] def clear(name: String): Unit =
+    for (ht <- Box.legacyNullTest(vals.value))
+      ht -= name
+
+  private[http] def addCleanupFunc(f: Box[LiftSession] => Unit): Unit =
+    for (cu <- Box.legacyNullTest(cleanup.value))
+      cu += f
+
+  def apply[T](session: Box[LiftSession], f: => T): T = {
+    if ("in" == isIn.value) {
+      val tv = vals.value
+
+      // remove all the session variables that are CleanRequestVarOnSessionTransition
+      val toRemove: Iterable[String] = tv.flatMap {
+        case (name, (it: CleanRequestVarOnSessionTransition, _, _)) => List(name)
+        case _ => Nil
+      }
+
+      toRemove.foreach(n => tv -= n)
+
+
+      sessionThing.set(session)
+      f
+    } else
+    isIn.doWith("in") (
+      vals.doWith(new HashMap) (
+        cleanup.doWith(new ListBuffer) {
+          sessionThing.doWith(session) {
+            val ret: T = f
+
+            cleanup.value.toList.foreach(clean => Helpers.tryo(clean(sessionThing.value)))
+
+            if (Props.devMode && LiftRules.logUnreadRequestVars) {
+              vals.value.keys.filter(! _.startsWith(VarConstants.varPrefix+"net.liftweb"))
+                .filter(! _.endsWith(VarConstants.initedSuffix))
+                .foreach(key => vals.value(key) match {
+                  case (rv,_,true) if rv.logUnreadVal => Log.warn("RequestVar %s was set but not read".format(key.replace(VarConstants.varPrefix,"")))
+                  case _ =>
+                })
+            }
+
+            ret
+          }
+        }
+      )
+    )
+  }
+}
+
 
 
 object AnyVar {
