@@ -23,12 +23,14 @@ import _root_.scala.xml.{NodeSeq, Null, MetaData, Text}
 import _root_.java.util.Locale
 import _root_.scala.collection.mutable.ListBuffer
 
+trait Wizard {
+  
+}
+
 object Wizard {
-
-
-  trait Field extends SettableValueHolder  {
+  trait Field extends SettableValueHolder {
     def validate: List[FieldError]
-    
+
     /**
      * Should this field appear on the confirmation page
      */
@@ -46,7 +48,7 @@ object Wizard {
     def toForm: Box[NodeSeq]
   }
 
-  trait LocalField extends Field  {
+  trait LocalField extends Field {
     object currentValue extends WizardVar[ValueType](default) {
       override protected def __nameSalt = randomString(20)
     }
@@ -54,12 +56,12 @@ object Wizard {
     def default: ValueType
 
     def is = currentValue.is
+
     def set(v: ValueType) = currentValue.set(v)
 
   }
 
   object Field {
-  
   }
 
   private object NextScreen extends RequestVar[Box[Screen]](Empty) {
@@ -68,83 +70,51 @@ object Wizard {
 
   private object ScreenVars extends RequestVar[Map[String, (WizardVar[_], Any)]](Map())
 
-  trait Screen extends DispatchSnippet {
-    def dispatch = {
-      case NextScreen(ns) => ns.screenContent
-      case _ => screenContent
-    }
+  trait Screen {
     def templateName: Box[String] = Empty
+
     def locale: Locale = S.locale
+
     def template: NodeSeq = templateName.flatMap(s => TemplateFinder.findAnyTemplate(s.roboSplit("/"), locale)) openOr NodeSeq.Empty
+
     def nextScreen: Box[Screen] = Empty
+
     def finished: () => Unit = () => ()
+
     def fields: List[Field] = Nil
+
     def validate: List[FieldError] = fields.flatMap(_.validate)
+
     def howManyMore_? : Box[Int] = Empty
+
     def lastScreen_? = true
+
     def buildContinuation: NodeSeq = {
       val currentScreenVars = ScreenVars.is
       SHtml.hidden(() => ScreenVars.set(currentScreenVars))
     }
+
     def screenContent(in: NodeSeq) = {
 
 
-      <form mathod="post" action={S.uri}>
-        {
-          buildContinuation
-        }
-        {
-          bind(bindName, template, fields.map(_.asBindParam) :_*)
-        }
-
-      </form> % formAttrs
+      <form mathod="post" action={S.uri}>{buildContinuation}{bind(bindName, template, fields.map(_.asBindParam): _*)}</form> % formAttrs
     }
 
     def formAttrs: MetaData = Null
+
     def bindName = "wizard"
+
     def &>(other: Screen): Screen = {
       val self = this
       new ProxyScreen {
         def proxyTo = self
+
         override def nextScreen: Box[Screen] = Full(other)
       }
     }
 
-    /*
-     def &>[Me <: Screen](other: PartialFunction[Me, Screen]): Screen = {
-     val self = this
-     new ProxyScreen {
-     def proxyTo = self
-     override def nextScreen: Box[Screen] = if ()
-     }
-     }
-     */
-  }
-
-  trait ProxyScreen extends Screen {
-    def proxyTo: Screen
-    override def dispatch = proxyTo.dispatch
-
-    override def templateName: Box[String] = proxyTo.templateName
-    override def locale: Locale = proxyTo.locale
-    override def template: NodeSeq = proxyTo.template
-    override def nextScreen: Box[Screen] = proxyTo.nextScreen
-    override def finished: () => Unit = proxyTo.finished
-    override def fields: List[Field] = proxyTo.fields
-    override def validate: List[FieldError] = proxyTo.validate
-    override def howManyMore_? : Box[Int] = proxyTo.howManyMore_?
-    override def lastScreen_? = proxyTo.lastScreen_?
-    override def buildContinuation: NodeSeq = proxyTo.buildContinuation
-    override def screenContent(in: NodeSeq) = proxyTo.screenContent(in)
-
-
-    override def formAttrs: MetaData = proxyTo.formAttrs
-    override def bindName = proxyTo.bindName
-  }
-
 
   object Screen {
-
   }
 
   /**
@@ -159,10 +129,13 @@ object Wizard {
    */
   abstract class WizardVar[T](dflt: => T) extends NonCleanAnyVar[T](dflt) {
     override protected def findFunc(name: String): Box[T] = WizardVarHandler.get(name)
+
     override protected def setFunc(name: String, value: T): Unit = WizardVarHandler.set(name, this, value)
+
     override protected def clearFunc(name: String): Unit = WizardVarHandler.clear(name)
+
     override protected def wasInitialized(name: String): Boolean = {
-      val bn = name+"_inited_?"
+      val bn = name + "_inited_?"
       val old: Boolean = WizardVarHandler.get(bn) openOr false
       WizardVarHandler.set(bn, this, true)
       old
@@ -180,14 +153,14 @@ object Wizard {
 
 
     def get[T](name: String): Box[T] =
-    ScreenVars.is.get(name).map(_._2.asInstanceOf[T])
+      ScreenVars.is.get(name).map(_._2.asInstanceOf[T])
 
 
     def set[T](name: String, from: WizardVar[_], value: T): Unit =
-    ScreenVars.set(ScreenVars.is + (name -> (from, value)))
+      ScreenVars.set(ScreenVars.is + (name -> (from, value)))
 
     def clear(name: String): Unit =
-    ScreenVars.set(ScreenVars.is - name)
+      ScreenVars.set(ScreenVars.is - name)
   }
 
 
