@@ -143,6 +143,7 @@ object Extraction {
     case JInt(x) if (targetType == classOf[String]) => x.toString
     case JDouble(x) if (targetType == classOf[Float]) => x.floatValue
     case JDouble(x) if (targetType == classOf[String]) => x.toString
+    case JString(s) if (targetType == classOf[Symbol]) => Symbol(s)
     case JString(s) if (targetType == classOf[Date]) => formats.dateFormat.parse(s).getOrElse(fail("Invalid date '" + s + "'"))
     case JNull => null
     case JNothing => fail("Did not find value which can be converted into " + targetType.getName)

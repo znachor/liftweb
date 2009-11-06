@@ -369,7 +369,7 @@ Please see other examples in src/test/scala/net/liftweb/json/SerializationExampl
 Serialization supports:
 
 * Arbitrarily deep case class graphs
-* All primitive types, including BigInts
+* All primitive types, including BigInt and Symbol
 * Lists
 * scala.Option
 * java.util.Date
