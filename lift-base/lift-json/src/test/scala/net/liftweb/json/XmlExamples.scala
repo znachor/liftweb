@@ -7,6 +7,7 @@ class XmlExamplesTest extends Runner(XmlExamples) with JUnit
 object XmlExamples extends Specification {
   import JsonAST._
   import JsonDSL._
+  import JsonParser._
   import Xml._
   import scala.xml.{Group, Text}
 
@@ -64,8 +65,7 @@ object XmlExamples extends Specification {
   }
 
   "Band example with namespaces and empty tag" in {
-    val json = toJson(band)
-    Printer.pretty(render(json)) mustEqual """{
+    toJson(band) mustEqual parse("""{
   "b:band":{
     "name":"The Fall",
     "genre":"rock",
@@ -79,7 +79,7 @@ object XmlExamples extends Specification {
       }]
     }
   }
-}"""
+}""")
   }
 
   "Grouped text example" in {
