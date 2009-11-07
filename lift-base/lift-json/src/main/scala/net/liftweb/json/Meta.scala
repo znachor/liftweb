@@ -117,7 +117,7 @@ private[json] object Meta {
                                    classOf[Short], classOf[java.lang.Integer], classOf[java.lang.Long], 
                                    classOf[java.lang.Double], classOf[java.lang.Float], 
                                    classOf[java.lang.Byte], classOf[java.lang.Boolean], 
-                                   classOf[java.lang.Short], classOf[Date])
+                                   classOf[java.lang.Short], classOf[Date], classOf[Symbol])
 
     def safePrimaryConstructorOf[A](cl: Class[A]): Option[JConstructor[A]] = 
       cl.getDeclaredConstructors.toList match {
@@ -167,6 +167,7 @@ private[json] object Meta {
       case x: java.lang.Boolean => JBool(x.asInstanceOf[Boolean])
       case x: java.lang.Short => JInt(BigInt(x.asInstanceOf[Short]))
       case x: Date => JString(formats.dateFormat.format(x))
+      case x: Symbol => JString(x.name)
       case _ => error("not a primitive " + a.asInstanceOf[AnyRef].getClass)
     }
   }

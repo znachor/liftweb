@@ -2,6 +2,7 @@ trait Benchmark {
   def run(name: String, warmup: Int, count: Int)(f: => Any) = {
     print("warmup... ")
     repeat(warmup)(f)
+    System.gc
     println("done")
     val t = time {
       repeat(count)(f)

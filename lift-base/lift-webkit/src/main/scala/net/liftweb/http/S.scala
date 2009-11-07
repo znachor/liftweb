@@ -835,14 +835,35 @@ for {
    */
   def logQuery(query: String, time: Long) = p_queryLog.is += (query, time)
 
+  /**
+   * Given a snippet class name, return the cached or predefined stateful snippet for
+   * that class
+   */
   def snippetForClass(cls: String): Box[StatefulSnippet] =
-  _statefulSnip.is.get(cls)
+    _statefulSnip.is.get(cls)
 
-  def setSnippetForClass(cls: String, inst: StatefulSnippet): Unit =
-  _statefulSnip.set(_statefulSnip.is.update(cls, inst))
+  /**
+   * Register a stateful snippet for a given class name.  Only registers if the name
+   * is not already set.
+   */
+  def addSnippetForClass(cls: String, inst: StatefulSnippet): Unit = {
+    if (!_statefulSnip.is.contains(cls)) {
+      inst.addName(cls)  // addresses
+      _statefulSnip.set(_statefulSnip.is.update(cls, inst))
+    }
+  }
+
+  /**
+   * Register a stateful snippet for a given class name.  The addSnippetForClass
+   * method is preferred
+   */
+  def overrideSnippetForClass(cls: String, inst: StatefulSnippet): Unit = {
+    inst.addName(cls)
+    _statefulSnip.set(_statefulSnip.is.update(cls, inst))
+  }
 
   private[http] def unsetSnippetForClass(cls: String): Unit =
-  _statefulSnip.set(_statefulSnip.is - cls)
+    _statefulSnip.set(_statefulSnip.is - cls)
 
   private var _queryAnalyzer: List[(Box[Req], Long,
           List[(String, Long)]) => Any] = Nil

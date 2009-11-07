@@ -7,7 +7,7 @@ import Arbitrary.arbitrary
 trait JValueGen {
   import JsonAST._
 
-  def genJValue: Gen[JValue] = frequency((5, genSimple), (1, lzy(genArray)), (1, lzy(genObject)))
+  def genJValue: Gen[JValue] = frequency((5, genSimple), (1, wrap(genArray)), (1, wrap(genObject)))
   def genSimple: Gen[JValue] = oneOf(
     value(JNull), 
     arbitrary[Int].map(JInt(_)),
@@ -28,7 +28,7 @@ trait NodeGen {
   import Xml.{XmlNode, XmlElem}
   import scala.xml.{Node, NodeSeq, Text}
 
-  def genXml: Gen[Node] = frequency((2, lzy(genNode)), (3, genElem))
+  def genXml: Gen[Node] = frequency((2, wrap(genNode)), (3, genElem))
   
   def genNode = for {
     name <- genName

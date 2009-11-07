@@ -640,7 +640,7 @@ object SHtml {
    * @oaram formId - the id of the form
    */
   def submitJsonForm(jsonHandler: JsonHandler, formId: String):JsCmd = jsonHandler.call("processForm", FormToJSON(formId))
-  
+
   /**
    * Having a regular form, this method can be used to send the serialized content of the form.
    * 

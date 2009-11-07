@@ -72,7 +72,7 @@ trait StatefulSnippet extends DispatchSnippet {
     _names
   }
 
-  def registerThisSnippet() = names.foreach(n => S.setSnippetForClass(n, this))
+  def registerThisSnippet() = names.foreach(n => S.overrideSnippetForClass(n, this))
 
   def unregisterThisSnippet() =  names.foreach(n => S.unsetSnippetForClass(n))
 
