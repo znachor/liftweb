@@ -1924,12 +1924,11 @@ for {
   /**
    * Maps a function with an random generated and name
    */
-  def fmapFunc[T](in: AFuncHolder)(f: String => T): T = //
-    {
-      val name = formFuncName
-      addFunctionMap(name, in)
-      f(name)
-    }
+  def fmapFunc[T](in: AFuncHolder)(f: String => T): T = {
+    val name = formFuncName
+    addFunctionMap(name, in)
+    f(name)
+  }
 
   /**
    * Wrap an AFuncHolder with the current snippet and Loc context so that for Ajax calls, the original snippets,
