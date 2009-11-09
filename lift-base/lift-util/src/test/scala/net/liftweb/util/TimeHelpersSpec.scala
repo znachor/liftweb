@@ -6,7 +6,7 @@ import _root_.java.text._
 import _root_.org.scalacheck.Gen._
 import _root_.org.scalacheck.Prop._
 import _root_.org.scalacheck.Arbitrary
-import _root_.org.specs.Products._
+import _root_.org.specs.util.Products._
 import _root_.org.specs.mock.Mocker
 import _root_.org.specs.ScalaCheck
 
