@@ -18,22 +18,88 @@ package net.liftweb.wizard
 import _root_.net.liftweb.http._
 import _root_.net.liftweb.common._
 import _root_.net.liftweb.util._
+import _root_.net.liftweb.mapper._
 import Helpers._
 import _root_.scala.xml._
 import _root_.scala.reflect.Manifest
 
 object WizardRules {
-  
+  @volatile var dbConnections: List[ConnectionIdentifier] = List(DefaultConnectionIdentifier)
+
+  private def m[T](implicit man: Manifest[T]): Manifest[T] = man
+
+  private def textInfo(field: SettableValueHolder{type ValueType = String}) = SHtml.text(field.is, field.set _)
+private def intInfo(field: SettableValueHolder{type ValueType = Int}) = SHtml.text(field.is.toString,s => Helpers.asInt(s).foreach(field.set _))
+
+
+
 }
 
 trait Wizard {
   @volatile private[this] var _screenList: List[Screen] = Nil
   private object ScreenVars extends RequestVar[Map[String, (WizardVar[_], Any)]](Map())
   private object CurrentScreen extends RequestVar[Box[Screen]](calcFirstScreen)
+  private object PrevSnapshot extends RequestVar[Box[WizardSnapshot]](Empty)
+  private object Referer extends WizardVar[String](S.referer openOr "/")
+
+def toForm = {
+  Referer.is // touch to capture the referer
+  val nextId = Helpers.nextFuncName
+  val prevId = Helpers.nextFuncName
+  val cancelId = Helpers.nextFuncName
+
+  val theScreen = currentScreen openOr S.redirectTo(Referer.is)
+
+  val nextButton = theScreen.nextButton % ("onclick" -> ("document.getElementById("+nextId.encJs+").submit()"))
+  val prevButton = theScreen.prevButton % ("onclick" -> ("document.getElementById("+prevId.encJs+").submit()"))
+  val cancelButton = theScreen.cancelButton % ("onclick" -> ("document.getElementById("+cancelId.encJs+").submit()"))
+
+
+  val url = S.uri
+  val snapshot = createSnapshot
+
+  def doNext() {
+    this.nextScreen
+    if (currentScreen.isEmpty) S.redirectTo(Referer.is)
+  }
+
+  <form id={nextId} action={url} method="post">{
+      SHtml.hidden(() => snapshot.restore())
+    }
+    <table>
+      {
+        theScreen.screenFields.map(f =>
+        <tr><td>{f.titleAsHtml}</td><td>{f.toForm}</td></tr>)
+      }
+    </table>
+    {
+    S.formGroup(4)(SHtml.hidden(() => doNext()))
+
+    }
+      </form> ++
+   <form id={prevId} action={url} method="post">{
+       SHtml.hidden(() => {snapshot.restore(); this.prevScreen})
+     }</form> ++
+   <form id={cancelId} action={url} method="post">{
+       SHtml.hidden(() => {snapshot.restore(); S.redirectTo(Referer.is)})
+     }</form> ++ prevButton ++ cancelButton ++ nextButton
+}
+
+  class WizardSnapshot(private[wizard] val screenVars: Map[String, (WizardVar[_], Any)],
+                       val currentScreen: Box[Screen],
+                       private[wizard] val snapshot: Box[WizardSnapshot]) {
+    def restore() {
+      ScreenVars.set(screenVars)
+      CurrentScreen.set(currentScreen)
+      PrevSnapshot.set(snapshot)
+    }
+  }
   
   private def _register(screen: Screen) {
     _screenList = _screenList ::: List(screen)
   }
+
+  def dbConnections: List[ConnectionIdentifier] = WizardRules.dbConnections
 
   /**
    * The ordered list of Screens
@@ -43,21 +109,71 @@ trait Wizard {
   /**
    * Given the current screen, what's the next screen?
    */
-  def calcScreenAfter(which: Screen): Box[Screen] = screens.dropWhile(_ == which).drop(1).firstOption
+  def calcScreenAfter(which: Screen): Box[Screen] = 
+    screens.dropWhile(_ ne which).drop(1).firstOption
+  
 
   /**
    * What's the first screen in this wizard
    */
   def calcFirstScreen: Box[Screen] = screens.firstOption
 
-  def nextButton: NodeSeq = <button>{S.??("Next")}</button>
+  def nextButton: Elem = <button>{S.??("Next")}</button>
 
-  def prevButton: NodeSeq = <button>{S.??("Previous")}</button>
+  def prevButton: Elem = <button>{S.??("Previous")}</button>
 
-  def cancelButton: NodeSeq = <button>{S.??("Cancel")}</button>
+  def cancelButton: Elem = <button>{S.??("Cancel")}</button>
 
-  def finishButton: NodeSeq = <button>{S.??("Finish")}</button>
+  def finishButton: Elem = <button>{S.??("Finish")}</button>
 
+  def currentScreen: Box[Screen] = CurrentScreen.is
+
+  def createSnapshot = new WizardSnapshot(ScreenVars.is, CurrentScreen.is, PrevSnapshot.is)
+
+  /**
+   * This method will be called within a transactional block when the last screen is completed
+   */
+  protected def finish(): Unit
+
+  def nextScreen {
+    for {
+      screen <- CurrentScreen.is
+    } {
+      screen.validate match {
+        case Nil =>
+          val snapshot = createSnapshot
+          PrevSnapshot.set(Full(snapshot))
+          val nextScreen = screen.nextScreen
+          CurrentScreen.set(screen.nextScreen)
+
+          nextScreen match {
+            case Empty =>
+              def useAndFinish(in: List[ConnectionIdentifier]) {
+                in match {
+                  case Nil => finish()
+
+                  case x :: xs => DB.use(x) {
+                      conn =>
+                      useAndFinish(xs)
+                    }
+                }
+              }
+              useAndFinish(dbConnections)
+
+            case _ =>
+          }
+        case xs => S.error(xs)
+      }
+    }
+  }
+
+  def prevScreen {
+    for {
+      snapshot <- PrevSnapshot.is
+    } {
+      snapshot.restore()
+    }
+  }
 
   /**
    * By default, are all the fields on all the screen in this wizardn on the confirm screen?
@@ -68,6 +184,8 @@ trait Wizard {
    * Define a screen within this wizard
    */
   trait Screen {
+    override def toString = screenName
+
     @volatile private[this] var _fieldList: List[Field] = Nil
     private def _register(field: Field) {
       _fieldList = _fieldList ::: List(field)
@@ -76,33 +194,41 @@ trait Wizard {
     /**
      * A list of fields in this screen
      */
-    def fields = _fieldList
+    def screenFields = _fieldList
+
+    val myScreenNum = screens.length
 
     /**
      * The name of the screen.  Override this to change the screen name
      */
-    def name: String = "Screen "+(screens.length)
+    def screenName: String = "Screen "+(myScreenNum + 1)
 
-    def nameAsHtml: NodeSeq = Text(name)
+    def screenNameAsHtml: NodeSeq = Text(screenName)
 
-    def title: NodeSeq = nameAsHtml
+    def screenTitle: NodeSeq = screenNameAsHtml
 
-    def topText: Box[String] = Empty
+    def screenTopText: Box[String] = Empty
 
-    def topTextAsHtml: Box[NodeSeq] = topText.map(Text.apply)
+    def screenTopTextAsHtml: Box[NodeSeq] = screenTopText.map(Text.apply)
 
-    def nextButton: NodeSeq = Wizard.this.nextButton
+    def nextButton: Elem = Wizard.this.nextButton
 
-    def prevButton: NodeSeq = Wizard.this.prevButton
+    def prevButton: Elem = Wizard.this.prevButton
 
-    def cancelButton: NodeSeq = Wizard.this.cancelButton
+    def cancelButton: Elem = Wizard.this.cancelButton
 
-    def finishButton: NodeSeq = Wizard.this.finishButton
+    def finishButton: Elem = Wizard.this.finishButton
 
+    def nextScreen: Box[Screen] = calcScreenAfter(this)
+
+    implicit def boxOfScreen(in: Screen): Box[Screen] = Box !! in
     /**
      * By default, are all the fields on this screen on the confirm screen?
      */
     def onConfirm_? = Wizard.this.onConfirm_?
+
+
+    def validate: List[FieldError] = screenFields.flatMap(_.validate)
 
     /**
      * Is this screen a confirm screen?
@@ -112,27 +238,29 @@ trait Wizard {
     /**
      * Define a field within the screen
      */
-    trait Field {
-      type FieldType
+    trait Field extends FieldIdentifier with SettableValueHolder {
+      type ValueType
       Screen.this._register(this)
 
-      object currentValue extends WizardVar[FieldType](default) {
+      object currentValue extends WizardVar[ValueType](default) {
         override protected def __nameSalt = randomString(20)
       }
 
-      def default: FieldType
+      def default: ValueType
 
       def is = currentValue.is
 
-      def set(v: FieldType) = currentValue.set(v)
+def get = is
 
-      implicit def manifest: Manifest[FieldType]
+      def set(v: ValueType) = currentValue.set(v)
+
+      implicit def manifest: Manifest[ValueType]
 
       protected def buildIt[T](implicit man: Manifest[T]): Manifest[T] = man
 
       def title: String
 
-      def titleAsHtml: NodeSeq = Text(name)
+      def titleAsHtml: NodeSeq = Text(title)
 
       def help: Box[String] = Empty
 
@@ -143,10 +271,18 @@ trait Wizard {
        */
       def editable_? = true
 
+def toForm: NodeSeq
+
       /**
        * Is this field on the confirm screen
        */
       def onConfirm_? = Screen.this.onConfirm_?
+
+      def validate: List[FieldError] = validation.flatMap(_.apply(is))
+
+      def validation: List[ValueType => List[FieldError]] = Nil
+
+      override lazy val uniqueFieldId: Box[String] = Full(Helpers.hash(this.getClass.getName))
     }
 
     Wizard.this._register(this)
@@ -199,11 +335,34 @@ trait Wizard {
   }
 }
 
-trait IntField {
+trait IntField extends FieldIdentifier {
   self: Wizard#Screen#Field =>
-  type FieldType = Int
+  type ValueType = Int
   def default = 0
   lazy val manifest = buildIt[Int]
+
+  def minVal(len: Int, msg: => String): Int => List[FieldError] = s =>
+  if (s < len) List(FieldError(this, Text(msg))) else Nil
+
+  def maxVal(len: Int, msg: => String): Int => List[FieldError] = s =>
+  if (s > len) List(FieldError(this, Text(msg))) else Nil
+
+  def toForm: NodeSeq = SHtml.text(this.is.toString, s => Helpers.asInt(s).foreach(this.set _))
+}
+
+trait StringField extends FieldIdentifier {
+  self: Wizard#Screen#Field =>
+  type ValueType = String
+  def default = ""
+  lazy val manifest = buildIt[String]
+
+  def minLen(len: Int, msg: => String): String => List[FieldError] = s => 
+  if (s.length < len) List(FieldError(this, Text(msg))) else Nil
+
+  def maxLen(len: Int, msg: => String): String => List[FieldError] = s =>
+  if (s.length > len) List(FieldError(this, Text(msg))) else Nil
+
+  def toForm: NodeSeq = SHtml.text(this.is, this.set _)
 }
 
 /*
