@@ -403,13 +403,13 @@
         <groupId>org.scala-tools.testing</groupId>
         <artifactId>specs</artifactId>
         <!--<version>[1.4.4,1.6.0]</version>-->
-        <version>1.6.0</version>
+        <version>1.6.1</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.scala-tools.testing</groupId>
         <artifactId>scalacheck</artifactId>
-        <version>1.5</version>
+        <version>1.6</version>
         <scope>test</scope>
       </dependency>
 
@@ -539,6 +539,11 @@
           </executions>
         </plugin>
         <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-changes-plugin</artifactId>
+          <version>2.1</version>
+        </plugin>
+        <plugin>
           <groupId>org.apache.felix</groupId>
           <artifactId>maven-bundle-plugin</artifactId>
           <version>2.0.1</version>
@@ -612,6 +617,22 @@
       <plugin>
         <groupId>org.scala-tools</groupId>
         <artifactId>maven-scala-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-changes-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default-changes-validate</id>
+            <phase>pre-site</phase>
+            <goals>
+              <goal>changes-validate</goal>
+            </goals>
+            <configuration>
+              <failOnError>true</failOnError>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
@@ -785,16 +806,16 @@
       <id>hudson</id>
       <distributionManagement>
         <repository>
-          <id>hudson.scala-tools.org</id>
-          <url>file:///home/scala-tools.org/www/repo-snapshots</url>
+          <id>nexus.scala-tools.org</id>
+          <url>http://nexus.scala-tools.org/content/repositories/releases</url>
         </repository>
         <snapshotRepository>
-          <id>hudson.scala-tools.org</id>
-          <url>file:///home/scala-tools.org/www/repo-snapshots</url>
+          <id>nexus.scala-tools.org</id>
+          <url>http://nexus.scala-tools.org/content/repositories/snapshots</url>
           <uniqueVersion>false</uniqueVersion>
         </snapshotRepository>
         <site>
-          <id>hudson.scala-tools.org</id>
+          <id>nexus.scala-tools.org</id>
           <url>file:///home/scala-tools.org/www/mvnsites-snapshots/liftweb</url>
         </site>
       </distributionManagement>

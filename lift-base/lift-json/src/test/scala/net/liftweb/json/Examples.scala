@@ -60,6 +60,10 @@ object Examples extends Specification {
     compact(render(nulls)) mustEqual """{"f1":null,"f2":[null,"s"]}"""
   }
 
+  "Symbol example" in {
+    compact(render(symbols)) mustEqual """{"f1":"foo","f2":"bar"}"""
+  }
+
   "Unicode example" in {
     parse("[\" \\u00e4\\u00e4li\\u00f6t\"]") mustEqual JArray(List(JString(" \u00e4\u00e4li\u00f6t")))
   }
@@ -156,4 +160,5 @@ object Examples extends Specification {
 
   val nulls = ("f1" -> null) ~ ("f2" -> List(null, "s"))
   val quoted = """["foo \" \n \t \r bar"]"""
+  val symbols = ("f1" -> 'foo) ~ ("f2" -> 'bar)
 }
