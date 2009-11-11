@@ -41,15 +41,6 @@
       <artifactId>lift-jpa</artifactId>
       <version>${pom.version}</version>
     </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-simple</artifactId>
-      <!-- Alternative to slf4j-simple. See: http://www.slf4j.org/legacy.html#log4j-over-slf4j -->
-      <!--<artifactId>slf4j-log4j12</artifactId>-->
-      <!-- <version>1.4.2</version> -->
-      <scope>runtime</scope>
-      <version>1.4.2</version>
-    </dependency>
   </dependencies>
 
   <build>

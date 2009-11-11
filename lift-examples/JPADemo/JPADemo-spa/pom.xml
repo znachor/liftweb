@@ -22,7 +22,7 @@
     <dependency>
       <groupId>org.hibernate</groupId>
       <artifactId>hibernate-entitymanager</artifactId>
-      <version>3.4.0.GA</version>
+      <version>3.3.2.GA</version>
       <exclusions>
         <exclusion>
           <groupId>javax.transaction</groupId>
@@ -35,14 +35,6 @@
       <artifactId>geronimo-spec-jta</artifactId>
       <version>1.0.1B-rc4</version>
       <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-simple</artifactId>
-      <version>1.4.2</version>
-      <!-- Alternative to slf4j-simple. See: http://www.slf4j.org/legacy.html#log4j-over-slf4j -->
-      <!--<artifactId>slf4j-log4j12</artifactId>-->
-      <scope>runtime</scope>
     </dependency>
   </dependencies>
 
