@@ -32,7 +32,7 @@ import _root_.net.liftweb.common.{Box, Full, Empty}
  *
  * E.g. (child nodes are optional)
  * <pre>
- * &lt;lift:snippet type="error_report"&gt;
+ * &lt;lift:Msgs showAll="false"&gt;
  *   &lt;lift:error_msg&gt;Error!  The details are:&lt;/lift:error_msg&gt;
  *   &lt;lift:error_class&gt;errorBox&lt;/lift:error_class&gt;
  *   &lt;lift:warning_msg&gt;Whoops, I had a problem:&lt;/lift:warning_msg&gt;
