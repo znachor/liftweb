@@ -161,9 +161,9 @@ object S extends HasParams {
   private val _responseCookies = new ThreadGlobal[CookieHolder]
   private val _lifeTime = new ThreadGlobal[Boolean]
 
-  private object postFuncs extends UnboundRequestVar(new ListBuffer[() => Unit])
-  private object p_queryLog extends UnboundRequestVar(new ListBuffer[(String, Long)])
-  private object p_notice extends UnboundRequestVar(new ListBuffer[(NoticeType.Value, NodeSeq, Box[String])])
+  private object postFuncs extends TransientRequestVar(new ListBuffer[() => Unit])
+  private object p_queryLog extends TransientRequestVar(new ListBuffer[(String, Long)])
+  private object p_notice extends TransientRequestVar(new ListBuffer[(NoticeType.Value, NodeSeq, Box[String])])
 
   /**
    * This function returns true if the S object has been initialized for our current scope. If
@@ -785,7 +785,7 @@ for {
     throw ResponseShortcutException.redirect(where, func)
 
   private[http] object oldNotices extends
-  UnboundRequestVar[Seq[(NoticeType.Value, NodeSeq, Box[String])]](Nil)
+  TransientRequestVar[Seq[(NoticeType.Value, NodeSeq, Box[String])]](Nil)
 
   /**
    * Initialize the current request session. Generally this is handled by Lift during request
@@ -1052,7 +1052,7 @@ for {
     ).openOr((false, Empty))
 
 
-  private object _skipDocType extends UnboundRequestVar(false)
+  private object _skipDocType extends TransientRequestVar(false)
 
   /**
    * When this is true, Lift will not emit a DocType definition at the start of the response
@@ -1121,7 +1121,7 @@ for {
     this._request.doWith(request) {
       _sessionInfo.doWith(session) {
         _responseHeaders.doWith(new ResponseInfoHolder) {
-	  UnboundRequestVarHandler(Full(session),
+	  TransientRequestVarHandler(Full(session),
           RequestVarHandler(Full(session),
             _responseCookies.doWith(CookieHolder(getCookies(containerRequest), Nil)) {
               _innerInit(f)
@@ -1707,8 +1707,8 @@ for {
   def buildJsonFunc(onError: JsCmd, f: Any => JsCmd): (JsonCall, JsCmd) =
     buildJsonFunc(Empty, Full(onError), f)
 
-  private[http] object _formGroup extends UnboundRequestVar[Box[Int]](Empty)
-  private object formItemNumber extends UnboundRequestVar[Int](0)
+  private[http] object _formGroup extends TransientRequestVar[Box[Int]](Empty)
+  private object formItemNumber extends TransientRequestVar[Int](0)
 
   def formFuncName: String = if (Props.testMode) {
     val bump: Long = ((_formGroup.is openOr 0) + 1000L) * 10000L
