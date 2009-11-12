@@ -462,6 +462,16 @@ case class XmlResponse(xml: Node) extends NodeResponse {
   def out = xml
 }
 
+case class XmlCodeResponse(xml: Node, code: Int) extends NodeResponse {
+  def docType = Empty
+
+  def headers = List("Content-Type" -> "text/xml; charset=utf-8")
+
+  def cookies = Nil
+
+  def out = xml
+}
+
 /**
  * Returning an Atom document.
  */
