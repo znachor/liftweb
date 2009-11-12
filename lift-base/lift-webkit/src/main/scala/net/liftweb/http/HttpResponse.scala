@@ -450,26 +450,28 @@ case class XmlMimeResponse(xml: Node, mime: String) extends NodeResponse {
   def out = xml
 }
 
-case class XmlResponse(xml: Node) extends NodeResponse {
+class XmlResponse(val xml: Node, val code: Int, mime: String) extends NodeResponse {
   def docType = Empty
 
-  def code = 200
-
-  def headers = List("Content-Type" -> "text/xml; charset=utf-8")
+  def headers = List("Content-Type" -> mime)
 
   def cookies = Nil
 
   def out = xml
 }
 
-case class XmlCodeResponse(xml: Node, code: Int) extends NodeResponse {
-  def docType = Empty
+object XmlResponse {
+  /** Construct XmlResponse with 200 OK response code and "text/xml" mime type */
+  def apply(xml: Node) = new XmlResponse(xml, 200, "text/xml; charset=utf-8")
 
-  def headers = List("Content-Type" -> "text/xml; charset=utf-8")
+  /** Construct XmlResponse with given response code and "text/xml" mime type */
+  def apply(xml: Node, code: Int) = new XmlResponse(xml, code, "text/xml; charset=utf-8")
 
-  def cookies = Nil
+  /** Construct XmlResponse with 200 OK response code and given mime type */
+  def apply(xml: Node, mime: String) = new XmlResponse(xml, 200, mime)
 
-  def out = xml
+  /** Construct XmlResponse with given response code and mime type */
+  def apply(xml: Node, code: Int, mime: String) = new XmlResponse(xml, code, mime)
 }
 
 /**
