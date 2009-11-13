@@ -30,11 +30,19 @@ import common._
  * name format is:
  *
  * <pre>
- *   modeName.hostName.userName.filename.extension
+ *   modeName.userName.hostName.props
+ *
+ *   examples:
+ *   dpp.yak.props
+ *   test.dpp.yak.props
+ *   production.moose.props
+ *   staging.dpp.props
+ *   test.default.props
+ *   default.props
  * </pre>
  *
  * with hostName and userName being optional, and modeName being one of
- * "test", "staging", "production", "pilot", "profile", or "default.
+ * "test", "staging", "production", "pilot", "profile", or "default".
  * The standard Lift properties file extension is "props".
  */
 object Props {

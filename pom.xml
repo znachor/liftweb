@@ -558,14 +558,6 @@
                 <goal>bundle</goal>
               </goals>
             </execution>
-            <!-- TODO: Clarify if we really need bundle:install or bundle:bundle would suffice -->
-            <execution>
-              <id>bundle-install</id>
-              <phase>install</phase>
-              <goals>
-                <goal>install</goal>
-              </goals>
-            </execution>
           </executions>
         </plugin>
         <plugin>
