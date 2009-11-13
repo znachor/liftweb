@@ -1051,7 +1051,7 @@ object LiftRules extends Factory {
           new InMemFileParamHolder(fieldName, contentType, fileName, Helpers.readWholeStream(inputStream))
 
   /**
-   * Hods the last update time of the Comet request. Based on this server mayreturn HTTP 304 status
+   * Holds the last update time of the Comet request. Based on this server mayreturn HTTP 304 status
    * indicating the client to used the cached information.
    */
   var cometScriptUpdateTime: LiftSession => Long = session => {
