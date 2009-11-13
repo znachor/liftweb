@@ -14,7 +14,7 @@ package net.liftweb.jpa
 
 import _root_.javax.persistence.EntityManager
 
-import _root_.net.liftweb.http.RequestVar
+import _root_.net.liftweb.http.TransientRequestVar
 
 import _root_.org.scala_libs.jpa.{ScalaEMFactory, ScalaEntityManager}
 
@@ -38,10 +38,10 @@ trait RequestVarEM extends ScalaEntityManager with ScalaEMFactory {
    * Provides the request var that holds the underlying <code>EntityManager</code>
    * for each request.
    */
-  object emVar extends RequestVar[EntityManager](openEM()) {
+  object emVar extends TransientRequestVar[EntityManager](openEM()) {
     this.registerGlobalCleanupFunc(ignore => closeEM(this.is))
 
-  override def __nameSalt = net.liftweb.util.Helpers.randomString(10)
+    override def __nameSalt = net.liftweb.util.Helpers.randomString(10)
   }
 
   // Must be provided to properly implement ScalaEntityManager

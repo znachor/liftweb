@@ -52,7 +52,7 @@ abstract class SessionVar[T](dflt: => T) extends AnyVar[T, SessionVar[T]](dflt) 
   type CleanUpParam = LiftSession
 }
 
-private[http] trait HasLogUneadVal {
+private[http] trait HasLogUnreadVal {
   def logUnreadVal: Boolean
 }
 
@@ -67,7 +67,7 @@ private[http] trait HasLogUneadVal {
  *
  * @param dflt - the default value of the session variable
  */
-abstract class RequestVar[T](dflt: => T) extends AnyVar[T, RequestVar[T]](dflt) with HasLogUneadVal {
+abstract class RequestVar[T](dflt: => T) extends AnyVar[T, RequestVar[T]](dflt) with HasLogUnreadVal {
   type CleanUpParam = Box[LiftSession]
 
   override protected def findFunc(name: String): Box[T] = RequestVarHandler.get(name)
@@ -112,7 +112,7 @@ abstract class RequestVar[T](dflt: => T) extends AnyVar[T, RequestVar[T]](dflt) 
  *
  * @param dflt - the default value of the session variable
  */
-private[http] abstract class TransientRequestVar[T](dflt: => T) extends AnyVar[T, TransientRequestVar[T]](dflt) with HasLogUneadVal {
+private[liftweb] abstract class TransientRequestVar[T](dflt: => T) extends AnyVar[T, TransientRequestVar[T]](dflt) with HasLogUnreadVal {
   type CleanUpParam = Box[LiftSession]
 
   override protected def findFunc(name: String): Box[T] = TransientRequestVarHandler.get(name)
@@ -154,7 +154,7 @@ type MyType = TransientRequestVar[_]
 }
 
 private[http] trait CoreRequestVarHandler {
-  type MyType <: HasLogUneadVal
+  type MyType <: HasLogUnreadVal
   // This maps from the RV name to (RV instance, value, set-but-not-read flag)
   private val vals: ThreadGlobal[HashMap[String, (MyType, Any, Boolean)]] = new ThreadGlobal
   private val cleanup: ThreadGlobal[ListBuffer[Box[LiftSession] => Unit]] = new ThreadGlobal
