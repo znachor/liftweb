@@ -129,7 +129,11 @@
                 <configuration>
                     <instructions>
                         <Private-Package>i18n.*,toserve.*</Private-Package>
-                        <Export-Package>!net.liftweb.util.*,net.liftweb.*;version="${project.version}"</Export-Package>
+                        <Export-Package>
+                          net.liftweb.builtin.*;version="${project.version}",
+                          net.liftweb.http.*;version="${project.version}",
+                          net.liftweb.sitemap.*;version="${project.version}"
+                        </Export-Package>
                         <Import-Package>org.slf4j.*;resolution:="optional",*</Import-Package>
                     </instructions>
                 </configuration>
