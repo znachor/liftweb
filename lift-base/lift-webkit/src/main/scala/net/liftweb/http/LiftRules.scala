@@ -1025,7 +1025,7 @@ object LiftRules extends Factory {
     )
 
   /**
-   * Hods the last update time of the Ajax request. Based on this server mayreturn HTTP 304 status
+   * Holds the last update time of the Ajax request. Based on this server mayreturn HTTP 304 status
    * indicating the client to used the cached information.
    */
   var ajaxScriptUpdateTime: LiftSession => Long = session => {
