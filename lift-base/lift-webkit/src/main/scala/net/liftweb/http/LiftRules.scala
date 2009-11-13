@@ -16,8 +16,6 @@
 
 package net.liftweb.http
 
-;
-
 import _root_.net.liftweb.common._
 import _root_.net.liftweb.util._
 import _root_.net.liftweb.util.Helpers._
@@ -211,8 +209,7 @@ object LiftRules extends Factory {
   }
 
   /**
-   * The maximum allowed size of a complete mime multi-part POST.  Default
-   * 8MB
+   * The maximum allowed size of a complete mime multi-part POST.  Default 8MB
    */
   var maxMimeSize: Long = 8 * 1024 * 1024
 
