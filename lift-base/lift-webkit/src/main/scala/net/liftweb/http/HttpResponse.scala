@@ -450,28 +450,39 @@ case class XmlMimeResponse(xml: Node, mime: String) extends NodeResponse {
   def out = xml
 }
 
-class XmlResponse(val xml: Node, val code: Int, mime: String) extends NodeResponse {
+class XmlResponse(val xml: Node, val code: Int, val mime: String, val cookies: List[HTTPCookie]) extends NodeResponse {
   def docType = Empty
 
   def headers = List("Content-Type" -> mime)
-
-  def cookies = Nil
 
   def out = xml
 }
 
 object XmlResponse {
   /** Construct XmlResponse with 200 OK response code and "text/xml" mime type */
-  def apply(xml: Node) = new XmlResponse(xml, 200, "text/xml; charset=utf-8")
+  def apply(xml: Node) = new XmlResponse(xml, 200, "text/xml; charset=utf-8", Nil)
 
   /** Construct XmlResponse with given response code and "text/xml" mime type */
-  def apply(xml: Node, code: Int) = new XmlResponse(xml, code, "text/xml; charset=utf-8")
+  def apply(xml: Node, code: Int) = new XmlResponse(xml, code, "text/xml; charset=utf-8", Nil)
 
   /** Construct XmlResponse with 200 OK response code and given mime type */
-  def apply(xml: Node, mime: String) = new XmlResponse(xml, 200, mime)
+  def apply(xml: Node, mime: String) = new XmlResponse(xml, 200, mime, Nil)
 
   /** Construct XmlResponse with given response code and mime type */
-  def apply(xml: Node, code: Int, mime: String) = new XmlResponse(xml, code, mime)
+  def apply(xml: Node, code: Int, mime: String) = new XmlResponse(xml, code, mime, Nil)
+
+  /** Construct XmlResponse with 200 OK response code, "text/xml" mime type and given cookies */
+  def apply(xml: Node, cookies: List[HTTPCookie]) = new XmlResponse(xml, 200, "text/xml; charset=utf-8", cookies)
+
+  /** Construct XmlResponse with given response code, given cookies and "text/xml" mime type */
+  def apply(xml: Node, code: Int, cookies: List[HTTPCookie]) = new XmlResponse(xml, code, "text/xml; charset=utf-8", cookies)
+
+  /** Construct XmlResponse with 200 OK response code, given mime type and given cookies */
+  def apply(xml: Node, mime: String, cookies: List[HTTPCookie]) = new XmlResponse(xml, 200, mime, cookies)
+
+  /** Construct XmlResponse with given response code, mime type and cookies */
+  def apply(xml: Node, code: Int, mime: String, cookies: List[HTTPCookie]) = new XmlResponse(xml, code, mime, cookies)
+
 }
 
 /**
