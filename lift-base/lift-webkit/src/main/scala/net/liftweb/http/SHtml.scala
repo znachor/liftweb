@@ -603,6 +603,13 @@ object SHtml {
   def hidden(func: (String) => Any, defaultlValue: String, attrs: (String, String)*): Elem =
     makeFormElement("hidden", SFuncHolder(func), attrs: _*) % ("value" -> defaultlValue)
 
+  /**
+   * Generates a form submission button.
+   *
+   * @param value The label for the button
+   * @param func The function that will be executed on form submission
+   * @param attrs Optional XHTML element attributes that will be applied to the button
+   */
   def submit(value: String, func: () => Any, attrs: (String, String)*): Elem = {
 
     def doit = {
@@ -616,17 +623,68 @@ object SHtml {
     }
   }
 
-  // support mixin of attribuites from xhtml
+  /**
+   * Generates a form submission button with a default label.
+   *
+   * @param func The function that will be executed on form submission
+   * @param attrs Optional XHTML element attributes that will be applied to the button
+   */
   def submitButton(func: () => Any, attrs: (String, String)*): Elem = makeFormElement("submit", NFuncHolder(func), attrs: _*)
 
+  /**
+   * Takes a form and wraps it so that it will be submitted via AJAX.
+   *
+   * @param body The form body. This should not include the &lt;form&gt; tag.
+   */
   def ajaxForm(body: NodeSeq) = (<lift:form>{body}</lift:form>)
 
+  /**
+   * Takes a form and wraps it so that it will be submitted via AJAX.
+   *
+   * @param body The form body. This should not include the &lt;form&gt; tag.
+   * @param onSubmit JavaScript code to execute on the client prior to submission
+   *
+   * @deprecated Use ajaxForm(NodeSeq,JsCmd) instead
+   */
   def ajaxForm(onSubmit: JsCmd, body: NodeSeq) = (<lift:form onsubmit={onSubmit.toJsCmd}>{body}</lift:form>)
 
+  /**
+   * Takes a form and wraps it so that it will be submitted via AJAX.
+   *
+   * @param body The form body. This should not include the &lt;form&gt; tag.
+   * @param onSubmit JavaScript code to execute on the client prior to submission
+   */
   def ajaxForm(body: NodeSeq, onSubmit: JsCmd) = (<lift:form onsubmit={onSubmit.toJsCmd}>{body}</lift:form>)
 
+  /**
+   * Takes a form and wraps it so that it will be submitted via AJAX. This also
+   * takes a parameter for script code that will be executed after the form has been submitted.
+   *
+   * @param body The form body. This should not include the &lt;form&gt; tag.
+   * @param postSubmit Code that should be executed after a successful submission
+   */
+  def ajaxForm(body : NodeSeq, onSubmit : JsCmd, postSubmit : JsCmd) = (<lift:form onsubmit={onSubmit.toJsCmd} postsubmit={postSubmit.toJsCmd}>{body}</lift:form>)
+
+  /**
+   * Takes a form and wraps it so that it will be submitted via AJAX and processed by
+   * a JSON handler. This can be useful if you may have dynamic client-side modification
+   * of the form (addition or removal).
+   *
+   * @param jsonHandler The handler that will process the form
+   * @param body The form body. This should not include the &lt;form&gt; tag.
+   */
   def jsonForm(jsonHandler: JsonHandler, body: NodeSeq): NodeSeq = jsonForm(jsonHandler, Noop, body)
 
+  /**
+   * Takes a form and wraps it so that it will be submitted via AJAX and processed by
+   * a JSON handler. This can be useful if you may have dynamic client-side modification
+   * of the form (addition or removal).
+   *
+   * @param jsonHandler The handler that will process the form
+   * @param onSubmit JavaScript code that will be executed on the client prior to submitting
+   * the form
+   * @param body The form body. This should not include the &lt;form&gt; tag.
+   */
   def jsonForm(jsonHandler: JsonHandler, onSubmit: JsCmd, body: NodeSeq): NodeSeq = {
     val id = formFuncName
     <form onsubmit={(onSubmit & jsonHandler.call("processForm", FormToJSON(id)) & JsReturn(false)).toJsCmd} id={id}>{body}</form>

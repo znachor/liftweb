@@ -87,9 +87,18 @@
         Simplified Factory signatures in LiftRules
       </action>
 
+<<<<<<< HEAD:src/changes/changes.xml
       <action dev="indrajitr" type="update" issue="127" system="github">
         Restructured Lift codebase (now categorized into lift-base, lift-persistence, lift-modules, lift-archetypes and lift-examples).
       </action>
+=======
+      <action dev="dchenbecker" type="enhancement" issue="148">
+        Add ability to call JS code after AJAX form submit
+      </action>
+
+    </release>
+    <release version="1.1-M6" date="2009-09-08" description="Lift 1.1 Milestone 6"/>
+>>>>>>> 1c4a208... Add ability to call JS code after AJAX form submit:src/changes/changes.xml
 
       <action dev="indrajitr" type="update" issue="128" system="github">
         Project build models are more enriched and streamlined.
