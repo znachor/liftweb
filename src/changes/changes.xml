@@ -25,6 +25,22 @@
    -->
     <release version="1.1-SNAPSHOT" date="" description="Lift 1.1 Snapshot">
 
+      <action dev="boisvert" type="fix" issue="153" system="github">
+        Updated documentation for Msgs
+      </action>
+
+      <action dev="boisvert" type="fix" issue="177" system="github">
+        XmlResponse(...) now accepts optional HTTP status code, mime type and cookies.
+      </action>
+
+      <action dev="boisvert" type="fix" issue="14" system="github">
+        SQL Server Alter Table Fails
+      </action>
+
+      <action dev="boisvert" type="fix" issue="170" system="github">
+        Typo in Req.scala
+      </action>
+
       <action dev="hseeberger" type="fix" issue="166" system="github">
         Snapshot jars contains several Box.class files
       </action>
