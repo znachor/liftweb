@@ -66,7 +66,7 @@ trait DBLog {
 object DBLog {
   def createStatement (conn : Connection) = {
     val stmt = conn.createStatement
-    Proxy.newProxyInstance(stmt.getClass.getClassLoader, 
+    Proxy.newProxyInstance(this.getClass.getClassLoader,
                            Array(classOf[java.sql.Statement], classOf[DBLog]),
                            new LoggedStatementHandler(stmt)).asInstanceOf[Statement]
   }
@@ -84,7 +84,7 @@ object DBLog {
     proxyPreparedStatement(conn.prepareStatement(query, autoKeys), query)
 
   private def proxyPreparedStatement(stmt : PreparedStatement, query : String) = {
-    Proxy.newProxyInstance(stmt.getClass.getClassLoader,
+    Proxy.newProxyInstance(this.getClass.getClassLoader,
                            Array(classOf[java.sql.PreparedStatement], classOf[DBLog]),
                            new LoggedPreparedStatementHandler(query, stmt)).asInstanceOf[PreparedStatement]
   }
