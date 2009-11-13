@@ -25,6 +25,15 @@ import Helpers._
 
 import _root_.scala.xml._
 
+/**
+ * This trait automatically adds CRUD (Create, read, update and delete) operations
+ * to an existing <b>MetaMapper</b> object. Various methods can be overridden to
+ * customize which operations are available to a user and how things are displayed.
+ * For example, you can disable deletion of entities by overriding deleteMenuLoc to Empty.
+ *
+ * Note: Compilation will fail if you try to mix this into a Mapper instead of the
+ * associated MetaMapper. You have been warned.
+ */
 trait CRUDify[KeyType, CrudType <: KeyedMapper[KeyType, CrudType]] {
   self: CrudType with KeyedMetaMapper[KeyType, CrudType] =>
 
@@ -71,7 +80,7 @@ trait CRUDify[KeyType, CrudType <: KeyedMapper[KeyType, CrudType]] {
   def showAllMenuLocParams: List[Loc.LocParam] = Nil
 
   /**
-   * The menu item for listing items (make this "Empty" to disable)
+   * The menu item for creating items (make this "Empty" to disable)
    */
   def createMenuLoc: Box[Menu] =
   Full(Menu(Loc("Create "+Prefix, createPath, createMenuName,
@@ -529,7 +538,9 @@ trait CRUDify[KeyType, CrudType <: KeyedMapper[KeyType, CrudType]] {
 }
 
 
-
+/**
+ * A specialization of CRUDify for LongKeyedMetaMappers.
+ */
 trait LongCRUDify[CrudType <: KeyedMapper[Long, CrudType]] extends CRUDify[Long, CrudType] {
   self: CrudType with KeyedMetaMapper[Long, CrudType] =>
 }
