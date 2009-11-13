@@ -25,6 +25,10 @@
    -->
     <release version="1.1-SNAPSHOT" date="" description="Lift 1.1 Snapshot">
 
+      <action dev="hseeberger" type="fix" issue="166" system="github">
+        Snapshot jars contains several Box.class files
+      </action>
+
       <action dev="indrajitr" type="update" issue="156" system="github" due-to="econoplas">
         Update hibernate-entitymanager to 3.4.0.GA
       </action>
