@@ -571,7 +571,7 @@
           <executions>
             <execution>
               <id>default-changes-validate</id>
-              <phase>pre-site</phase>
+              <phase>verify</phase>
               <goals>
                 <goal>changes-validate</goal>
               </goals>
