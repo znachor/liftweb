@@ -22,6 +22,14 @@ import _root_.net.liftweb.common._
 
 import Helpers._
 
+/**
+ * This object is the default handler for the &lt;lift:form&gt; tag, which
+ * is used to perform AJAX submission of form contents. If the "onsubmit"
+ * attribute is set on this tag, then the contents there will be run prior
+ * to the actual AJAX call. If a "postsubmit" attribute is present on the
+ * tag, then its contents will be executed after successful submission of
+ * the form.
+ */
 object Form extends DispatchSnippet {
 
   def dispatch : DispatchIt = {
@@ -41,8 +49,9 @@ object Form extends DispatchSnippet {
 
     val pre = S.attr.~("onsubmit").map(_.text + ";") getOrElse ""
 
-    val ajax: String = pre + SHtml.makeAjaxCall(LiftRules.jsArtifacts.serialize(id)).toJsCmd + ";" + "return false;"
+    val post = S.attr.~("postsubmit").map("function() { " + _.text + "; }") getOrElse ""
 
+    val ajax: String = pre + SHtml.makeAjaxCall(LiftRules.jsArtifacts.serialize(id), AjaxContext.js(Full(post))).toJsCmd + ";" + "return false;"
 
     new UnprefixedAttribute("id", Text(id),
                             new UnprefixedAttribute("action", Text("javascript://"),
