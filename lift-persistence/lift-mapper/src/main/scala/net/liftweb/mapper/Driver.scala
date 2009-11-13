@@ -68,15 +68,15 @@ abstract class DriverType(val name : String) {
     * @param setter A function that will set the parameters on the prepared statement
     * @param pkName Zero or more generated column names that need to be returned
     */
-  def performInsert [T](conn : SuperConnection, query : String, setter : PreparedStatement => Unit, tableName : String, pkNames : List[String])(handler : Either[ResultSet,Int] => T) : T = 
+  def performInsert [T](conn : SuperConnection, query : String, setter : PreparedStatement => Unit, tableName : String, pkNames : List[String])(handler : Either[ResultSet,Int] => T) : T =
     pkNames match {
-      case Nil =>  
+      case Nil =>
         DB.prepareStatement(query, conn) {
           stmt =>
             setter(stmt)
             handler(Right(stmt.executeUpdate))
         }
-      case pk => 
+      case pk =>
         performInsertWithPK(conn, query, setter, tableName, pk, handler)
     }
 
@@ -103,7 +103,7 @@ abstract class DriverType(val name : String) {
    * where not all types are supported. Classes that want to do custom type
    * mapping for columns should override the customColumnTypeMap method.
    */
-  def columnTypeMap : TypeMapFunc = 
+  def columnTypeMap : TypeMapFunc =
     customColumnTypeMap orElse {
       case x => x
     }
@@ -132,7 +132,7 @@ abstract class DriverType(val name : String) {
 }
 
 object DriverType {
-  def calcDriver (conn : Connection) : DriverType = {
+  var calcDriver:  Connection => DriverType = conn => {
     val meta = conn.getMetaData
 
     (meta.getDatabaseProductName,meta.getDatabaseMajorVersion,meta.getDatabaseMinorVersion) match {
@@ -258,7 +258,7 @@ object PostgreSqlDriver extends BasePostgreSQLDriver {
   /* PostgreSQL doesn't support generated keys via the JDBC driver. Instead, we use the RETURNING clause on the insert.
    * From: http://www.postgresql.org/docs/8.2/static/sql-insert.html
    */
-  override def performInsertWithPK [T](conn : SuperConnection, query : String, setter : PreparedStatement => Unit, tableName : String, pkNames : List[String], handler : Either[ResultSet,Int] => T) : T = 
+  override def performInsertWithPK [T](conn : SuperConnection, query : String, setter : PreparedStatement => Unit, tableName : String, pkNames : List[String], handler : Either[ResultSet,Int] => T) : T =
     DB.prepareStatement(query + " RETURNING " + pkNames.mkString(","), conn) {
       stmt =>
         setter(stmt)
@@ -288,7 +288,7 @@ object PostgreSqlOldDriver extends BasePostgreSQLDriver {
           stmt.executeUpdate
       }
       val pkValueQuery = pkNames.map(String.format("currval('%s_%s_seq')", tableName, _)).mkString(", ")
-      DB.statement(conn) { 
+      DB.statement(conn) {
         stmt =>
           handler(Left(stmt.executeQuery("SELECT " + pkValueQuery)))
       }
@@ -313,6 +313,10 @@ object SqlServerDriver extends DriverType("Microsoft SQL Server") {
   def doubleColumnType = "FLOAT"
 
   override def defaultSchemaName : Box[String] = Full("dbo")
+
+  // Microsoft doesn't use "COLUMN" syntax when adding a column to a table
+  override def alterAddColumn = "ADD"
+
 }
 
 /**
@@ -346,6 +350,11 @@ object OracleDriver extends DriverType("Oracle") {
   def longColumnType = "NUMBER"
   def doubleColumnType = "NUMBER"
 
+  /**
+   * Whether this database supports LIMIT clause in SELECTs.
+   */
+  override def brokenLimit_? : Boolean = true
+
   import _root_.java.sql.Types
   override def customColumnTypeMap = {
     case Types.BOOLEAN => Types.INTEGER
@@ -366,7 +375,7 @@ object OracleDriver extends DriverType("Oracle") {
   }
 
   // Oracle supports returning generated keys only if we specify the names of the column(s) to return.
-  override def performInsertWithPK [T](conn : SuperConnection, query : String, setter : PreparedStatement => Unit, tableName : String , pkNames : List[String], handler : Either[ResultSet,Int] => T) : T = 
+  override def performInsertWithPK [T](conn : SuperConnection, query : String, setter : PreparedStatement => Unit, tableName : String , pkNames : List[String], handler : Either[ResultSet,Int] => T) : T =
     DB.prepareStatement(query, pkNames.toArray, conn) {
       stmt =>
         setter(stmt)
