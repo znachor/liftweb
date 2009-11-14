@@ -24,10 +24,10 @@
       <artifactId>hibernate-entitymanager</artifactId>
       <version>3.3.2.GA</version>
       <exclusions>
-	<exclusion>
-	  <groupId>javax.transaction</groupId>
-	  <artifactId>jta</artifactId>
-	</exclusion>
+        <exclusion>
+          <groupId>javax.transaction</groupId>
+          <artifactId>jta</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>

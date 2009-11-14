@@ -98,7 +98,7 @@ abstract class AnyVar[T, MyType <: AnyVar[T, MyType]](dflt: => T) extends PSetta
 
   //def cleanupFunc: Box[() => Unit] = Empty
 
-protected def registerCleanupFunc(in: CleanUpParam => Unit): Unit
+  protected def registerCleanupFunc(in: CleanUpParam => Unit): Unit
 
   protected final def registerGlobalCleanupFunc(in: CleanUpParam => Unit) {
     cuf ::= in

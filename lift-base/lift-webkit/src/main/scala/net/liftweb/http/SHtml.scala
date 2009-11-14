@@ -273,6 +273,56 @@ object SHtml {
   def ajaxButton(text: String, jsFunc: Call, func: () => JsCmd, attrs: (String, String)*): Elem =
     ajaxButton(Text(text), jsFunc, func, attrs: _*)
 
+  /**
+   * This method generates an AJAX editable field. Normally, the displayContents
+   * will be shown, with an "Edit" button. If the "Edit" button is clicked, the field
+   * will be replaced with the edit form, along with an "OK" and "Cancel" button.
+   * If the OK button is pressed, the form fields are submitted and the onSubmit
+   * function is called, and then the displayContents are re-run to get a new display.
+   * If cancel is pressed then the original displayContents are re-shown.
+   */
+  def ajaxEditable (displayContents : => NodeSeq, editForm : => NodeSeq, onSubmit : () => Unit) : NodeSeq = {
+    import _root_.net.liftweb.http.js
+    import js.{jquery,JsCmd,JsCmds,JE}
+    import jquery.JqJsCmds
+    import JsCmds.{Noop,SetHtml}
+    import JE.Str
+    import JqJsCmds.{Hide,Show}
+
+    val divName = Helpers.nextFuncName
+    val dispName = divName + "_display"
+    val editName = divName + "_edit"
+
+    def swapJsCmd (show : String, hide : String) : JsCmd = Show(show) & Hide(hide)
+
+    def setAndSwap (show : String, showContents : => NodeSeq, hide : String) : JsCmd =
+      (SHtml.ajaxCall(Str("ignore"), {ignore : String => SetHtml(show, showContents)})._2.cmd & swapJsCmd(show,hide))
+
+    def displayMarkup : NodeSeq =
+      displayContents ++ Text(" ") ++
+      <input value={S.??("edit")} type="button" onclick={setAndSwap(editName, editMarkup, dispName).toJsCmd + " return false;"} />
+
+    def editMarkup : NodeSeq = {
+      val formData : NodeSeq =
+        editForm ++
+        <input type="submit" value={S.??("ok")} /> ++
+        hidden(onSubmit) ++
+        <input type="button" onclick={swapJsCmd(dispName,editName).toJsCmd + " return false;"} value={S.??("cancel")} />
+
+      ajaxForm(formData,
+               Noop,
+               setAndSwap(dispName, displayMarkup, editName))
+    }
+
+    <div>
+      <div id={dispName}>
+        {displayMarkup}
+      </div>
+      <div id={editName} style="display: none;">
+        {editMarkup}
+      </div>
+    </div>
+  }
 
   /**
    * Create an anchor tag around a body which will do an AJAX call and invoke the function
@@ -603,6 +653,13 @@ object SHtml {
   def hidden(func: (String) => Any, defaultlValue: String, attrs: (String, String)*): Elem =
     makeFormElement("hidden", SFuncHolder(func), attrs: _*) % ("value" -> defaultlValue)
 
+  /**
+   * Generates a form submission button.
+   *
+   * @param value The label for the button
+   * @param func The function that will be executed on form submission
+   * @param attrs Optional XHTML element attributes that will be applied to the button
+   */
   def submit(value: String, func: () => Any, attrs: (String, String)*): Elem = {
 
     def doit = {
@@ -616,45 +673,96 @@ object SHtml {
     }
   }
 
-  // support mixin of attribuites from xhtml
+  /**
+   * Generates a form submission button with a default label.
+   *
+   * @param func The function that will be executed on form submission
+   * @param attrs Optional XHTML element attributes that will be applied to the button
+   */
   def submitButton(func: () => Any, attrs: (String, String)*): Elem = makeFormElement("submit", NFuncHolder(func), attrs: _*)
 
+  /**
+   * Takes a form and wraps it so that it will be submitted via AJAX.
+   *
+   * @param body The form body. This should not include the &lt;form&gt; tag.
+   */
   def ajaxForm(body: NodeSeq) = (<lift:form>{body}</lift:form>)
 
+  /**
+   * Takes a form and wraps it so that it will be submitted via AJAX.
+   *
+   * @param body The form body. This should not include the &lt;form&gt; tag.
+   * @param onSubmit JavaScript code to execute on the client prior to submission
+   *
+   * @deprecated Use ajaxForm(NodeSeq,JsCmd) instead
+   */
   def ajaxForm(onSubmit: JsCmd, body: NodeSeq) = (<lift:form onsubmit={onSubmit.toJsCmd}>{body}</lift:form>)
 
+  /**
+   * Takes a form and wraps it so that it will be submitted via AJAX.
+   *
+   * @param body The form body. This should not include the &lt;form&gt; tag.
+   * @param onSubmit JavaScript code to execute on the client prior to submission
+   */
   def ajaxForm(body: NodeSeq, onSubmit: JsCmd) = (<lift:form onsubmit={onSubmit.toJsCmd}>{body}</lift:form>)
 
+  /**
+   * Takes a form and wraps it so that it will be submitted via AJAX. This also
+   * takes a parameter for script code that will be executed after the form has been submitted.
+   *
+   * @param body The form body. This should not include the &lt;form&gt; tag.
+   * @param postSubmit Code that should be executed after a successful submission
+   */
+  def ajaxForm(body : NodeSeq, onSubmit : JsCmd, postSubmit : JsCmd) = (<lift:form onsubmit={onSubmit.toJsCmd} postsubmit={postSubmit.toJsCmd}>{body}</lift:form>)
+
+  /**
+   * Takes a form and wraps it so that it will be submitted via AJAX and processed by
+   * a JSON handler. This can be useful if you may have dynamic client-side modification
+   * of the form (addition or removal).
+   *
+   * @param jsonHandler The handler that will process the form
+   * @param body The form body. This should not include the &lt;form&gt; tag.
+   */
   def jsonForm(jsonHandler: JsonHandler, body: NodeSeq): NodeSeq = jsonForm(jsonHandler, Noop, body)
 
+  /**
+   * Takes a form and wraps it so that it will be submitted via AJAX and processed by
+   * a JSON handler. This can be useful if you may have dynamic client-side modification
+   * of the form (addition or removal).
+   *
+   * @param jsonHandler The handler that will process the form
+   * @param onSubmit JavaScript code that will be executed on the client prior to submitting
+   * the form
+   * @param body The form body. This should not include the &lt;form&gt; tag.
+   */
   def jsonForm(jsonHandler: JsonHandler, onSubmit: JsCmd, body: NodeSeq): NodeSeq = {
     val id = formFuncName
     <form onsubmit={(onSubmit & jsonHandler.call("processForm", FormToJSON(id)) & JsReturn(false)).toJsCmd} id={id}>{body}</form>
   }
 
   /**
-   * Having a regular form, this method can be used to send the content of the form as JSON. 
+   * Having a regular form, this method can be used to send the content of the form as JSON.
    * the request will be processed by the jsonHandler
-   * 
-   * @param jsonHandler - the handler that process this request 
+   *
+   * @param jsonHandler - the handler that process this request
    * @oaram formId - the id of the form
    */
   def submitJsonForm(jsonHandler: JsonHandler, formId: String):JsCmd = jsonHandler.call("processForm", FormToJSON(formId))
 
   /**
    * Having a regular form, this method can be used to send the serialized content of the form.
-   * 
+   *
    * @oaram formId - the id of the form
    */
   def submitAjaxForm(formId: String):JsCmd = SHtml.makeAjaxCall(LiftRules.jsArtifacts.serialize(formId))
 
   /**
    * Having a regular form, this method can be used to send the serialized content of the form.
-   * 
+   *
    * @oaram formId - the id of the form
    * @param postSubmit - the function that needs to be called after a successfull request
    */
-  def submitAjaxForm(formId: String, postSubmit: Call):JsCmd = 
+  def submitAjaxForm(formId: String, postSubmit: Call):JsCmd =
     SHtml.makeAjaxCall(LiftRules.jsArtifacts.serialize(formId), AjaxContext.js(Full(postSubmit.toJsCmd)))
 
 

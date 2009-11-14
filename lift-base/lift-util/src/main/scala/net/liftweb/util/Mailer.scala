@@ -24,7 +24,12 @@ import actor._
 /**
  * Utilities for sending email.
  */
-object Mailer {
+object Mailer extends MailerImpl
+
+/**
+ * This trait implmenets the mail sending
+ */
+protected trait MailerImpl {
   sealed abstract class MailTypes
   sealed abstract class MailBodyType extends MailTypes
   case class PlusImageHolder(name: String, mimeType: String, bytes: Array[Byte])
@@ -54,11 +59,13 @@ object Mailer {
   case class ReplyTo(address: String) extends AddressType(address)
 
   implicit def stringToMailBodyType(text: String): MailBodyType = PlainMailBodyType(text)
+
   implicit def xmlToMailBodyType(html: NodeSeq): MailBodyType = XHTMLMailBodyType(html)
 
   case class MessageInfo(from: From, subject: Subject, info: List[MailTypes])
 
   implicit def addressToAddress(in: AddressType): Address = new InternetAddress(in.adr)
+
   implicit def adListToAdArray(in: List[AddressType]): Array[Address] = in.map(a => new InternetAddress(a.adr)).toArray
 
   /**
@@ -79,7 +86,7 @@ object Mailer {
   var customProperties: Map[String, String] = Map()
 
   lazy val jndiSession: Box[Session] =
-  for {
+  for{
     name <- jndiName
     contextObj <- Helpers.tryo(new InitialContext().lookup("java:comp/env"))
     context <- Box.asA[Context](contextObj)
@@ -89,10 +96,10 @@ object Mailer {
 
   lazy val properties: Properties = {
     val p = System.getProperties.clone.asInstanceOf[Properties]
-    customProperties.foreach{case (name, value) => p.put(name, value)}
+    customProperties.foreach {case (name, value) => p.put(name, value)}
     // allow the properties file to set/override system properties
 
-    Props.props.foreach{
+    Props.props.foreach {
       case (name, value) =>
         p.setProperty(name, value)
     }
@@ -136,69 +143,76 @@ object Mailer {
 
   // def host_=(hostname: String) = System.setProperty("mail.smtp.host", hostname)
 
-  private class MsgSender extends LiftActor {
+  protected class MsgSender extends SpecializedLiftActor[MessageInfo] {
     protected def messageHandler = {
-          case MessageInfo(from, subject, info) =>
-            try {
-              val session = authenticator match {
-                case Full(a) => jndiSession openOr Session.getInstance(buildProps, a)
-                case _ => jndiSession openOr Session.getInstance(buildProps)
-              }
+      case MessageInfo(from, subject, info) =>
+        try {
+          val session = authenticator match {
+            case Full(a) => jndiSession openOr Session.getInstance(buildProps, a)
+            case _ => jndiSession openOr Session.getInstance(buildProps)
+          }
 
-              val message = new MimeMessage(session)
-              message.setFrom(from)
-              message.setRecipients(Message.RecipientType.TO, info.flatMap{case x: To => Some[To](x) case _ => None})
-              message.setRecipients(Message.RecipientType.CC, info.flatMap{case x: CC => Some[CC](x) case _ => None})
-              message.setRecipients(Message.RecipientType.BCC, info.flatMap{case x: BCC => Some[BCC](x) case _ => None})
-              // message.setReplyTo(filter[MailTypes, ReplyTo](info, {case x @ ReplyTo(_) => Some(x); case _ => None}))
-              message.setReplyTo(info.flatMap{case x: ReplyTo => Some[ReplyTo](x) case _ => None})
-              message.setSubject(subject.subject)
+          val message = new MimeMessage(session)
+          message.setFrom(from)
+          message.setRecipients(Message.RecipientType.TO, info.flatMap {case x: To => Some[To](x) case _ => None})
+          message.setRecipients(Message.RecipientType.CC, info.flatMap {case x: CC => Some[CC](x) case _ => None})
+          message.setRecipients(Message.RecipientType.BCC, info.flatMap {case x: BCC => Some[BCC](x) case _ => None})
+          // message.setReplyTo(filter[MailTypes, ReplyTo](info, {case x @ ReplyTo(_) => Some(x); case _ => None}))
+          message.setReplyTo(info.flatMap {case x: ReplyTo => Some[ReplyTo](x) case _ => None})
+          message.setSubject(subject.subject)
+          val bodyTypes = info.flatMap {case x: MailBodyType => Some[MailBodyType](x); case _ => None}
+          bodyTypes match {
+            case PlainMailBodyType(txt) :: Nil =>
+              message.setText(txt)
+
+            case _ =>
               val multiPart = new MimeMultipart("alternative")
-              info.flatMap{case x: MailBodyType => Some[MailBodyType](x); case _ => None}.foreach {
+              bodyTypes.foreach {
                 tab =>
-                val bp = new MimeBodyPart
-                tab match {
-                  case PlainMailBodyType(txt) => bp.setText(txt, "UTF-8")
-                  case PlainPlusBodyType(txt,charset) => bp.setText(txt, charset)
-                  case XHTMLMailBodyType(html) => bp.setContent(html.toString, "text/html; charset="+charSet)
-                  case XHTMLPlusImages(html, img @ _*) =>
-                    val html_mp = new MimeMultipart("related")
-                    val bp2 = new MimeBodyPart
-                    bp2.setContent(html.toString, "text/html; charset="+charSet)
-                    html_mp.addBodyPart(bp2)
-                    img.foreach { i =>
-                      val rel_bpi = new MimeBodyPart
-                      rel_bpi.setFileName(i.name)
-                      rel_bpi.setContentID(i.name)
-                      rel_bpi.setDisposition("inline")
-                      rel_bpi.setDataHandler(new _root_.javax.activation.DataHandler(new _root_.javax.activation.DataSource{
-                            def getContentType = i.mimeType
-                            def getInputStream = new _root_.java.io.ByteArrayInputStream(i.bytes)
-                            def getName = i.name
-                            def getOutputStream = throw new _root_.java.io.IOException("Unable to write to item")
-                          }))
-                      html_mp.addBodyPart(rel_bpi)
+                    val bp = new MimeBodyPart
+                    tab match {
+                      case PlainMailBodyType(txt) => bp.setText(txt, "UTF-8")
+                      case PlainPlusBodyType(txt, charset) => bp.setText(txt, charset)
+                      case XHTMLMailBodyType(html) => bp.setContent(html.toString, "text/html; charset=" + charSet)
+                      case XHTMLPlusImages(html, img@_*) =>
+                        val html_mp = new MimeMultipart("related")
+                        val bp2 = new MimeBodyPart
+                        bp2.setContent(html.toString, "text/html; charset=" + charSet)
+                        html_mp.addBodyPart(bp2)
+                        img.foreach {
+                          i =>
+                              val rel_bpi = new MimeBodyPart
+                              rel_bpi.setFileName(i.name)
+                              rel_bpi.setContentID(i.name)
+                              rel_bpi.setDisposition("inline")
+                              rel_bpi.setDataHandler(new _root_.javax.activation.DataHandler(new _root_.javax.activation.DataSource {
+                                def getContentType = i.mimeType
+
+                                def getInputStream = new _root_.java.io.ByteArrayInputStream(i.bytes)
+
+                                def getName = i.name
+
+                                def getOutputStream = throw new _root_.java.io.IOException("Unable to write to item")
+                              }))
+                              html_mp.addBodyPart(rel_bpi)
+                        }
+                        bp.setContent(html_mp)
                     }
-                    bp.setContent(html_mp)
-                }
-                multiPart.addBodyPart(bp)
+                    multiPart.addBodyPart(bp)
               }
               message.setContent(multiPart);
+          }
 
-              Transport.send(message);
-            } catch {
-              case e: Exception => Log.error("Couldn't send mail", e)
-            }
-
-          case _ => Log.warn("Email Send: Here... sorry")
+          MailerImpl.this.performTransportSend(message)
+        } catch {
+          case e: Exception => Log.error("Couldn't send mail", e)
         }
+    }
   }
 
-  private val msgSender = {
-    val ret = new MsgSender
-    // ret.start
-    ret
-  }
+  protected def performTransportSend(msg: MimeMessage) = Transport.send(msg)
+
+  protected lazy val msgSender = new MsgSender
 
   /**
    * Asynchronously send an email.

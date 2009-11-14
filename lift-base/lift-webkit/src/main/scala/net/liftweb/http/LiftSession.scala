@@ -190,6 +190,8 @@ object SessionMaster extends LiftActor {
       }
     }
   }
+
+  doPing()
 }
 
 
