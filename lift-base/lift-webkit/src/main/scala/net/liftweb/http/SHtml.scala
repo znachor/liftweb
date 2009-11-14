@@ -273,6 +273,56 @@ object SHtml {
   def ajaxButton(text: String, jsFunc: Call, func: () => JsCmd, attrs: (String, String)*): Elem =
     ajaxButton(Text(text), jsFunc, func, attrs: _*)
 
+  /**
+   * This method generates an AJAX editable field. Normally, the displayContents
+   * will be shown, with an "Edit" button. If the "Edit" button is clicked, the field
+   * will be replaced with the edit form, along with an "OK" and "Cancel" button.
+   * If the OK button is pressed, the form fields are submitted and the onSubmit
+   * function is called, and then the displayContents are re-run to get a new display.
+   * If cancel is pressed then the original displayContents are re-shown.
+   */
+  def ajaxEditable (displayContents : => NodeSeq, editForm : => NodeSeq, onSubmit : () => Unit) : NodeSeq = {
+    import _root_.net.liftweb.http.js
+    import js.{jquery,JsCmd,JsCmds,JE}
+    import jquery.JqJsCmds
+    import JsCmds.{Noop,SetHtml}
+    import JE.Str
+    import JqJsCmds.{Hide,Show}
+
+    val divName = Helpers.nextFuncName
+    val dispName = divName + "_display"
+    val editName = divName + "_edit"
+
+    def swapJsCmd (show : String, hide : String) : JsCmd = Show(show) & Hide(hide)
+
+    def setAndSwap (show : String, showContents : => NodeSeq, hide : String) : JsCmd =
+      (SHtml.ajaxCall(Str("ignore"), {ignore : String => SetHtml(show, showContents)})._2.cmd & swapJsCmd(show,hide))
+
+    def displayMarkup : NodeSeq =
+      displayContents ++ Text(" ") ++
+      <input value={S.??("edit")} type="button" onclick={setAndSwap(editName, editMarkup, dispName).toJsCmd + " return false;"} />
+
+    def editMarkup : NodeSeq = {
+      val formData : NodeSeq =
+        editForm ++
+        <input type="submit" value={S.??("ok")} /> ++
+        hidden(onSubmit) ++
+        <input type="button" onclick={swapJsCmd(dispName,editName).toJsCmd + " return false;"} value={S.??("cancel")} />
+
+      ajaxForm(formData,
+               Noop,
+               setAndSwap(dispName, displayMarkup, editName))
+    }
+
+    <div>
+      <div id={dispName}>
+        {displayMarkup}
+      </div>
+      <div id={editName} style="display: none;">
+        {editMarkup}
+      </div>
+    </div>
+  }
 
   /**
    * Create an anchor tag around a body which will do an AJAX call and invoke the function
@@ -691,28 +741,28 @@ object SHtml {
   }
 
   /**
-   * Having a regular form, this method can be used to send the content of the form as JSON. 
+   * Having a regular form, this method can be used to send the content of the form as JSON.
    * the request will be processed by the jsonHandler
-   * 
-   * @param jsonHandler - the handler that process this request 
+   *
+   * @param jsonHandler - the handler that process this request
    * @oaram formId - the id of the form
    */
   def submitJsonForm(jsonHandler: JsonHandler, formId: String):JsCmd = jsonHandler.call("processForm", FormToJSON(formId))
 
   /**
    * Having a regular form, this method can be used to send the serialized content of the form.
-   * 
+   *
    * @oaram formId - the id of the form
    */
   def submitAjaxForm(formId: String):JsCmd = SHtml.makeAjaxCall(LiftRules.jsArtifacts.serialize(formId))
 
   /**
    * Having a regular form, this method can be used to send the serialized content of the form.
-   * 
+   *
    * @oaram formId - the id of the form
    * @param postSubmit - the function that needs to be called after a successfull request
    */
-  def submitAjaxForm(formId: String, postSubmit: Call):JsCmd = 
+  def submitAjaxForm(formId: String, postSubmit: Call):JsCmd =
     SHtml.makeAjaxCall(LiftRules.jsArtifacts.serialize(formId), AjaxContext.js(Full(postSubmit.toJsCmd)))
 
 

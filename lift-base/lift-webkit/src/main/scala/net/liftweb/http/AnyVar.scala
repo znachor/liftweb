@@ -21,16 +21,28 @@ import Helpers._
 import _root_.scala.collection.mutable.{HashMap, HashSet, ListBuffer}
 
 /**
- * Keep session information around without the nastiness of naming session variables
- * or the type-unsafety of casting the results.
- * SessionVars are type-safe variables that map pretty directly to
- * HttpSession attributes.  Put stuff in and they are available for the
- * life of the Session.
+ * A typesafe container for data with a lifetime nominally equivalent to the
+ * lifetime of HttpSession attributes.
  *
- * SessionVar's can be used even from CometActor's as now S scope in a Cometctor is
- * provided automatically.
+ * <code>
+ * object MySnippetCompanion {
+ *   object mySessionVar extends SessionVar[String]("hello")
+ * }
+ * </code>
+ * 
+ * The standard pattern is to create a singleton object extending SessionVar instead
+ * of creating an instance variable of a concrete SessionVar subclass. This is preferred
+ * because SessionVar will use the name of its instantiating class for part of its state 
+ * maintenance mechanism.
  *
- * @param dflt - the default value of the session variable
+ * If you find it necessary to create a SessionVar subclass of which there may be more
+ * than one instance, it is necessary to override the __nameSalt() method to return
+ * a unique salt value for each instance to prevent name collisions.
+ *
+ * Note: SessionVars can be used within CometActors
+ *
+ * @param dflt - the default value to be returned if none was set prior to 
+ * requesting a value to be returned from the container
  */
 abstract class SessionVar[T](dflt: => T) extends AnyVar[T, SessionVar[T]](dflt) {
   override protected def findFunc(name: String): Box[T] = S.session.flatMap(_.get(name))
@@ -52,22 +64,38 @@ abstract class SessionVar[T](dflt: => T) extends AnyVar[T, SessionVar[T]](dflt) 
   type CleanUpParam = LiftSession
 }
 
-private[http] trait HasLogUneadVal {
+private[http] trait HasLogUnreadVal {
   def logUnreadVal: Boolean
 }
 
-
 /**
- * Keep request-local information around without the nastiness of naming session variables
- * or the type-unsafety of casting the results.
- * RequestVars share their value through the scope of the current HTTP
- * request.  They have no value at the beginning of request servicing
- * and their value is discarded at the end of request processing.  They
- * are helpful to share values across many snippets.
+ * A typesafe container for data with a lifetime nominally equivalent to the
+ * lifetime of a page rendered by an HTTP request.
+ * RequestVars maintain their value throughout the duration of the current HTTP
+ * request and any callbacks for servicing AJAX calls associated with the rendered page.  
+ * RequestVar instances have no value at the beginning of request servicing (excluding
+ * AJAX callbacks) and their value is discarded at the end of request processing. 
+ * They are commonly used to share values across many snippets. Basic usage:
  *
- * @param dflt - the default value of the session variable
+ * <code>
+ * object MySnippetCompanion {
+ *   object myRequestVar extends RequestVar[String]("hello")
+ * }
+ * </code>
+ * 
+ * The standard pattern is to create a singleton object extending RequestVar instead
+ * of creating an instance variable of a concrete RequestVar subclass. This is preferred
+ * because RequestVar will use the name of its instantiating class for part of its state 
+ * maintenance mechanism.
+ *
+ * If you find it necessary to create a RequestVar subclass of which there may be more
+ * than one instance, it is necessary to override the __nameSalt() method to return
+ * a unique salt value for each instance to prevent name collisions.
+ *
+ * @param dflt - the default value to be returned if none was set prior to 
+ * requesting a value to be returned from the container
  */
-abstract class RequestVar[T](dflt: => T) extends AnyVar[T, RequestVar[T]](dflt) with HasLogUneadVal {
+abstract class RequestVar[T](dflt: => T) extends AnyVar[T, RequestVar[T]](dflt) with HasLogUnreadVal {
   type CleanUpParam = Box[LiftSession]
 
   override protected def findFunc(name: String): Box[T] = RequestVarHandler.get(name)
@@ -89,8 +117,9 @@ abstract class RequestVar[T](dflt: => T) extends AnyVar[T, RequestVar[T]](dflt) 
    */
   final def generateSnapshotRestorer[T](): Function1[Function0[T], T] = RequestVarHandler.generateSnapshotRestorer()
 
-  override protected def registerCleanupFunc(in: Box[LiftSession] => Unit): Unit =
+  override protected def registerCleanupFunc(in: Box[LiftSession] => Unit): Unit = {
     RequestVarHandler.addCleanupFunc(in)
+  }
 
   /**
    * This defines whether or not Lift will log when a RequestVar is set but then not read within
@@ -103,16 +132,17 @@ abstract class RequestVar[T](dflt: => T) extends AnyVar[T, RequestVar[T]](dflt) 
 }
 
 /**
- * Keep request-local information around without the nastiness of naming session variables
- * or the type-unsafety of casting the results.
- * RequestVars share their value through the scope of the current HTTP
- * request.  They have no value at the beginning of request servicing
- * and their value is discarded at the end of request processing.  They
- * are helpful to share values across many snippets.
+ * A typesafe container for data with a lifetime strictly equal to the processing of a single
+ * HTTP request. Unlike ordinary RequestVar instances, TransientRequestVars will not maintain
+ * data for servicing of AJAX callbacks from a rendered page. This is useful in cases where
+ * the value stored within the RequestVar cannot safely be used across multiple requests; an 
+ * example of such a value is a JTA UserTransaction which has a lifecycle strictly coupled
+ * to the actul HTTP request handling by the enclosing container.
  *
- * @param dflt - the default value of the session variable
+ * @param dflt - the default value to be returned if none was set prior to 
+ * requesting a value to be returned from the container
  */
-private[http] abstract class TransientRequestVar[T](dflt: => T) extends AnyVar[T, TransientRequestVar[T]](dflt) with HasLogUneadVal {
+private[liftweb] abstract class TransientRequestVar[T](dflt: => T) extends AnyVar[T, TransientRequestVar[T]](dflt) with HasLogUnreadVal {
   type CleanUpParam = Box[LiftSession]
 
   override protected def findFunc(name: String): Box[T] = TransientRequestVarHandler.get(name)
@@ -146,54 +176,55 @@ trait CleanRequestVarOnSessionTransition {
 }
 
 private[http] object RequestVarHandler extends CoreRequestVarHandler {
-type MyType = RequestVar[_]
+  type MyType = RequestVar[_]
 }
 
 private[http] object TransientRequestVarHandler extends CoreRequestVarHandler {
-type MyType = TransientRequestVar[_]
+  type MyType = TransientRequestVar[_]
 }
 
 private[http] trait CoreRequestVarHandler {
-  type MyType <: HasLogUneadVal
+  type MyType <: HasLogUnreadVal
   // This maps from the RV name to (RV instance, value, set-but-not-read flag)
   private val vals: ThreadGlobal[HashMap[String, (MyType, Any, Boolean)]] = new ThreadGlobal
   private val cleanup: ThreadGlobal[ListBuffer[Box[LiftSession] => Unit]] = new ThreadGlobal
   private val isIn: ThreadGlobal[String] = new ThreadGlobal
   private val sessionThing: ThreadGlobal[Box[LiftSession]] = new ThreadGlobal
 
-
   /**
    * Generate a function that will take a snapshot of the current RequestVars
    * such that they can be restored
    */
-  final def generateSnapshotRestorer[T](): Function1[Function0[T], T] =
-    {
-      val myVals = vals.value
-      val mySessionThing = sessionThing.value
+  final def generateSnapshotRestorer[T](): Function1[Function0[T], T] = {
+    val myVals = vals.value
+    val mySessionThing = sessionThing.value
 
-      f => isIn.doWith("in")(
-        vals.doWith(myVals)(
-          cleanup.doWith(new ListBuffer) {
-            sessionThing.doWith(mySessionThing) {
-              val ret: T = f()
+    f => isIn.doWith("in")(
+      vals.doWith(myVals)(
+        cleanup.doWith(new ListBuffer) {
+          sessionThing.doWith(mySessionThing) {
+            val ret: T = f()
 
-              cleanup.value.toList.foreach(clean => Helpers.tryo(clean(sessionThing.value)))
+            cleanup.value.toList.foreach(clean => Helpers.tryo(clean(sessionThing.value)))
 
-              ret
-            }
+            ret
           }
-          ))
-    }
+        }
+      )
+    )
+  }
 
   private[http] def get[T](name: String): Box[T] =
-    for (ht <- Box.legacyNullTest(vals.value);
-         (rvInstance,value,unread) <- ht.get(name)) yield {
-           if (unread) {
-             // Flag the variable as no longer being set-but-unread
-             ht(name) = (rvInstance : MyType, value.asInstanceOf[T], false)
-           }
-           value.asInstanceOf[T]
-         }
+    for {
+      ht <- Box.legacyNullTest(vals.value)
+      (rvInstance,value,unread) <- ht.get(name)
+    } yield {
+      if (unread) {
+        // Flag the variable as no longer being set-but-unread
+        ht(name) = (rvInstance : MyType, value.asInstanceOf[T], false)
+      }
+      value.asInstanceOf[T]
+    }
 
   private[http] def set[T](name: String, from: MyType, value: T): Unit =
   for (ht <- Box.legacyNullTest(vals.value))
@@ -222,29 +253,30 @@ private[http] trait CoreRequestVarHandler {
 
       sessionThing.set(session)
       f
-    } else
-    isIn.doWith("in") (
-      vals.doWith(new HashMap) (
-        cleanup.doWith(new ListBuffer) {
-          sessionThing.doWith(session) {
-            val ret: T = f
+    } else {
+      isIn.doWith("in") (
+        vals.doWith(new HashMap) (
+          cleanup.doWith(new ListBuffer) {
+            sessionThing.doWith(session) {
+              val ret: T = f
 
-            cleanup.value.toList.foreach(clean => Helpers.tryo(clean(sessionThing.value)))
+              cleanup.value.toList.foreach(clean => Helpers.tryo(clean(sessionThing.value)))
 
-            if (Props.devMode && LiftRules.logUnreadRequestVars) {
-              vals.value.keys.filter(! _.startsWith(VarConstants.varPrefix+"net.liftweb"))
-                .filter(! _.endsWith(VarConstants.initedSuffix))
-                .foreach(key => vals.value(key) match {
-                  case (rv,_,true) if rv.logUnreadVal => Log.warn("RequestVar %s was set but not read".format(key.replace(VarConstants.varPrefix,"")))
-                  case _ =>
-                })
+              if (Props.devMode && LiftRules.logUnreadRequestVars) {
+                vals.value.keys.filter(! _.startsWith(VarConstants.varPrefix+"net.liftweb"))
+                  .filter(! _.endsWith(VarConstants.initedSuffix))
+                  .foreach(key => vals.value(key) match {
+                    case (rv,_,true) if rv.logUnreadVal => Log.warn("RequestVar %s was set but not read".format(key.replace(VarConstants.varPrefix,"")))
+                    case _ =>
+                  })
+              }
+
+              ret
             }
-
-            ret
           }
-        }
+        )
       )
-    )
+    }
   }
 }
 
