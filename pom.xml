@@ -282,7 +282,7 @@
   </pluginRepositories>
   <distributionManagement>
     <snapshotRepository>
-      <id>scala-tools.dist.snapshot</id>
+      <id>nexus.scala-tools.org</id>
       <name>Scala-Tools Snapshot Distribution Repository</name>
       <url>http://nexus.scala-tools.org/content/repositories/snapshots</url>
       <uniqueVersion>false</uniqueVersion>
@@ -844,7 +844,7 @@
       -->
       <distributionManagement>
         <repository>
-          <id>scala-tools.dist.release</id>
+          <id>nexus.scala-tools.org</id>
           <name>Scala-Tools Release Distribution Repository</name>
           <url>http://nexus.scala-tools.org/content/repositories/releases</url>
         </repository>
