@@ -1121,13 +1121,13 @@ for {
     this._request.doWith(request) {
       _sessionInfo.doWith(session) {
         _responseHeaders.doWith(new ResponseInfoHolder) {
-	  TransientRequestVarHandler(Full(session),
+	      TransientRequestVarHandler(Full(session),
           RequestVarHandler(Full(session),
             _responseCookies.doWith(CookieHolder(getCookies(containerRequest), Nil)) {
               _innerInit(f)
             }
             )
-        )}
+          )}
       }
     }
 
