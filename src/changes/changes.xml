@@ -115,6 +115,14 @@
         Restructured Lift codebase (now categorized into lift-base, lift-persistence, lift-modules, lift-archetypes and lift-examples).
       </action>
 
+      <action dev="dchenbecker" type="add" issue="148">
+        Add ability to call JS code after AJAX form submit
+      </action>
+
+      <action dev="dchenbecker" type="add" issue="181">
+        Add AJAX editable field generator to SHtml, add AjaxEditableField to Mapper.
+      </action>
+
     </release>
 
     <release version="1.1-M6" date="2009-10-09" description="Lift 1.1 Milestone 6">
