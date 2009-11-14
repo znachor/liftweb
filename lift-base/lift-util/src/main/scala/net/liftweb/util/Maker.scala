@@ -14,7 +14,8 @@
  * and limitations under the License.
  */
 
-package net.liftweb.util
+package net.liftweb
+package util
 
 import _root_.java.util.concurrent.{ConcurrentHashMap => CHash}
 import _root_.java.lang.ThreadLocal

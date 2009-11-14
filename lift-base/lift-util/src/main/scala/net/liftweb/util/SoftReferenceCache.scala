@@ -1,4 +1,5 @@
-package net.liftweb.util
+package net.liftweb
+package util
 
 import _root_.java.lang.ref.{ReferenceQueue,SoftReference};
 import _root_.java.util._

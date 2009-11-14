@@ -1,5 +1,6 @@
 package net.liftweb.json
 
+/* FIXME 280
 import org.scalacheck._
 import Gen._
 import Arbitrary.arbitrary
@@ -43,3 +44,5 @@ trait NodeGen {
   def genName = frequency((2, identifier), (1, value("const")))
   private def children = choose(1, 3).sample.get
 }
+
+*/

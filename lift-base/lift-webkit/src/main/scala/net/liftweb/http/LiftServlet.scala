@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package net.liftweb.http
+package net.liftweb
+package http
 
 import _root_.java.net.URLDecoder
 import _root_.scala.xml.{Node, NodeSeq, Group, Elem, MetaData, Null, XML, Comment, Text}
@@ -350,7 +351,7 @@ class LiftServlet {
         (request, S.init(request, session)
                   (LiftRules.performTransform(
           convertAnswersToCometResponse(session,
-            answers.toArray, actors)))),
+            answers.toList, actors)))),
         request.request))
 
     cont ! BeginContinuation
@@ -445,8 +446,8 @@ class LiftServlet {
     def fixHeaders(headers: List[(String, String)]) = headers map ((v) => v match {
       case ("Location", uri) => (v._1, (
               (for (u <- request;
-                    updated <- Full((if (!LiftRules.excludePathFromContextPathRewriting.vend(uri)) u.contextPath else "") + uri) if (uri.startsWith("/"));
-                    f <- URLRewriter.rewriteFunc map (_(updated))) yield f) openOr uri
+                    updated <- Full((if (!LiftRules.excludePathFromContextPathRewriting.vend(uri)) u.contextPath else "") + uri).filter(ignore => uri.startsWith("/"));
+              rwf <- URLRewriter.rewriteFunc) yield rwf(updated)) openOr uri
               ))
       case _ => v
     })

@@ -14,7 +14,9 @@
  * and limitations under the License.
  */
 
-package net.liftweb.http.rest
+package net.liftweb
+package http
+package rest
 
 import _root_.net.liftweb.common._
 import _root_.net.liftweb._
@@ -44,7 +46,7 @@ trait XMLApiHelper {
     (for (req <- S.request) yield req.path.partPath match {
       case _ :: name :: _ => name
       case _ => ""
-    }).map(Text)
+    }).map(Text.apply)
 
   implicit def nodeSeqToResponse(in: NodeSeq): LiftResponse =
     buildResponse(true, Empty, in)

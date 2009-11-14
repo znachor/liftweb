@@ -1,4 +1,5 @@
-package net.liftweb.json
+package net.liftweb
+package json
 
 /*
  * Copyright 2009 WorldWide Conferencing, LLC

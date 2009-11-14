@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package net.liftweb.http
+package net.liftweb
+package http
 
 import _root_.net.liftweb.common.{Box, Full, Empty}
 import _root_.net.liftweb.util._
@@ -62,7 +63,7 @@ object ResourceServer {
 
 
   def findResourceInClasspath(request: Req, uri: List[String])(): Box[LiftResponse] =
-    for{
+    (for{
       auri <- Full(uri.filter(!_.startsWith("."))) if isAllowed(auri)
       rw = baseResourceLocation :: pathRewriter(auri)
       path = rw.mkString("/", "/", "")
@@ -78,7 +79,7 @@ object ResourceServer {
                   List(("Expires", toInternetDate(millis + 30.days)),
                     ("Content-Type", detectContentType(rw.last))), Nil,
           200)
-      }
+      }).firstOption
 
 
   /**

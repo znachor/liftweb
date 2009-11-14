@@ -16,6 +16,8 @@
 
 package net.liftweb.webapptest.snippet
 
+/* FIXME 280
+
 import net.liftweb.http._
 import scala.xml._
 
@@ -44,3 +46,4 @@ class DeferredSnippet {
    <span id={"actor_"+inActor}>stackWhack</span>
    }
 }
+*/

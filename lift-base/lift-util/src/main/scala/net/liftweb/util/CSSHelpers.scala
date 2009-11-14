@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package net.liftweb.util
+package net.liftweb
+package util
 
 import _root_.scala.util.parsing.combinator._
 import _root_.scala.util.parsing.combinator.syntactical._

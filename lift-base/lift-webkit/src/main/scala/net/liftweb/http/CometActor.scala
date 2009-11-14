@@ -14,7 +14,8 @@
  * and limitations under the License.
  */
 
-package net.liftweb.http
+package net.liftweb
+package http
 
 import _root_.net.liftweb.common._
 import _root_.net.liftweb.actor._
@@ -466,11 +467,11 @@ trait CometActor extends LiftActor with LiftCometActor with BindHelpers {
 
     case ReRender(all) => performReRender(all)
 
-    case Error(id, node) => notices += (NoticeType.Error, node, id)
+    case Error(id, node) => notices += ((NoticeType.Error, node, id))
 
-    case Warning(id, node) => notices += (NoticeType.Warning, node, id)
+    case Warning(id, node) => notices += ((NoticeType.Warning, node, id))
 
-    case Notice(id, node) => notices += (NoticeType.Notice, node, id)
+    case Notice(id, node) => notices += ((NoticeType.Notice, node, id))
 
     case ClearNotices => clearNotices
 
@@ -601,12 +602,12 @@ trait CometActor extends LiftActor with LiftCometActor with BindHelpers {
   /**
    * Similar with S.error
    */
-  def error(n: NodeSeq) {notices += (NoticeType.Error, n, Empty)}
+  def error(n: NodeSeq) {notices += ((NoticeType.Error, n, Empty))}
 
   /**
    * Similar with S.error
    */
-  def error(id: String, n: NodeSeq) {notices += (NoticeType.Error, n, Full(id))}
+  def error(id: String, n: NodeSeq) {notices += ((NoticeType.Error, n, Full(id)))}
 
   /**
    * Similar with S.error
@@ -621,12 +622,12 @@ trait CometActor extends LiftActor with LiftCometActor with BindHelpers {
   /**
    * Similar with S.notice
    */
-  def notice(n: NodeSeq) {notices += (NoticeType.Notice, n, Empty)}
+  def notice(n: NodeSeq) {notices += ((NoticeType.Notice, n, Empty))}
 
   /**
    * Similar with S.notice
    */
-  def notice(id: String, n: NodeSeq) {notices += (NoticeType.Notice, n, Full(id))}
+  def notice(id: String, n: NodeSeq) {notices += ((NoticeType.Notice, n, Full(id)))}
 
   /**
    * Similar with S.notice
@@ -641,12 +642,12 @@ trait CometActor extends LiftActor with LiftCometActor with BindHelpers {
   /**
    * Similar with S.warning
    */
-  def warning(n: NodeSeq) {notices += (NoticeType.Warning, n, Empty)}
+  def warning(n: NodeSeq) {notices += ((NoticeType.Warning, n, Empty))}
 
   /**
    * Similar with S.warning
    */
-  def warning(id: String, n: NodeSeq) {notices += (NoticeType.Warning, n, Full(id))}
+  def warning(id: String, n: NodeSeq) {notices += ((NoticeType.Warning, n, Full(id)))}
 
   /**
    * Similar with S.warning

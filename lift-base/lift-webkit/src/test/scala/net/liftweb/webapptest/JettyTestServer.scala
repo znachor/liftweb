@@ -15,6 +15,8 @@
  */
 package net.liftweb.webapptest
 
+/* FIXME 280
+
 import _root_.org.mortbay.jetty.Server
 //import _root_.org.mortbay.jetty.servlet.Context
 import _root_.org.mortbay.jetty.servlet.ServletHolder
@@ -67,3 +69,4 @@ object JettyTestServer {
 
 }
 
+*/

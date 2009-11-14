@@ -14,7 +14,8 @@
  * and limitations under the License.
  */
 
-package net.liftweb.http
+package net.liftweb
+package http
 
 import _root_.net.liftweb.common._
 import _root_.net.liftweb.util._

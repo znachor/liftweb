@@ -14,7 +14,7 @@
  * and limitations under the License.
  */
 package bootstrap.liftweb
-
+/* FIXME 280
 import _root_.net.liftweb.util._
 import _root_.net.liftweb.http._
 import _root_.net.liftweb.sitemap._
@@ -43,3 +43,4 @@ class Boot {
   }
 }
 
+*/

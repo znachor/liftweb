@@ -1,4 +1,6 @@
-package net.liftweb.util
+package net.liftweb
+package util
+
 import _root_.java.util.regex._
 import _root_.java.lang.Character._
 import _root_.scala.xml.NodeSeq

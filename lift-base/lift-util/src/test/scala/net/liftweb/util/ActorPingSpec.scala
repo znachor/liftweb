@@ -15,6 +15,8 @@
  */
 package net.liftweb.util
 
+/* FIXME 280
+
 import _root_.org.specs._
 import _root_.org.specs.util.WaitFor
 import _root_.org.specs.runner._
@@ -54,3 +56,4 @@ trait PingedService {
     }
   }
 }
+*/

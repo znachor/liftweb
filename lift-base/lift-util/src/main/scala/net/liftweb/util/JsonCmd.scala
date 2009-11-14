@@ -14,7 +14,8 @@
  * and limitations under the License.
  */
 
-package net.liftweb.util
+package net.liftweb
+package util
 
 import _root_.scala.xml.NodeSeq
 import common._

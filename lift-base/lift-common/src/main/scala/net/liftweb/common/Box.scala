@@ -1,4 +1,5 @@
-package net.liftweb.common
+package net.liftweb
+package common
 
 /*
  * Copyright 2007-2009 WorldWide Conferencing, LLC
@@ -13,7 +14,7 @@ package net.liftweb.common
  * limitations under the License.
  */
 
-import _root_.scala.reflect.Manifest
+import scala.reflect.Manifest
 
 /**
  * The Box companion object provides methods to create a Box from:
@@ -331,7 +332,7 @@ final case class Full[+A](value: A) extends Box[A] {
 
   override def flatMap[B](f: A => Box[B]): Box[B] = f(value)
 
-  override def elements: Iterator[A] = Iterator.fromValues(value)
+  override def elements: Iterator[A] = Iterator(value)
 
   override def toList: List[A] = List(value)
 
@@ -422,7 +423,7 @@ sealed case class Failure(msg: String, exception: Box[Throwable], chain: Box[Fai
     case _ => false
   }
 
-  override def ~>[T](errorCode: T): ParamFailure[T] = ParamFailure(msg, exception, chain, errorCode)
+  override def ~>[T](errorCode: T): ParamFailure[T] = new ParamFailure(msg, exception, chain, errorCode)
 }
 
 /**
@@ -430,7 +431,7 @@ sealed case class Failure(msg: String, exception: Box[Throwable], chain: Box[Fai
  * allow an application to store other information related to the failure.
  */
 @serializable
-final case class ParamFailure[T](override val msg: String,
+final class ParamFailure[T](override val msg: String,
 				 override val exception: Box[Throwable],
 				 override val chain: Box[Failure], param: T) extends
 Failure(msg, exception, chain)

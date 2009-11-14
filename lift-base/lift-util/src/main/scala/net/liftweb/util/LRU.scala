@@ -1,4 +1,5 @@
-package net.liftweb.util
+package net.liftweb
+package util
 
 /*
  * Copyright 2006-2008 WorldWide Conferencing, LLC
@@ -15,7 +16,9 @@ package net.liftweb.util
 
 import _root_.org.apache.commons.collections.map.{LRUMap, AbstractLinkedMap}
 import _root_.org.apache.commons.collections.map.AbstractLinkedMap.LinkEntry
-import _root_.scala.collection.jcl.Conversions._
+import collection.mutable.ListBuffer
+import collection.JavaConversions
+// import _root_.scala.collection.jcl.Conversions._
 import common._
 
 /**
@@ -45,5 +48,8 @@ class LRU[KeyType, ValueType](size: Int, loadFactor: Box[Float]) {
 
   def apply(k: KeyType): ValueType = map.get(k).asInstanceOf[ValueType]
   def contains(k: KeyType): Boolean = map.containsKey(k)
-  def keys: List[KeyType] = map.keySet().toList.map(_.asInstanceOf[KeyType])
+  def keys: List[KeyType] = {
+    import  JavaConversions._
+    map.keySet().toList.map(_.asInstanceOf[KeyType])
+  }
 }

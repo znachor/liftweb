@@ -15,7 +15,10 @@
  */
 package net.liftweb.webapptest.snippet
 
+/* FIXME 280
+
 class HelloWorld {
   def howdy = <span>Welcome to webtest1 at {new _root_.java.util.Date}</span>
 }
 
+*/

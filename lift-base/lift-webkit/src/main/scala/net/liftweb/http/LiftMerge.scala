@@ -14,7 +14,8 @@
  * and limitations under the License.
  */
 
-package net.liftweb.http
+package net.liftweb
+package http
 
 import _root_.scala.collection.mutable.{HashMap, ArrayBuffer, ListBuffer}
 import _root_.scala.xml._

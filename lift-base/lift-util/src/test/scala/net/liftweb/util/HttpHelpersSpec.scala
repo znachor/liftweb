@@ -1,4 +1,7 @@
 package net.liftweb.util
+
+/* FIXME 280
+
 import _root_.org.specs._
 import _root_.org.specs.specification._
 
@@ -73,3 +76,4 @@ object HttpHelpersSpec extends Specification with HttpHelpers with ListHelpers w
  // currentSus is no longer part of Specification in 1.6  def provide(e: =>Example) = { currentSus.verb += " provide"; e }
 }
 class HttpHelpersSpecTest extends _root_.org.specs.runner.JUnit4(HttpHelpersSpec)
+*/

@@ -1,5 +1,6 @@
 package net.liftweb.json
 
+/* FIXME 280
 import _root_.org.specs.Specification
 import _root_.org.specs.runner.{Runner, JUnit}
 
@@ -84,3 +85,4 @@ object QueryExamples extends Specification {
    ]}
   """)
 }
+*/

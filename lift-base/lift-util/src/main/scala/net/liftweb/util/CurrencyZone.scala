@@ -1,4 +1,5 @@
-package net.liftweb.util
+package net.liftweb
+package util
 
 /*
  * Copyright 2007-2009 WorldWide Conferencing, LLC
@@ -84,7 +85,7 @@ abstract class CurrencyZone {
     abstract class AbstractCurrency(val designation: String) extends Ordered[Currency] {
 
         val _locale: Locale = locale
-        val amount: BigDecimal
+        def amount: BigDecimal
         def floatValue = amount.floatValue
         def doubleValue = amount.doubleValue
         val currencySymbol: String
@@ -104,7 +105,7 @@ abstract class CurrencyZone {
         make(new BigDecimal(this.amount.bigDecimal.divide(that.amount.bigDecimal, scale, _root_.java.math.BigDecimal.ROUND_HALF_UP)) )
         def /(that: Int): Currency = this / make(that)
 
-        def compare(that: Currency) = this.amount compareTo that.amount
+        def compare(that: Currency) = this.amount compare that.amount
 
         override def equals(that: Any) = that match {
             case that: AbstractCurrency => this.designation+this.format("", scale) == that.designation+that.format("", scale)
@@ -124,7 +125,7 @@ abstract class CurrencyZone {
         def format(currencySymbol: String, numberOfFractionDigits: Int): String = {
             val moneyValue = amount match {
                 case null => 0
-                case _ => amount.setScale(numberOfFractionDigits, BigDecimal.RoundingMode.ROUND_HALF_UP).doubleValue;
+                case _ => amount.setScale(numberOfFractionDigits, BigDecimal.RoundingMode.HALF_UP).doubleValue;
             }
 
             val numberFormat = NumberFormat.getCurrencyInstance(_locale);

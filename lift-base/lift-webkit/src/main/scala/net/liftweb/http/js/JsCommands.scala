@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package net.liftweb.http.js
+package net.liftweb
+package http
+package js
 
 import _root_.scala.xml.{NodeSeq, Group, Unparsed, Elem}
 import _root_.net.liftweb.util.Helpers._
@@ -92,8 +94,8 @@ trait JsExp extends SpecialNode with HtmlFixer with JxBase with ToJsCmd {
 
   // def label: String = "#JS"
 
-  override def toString(sb: StringBuilder) = {
-    (new Text(toJsCmd)).toString(sb)
+  override def buildString(sb: StringBuilder) = {
+    (new Text(toJsCmd)).buildString(sb)
   }
 
   def appendToParent(parentName: String): JsCmd = {
@@ -285,12 +287,12 @@ object JE {
   }
 
   object LjFold {
-    def apply(what: JsExp, init: JsExp, func: String): JsExp = new JsExp {
-      def toJsCmd = "lift$.fold(" + what.toJsCmd + ", " + init.toJsCmd + ", " + func.encJs + ")"
+    def apply(what1: JsExp, init1: JsExp, func: String): JsExp = new JsExp {
+      def toJsCmd = "lift$.fold(" + what1.toJsCmd + ", " + init1.toJsCmd + ", " + func.encJs + ")"
     }
 
-    def apply(what: JsExp, init: JsExp, func: AnonFunc): JsExp = new JsExp {
-      def toJsCmd = "lift$.fold(" + what.toJsCmd + ", " + init.toJsCmd + ", " + func.toJsCmd + ")"
+    def apply(what1: JsExp, init1: JsExp, func: AnonFunc): JsExp = new JsExp {
+      def toJsCmd = "lift$.fold(" + what1.toJsCmd + ", " + init1.toJsCmd + ", " + func.toJsCmd + ")"
     }
   }
 

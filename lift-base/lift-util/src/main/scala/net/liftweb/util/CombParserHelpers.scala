@@ -1,4 +1,5 @@
-package net.liftweb.util;
+package net.liftweb
+package util
 
 /*
  * Copyright 2007-2008 WorldWide Conferencing, LLC
@@ -80,7 +81,7 @@ trait CombParserHelpers {
   /**
    * @return a list of elements (Elem) from a String
    */
-  implicit def strToLst(in: String): List[Elem] = stringWrapper(in).toList
+  implicit def strToLst(in: String): List[Elem] = (new scala.runtime.RichString(in)).toList
 
   /**
    * @return a parser for a digit

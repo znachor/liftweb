@@ -1,5 +1,6 @@
 package net.liftweb.json
 
+/*
 import _root_.org.specs.Specification
 import _root_.org.specs.runner.{Runner, JUnit}
 
@@ -58,3 +59,4 @@ object DiffExamples extends Specification {
   private def read(resource: String) = 
     parse(scala.io.Source.fromInputStream(classOf[DiffExamplesTest].getResourceAsStream(resource)).getLines.mkString)
 }
+*/

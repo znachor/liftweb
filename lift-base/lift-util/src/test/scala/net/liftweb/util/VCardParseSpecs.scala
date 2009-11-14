@@ -16,6 +16,7 @@
 
 package net.liftweb.util
 
+/*
 import _root_.org.specs._
 import _root_.org.specs.runner._
 
@@ -57,3 +58,4 @@ END:VCARD"""
     }
   }
 }
+*/

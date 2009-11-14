@@ -11,7 +11,8 @@
  * limitations under the License.
  */
 
-package net.liftweb.util
+package net.liftweb
+package util
 
 import common._
 

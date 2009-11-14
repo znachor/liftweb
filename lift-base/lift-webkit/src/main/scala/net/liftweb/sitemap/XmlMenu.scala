@@ -1,4 +1,5 @@
-package net.liftweb.sitemap
+package net.liftweb
+package sitemap
 
 import scala.xml.NodeSeq
 import Loc._

@@ -1,4 +1,5 @@
-package net.liftweb.util
+package net.liftweb
+package util
 import _root_.java.text.SimpleDateFormat
 import _root_.java.util.{TimeZone, Calendar, Date, Locale}
 import common._

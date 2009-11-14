@@ -1,5 +1,6 @@
 package net.liftweb.json
 
+/* FIXME 280
 import java.util.Date
 import _root_.org.specs.Specification
 import _root_.org.specs.runner.{Runner, JUnit}
@@ -125,3 +126,4 @@ case class Parent(name: String)
 case class OList(elems: Option[List[Int]])
 
 case class Event(name: String, timestamp: Date)
+*/

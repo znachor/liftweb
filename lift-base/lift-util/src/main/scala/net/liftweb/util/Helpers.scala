@@ -1,4 +1,6 @@
-package net.liftweb.util
+package net.liftweb
+package util
+
 import _root_.scala.xml._
 import common._
 

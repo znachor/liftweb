@@ -1,4 +1,5 @@
-package net.liftweb.util
+package net.liftweb
+package util
 
 /*
  * Copyright 2006-2009 WorldWide Conferencing, LLC

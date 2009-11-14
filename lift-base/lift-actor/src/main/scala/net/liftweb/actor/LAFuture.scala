@@ -14,7 +14,8 @@
  * and limitations under the License.
  */
 
-package net.liftweb.actor
+package net.liftweb
+package actor
 
 import common._
 

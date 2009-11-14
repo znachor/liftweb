@@ -1,4 +1,5 @@
-package net.liftweb.json
+package net.liftweb
+package json
 
 /*
  * Copyright 2009 WorldWide Conferencing, LLC
@@ -122,7 +123,7 @@ private[json] object Meta {
     def safePrimaryConstructorOf[A](cl: Class[A]): Option[JConstructor[A]] = 
       cl.getDeclaredConstructors.toList.asInstanceOf[List[JConstructor[A]]] match {
         case Nil => None
-        case x :: xs => Some[JConstructor[A]](x)
+        case x :: xs => Some(x.asInstanceOf[JConstructor[A]])
       }
 
     def primaryConstructorOf[A](cl: Class[A]): JConstructor[A] = 

@@ -1,5 +1,6 @@
 package net.liftweb.json
 
+/* FIXME 280
 import _root_.org.scalacheck._
 import _root_.org.scalacheck.Prop.forAll
 import _root_.org.specs.Specification
@@ -27,3 +28,5 @@ object XmlSpec extends Specification with NodeGen with JValueGen with ScalaCheck
   implicit def arbXml: Arbitrary[Node] = Arbitrary(genXml)
   implicit def arbJValue: Arbitrary[JValue] = Arbitrary(genObject)
 }
+
+*/

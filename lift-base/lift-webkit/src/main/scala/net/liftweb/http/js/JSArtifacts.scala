@@ -14,9 +14,10 @@
  * and limitations under the License.
  */
 
-package net.liftweb.http.js
+package net.liftweb
+package http
+package js
 
-import _root_.net.liftweb.http.js._
 import _root_.net.liftweb.common.{Box, Full, Empty}
 
 import _root_.scala.xml.{Elem, NodeSeq}

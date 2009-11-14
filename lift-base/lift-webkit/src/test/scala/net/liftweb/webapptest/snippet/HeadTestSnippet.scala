@@ -15,6 +15,8 @@
  */
 package net.liftweb.webapptest.snippet
 
+/* FIXME 280
+
 class HeadTestSnippet {
   def withHead = <div>
     <head>
@@ -25,3 +27,4 @@ class HeadTestSnippet {
 
 }
 
+*/

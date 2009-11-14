@@ -1,4 +1,7 @@
 package net.liftweb.util
+
+/* FIXME 280
+
 import _root_.org.specs.Specification
 import _root_.org.specs.runner._
 import _root_.java.util._
@@ -255,3 +258,4 @@ trait LoggerDelegation {
 
   }
 }
+*/

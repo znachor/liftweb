@@ -1,5 +1,6 @@
 package net.liftweb.json
 
+/* FIXME 280
 import java.util.Date
 import _root_.org.specs.Specification
 import _root_.org.specs.runner.{Runner, JUnit}
@@ -122,3 +123,4 @@ case class Meeting(place: String, time: DateTime)
 class DateTime(val time: Long)
 
 case class Times(times: List[DateTime])
+*/

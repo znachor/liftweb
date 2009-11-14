@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package net.liftweb.http.auth
+package net.liftweb
+package http
+package auth
 
 import _root_.net.liftweb.common.{Box, Full, Empty}
 
@@ -50,7 +52,7 @@ trait Role {
    * in the tree.
    */
   def addRoles(roles: Role*) = {
-    for (val role <- roles) {
+    for (role <- roles) {
       getRoleByName(role.name) match {
         case Empty =>
           childs = role :: childs
@@ -118,7 +120,7 @@ trait Role {
 
   override def toString = {
     var str = "Role(" + name;
-    for (val role <- childs) {
+    for (role <- childs) {
       str = str + ", " + role.toString
     }
     str + ")"

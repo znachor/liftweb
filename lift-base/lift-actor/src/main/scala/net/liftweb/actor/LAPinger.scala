@@ -1,4 +1,5 @@
-package net.liftweb.actor
+package net.liftweb
+package actor
 
 /*
  * Copyright 2007-2009 WorldWide Conferencing, LLC

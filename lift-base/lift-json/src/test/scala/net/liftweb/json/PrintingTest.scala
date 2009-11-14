@@ -1,5 +1,6 @@
 package net.liftweb.json
 
+/* FIXME 280
 import _root_.org.scalacheck._
 import _root_.org.scalacheck.Prop.forAll
 import _root_.org.specs.Specification
@@ -20,3 +21,4 @@ object PrintingSpec extends Specification with JValueGen with ScalaCheck {
 
   implicit def arbDoc: Arbitrary[Document] = Arbitrary(genJValue.map(render(_)))
 }
+*/

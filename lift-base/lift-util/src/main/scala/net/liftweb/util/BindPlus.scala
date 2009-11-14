@@ -1,4 +1,5 @@
-package net.liftweb.util
+package net.liftweb
+package util
 
 import scala.xml.{NodeSeq, PrefixedAttribute, MetaData}
 import Helpers.{bind, BindParam, FuncBindParam, TheBindParam}

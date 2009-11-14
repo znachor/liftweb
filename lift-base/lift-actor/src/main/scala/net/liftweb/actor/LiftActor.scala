@@ -14,7 +14,9 @@
  * and limitations under the License.
  */
 
-package net.liftweb.actor
+package net.liftweb
+package actor
+
 import common._
 
 trait ILAExecute {
@@ -34,7 +36,7 @@ object LAScheduler {
   @volatile
   var createExecutor: () => ILAExecute = () => {
     new ILAExecute {
-      import _root_.java.util.concurrent.{Executors, Executor}
+      import java.util.concurrent.{Executors, Executor}
 
       private val es: Executor = Executors.newFixedThreadPool(threadPoolSize)
 
@@ -59,9 +61,8 @@ object LAScheduler {
 }
 
 trait SpecializedLiftActor[T] extends SimpleActor[T]  {
-  @volatile
-  private[this] var processing = false
-  @volatile  private[this] val baseMailbox: MailboxItem = new SpecialMailbox
+  @volatile  private[this] var processing = false
+  private[this] val baseMailbox: MailboxItem = new SpecialMailbox
   @volatile private[this] var msgList: List[T] = Nil
   @volatile private[this] var startCnt = 0
 
