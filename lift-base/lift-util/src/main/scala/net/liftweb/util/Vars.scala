@@ -29,6 +29,7 @@ private[liftweb] object VarConstants {
  */
 abstract class AnyVar[T, MyType <: AnyVar[T, MyType]](dflt: => T) extends PSettableValueHolder[T] {
   self: MyType =>
+
   protected lazy val name = VarConstants.varPrefix+getClass.getName+"_"+__nameSalt
   protected def findFunc(name: String): Box[T]
   protected def setFunc(name: String, value: T): Unit
@@ -63,14 +64,9 @@ abstract class AnyVar[T, MyType <: AnyVar[T, MyType]](dflt: => T) extends PSetta
   }
 
   /**
-   * Shadow of the 'is' method
+   * Alternative name for the 'is' method
    */
   def get: T = is
-
-  /**
-   * Shadow of the apply method
-   */
-  def set(what: T): T = apply(what)
 
   /**
    * Set the session variable
@@ -84,21 +80,28 @@ abstract class AnyVar[T, MyType <: AnyVar[T, MyType]](dflt: => T) extends PSetta
   }
 
   /**
+   * Alternateive name for the 'apply' method
+   */
+  def set(what: T): T = apply(what)
+
+  /**
+   * Permits the use of the syntax myRequestVar = new T
+   */
+  def update(what: T): Unit = apply(what)
+
+  /**
    * Applies the given function to the contents of this
    * variable and sets the variable to the resulting value.
    *
    * @param f -- the function to apply and set the result from.
    */
-  def update(f: T => T): T = {
-    apply(f(is))
-    is
-  }
+  def update(f: T => T): T = apply(f(is))
 
   def remove(): Unit = clearFunc(name)
 
   //def cleanupFunc: Box[() => Unit] = Empty
 
-protected def registerCleanupFunc(in: CleanUpParam => Unit): Unit
+  protected def registerCleanupFunc(in: CleanUpParam => Unit): Unit
 
   protected final def registerGlobalCleanupFunc(in: CleanUpParam => Unit) {
     cuf ::= in
