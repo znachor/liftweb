@@ -61,10 +61,10 @@ object LazyLoad extends DispatchSnippet {
         // Add the comet only once
         session.map(_.addAndInitCometActor(new AsyncRenderComet(), 
                                            Full("AsyncRenderComet"), 
-                                           Full("AsyncRenderer"), 
+                                           Full(id), 
                                            NodeSeq.Empty, Map.empty)) 
 
-        <tail><lift:comet type="AsyncRenderComet" name="AsyncRenderer"></lift:comet></tail>
+        <tail><lift:comet type="AsyncRenderComet" name={id}></lift:comet></tail>
       } else {
         NodeSeq.Empty
       }
@@ -97,6 +97,8 @@ object AsyncRenderer extends LiftActor {
 class AsyncRenderComet extends CometActor {
 
   var content = NodeSeq.Empty
+
+  override def lifespan: Box[TimeSpan] = Full(1 minute)
 
   def render = content
   override def lowPriority : PartialFunction[Any, Unit] = {
