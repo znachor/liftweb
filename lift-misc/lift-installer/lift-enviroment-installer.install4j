@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<install4j version="4.2.3" transformSequenceNumber="2">
+<install4j version="4.2.4" transformSequenceNumber="2">
   <directoryPresets config="./src/javarebel-1.2.2/Install.html" />
-  <application name="Lift Framework" distributionSourceDir="" applicationId="5718-3659-1334-6595" mediaDir="./target" mediaFilePattern="${compiler:sys.shortName}_${compiler:sys.platform}_${compiler:sys.version}" compression="9" lzmaCompression="true" pack200Compression="true" excludeSignedFromPacking="true" keepModificationTimes="false" missingFilesStrategy="warn" shortName="liftweb" publisher="The Lift Open Source Comunity" publisherWeb="http://www.liftweb.net/" version="1.0.1" allPathsRelative="true" backupOnSave="false" autoSave="true" convertDotsToUnderscores="true" macSignature="????" installerName="" javaMinVersion="1.5" javaMaxVersion="" allowBetaVM="true" jdkMode="runtimeJre" jdkName="">
+  <application name="Lift Framework" distributionSourceDir="" applicationId="5718-3659-1334-6595" mediaDir="./target" mediaFilePattern="${compiler:sys.shortName}_${compiler:sys.platform}_${compiler:sys.version}" compression="9" lzmaCompression="true" pack200Compression="true" excludeSignedFromPacking="true" keepModificationTimes="false" missingFilesStrategy="warn" shortName="liftweb" publisher="The Lift Open Source Comunity" publisherWeb="http://www.liftweb.net/" version="1.0.2" allPathsRelative="true" backupOnSave="false" autoSave="true" convertDotsToUnderscores="true" macSignature="????" installerName="" javaMinVersion="1.5" javaMaxVersion="" allowBetaVM="true" jdkMode="runtimeJre" jdkName="">
     <languages skipLanguageSelection="false" languageSelectionInPrincipalLanguage="false">
       <principalLanguage id="en" customLocalizationFile="" />
       <additionalLanguages />
@@ -240,16 +240,33 @@ if(Util.isMacOS() | Util.isLinux()){
     
     // get the user home directory 
     String homeDir = System.getProperty("user.home");
-    File bashProfile = new File(homeDir + "/.bash_profile");
+    File _bashProfile = new File(homeDir + "/.bash_profile");
+    File _dotProfile = new File(homeDir + "/.profile");
+    
+    // java masturbation... scala has spoiled me. 
+    File bashProfile = _bashProfile;
+    
+    // check to see if only .bash_profile
+    if(_bashProfile.exists() == true &amp;&amp; _dotProfile.exists() == false){
+      bashProfile = _bashProfile;
+    // check for .profile only
+    } else if(_bashProfile.exists() == false &amp;&amp; _dotProfile.exists() == true){
+      bashProfile = _dotProfile;
+    // check for both .bash_profile and .profile
+    } else if(_bashProfile.exists() == true &amp;&amp; _dotProfile.exists() == true){
+      bashProfile = _dotProfile;
+    // fall back to .bash_profile
+    } else {
+      bashProfile = _bashProfile;
+    }
     
     // contents to be appended to the bash_profile
     String appendToBash = "\n# liftweb path vars\nexport M2_HOME=" + mavenHomePath + "\nexport M2=$M2_HOME/bin\nexport MAVEN_OPTS=\"-noverify\" \nexport PATH=$M2:$PATH\n";
     
     if(bashProfile.exists() == true){
       String backupBash = ".bash_profile.liftweb.old." + new Date().toString();
-      Runtime.getRuntime().exec("cp ~/.bash_profile ~/" + backupBash);
+      Runtime.getRuntime().exec("cp "+ bashProfile.getAbsolutePath() +" ~/" + backupBash);
       Util.showMessage("We detected an exsisting .bash_profile, this has been backed up to " + backupBash);
-      //bashProfile.renameTo(new File(homeDir + "/" + backupBash));
     } else {
       try {
         // there should now be no bash_profile, so we just make a new one.
@@ -559,7 +576,7 @@ if(Util.isWindows() == true){
     </applications>
   </installerGui>
   <mediaSets>
-    <macosFolder name="Mac OS X Folder" id="54" mediaFileName="" installDir="liftweb-${compiler:sys.version}" overridePrincipalLanguage="false" requires64bit="false" runPostProcessor="false" postProcessor="" failOnPostProcessorError="false" customInstallBaseDir="" createUninstallIcon="true" contentFilesType="1" downloadURL="">
+    <macosFolder name="Mac OS X Folder" id="54" mediaFileName="" installDir="liftweb-${compiler:sys.version}" overridePrincipalLanguage="false" requires64bit="false" jreBitType="all" runPostProcessor="false" postProcessor="" failOnPostProcessorError="false" customInstallBaseDir="" createUninstallIcon="true" contentFilesType="1" downloadURL="">
       <excludedLaunchers />
       <excludedComponents />
       <excludedBeans />
@@ -567,7 +584,7 @@ if(Util.isWindows() == true){
       <exclude />
       <variables />
     </macosFolder>
-    <win32 name="Windows" id="57" mediaFileName="" installDir="${compiler:sys.shortName}-${compiler:sys.version}" overridePrincipalLanguage="false" requires64bit="false" runPostProcessor="false" postProcessor="" failOnPostProcessorError="false" includedJRE="windows-x86-1.6.0_12" manualJREEntry="false" bundleType="2" jreURL="http://scala-tools.org/windows-x86-1.6.0_12.tar.gz" jreFtpURL="" jreShared="false" customInstallBaseDir="" createUninstallIcon="true" contentFilesType="1" downloadURL="" runAsAdmin="true">
+    <win32 name="Windows" id="57" mediaFileName="" installDir="${compiler:sys.shortName}-${compiler:sys.version}" overridePrincipalLanguage="false" requires64bit="false" jreBitType="32" runPostProcessor="false" postProcessor="" failOnPostProcessorError="false" includedJRE="windows-x86-1.6.0_12" manualJREEntry="false" bundleType="2" jreURL="http://scala-tools.org/windows-x86-1.6.0_12.tar.gz" jreFtpURL="" jreShared="false" customInstallBaseDir="" createUninstallIcon="true" contentFilesType="1" downloadURL="" runAsAdmin="true">
       <excludedLaunchers />
       <excludedComponents />
       <excludedBeans />
@@ -575,7 +592,7 @@ if(Util.isWindows() == true){
       <exclude />
       <variables />
     </win32>
-    <unixInstaller name="Unix Installer" id="128" mediaFileName="" installDir="liftweb-${compiler:sys.version}" overridePrincipalLanguage="false" requires64bit="false" runPostProcessor="false" postProcessor="" failOnPostProcessorError="false" includedJRE="linux-x86-1.6.0_06" manualJREEntry="false" bundleType="2" jreURL="http://scala-tools.org/linux-x86-1.6.0_06.tar.gz" jreFtpURL="" jreShared="true" customInstallBaseDir="" createUninstallIcon="true" contentFilesType="1" downloadURL="">
+    <unixInstaller name="Unix Installer" id="128" mediaFileName="" installDir="liftweb-${compiler:sys.version}" overridePrincipalLanguage="false" requires64bit="false" jreBitType="all" runPostProcessor="false" postProcessor="" failOnPostProcessorError="false" includedJRE="linux-x86-1.6.0_06" manualJREEntry="false" bundleType="2" jreURL="http://scala-tools.org/linux-x86-1.6.0_06.tar.gz" jreFtpURL="" jreShared="true" customInstallBaseDir="" createUninstallIcon="true" contentFilesType="1" downloadURL="">
       <excludedLaunchers />
       <excludedComponents />
       <excludedBeans />
