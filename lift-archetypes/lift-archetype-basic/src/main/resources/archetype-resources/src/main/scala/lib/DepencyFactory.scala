@@ -1,4 +1,4 @@
-package ${packageName}.lib
+package ${package}.lib
 
 import net.liftweb._
 import http._

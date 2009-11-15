@@ -9,7 +9,7 @@ import _root_.net.liftweb.sitemap.Loc._
 import Helpers._
 import _root_.net.liftweb.mapper.{DB, ConnectionManager, Schemifier, DefaultConnectionIdentifier, StandardDBVendor}
 import _root_.java.sql.{Connection, DriverManager}
-import _root_.${packageName}.model._
+import _root_.${package}.model._
 
 
 /**
@@ -25,7 +25,7 @@ class Boot {
 Props.get("db.user"), Props.get("db.password")))
 
     // where to search snippet
-    LiftRules.addToPackages("${packageName}")
+    LiftRules.addToPackages("${package}")
     Schemifier.schemify(true, Log.infoF _, User)
 
     // Build SiteMap
