@@ -25,6 +25,10 @@
    -->
     <release version="1.1-SNAPSHOT" date="" description="Lift 1.1 Snapshot">
 
+      <action dev="Marius Danciu" type="fix" issue="56" system="github">
+        Allowing page fragments wrapped by &lt;lift:lazy-load&gt; node to be processed and loaded asynchronously.
+      </action>
+
       <action dev="boisvert" type="fix" issue="153" system="github">
         Updated documentation for Msgs
       </action>
