@@ -51,23 +51,32 @@ trait ManyToMany extends BaseKeyedMapper {
    */
   class MappedManyToMany[O<:Mapper[O], K2, T2 <: KeyedMapper[K2,T2]](
     val joinMeta: MetaMapper[O],
-    thisField: MappedForeignKey[K,O,_ /* the compiler doesn't like the types this should be T*/],
+    thisField: MappedForeignKey[K,O,_ <: KeyedMapper[K,T]],
     val otherField: MappedForeignKey[K2, O, T2],
     val otherMeta: MetaMapper[T2],
     val qp: QueryParam[O]*) extends scala.collection.mutable.Buffer[T2] {
     
-    def field(join: O) = thisField.actualField(join).asInstanceOf[MappedForeignKey[K,O,_ /* T */]]
+    def field(join: O): MappedForeignKey[K,O, _ <: KeyedMapper[K,T]] =
+      thisField.actualField(join).asInstanceOf[MappedForeignKey[K,O, _<:KeyedMapper[K,T]]]
     
-    protected def children: List[T2] =
-      joins.map(otherField.actualField(_).asInstanceOf[MappedForeignKey[K2,O,T2]].obj.openOr(error("Child cannot be found through join table")))
+    protected def children: List[T2] = {
+      joins.flatMap {
+        otherField.actualField(_).asInstanceOf[MappedForeignKey[K2,O,T2]].obj
+      }
+    }
+    
     protected var _joins: List[O] = _
     def joins = _joins // read only to the public
     protected var removedJoins: List[O] = Nil
     refresh
     manyToManyFields = this :: manyToManyFields
     
+    protected def isJoinForChild(e: T2)(join: O) = otherField.actualField(join).is == e.primaryKeyField.is
+    protected def joinForChild(e: T2): Option[O] =
+      joins.find(isJoinForChild(e))
+    
     protected def own(e: T2) = {
-      joins.find(otherField.actualField(_).is == e.primaryKeyField.is) match {
+      joinForChild(e) match {
         case None =>
           removedJoins.find { // first check if we can recycle a removed join
             otherField.actualField(_).is == e.primaryKeyField
@@ -86,7 +95,7 @@ trait ManyToMany extends BaseKeyedMapper {
       }
     }
     protected def unown(e: T2) = {
-      joins.find(otherField.actualField(_).is == e.primaryKeyField.is) match {
+      joinForChild(e) match {
         case Some(join) =>
           removedJoins = join :: removedJoins
           val o = otherField.actualField(join)
@@ -118,16 +127,22 @@ trait ManyToMany extends BaseKeyedMapper {
     }
 
     def insertAll(n: Int, iter: Iterable[T2]) {
-      //TODO if children uses flatMap n needs to be converted
-      val (before, after) = joins.splitAt(n)
-      val owned = iter map own
-      _joins = before ++ owned ++ after
+      val ownedJoins = iter map own
+      val n2 = joins.findIndexOf(isJoinForChild(children(n)))
+      val before = joins.take(n2)
+      val after = joins.drop(n2)
+      
+      _joins = before ++ ownedJoins ++ after
     }
 
     def update(n: Int, newelem: T2) {
-      unown(childAt(n))
-      val (before, after) = (joins.take(n), joins.drop(n+1))
-      _joins = before ++ List(own(newelem)) ++ after
+      unown(childAt(n)) match {
+        case Some(join) =>
+          val n2 = joins.indexOf(join)
+          val (before, after) = (joins.take(n2), joins.drop(n2+1))
+          _joins = before ++ List(own(newelem)) ++ after
+        case None =>
+      }
     }
 
     def remove(n: Int) = {
