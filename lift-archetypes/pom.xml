@@ -43,7 +43,9 @@
     ~ More Project Information
   -->
   <name>Lift Archetypes</name>
-  <description>Standard archetypes for Lift</description>
+  <description>
+    Standard archetypes for Lift Web Framework.
+  </description>
 
   <!--
     ~ Environment Settings
