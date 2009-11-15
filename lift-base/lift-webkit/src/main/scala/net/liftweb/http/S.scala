@@ -794,9 +794,8 @@ for {
    *
    * @param request The Req instance for this request
    * @param session the LiftSession for this request
-   * @param f
+   * @param f Function to execute within the scope of the request and session
    */
-  // TODO: what is f?
   def init[B](request: Req, session: LiftSession)(f: => B): B = {
     _init(request, session)(() => f)
   }
