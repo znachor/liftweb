@@ -836,16 +836,16 @@ for {
   def logQuery(query: String, time: Long) = p_queryLog.is += (query, time)
 
   /**
-  * Given a snippet class name, return the cached or predefined stateful snippet for
-  * that class
-  */
+   * Given a snippet class name, return the cached or predefined stateful snippet for
+   * that class
+   */
   def snippetForClass(cls: String): Box[StatefulSnippet] =
     _statefulSnip.is.get(cls)
 
-/**
- * Register a stateful snippet for a given class name.  Only registers if the name
- * is not already set.
-*/
+  /**
+   * Register a stateful snippet for a given class name.  Only registers if the name
+   * is not already set.
+   */
   def addSnippetForClass(cls: String, inst: StatefulSnippet): Unit = {
     if (!_statefulSnip.is.contains(cls)) {
       inst.addName(cls)  // addresses
@@ -853,10 +853,10 @@ for {
     }
   }
 
-/**
- * Register a stateful snippet for a given class name.  The addSnippetForClass
- * method is preferred
-*/
+  /**
+   * Register a stateful snippet for a given class name.  The addSnippetForClass
+   * method is preferred
+   */
   def overrideSnippetForClass(cls: String, inst: StatefulSnippet): Unit = {
     inst.addName(cls)
     _statefulSnip.set(_statefulSnip.is.update(cls, inst))
@@ -1121,13 +1121,14 @@ for {
     this._request.doWith(request) {
       _sessionInfo.doWith(session) {
         _responseHeaders.doWith(new ResponseInfoHolder) {
-	  TransientRequestVarHandler(Full(session),
-          RequestVarHandler(Full(session),
-            _responseCookies.doWith(CookieHolder(getCookies(containerRequest), Nil)) {
-              _innerInit(f)
-            }
+          TransientRequestVarHandler(Full(session),
+            RequestVarHandler(Full(session),
+              _responseCookies.doWith(CookieHolder(getCookies(containerRequest), Nil)) {
+                _innerInit(f)
+              }
             )
-        )}
+          )
+        }
       }
     }
 
@@ -1925,12 +1926,11 @@ for {
   /**
    * Maps a function with an random generated and name
    */
-  def fmapFunc[T](in: AFuncHolder)(f: String => T): T = //
-    {
-      val name = formFuncName
-      addFunctionMap(name, in)
-      f(name)
-    }
+  def fmapFunc[T](in: AFuncHolder)(f: String => T): T = {
+    val name = formFuncName
+    addFunctionMap(name, in)
+    f(name)
+  }
 
   /**
    * Wrap an AFuncHolder with the current snippet and Loc context so that for Ajax calls, the original snippets,

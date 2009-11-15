@@ -190,26 +190,6 @@ object JE {
     def toJsCmd = (ElemById(id) ~> Parent).toJsCmd
   }
 
-  /**
-   * Replaces the node having the provided id with the markup given by node
-   *
-   * @param id - the id of the node that will be replaces
-   * @param node - the new node
-   */
-  case class Replace(id: String, node: NodeSeq) extends JsExp {
-    def toJsCmd = {
-      val funcName = "f_" + Helpers.nextFuncName
-      val toBeReplaced = "v_" + Helpers.nextFuncName
-
-      (JsCmds.JsCrVar(funcName, Jx(node).toJs) &
-              JsCmds.JsCrVar(toBeReplaced, ElemById(id)) &
-              JE.JsRaw(toBeReplaced + ".parentNode.insertBefore(" + funcName + ", " + toBeReplaced + ");").cmd &
-              JE.JsRaw(toBeReplaced + ".parentNode.removeChild(" + toBeReplaced + ");").cmd
-              ).toJsCmd
-    }
-  }
-
-
   object LjSwappable {
     def apply(visible: JsExp, hidden: JsExp): JxBase = {
       new JxNodeBase {
@@ -495,6 +475,28 @@ object JsCmds {
   def JsHideId(what: String): JsCmd = LiftRules.jsArtifacts.hide(what).cmd
 
   def JsShowId(what: String): JsCmd = LiftRules.jsArtifacts.show(what).cmd
+
+  /**
+   * Replaces the node having the provided id with the markup given by node
+   * 
+   * @param id - the id of the node that will be replaced
+   * @param node - the new node
+   */
+  case class Replace(id: String, content: NodeSeq) extends JsCmd with HtmlFixer {
+     override val toJsCmd = {
+       val html = fixHtml("inline", content);
+"""
+  var parent = document.getElementById(""" + id.encJs + """);
+  parent.innerHTML = """ + html + """;
+  for (var i = 0; i < parent.childNodes.length; i++) { 
+    var node = parent.childNodes[i];
+    parent.parentNode.insertBefore(node.cloneNode(true), parent);
+  }
+  parent.parentNode.removeChild(parent);
+"""
+
+     }
+  }
 
   case class SetHtml(uid: String, content: NodeSeq) extends JsCmd {
     // we want eager evaluation of the snippets so they get evaluated in context
