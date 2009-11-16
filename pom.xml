@@ -479,8 +479,6 @@
               <jvmArg>-Xmx1024m</jvmArg>
             </jvmArgs>
             <args>
-              <arg>-unchecked</arg>
-              <arg>-deprecation</arg>
               <arg>-Xno-varargs-conversion</arg>
             </args>
           </configuration>
@@ -723,11 +721,6 @@
             <jvmArg>-Xmx1024m</jvmArg>
             <jvmArg>-DpackageLinkDefs=file://${project.build.directory}/packageLinkDefs.properties</jvmArg>
           </jvmArgs>
-          <args>
-            <arg>-unchecked</arg>
-            <arg>-deprecation</arg>
-            <arg>-Xno-varargs-conversion</arg>
-          </args>
           <!--FIXME: see that sxr plugin works -->
           <!--
           <compilerPlugins>
@@ -804,6 +797,26 @@
     ~ Profile Settings
   -->
   <profiles>
+    <profile>
+      <id>detail</id>
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>org.scala-tools</groupId>
+              <artifactId>maven-scala-plugin</artifactId>
+              <configuration>
+                <args>
+                  <arg>-unchecked</arg>
+                  <arg>-deprecation</arg>
+                  <arg>-Xno-varargs-conversion</arg>
+                </args>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
+    </profile>
     <profile>
       <id>release</id>
       <properties>
