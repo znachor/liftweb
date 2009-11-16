@@ -66,10 +66,10 @@ trait BoxGen {
 
   def genFailureBox: Gen[Failure] = for {
     msgLen <- choose(0, 4)
-    msg <- vectorOf(msgLen, alphaChar)
+    msg <- listOfN(msgLen, alphaChar)
     exception <- value(Full(new Exception("")))
     chainLen <- choose(1, 5)
-    chain <- frequency((1, vectorOf(chainLen, genFailureBox)), (3, value(Nil)))
+    chain <- frequency((1, listOfN(chainLen, genFailureBox)), (3, value(Nil)))
   } yield Failure(msg.mkString, exception, Box(chain.firstOption))
 
 }
