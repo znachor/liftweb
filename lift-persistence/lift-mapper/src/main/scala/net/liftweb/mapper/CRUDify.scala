@@ -77,7 +77,7 @@ trait CRUDify[KeyType, CrudType <: KeyedMapper[KeyType, CrudType]] {
   /**
    * Override to include new Params for the show all menu
    */
-  def showAllMenuLocParams: List[Loc.AnyLocParam] = Nil
+  def showAllMenuLocParams: List[Loc.LocParam] = Nil
 
   /**
    * The menu item for creating items (make this "Empty" to disable)
@@ -88,7 +88,7 @@ trait CRUDify[KeyType, CrudType <: KeyedMapper[KeyType, CrudType]] {
   /**
    * Override to include new Params for the create menu
    */
-  def createMenuLocParams: List[Loc.AnyLocParam] = Nil
+  def createMenuLocParams: List[Loc.LocParam] = Nil
 
 
   /**
@@ -103,7 +103,7 @@ trait CRUDify[KeyType, CrudType <: KeyedMapper[KeyType, CrudType]] {
           case ("crud.view", Full(wp: CrudType)) => displayRecord(wp) _
         }
 
-        def defaultValue = Empty
+        def defaultParams = Empty
 
         def params = viewMenuLocParams
 
@@ -147,7 +147,7 @@ trait CRUDify[KeyType, CrudType <: KeyedMapper[KeyType, CrudType]] {
   /**
    * Override to include new Params for the view menu
    */
-  def viewMenuLocParams: List[Loc.LocParam[CrudType]] = Nil
+  def viewMenuLocParams: List[Loc.LocParam] = Nil
 
 
   /**
@@ -162,7 +162,7 @@ trait CRUDify[KeyType, CrudType <: KeyedMapper[KeyType, CrudType]] {
             case ("crud.edit", Full(wp: CrudType)) => crudDoForm(wp, S.??("Save"))
           }
 
-          def defaultValue = Empty
+          def defaultParams = Empty
 
           def params = editMenuLocParams
 
@@ -199,7 +199,7 @@ trait CRUDify[KeyType, CrudType <: KeyedMapper[KeyType, CrudType]] {
   /**
    * Override to include new Params for the edit menu
    */
-  def editMenuLocParams: List[Loc.LocParam[CrudType]] = Nil
+  def editMenuLocParams: List[Loc.LocParam] = Nil
 
 
   def editMenuName = S.??("Edit")+" "+displayName
@@ -263,7 +263,7 @@ trait CRUDify[KeyType, CrudType <: KeyedMapper[KeyType, CrudType]] {
                  ((text: NodeSeq) => SHtml.submit(text.text, doSubmit _)))
           }
 
-          def defaultValue = Empty
+          def defaultParams = Empty
 
           def params = Nil
 

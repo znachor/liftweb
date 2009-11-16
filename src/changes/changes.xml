@@ -24,49 +24,6 @@
    see http://maven.apache.org/plugins/maven-changes-plugin/usage.html for full guide
    -->
     <release version="1.1-SNAPSHOT" date="" description="Lift 1.1 Snapshot">
-      <action dev="Kris Nuttycombe" type="fix" issue="139" system="github">
-        Breaking Changes:
-
-        1) LocParam
-
-        LocParam has been made a sealed trait to facilitate pattern matching within the Lift codebase and has had a contravariant type parameter added to its type to facilitate typesafe interactions with Loc[T]. The new trait is hence LocParam[-T]. As LocParam is now a sealed trait, I have added an extension point for user-specified LocParam subtypes as UserLocParam[-T] extends LocParam[T]. Since the new type parameter is contravariant, LocParam subclasses that are applicable for any Loc[T] have the type LocParam[Any], and a type alias AnyLocParam has been added for this type.
-
-        The Loc.checkProtected method now enforces type consistency between the evaluated Link[T] and the list of LocParam[T] which are used to evaluate whether the link is accessible given the specified parameters.
-
-        2) Renames
-
-        Previously, the "Param" suffix was used for two unrelated purposes within Loc: first, to refer to the type parameter of the Loc, and secondly for the LocParam configuration. This overloading made the code and the API somewhat difficult to read, so the first usage has been removed resulting in the following renames:
-
-        ParamType => T
-        NullLocParams => //removed, Unit is sufficient!
-        Loc.defaultParams => Loc.defaultValue
-        Loc.forceParam => Loc.overrideValue
-        Loc.foundParam => Loc.requestValue
-        Loc.additionalKidParams => Loc.childValues
-
-        After this change, all instances of the "param" name within Loc should refer to something having to do with LocParam instances.
-
-        Non-Breaking Additions:
-
-        case class IfValue[T](test: Box[T] => Boolean, failMsg: FailMsg) extends LocParam[T]
-        case class UnlessValue[T](test: Box[T] => Boolean, failMsg: FailMsg) extends LocParam[T]
-        case class TestValueAccess[T](func: Box[T] => Box[LiftResponse]) extends LocParam[T]
-
-        If you are using a non-Unit typed Loc, you can use these LocParam instances to enforce access rules at the value level.
-
-        case class ValueTemplate[T](template: Box[T] => NodeSeq) extends LocParam[T] //per-value template selection
-
-        DataLoc[T] subclass of Loc was added to facilitate the use of the new more typeful LocParam subtypes.
-
-        A few changes to Link: 
-
-        Since Link.createLink creates a Box[Text] (and not a clickable link) a couple of methods were added to create the intermediate, unboxed
-        values in order that subclasses can more easily manipulate the resulting path:
-
-        Link.pathList(value: T): List[String] // added to facilitate creation of value-aware paths by subclasses.
-        Link.createPath(value: T): String //creates the String representation of the path that is subsequently turned into XML and boxed by Link.createLink
-      </action>
-
 
       <action dev="Marius Danciu" type="fix" issue="56" system="github">
         Allowing page fragments wrapped by &lt;lift:lazy-load&gt; node to be processed and loaded asynchronously.
