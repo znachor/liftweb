@@ -28,7 +28,7 @@ case class Menu(loc: Loc[_], kids: Menu*) extends HasKids {
     this.siteMap = siteMap
     kids.foreach(_._parent = Full(this))
     kids.foreach(_.init(siteMap))
-    loc.setMenu(this)
+    loc.menu = this
   }
 
   private[sitemap] def validate {
