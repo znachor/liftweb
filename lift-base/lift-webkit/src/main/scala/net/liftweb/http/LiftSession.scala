@@ -766,22 +766,30 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
   private[http] def contextFuncBuilder(f: S.AFuncHolder): S.AFuncHolder = {
     val currentMap = snippetMap.is
     val curLoc = S.location
+    val req: Req = S.request openOr Req.nil
+    val session = this
+
     val requestVarFunc: Function1[Function0[Any], Any] = RequestVarHandler.generateSnapshotRestorer()
     new S.ProxyFuncHolder(f) {
       override def apply(in: List[String]): Any =
       requestVarFunc(() =>
-        S.CurrentLocation.doWith(curLoc) {
-          snippetMap.doWith(snippetMap.is ++ currentMap) {
-            super.apply(in)
+        S.init(req, session) {
+          S.CurrentLocation.doWith(curLoc) {
+            snippetMap.doWith(snippetMap.is ++ currentMap) {
+              super.apply(in)
+            }
           }
         })
 
       override def apply(in: FileParamHolder): Any =
-        requestVarFunc(() => S.CurrentLocation.doWith(curLoc) {
-          snippetMap.doWith(snippetMap.is ++ currentMap) {
-            super.apply(in)
-          }
-        })
+        requestVarFunc(() => 
+          S.init(req, session){
+            S.CurrentLocation.doWith(curLoc) {
+              snippetMap.doWith(snippetMap.is ++ currentMap) {
+                super.apply(in)
+              }
+            }
+          })
     }
   }
 
