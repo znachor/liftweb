@@ -196,11 +196,11 @@ object ClassHelpersSpec extends Specification with ClassHelpers with ControlHelp
 }
 trait StringGenerators {
   val underscoredStrings = for {length <- choose(0, 4)
-                                string <- vectorOf(length, frequency((3, alphaChar), (1, elements('_'))))
+                                string <- listOfN(length, frequency((3, alphaChar), (1, oneOf('_'))))
                                 } yield List.toString(string)
 
   val camelCasedStrings = for {length <- choose(0, 4)
          firstLetter <- alphaNumChar.map(_.toUpperCase)
-         string <- vectorOf(length, frequency((3, alphaNumChar.map(_.toLowerCase)), (1, alphaNumChar.map(_.toUpperCase))))
+         string <- listOfN(length, frequency((3, alphaNumChar.map(_.toLowerCase)), (1, alphaNumChar.map(_.toUpperCase))))
         } yield List.toString(firstLetter :: string)
 }
