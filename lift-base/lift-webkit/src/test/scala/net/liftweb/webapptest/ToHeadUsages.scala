@@ -30,30 +30,30 @@ object ToHeadUsages extends Specification {
   "lift <head> merger" should {
     "merge <head> from html fragment" >> {
       JettyTestServer.browse(
-        "/htmlFragmentWithHead",
-         _.assertElementPresentByXPath("/html/head/script[@id='fromFrag']")
+        "/htmlFragmentWithHead", html =>
+         html.getElementByXPath("/html/head/script[@id='fromFrag']") must notBeNull
       )
     }
 
     "merge <head> from html fragment does not include head element in body" >> {
       JettyTestServer.browse(
-        "/htmlFragmentWithHead",
-         _.assertElementNotPresentByXPath("/html/body/script[@id='fromFrag']")
+        "/htmlFragmentWithHead", html =>
+         html.getElementsByXPath("/html/body/script[@id='fromFrag']").size must_== 0
       )
     }
 
     "merge <head> from snippet" >> {
       JettyTestServer.browse(
-        "/htmlSnippetWithHead",
-         _.assertElementPresentByXPath("/html/head/script[@src='snippet.js']")
+        "/htmlSnippetWithHead", html =>
+         html.getElementByXPath("/html/head/script[@src='snippet.js']") must notBeNull
       )
     }
-    
+
     "not merge for bodyless html" >> {
       JettyTestServer.browse(
         "/basicDiv",html => {
-          html.assertElementPresent("fruit")
-          html.assertElementPresent("bat")
+          html.getElementById("fruit") must notBeNull
+          html.getElementById("bat")   must notBeNull
         }
       )
     }
@@ -61,7 +61,7 @@ object ToHeadUsages extends Specification {
     "not merge for headless bodyless html" >> {
       JettyTestServer.browse(
         "/h1",html => {
-          html.assertElementPresent("h1")
+          html.getElementById("h1") must notBeNull
         }
       )
     }
@@ -69,7 +69,10 @@ object ToHeadUsages extends Specification {
     "not merge for headless body html" >> {
       JettyTestServer.browse(
         "/body_no_head",html => {
-          html.assertElementPresentByXPath("/html/body/head/div")
+          // Note: The XPath expression "html/body/head/div" fails here with
+          // HtmlUnit 2.5 since "head" is not recognized as a XHTML element
+          // due to its incorrect position (under body instead of directly under html)
+          html.getElementsByXPath("/html/body//div").size must_== 1
         }
       )
     }
@@ -77,7 +80,7 @@ object ToHeadUsages extends Specification {
     "not merge non-html" >> {
       JettyTestServer.browse(
         "/non_html",html => {
-          html.assertElementPresent("frog")
+          html.getElementById("frog") must notBeNull
         }
       )
     }
@@ -88,7 +91,7 @@ object ToHeadUsages extends Specification {
     "render" >> {
       JettyTestServer.browse(
         "/deferred",html => {
-          html.assertElementPresent("second")
+          html.getElementById("second") must notBeNull
         }
       )
     }
@@ -96,7 +99,7 @@ object ToHeadUsages extends Specification {
     "not deferred not in actor" >> {
       JettyTestServer.browse(
         "/deferred",html => {
-          html.assertElementPresentByXPath("/html/body/span[@id='whack1']/span[@id='actor_false']")
+          html.getElementByXPath("/html/body/span[@id='whack1']/span[@id='actor_false']") must notBeNull
         }
       )
     }
@@ -104,20 +107,28 @@ object ToHeadUsages extends Specification {
     "deferred in actor" >> {
       JettyTestServer.browse(
         "/deferred",html => {
-          html.assertElementPresentByXPath("/html/body/span[@id='whack2']/span[@id='actor_true']")
+          html.getElementByXPath("/html/body/span[@id='whack2']/span[@id='actor_true']") must notBeNull
         }
       )
     }
 
     "Exclude from context rewriting" >> {
-      val first = net.liftweb.http.Req.fixHtml("/wombat", <span><a href="/foo" id="foo">foo</a>
-      <a href="/bar" id="bar">bar</a></span>)
+      val first = net.liftweb.http.Req.fixHtml("/wombat",
+        <span>
+          <a href="/foo" id="foo">foo</a>
+          <a href="/bar" id="bar">bar</a>
+        </span>
+      )
 
       def excludeBar(in: String): Boolean = in.startsWith("/bar")
 
-      val second = net.liftweb.http.LiftRules.excludePathFromContextPathRewriting.doWith(excludeBar _)
-      {net.liftweb.http.Req.fixHtml("/wombat", <span><a href="/foo" id="foo">foo</a>
-      <a href="/bar" id="bar">bar</a></span>)
+      val second = net.liftweb.http.LiftRules.excludePathFromContextPathRewriting.doWith(excludeBar _) {
+        net.liftweb.http.Req.fixHtml("/wombat",
+          <span>
+            <a href="/foo" id="foo">foo</a>
+            <a href="/bar" id="bar">bar</a>
+          </span>
+        )
       }
 
       ((first \\ "a").filter(e => (e \ "@id").text == "foo") \ "@href").text must_== "/wombat/foo"
