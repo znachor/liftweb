@@ -429,8 +429,7 @@
       <dependency>
         <groupId>net.sourceforge.jwebunit</groupId>
         <artifactId>jwebunit-htmlunit-plugin</artifactId>
-        <!--TODO: push version to 2.x-->
-        <version>1.4.1</version>
+        <version>2.2</version>
         <scope>test</scope>
         <exclusions>
           <exclusion>
