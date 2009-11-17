@@ -48,14 +48,20 @@ abstract class SessionVar[T](dflt: => T) extends AnyVar[T, SessionVar[T]](dflt) 
   override protected def findFunc(name: String): Box[T] = S.session match {
     case Full(s) => s.get(name)
     case _ =>
+      if (showWarningWhenAccessedOutOfSessionScope_?)
       Log.warn("Getting a SessionVar "+name+" outside session scope") // added warning per issue 188
+
       Empty
   }
 
   override protected def setFunc(name: String, value: T): Unit = S.session match {
     case Full(s) => s.set(name, value)
-    case _ => Log.warn("Setting a SessionVar "+name+" to "+value+" outside session scope") // added warning per issue 188
+    case _ =>
+      if (showWarningWhenAccessedOutOfSessionScope_?)
+      Log.warn("Setting a SessionVar "+name+" to "+value+" outside session scope") // added warning per issue 188
   }
+
+  def showWarningWhenAccessedOutOfSessionScope_? = false
 
   override protected def clearFunc(name: String): Unit = S.session.foreach(_.unset(name))
 

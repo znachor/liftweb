@@ -189,7 +189,7 @@ trait Loc[T] {
   /**
    * The first Loc.Template or Loc.ValueTemplate in the param list.
    */
-  lazy val paramTemplate: Box[NodeSeq] = 
+  def paramTemplate: Box[NodeSeq] =
     allParams.flatMap { 
       case Loc.Template(f) => Some(f()); 
       case Loc.ValueTemplate(f) => Some(f(currentValue)); 
