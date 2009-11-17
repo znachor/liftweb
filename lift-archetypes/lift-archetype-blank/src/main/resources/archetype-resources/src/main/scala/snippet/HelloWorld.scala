@@ -1,4 +1,4 @@
-package ${packageName}.snippet
+package ${package}.snippet
 
 import _root_.scala.xml.NodeSeq
 import _root_.net.liftweb.util.Helpers
