@@ -216,6 +216,15 @@ object S extends HasParams {
       rc => Box(rc.inCookies.filter(_.name == name)).
               map(_.clone().asInstanceOf[HTTPCookie]))
 
+/**
+* Get the cookie value for the given cookie
+*/
+  def cookieValue(name: String): Box[String] =
+  for {
+    cookie <- findCookie(name)
+    value <- cookie.value
+  } yield value
+
   /**
    * @return a List of any Cookies that have been added to the response to be sent
    * back to the user. If you want the cookies that were sent with the request, see
@@ -1710,13 +1719,21 @@ for {
   private[http] object _formGroup extends TransientRequestVar[Box[Int]](Empty)
   private object formItemNumber extends TransientRequestVar[Int](0)
 
+  private def notLiftOrScala(in: StackTraceElement): Boolean =
+  in.getClassName match {
+    case s if s.startsWith("net.liftweb") => false
+    case s if s.startsWith("scala") => false
+    case _ => true
+  }
+
   def formFuncName: String = if (Props.testMode) {
     val bump: Long = ((_formGroup.is openOr 0) + 1000L) * 10000L
     val num: Int = formItemNumber.is
     formItemNumber.set(num + 1)
     import _root_.java.text._
     val prefix: String = new DecimalFormat("00000000000000000").format(bump + num)
-    "f" + prefix + "_" + Helpers.hashHex((new Exception).getStackTrace.toList.take(10).map(_.toString).mkString(","))
+    // take the first 2 non-Lift/non-Scala stack frames for use as hash issue 174
+    "f" + prefix + "_" + Helpers.hashHex((new Exception).getStackTrace.toList.filter(notLiftOrScala).take(2).map(_.toString).mkString(","))
   } else {
     _formGroup.is match {
       case Full(x) => Helpers.nextFuncName(x.toLong * 10000L)

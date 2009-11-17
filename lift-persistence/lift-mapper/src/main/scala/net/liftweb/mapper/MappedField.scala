@@ -284,6 +284,12 @@ trait MappedForeignKey[KeyType, MyOwner <: Mapper[MyOwner], Other <: KeyedMapper
    */
   def cached_? : Boolean = synchronized{ _calcedObj}
 
+  override protected def dirty_?(b: Boolean) = { // issue 165
+    _obj = Empty
+    _calcedObj = false
+    super.dirty_?(b)
+  }
+
   /**
    * Load and cache the record that this field references
    */
@@ -424,6 +430,8 @@ trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends Typed
    */
   def readPermission_? = false
 
+
+
   /**
    * Assignment from the underlying type.  It's ugly, but:<br />
    * field() = new_value <br />
@@ -440,6 +448,12 @@ trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends Typed
     fieldOwner
   }
 
+   def apply(v: FieldType): OwnerType = { // issue 154
+    this.set(v)
+    fieldOwner
+  }
+
+
   /**
   * The unique field id is the field name and the mapper name
   */
@@ -452,6 +466,14 @@ trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends Typed
   def set(value: FieldType): FieldType = {
     if (safe_? || writePermission_?) i_set_!(value)
     else throw new Exception("Do not have permissions to set this field")
+  }
+
+  def :=[Q <% FieldType](v: Q): FieldType = {
+    set(v)
+  }
+
+    def :=(v: FieldType): FieldType = {
+    set(v)
   }
 
 
@@ -700,7 +722,7 @@ trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends Typed
    */
   override def equals(other: Any): Boolean = {
     other match {
-      case mapped: MappedField[Any, Nothing] => this.is == mapped.is
+      case mapped: MappedField[_, _] => this.is == mapped.is
       case ov: AnyRef if (ov ne null) && dbFieldClass.isAssignableFrom(ov.getClass) => this.is == runFilters(ov.asInstanceOf[FieldType], setFilter)
       case ov => this.is == ov
     }

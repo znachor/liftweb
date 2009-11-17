@@ -237,6 +237,11 @@ trait MetaMegaProtoUser[ModelType <: MegaProtoUser[ModelType]] extends KeyedMeta
                 Template(() => wrapIt(validateUser(snarfLastItem))),
                 If(notLoggedIn_? _, S.??("logout.first")))))
 
+/**
+* An alias for the sitemap property
+*/
+def menus: List[Menu] = sitemap // issue 182
+
   lazy val sitemap: List[Menu] =
   List(loginMenuLoc, logoutMenuLoc, createUserMenuLoc,
        lostPasswordMenuLoc, resetPasswordMenuLoc,

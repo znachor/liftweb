@@ -41,7 +41,7 @@ object Wizard {
      */
     def displayName: NodeSeq = Text(bindName)
 
-  def bindName: String
+    def bindName: String
 
     def toForm: Box[NodeSeq]
   }
@@ -110,22 +110,22 @@ object Wizard {
       }
     }
 
-  /*
-  def &>[Me <: Screen](other: PartialFunction[Me, Screen]): Screen = {
-      val self = this
-      new ProxyScreen {
-        def proxyTo = self
-        override def nextScreen: Box[Screen] = if ()
-      }
-    }
-    */
+    /*
+     def &>[Me <: Screen](other: PartialFunction[Me, Screen]): Screen = {
+     val self = this
+     new ProxyScreen {
+     def proxyTo = self
+     override def nextScreen: Box[Screen] = if ()
+     }
+     }
+     */
   }
 
-trait ProxyScreen extends Screen {
-  def proxyTo: Screen
-  override def dispatch = proxyTo.dispatch
+  trait ProxyScreen extends Screen {
+    def proxyTo: Screen
+    override def dispatch = proxyTo.dispatch
 
-  override def templateName: Box[String] = proxyTo.templateName
+    override def templateName: Box[String] = proxyTo.templateName
     override def locale: Locale = proxyTo.locale
     override def template: NodeSeq = proxyTo.template
     override def nextScreen: Box[Screen] = proxyTo.nextScreen
@@ -138,8 +138,8 @@ trait ProxyScreen extends Screen {
     override def screenContent(in: NodeSeq) = proxyTo.screenContent(in)
 
 
-  override def formAttrs: MetaData = proxyTo.formAttrs
-  override def bindName = proxyTo.bindName
+    override def formAttrs: MetaData = proxyTo.formAttrs
+    override def bindName = proxyTo.bindName
   }
 
 
@@ -167,7 +167,13 @@ trait ProxyScreen extends Screen {
       WizardVarHandler.set(bn, this, true)
       old
     }
+
+    override protected def testWasSet(name: String): Boolean = {
+      val bn = name+"_inited_?"
+      WizardVarHandler.get(name).isDefined || (WizardVarHandler.get(bn) openOr false)
+    }
   }
+  
 
   private object WizardVarHandler /* extends LoanWrapper */ {
     //def vals = ScreenVars.is
