@@ -162,7 +162,7 @@ object Req {
 
       if ((reqType.post_? ||
            reqType.put_?) && contentType.dmap(false)(_.startsWith("text/xml"))) {
-        (queryStringParam._1, queryStringParam._2 ++ localParams, Nil, tryo(readWholeStream(request.inputStream)))
+        ParamCalcInfo(queryStringParam._1, queryStringParam._2 ++ localParams, Nil, tryo(readWholeStream(request.inputStream)))
       } else if (request multipartContent_?) {
         val allInfo = request extractFiles
 
@@ -172,15 +172,15 @@ object Req {
         val params = normal.foldLeft(eMap)((a, b) =>
           a + (b.name -> (a.getOrElse(b.name, Nil) ::: List(b.value))))
 
-        ((queryStringParam._1 ::: normal.map(_.name)).removeDuplicates, queryStringParam._2 ++ localParams ++ params, files, Empty)
+        ParamCalcInfo((queryStringParam._1 ::: normal.map(_.name)).removeDuplicates, queryStringParam._2 ++ localParams ++ params, files, Empty)
       } else if (reqType.get_?) {
-        (queryStringParam._1, queryStringParam._2 ++ localParams, Nil, Empty)
+        ParamCalcInfo(queryStringParam._1, queryStringParam._2 ++ localParams, Nil, Empty)
       } else if (contentType.dmap(false)(_.toLowerCase.startsWith("application/x-www-form-urlencoded"))) {
         // val tmp = paramNames.map{n => (n, xlateIfGet(request.getParameterValues(n).toList))}
         val params = localParams ++ (request.params.sort {(s1, s2) => s1.name < s2.name}).map(n => (n.name, n.values))
-        (request paramNames, params, Nil, Empty)
+        ParamCalcInfo(request paramNames, params, Nil, Empty)
       } else {
-        (queryStringParam._1, queryStringParam._2 ++ localParams, Nil, tryo(readWholeStream(request inputStream)))
+        ParamCalcInfo(queryStringParam._1, queryStringParam._2 ++ localParams, Nil, tryo(readWholeStream(request inputStream)))
       }
     }
 
@@ -196,7 +196,7 @@ object Req {
 
   def nil = new Req(NilPath, "", GetRequest, Empty, null,
                     System.nanoTime, System.nanoTime,
-                    () => (Nil, Map.empty, Nil, Empty))
+                    () => ParamCalcInfo(Nil, Map.empty, Nil, Empty))
 
   def parsePath(in: String): ParsePath = {
     val p1 = fixURI((in match {case null => "/"; case s if s.length == 0 => "/"; case s => s}).replaceAll("/+", "/"))
@@ -269,6 +269,11 @@ object Req {
   def unapply(in: Req): Option[(List[String], String, RequestType)] = Some((in.path.partPath, in.path.suffix, in.requestType))
 }
 
+case class ParamCalcInfo(paramNames: List[String],
+            params: Map[String, List[String]],
+            uploadedFiles: List[FileParamHolder],
+            body: Box[Array[Byte]])
+
 /**
  * Contains request information
  */
@@ -280,7 +285,7 @@ class Req(val path: ParsePath,
           val request: HTTPRequest,
           val nanoStart: Long,
           val nanoEnd: Long,
-          val paramCalculator: () => (List[String], Map[String, List[String]], List[FileParamHolder], Box[Array[Byte]])) extends HasParams
+          val paramCalculator: () => ParamCalcInfo) extends HasParams
 {
   override def toString = "Req(" + paramNames + ", " + params + ", " + path +
   ", " + contextPath + ", " + requestType + ", " + contentType + ")"
@@ -317,7 +322,7 @@ class Req(val path: ParsePath,
     case _ => Empty
   }
 
-  lazy val (paramNames: List[String],
+  lazy val ParamCalcInfo(paramNames: List[String],
             params: Map[String, List[String]],
             uploadedFiles: List[FileParamHolder],
             body: Box[Array[Byte]]) = paramCalculator()
