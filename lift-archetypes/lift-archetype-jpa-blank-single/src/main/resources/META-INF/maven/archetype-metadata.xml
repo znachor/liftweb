@@ -1,15 +1,16 @@
+<?xml version="1.0"?>
 <archetype-descriptor name="lift-archetype-jpa-basic">
   <!-- place the master POM into the root dir -->
   <fileSets>
-    <fileSet filtered="true">
-      <directory></directory>
+    <fileSet encoding="UTF-8" filtered="true">
+      <directory/>
       <includes>
 	<include>pom.xml</include>
 	<include>README</include>
       </includes>
     </fileSet>
     <!-- Place persistence XML files -->
-    <fileSet filtered="true" packaged="false">
+    <fileSet encoding="UTF-8" filtered="true" packaged="false">
       <directory>src/main/resources/META-INF</directory>
       <includes>
 	<include>persistence.xml</include>
@@ -17,13 +18,13 @@
       </includes>
     </fileSet>
     <!-- properly place Boot.scala -->
-    <fileSet filtered="true" packaged="false">
+    <fileSet encoding="UTF-8" filtered="true" packaged="false">
       <directory>src/main/scala/bootstrap/liftweb</directory>
       <includes>
 	<include>Boot.scala</include>
       </includes>
     </fileSet>
-    <fileSet filtered="true" packaged="true">
+    <fileSet encoding="UTF-8" filtered="true" packaged="true">
       <directory>src/main/scala/</directory>
       <includes>
 	<include>**/*.scala</include>
@@ -33,7 +34,7 @@
       </excludes>
     </fileSet>
     <!-- place templates -->
-    <fileSet filtered="false" packaged="false">
+    <fileSet encoding="UTF-8" filtered="false" packaged="false">
       <directory>src/main/webapp</directory>
       <includes>
 	<include>**/*</include>
