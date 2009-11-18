@@ -1122,12 +1122,14 @@ for {
     }
   }
 
-  private def _innerInit[B](f: () => B): B = {
+  private def _innerInit[B](request: Req, f: () => B): B = {
     _lifeTime.doWith(false) {
       _attrs.doWith(Nil) {
           _resBundle.doWith(Nil) {
             inS.doWith(true) {
+              _request.doWith(doStatefulRewrite(request)) {
                 _nest2InnerInit(f)
+              }
           }
         }
       }
@@ -1149,7 +1151,7 @@ for {
           TransientRequestVarHandler(Full(session),
             RequestVarHandler(Full(session),
               _responseCookies.doWith(CookieHolder(getCookies(containerRequest), Nil)) {
-                _innerInit(f)
+                _innerInit(request, f)
               }
             )
           )
@@ -1996,6 +1998,7 @@ for {
       f(name)
     }
 
+/*
   def render(xhtml: NodeSeq, httpRequest: HTTPRequest): NodeSeq = {
     def doRender(session: LiftSession): NodeSeq =
       session.processSurroundAndInclude("external render", xhtml)
@@ -2020,6 +2023,7 @@ for {
       }
     }
   }
+  */
 
   /**
    * Similar with addFunctionMap but also returns the name.

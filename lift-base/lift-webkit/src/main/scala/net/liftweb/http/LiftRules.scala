@@ -486,7 +486,7 @@ object LiftRules extends Factory with FormVendor {
     _sitemap = Full(sm)
     for (menu <- sm.menus;
          val loc = menu.loc;
-         rewrite <- loc.rewritePF) LiftRules.rewrite.append(rewrite)
+         rewrite <- loc.rewritePF) LiftRules.statefulRewrite.append(rewrite)
   }
 
   def siteMap: Box[SiteMap] = _sitemap
@@ -585,6 +585,7 @@ object LiftRules extends Factory with FormVendor {
     }
   }
 
+  /*
   private[http] def rewriteTable(req: HTTPRequest): List[RewritePF] = {
     req match {
       case null => rewrite.toList
@@ -595,7 +596,7 @@ object LiftRules extends Factory with FormVendor {
         case _ => rewrite.toList
       }
     }
-  }
+  }*/
 
   /**
    * Contains the Ajax URI path used by Lift to process Ajax requests.
@@ -748,7 +749,12 @@ object LiftRules extends Factory with FormVendor {
   /**
    * Holds the user's rewrite functions that can alter the URI parts and query parameters
    */
-  val rewrite = RulesSeq[RewritePF]
+  val statelessRewrite = RulesSeq[RewritePF]
+
+    /**
+   * Holds the user's rewrite functions that can alter the URI parts and query parameters
+   */
+  val statefulRewrite = RulesSeq[RewritePF]
 
   /**
    * Holds the user's snippet functions that will be executed by lift given a certain path.
