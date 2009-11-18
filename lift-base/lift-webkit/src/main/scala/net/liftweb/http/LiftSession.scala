@@ -773,13 +773,14 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
     new S.ProxyFuncHolder(f) {
       override def apply(in: List[String]): Any =
       requestVarFunc(() =>
-        S.init(req, session) {
+        //S.init(req, session) {
           S.CurrentLocation.doWith(curLoc) {
             snippetMap.doWith(snippetMap.is ++ currentMap) {
               super.apply(in)
             }
           }
-        })
+        //}
+        )
 
       override def apply(in: FileParamHolder): Any =
         requestVarFunc(() => 
