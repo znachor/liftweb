@@ -6,6 +6,7 @@
     #set($sv = '${scala.version}')
     #parse('ext.vm')
     <modelVersion>4.0.0</modelVersion>
+
     <groupId>$groupId</groupId>
     <artifactId>$artifactId</artifactId>
     <version>$version</version>
@@ -18,13 +19,13 @@
 
     <repositories>
         <repository>
-            <id>scala-tools.org</id>
-            <name>Scala-Tools Maven2 Repository</name>
+            <id>scala-tools.releases</id>
+            <name>Scala-Tools Maven2 Repository for Releases</name>
             <url>http://scala-tools.org/repo-releases</url>
         </repository>
         #if ($lift_version.endsWith("SNAPSHOT"))
         <repository>
-            <id>scala-tools.org.snapshots</id>
+            <id>scala-tools.snapshots</id>
             <name>Scala-Tools Maven2 Repository for Snapshots</name>
             <url>http://scala-tools.org/repo-snapshots</url>
             <snapshots/>
