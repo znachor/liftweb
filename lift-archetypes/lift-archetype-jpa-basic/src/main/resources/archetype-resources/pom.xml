@@ -16,11 +16,6 @@
     <scala.version>$scala_version</scala.version>
   </properties>
 
-  <modules>
-    <module>spa</module>
-    <!--<module>web</module>-->
-  </modules>
-
   <!-- Set up repo for ScalaJPA -->
   <repositories>
     <repository>
