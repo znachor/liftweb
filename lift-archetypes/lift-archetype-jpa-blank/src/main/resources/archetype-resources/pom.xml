@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project 
-  xmlns="http://maven.apache.org/POM/4.0.0" 
+<project xmlns="http://maven.apache.org/POM/4.0.0"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
 #set($sv = '${scala.version}')
 #parse('ext.vm')
   <modelVersion>4.0.0</modelVersion>
@@ -12,26 +12,30 @@
   <version>$version</version>
   <name>$artifactId Master</name>
   <packaging>pom</packaging>
+  <properties>
+    <scala.version>$scala_version</scala.version>
+  </properties>
+
   
   <modules>
     <module>web</module>
     <module>spa</module>
   </modules>
 
-  <properties>
-    <scala.version>2.7.7</scala.version>
-  </properties>
-
   <!-- Set up repo for ScalaJPA -->
   <repositories>
     <repository>
-      <id>scala-tools</id>
-      <url>http://scala-tools.org/repo-snapshots</url>
-    </repository>
-    <repository>
-      <id>scala-tools.release</id>
+      <id>scala-tools.releases</id>
+      <name>Scala-Tools Maven2 Repository for Releases</name>
       <url>http://scala-tools.org/repo-releases</url>
     </repository>
+    #if ($lift_version.endsWith("SNAPSHOT"))
+    <repository>
+      <id>scala-tools.snapshots</id>
+      <name>Scala-Tools Maven2 Repository for Snapshots</name>
+      <url>http://scala-tools.org/repo-snapshots</url>
+    </repository>
+    #end
   </repositories>
 
   <!-- Master properties (inherited by modules) -->
@@ -56,7 +60,7 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.4</version>
+      <version>4.5</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -76,7 +80,7 @@
       <plugin>
         <groupId>org.scala-tools</groupId>
         <artifactId>maven-scala-plugin</artifactId>
-        <version>2.9</version>
+        <version>2.12.2</version>
         <executions>
           <execution>
             <goals>
@@ -94,7 +98,6 @@
             <arg>-deprecation</arg>
             <arg>-Xno-varargs-conversion</arg>
           </args>
-          <scalaVersion>$sv</scalaVersion>
         </configuration>
       </plugin>
     </plugins>
