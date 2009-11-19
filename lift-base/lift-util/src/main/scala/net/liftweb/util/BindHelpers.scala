@@ -129,7 +129,7 @@ trait BindHelpers {
    * @return 'out' element with attributes from 'in'
    */
   def mixinAttributes(out: Elem)(in: NodeSeq): NodeSeq = {
-    val attributes = in.firstOption.map(_.attributes).getOrElse(Null)
+    val attributes = in.headOption.map(_.attributes).getOrElse(Null)
     out % attributes
   }
 

@@ -79,7 +79,7 @@ object ResourceServer {
                   List(("Expires", toInternetDate(millis + 30.days)),
                     ("Content-Type", detectContentType(rw.last))), Nil,
           200)
-      }).firstOption
+      }).headOption
 
 
   /**

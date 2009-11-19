@@ -83,8 +83,10 @@
   -->
   <modules>
     <module>lift-mapper</module>
+    <!-- FIXME 280
     <module>lift-jpa</module>
     <module>lift-record</module>
+    -->
   </modules>
 
   <!--

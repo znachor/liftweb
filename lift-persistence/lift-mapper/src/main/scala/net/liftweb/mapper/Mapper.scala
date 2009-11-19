@@ -294,7 +294,7 @@ trait LongKeyedMapper[OwnerType <: LongKeyedMapper[OwnerType]] extends KeyedMapp
 
 trait BaseKeyedMapper extends BaseMapper {
   type TheKeyType
-  type KeyedMapperType <: KeyedMapper[TheKeyType, MapperType]
+  type KeyedMapperType <: KeyedMapper[TheKeyType, KeyedMapperType]
 
   def primaryKeyField: MappedField[TheKeyType, MapperType] with IndexedField[TheKeyType]
   /**

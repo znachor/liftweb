@@ -1,4 +1,5 @@
 package net.liftweb.example.snippet
+/*
 import org.specs._
 import org.specs.Sugar._
 import org.specs.runner._
@@ -7,7 +8,6 @@ import net.liftweb.http.{ S, Req, LiftSession }
 import net.liftweb.common.{ Full, Empty }
 import org.mockito.Matchers._
 
-/*
 class WikiSpecTest extends Specification with MockEntries with JUnit {
   "In the following spec, 'pageName' refers to the value of the S parameter 'wiki_page'" +
   "The 'main' function" should { createMocks.before

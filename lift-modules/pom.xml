@@ -82,12 +82,15 @@
     ~ Modules Setting
   -->
   <modules>
+    <!-- FIXME 280
     <module>lift-testkit</module>
     <module>lift-osgi</module>
     <module>lift-wizard</module>
     <module>lift-widgets</module>
     <module>lift-machine</module>
+    -->
     <module>lift-textile</module>
+    <!-- FIXME 280
     <module>lift-facebook</module>
     <module>lift-amqp</module>
     <module>lift-xmpp</module>
@@ -95,6 +98,7 @@
     <module>lift-oauth</module>
     <module>lift-paypal</module>
     <module>lift-jta</module>
+    -->
   </modules>
 
   <!--

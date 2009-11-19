@@ -209,9 +209,9 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
     }
   }
 
-  type KeyDude = T forSome {type T}
-  type OtherMapper = T forSome {type T <: KeyedMapper[KeyDude, T]}
-  type OtherMetaMapper = T forSome {type T <: KeyedMetaMapper[KeyDude, OtherMapper]}
+  //type KeyDude = T forSome {type T}
+  type OtherMapper = KeyedMapper[_, _] // T forSome {type T <: KeyedMapper[KeyDude, T]}
+  type OtherMetaMapper = KeyedMetaMapper[_, _] // T forSome {type T <: KeyedMetaMapper[KeyDude, OtherMapper]}
   //type OtherMapper = KeyedMapper[_, (T forSome {type T})]
   //type OtherMetaMapper = KeyedMetaMapper[_, OtherMapper]
 
@@ -227,7 +227,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
 
   private def dealWithPrecache(ret: List[A], by: Seq[QueryParam[A]]): List[A] = {
 
-    val precache = by.flatMap{case j: PreCache[A] => List(j) case _ => Nil}
+    val precache: List[PreCache[A, _, _]] = by.toList.flatMap{case j: PreCache[A, _, _] => List[PreCache[A, _, _]](j) case _ => Nil}
     for (j <- precache) {
       type FT = j.field.FieldType
       type MT = T forSome {type T <: KeyedMapper[FT, T]}
@@ -271,7 +271,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
         getActualField(i, j.field).asInstanceOf[MappedForeignKey[FT, A, _]]
 
         map.get(field.is) match {
-          case Some(v) => field.primeObj(Full(v))
+          case Some(v) => field._primeObj(Full(v))
           case _ => field.primeObj(Empty)
         }
         //field.primeObj(Box(map.get(field.is).map(_.asInstanceOf[QQ])))
@@ -1308,11 +1308,11 @@ sealed abstract class InThing[OuterType <: Mapper[OuterType]] extends QueryParam
  * false if the query is not deterministic.  In this case, a SELECT * FROM FK_TABLE WHERE primary_key in (xxx) will
  * be generated
  */
-final case class PreCache[TheType <: Mapper[TheType]](field: MappedForeignKey[_, TheType, _], deterministic: Boolean)
+final case class PreCache[TheType <: Mapper[TheType], FieldType, OtherType <: KeyedMapper[FieldType, OtherType]](field: MappedForeignKey[FieldType, TheType, OtherType], deterministic: Boolean)
 extends QueryParam[TheType]
 
 object PreCache {
-  def apply[TheType <: Mapper[TheType]](field: MappedForeignKey[_, TheType, _]) =
+  def apply[TheType <: Mapper[TheType], FieldType, OtherType <: KeyedMapper[FieldType, OtherType]](field: MappedForeignKey[FieldType , TheType, OtherType]) =
   new PreCache(field, true)
 }
 
@@ -1714,7 +1714,7 @@ trait KeyedMetaMapper[Type, A<:KeyedMapper[Type, A]] extends MetaMapper[A] with 
   def addSnippetCallback(obj: A) { obj.save }
 }
 
-case class FieldHolder[T](name: String, method: Method, field: MappedField[_, T])
+case class FieldHolder[T <: Mapper[T]](name: String, method: Method, field: MappedField[_, T])
 
 class KeyObfuscator {
   private var to: Map[String, Map[Any, String]] = Map.empty

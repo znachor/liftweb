@@ -15,8 +15,9 @@
  */
 package net.liftweb.example.snippet
 
-import _root_.net.liftweb.http._
-import _root_.net.liftweb.widgets.autocomplete._
+import _root_.net.liftweb._
+import http._
+// FIXME 280 import _root_.net.liftweb.widgets.autocomplete._
 import S._
 import SHtml._
 import js._
@@ -64,7 +65,7 @@ class Ajax {
          "clicker" -> doClicker _,
          "select" -> doSelect _,
          "text" -> doText _,
-         "auto" -> AutoComplete("", buildQuery _, _ => ()))
+         "auto" -> NodeSeq.Empty /* FIXME 280 AutoComplete("", buildQuery _, _ => ())*/)
   }
 
   private def buildQuery(current: String, limit: Int): Seq[String] = {

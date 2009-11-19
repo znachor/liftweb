@@ -22,7 +22,7 @@ import common._
 import util._
 import Helpers._
 
-import model._
+import net.liftweb.example.model._
 
 import _root_.scala.xml.{NodeSeq, Text, Group}
 

@@ -15,6 +15,7 @@
  */
 package net.liftweb.textile
 
+/*
 import _root_.org.specs._
 import _root_.org.specs.runner._
 import _root_.org.specs.Sugar._
@@ -457,3 +458,4 @@ We use CSS(Cascading Style Sheets).
 """
 
 }
+*/

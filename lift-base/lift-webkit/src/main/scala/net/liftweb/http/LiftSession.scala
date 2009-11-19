@@ -697,7 +697,7 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
       in.toList.flatMap {
         case e: Elem => Some(e)
         case _ => None
-      } firstOption
+      } headOption
 
     for{
       template <- findAnyTemplate(name, S.locale) ?~ ("Template " + name + " not found")
@@ -895,7 +895,7 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
     def checkAttr(attr_name: String, in: MetaData, base: MetaData): MetaData =
       in.filter(_.key == attr_name).toList match {
         case Nil => base
-        case x => new UnprefixedAttribute(attr_name, Text(x.first.value.text),
+        case x => new UnprefixedAttribute(attr_name, Text(x.head.value.text),
           base)
       }
 

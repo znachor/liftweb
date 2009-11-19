@@ -926,6 +926,7 @@ object SHtml {
 
   /** Holds a series of choices: HTML for input controls alongside some user defined value */
   case class ChoiceHolder[T](items: Seq[ChoiceItem[T]]) {
+
     /** Retrieve the ChoiceItem that has the given key, throwing NoSuchElementException if there is no matching ChoiceItem */
     def apply(in: T) = items.filter(_.key == in).first.xhtml
 

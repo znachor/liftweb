@@ -15,6 +15,9 @@
  */
 package bootstrap.liftweb
 
+
+/* FIXME 280
+ * 
 import _root_.net.liftweb.util._
 import _root_.net.liftweb.common._
 import _root_.net.liftweb.http._
@@ -42,3 +45,4 @@ class Boot {
   }
 }
 
+*/

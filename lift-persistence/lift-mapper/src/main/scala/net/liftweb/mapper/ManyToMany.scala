@@ -5,6 +5,8 @@ package mapper
 import _root_.net.liftweb.util._
 import _root_.net.liftweb.common._
 
+/* FIXME 280
+
 /**
  * Add this trait to a Mapper to add support for many-to-many relationships
  * @author nafg
@@ -191,3 +193,4 @@ trait ManyToMany extends BaseKeyedMapper {
   }
 }
 
+*/

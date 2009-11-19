@@ -16,6 +16,7 @@
 package net.liftweb
 package mapper
 
+/* FIXME 280
 import _root_.net.liftweb.common.{Box, Empty, Full, Failure}
 import _root_.net.liftweb.util.{Helpers, Log, Props}
 import Helpers._
@@ -184,3 +185,4 @@ object DBProviders {
     def propName: String = "maxdb_local"
   }
 }
+*/

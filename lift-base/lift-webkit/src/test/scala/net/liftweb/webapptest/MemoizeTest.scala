@@ -14,6 +14,8 @@
  * and limitations under the License.
  */
 
+/*
+
 package net.liftweb.webapptest
 
 import _root_.org.specs._
@@ -82,4 +84,4 @@ object MemoizeSpec extends Specification {
     }
 
   }
-}
+}*/
