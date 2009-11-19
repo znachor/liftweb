@@ -137,7 +137,7 @@ object abcdStringGen {
 }
 object whiteStringGen {
   def genWhite = for (len <- choose(1, 4);
-         string <- vectorOf(len, frequency((1, value(" ")), (1, value("\t")), (1, value("\r")), (1, value("\n"))))
+         string <- listOfN(len, frequency((1, value(" ")), (1, value("\t")), (1, value("\r")), (1, value("\n"))))
          ) yield string.mkString("")
 
   implicit def genWhiteString: Arbitrary[String] = Arbitrary {
@@ -148,7 +148,7 @@ object stringWithWhiteGen {
   import whiteStringGen._
   implicit def genString: Arbitrary[String] = Arbitrary {
     for (len <- choose(1, 4);
-         string <- vectorOf(len, frequency((1, value("a")), (2, value("b")), (1, genWhite)))
+         string <- listOfN(len, frequency((1, value("a")), (2, value("b")), (1, genWhite)))
     ) yield string.mkString("")
   }
 }

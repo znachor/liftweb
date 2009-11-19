@@ -45,9 +45,23 @@ import _root_.scala.collection.mutable.{HashMap, HashSet, ListBuffer}
  * requesting a value to be returned from the container
  */
 abstract class SessionVar[T](dflt: => T) extends AnyVar[T, SessionVar[T]](dflt) {
-  override protected def findFunc(name: String): Box[T] = S.session.flatMap(_.get(name))
+  override protected def findFunc(name: String): Box[T] = S.session match {
+    case Full(s) => s.get(name)
+    case _ =>
+      if (showWarningWhenAccessedOutOfSessionScope_?)
+      Log.warn("Getting a SessionVar "+name+" outside session scope") // added warning per issue 188
 
-  override protected def setFunc(name: String, value: T): Unit = S.session.foreach(_.set(name, value))
+      Empty
+  }
+
+  override protected def setFunc(name: String, value: T): Unit = S.session match {
+    case Full(s) => s.set(name, value)
+    case _ =>
+      if (showWarningWhenAccessedOutOfSessionScope_?)
+      Log.warn("Setting a SessionVar "+name+" to "+value+" outside session scope") // added warning per issue 188
+  }
+
+  def showWarningWhenAccessedOutOfSessionScope_? = false
 
   override protected def clearFunc(name: String): Unit = S.session.foreach(_.unset(name))
 
@@ -58,8 +72,17 @@ abstract class SessionVar[T](dflt: => T) extends AnyVar[T, SessionVar[T]](dflt) 
     old
   }
 
+  override protected def testWasSet(name: String): Boolean = {
+    val bn = name + VarConstants.initedSuffix
+    S.session.flatMap(_.get(name)).isDefined || (S.session.flatMap(_.get(bn)) openOr false)
+  }
+
+
+
+
+
   protected override def registerCleanupFunc(in: LiftSession => Unit): Unit =
-    S.session.foreach(_.addSessionCleanup(in))
+  S.session.foreach(_.addSessionCleanup(in))
 
   type CleanUpParam = LiftSession
 }
@@ -67,6 +90,7 @@ abstract class SessionVar[T](dflt: => T) extends AnyVar[T, SessionVar[T]](dflt) 
 private[http] trait HasLogUnreadVal {
   def logUnreadVal: Boolean
 }
+
 
 /**
  * A typesafe container for data with a lifetime nominally equivalent to the
@@ -109,6 +133,11 @@ abstract class RequestVar[T](dflt: => T) extends AnyVar[T, RequestVar[T]](dflt) 
     val old: Boolean = RequestVarHandler.get(bn) openOr false
     RequestVarHandler.set(bn, this, true)
     old
+  }
+
+  override protected def testWasSet(name: String): Boolean = {
+    val bn = name + VarConstants.initedSuffix
+    RequestVarHandler.get(name).isDefined || (RequestVarHandler.get(bn) openOr false)
   }
 
   /**
@@ -158,8 +187,13 @@ private[liftweb] abstract class TransientRequestVar[T](dflt: => T) extends AnyVa
     old
   }
 
+  protected override def testWasSet(name: String): Boolean = {
+    val bn = name + VarConstants.initedSuffix
+    TransientRequestVarHandler.get(name).isDefined || (TransientRequestVarHandler.get(bn) openOr false)
+  }
+
   override protected def registerCleanupFunc(in: Box[LiftSession] => Unit): Unit =
-    TransientRequestVarHandler.addCleanupFunc(in)
+  TransientRequestVarHandler.addCleanupFunc(in)
 
   /**
    * This defines whether or not Lift will log when a RequestVar is set but then not read within
@@ -215,28 +249,28 @@ private[http] trait CoreRequestVarHandler {
   }
 
   private[http] def get[T](name: String): Box[T] =
-    for {
-      ht <- Box.legacyNullTest(vals.value)
-      (rvInstance,value,unread) <- ht.get(name)
-    } yield {
-      if (unread) {
-        // Flag the variable as no longer being set-but-unread
-        ht(name) = (rvInstance : MyType, value.asInstanceOf[T], false)
-      }
-      value.asInstanceOf[T]
+  for {
+    ht <- Box.legacyNullTest(vals.value)
+    (rvInstance,value,unread) <- ht.get(name)
+  } yield {
+    if (unread) {
+      // Flag the variable as no longer being set-but-unread
+      ht(name) = (rvInstance : MyType, value.asInstanceOf[T], false)
     }
+    value.asInstanceOf[T]
+  }
 
   private[http] def set[T](name: String, from: MyType, value: T): Unit =
   for (ht <- Box.legacyNullTest(vals.value))
   ht(name) = (from, value, true)
 
   private[http] def clear(name: String): Unit =
-    for (ht <- Box.legacyNullTest(vals.value))
-      ht -= name
+  for (ht <- Box.legacyNullTest(vals.value))
+  ht -= name
 
   private[http] def addCleanupFunc(f: Box[LiftSession] => Unit): Unit =
-    for (cu <- Box.legacyNullTest(cleanup.value))
-      cu += f
+  for (cu <- Box.legacyNullTest(cleanup.value))
+  cu += f
 
   def apply[T](session: Box[LiftSession], f: => T): T = {
     if ("in" == isIn.value) {
@@ -264,8 +298,8 @@ private[http] trait CoreRequestVarHandler {
 
               if (Props.devMode && LiftRules.logUnreadRequestVars) {
                 vals.value.keys.filter(! _.startsWith(VarConstants.varPrefix+"net.liftweb"))
-                  .filter(! _.endsWith(VarConstants.initedSuffix))
-                  .foreach(key => vals.value(key) match {
+                .filter(! _.endsWith(VarConstants.initedSuffix))
+                .foreach(key => vals.value(key) match {
                     case (rv,_,true) if rv.logUnreadVal => Log.warn("RequestVar %s was set but not read".format(key.replace(VarConstants.varPrefix,"")))
                     case _ =>
                   })
@@ -287,4 +321,16 @@ object AnyVar {
   implicit def whatRequestVarIs[T](in: RequestVar[T]): T = in.is
 }
 
+/**
+ * Memoize a value for the duration of the user's session
+ */
+abstract class SessionMemoize[K, V] extends MemoizeVar[K, V] {
+  protected object coreVar extends SessionVar[LRU[K, V]](buildLRU)
+}
 
+/**
+ * Memoize a value for the duration of the current request (and subsequent Ajax requests made as a result of viewing the page)
+ */
+abstract class RequestMemoize[K, V] extends MemoizeVar[K, V] {
+  protected object coreVar extends RequestVar[LRU[K, V]](buildLRU)
+}

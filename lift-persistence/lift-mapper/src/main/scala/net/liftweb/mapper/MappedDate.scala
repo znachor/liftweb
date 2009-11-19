@@ -109,19 +109,19 @@ abstract class MappedDate[T<:Mapper[T]](val fieldOwner: T) extends MappedField[D
   }
 
   def buildSetActualValue(accessor: Method, v: AnyRef, columnName: String): (T, AnyRef) => Unit =
-  (inst, v) => doField(inst, accessor, {case f: MappedDate[T] => f.st(toDate(v))})
+  (inst, v) => doField(inst, accessor, {case f: MappedDate[_] => f.st(toDate(v))})
 
   def buildSetLongValue(accessor: Method, columnName: String): (T, Long, Boolean) => Unit =
-  (inst, v, isNull) => doField(inst, accessor, {case f: MappedDate[T] => f.st(if (isNull) Empty else Full(new Date(v)))})
+  (inst, v, isNull) => doField(inst, accessor, {case f: MappedDate[_] => f.st(if (isNull) Empty else Full(new Date(v)))})
 
   def buildSetStringValue(accessor: Method, columnName: String): (T, String) => Unit =
-  (inst, v) => doField(inst, accessor, {case f: MappedDate[T] => f.st(toDate(v))})
+  (inst, v) => doField(inst, accessor, {case f: MappedDate[_] => f.st(toDate(v))})
 
   def buildSetDateValue(accessor: Method, columnName: String): (T, Date) => Unit =
-  (inst, v) => doField(inst, accessor, {case f: MappedDate[T] => f.st(Full(v))})
+  (inst, v) => doField(inst, accessor, {case f: MappedDate[_] => f.st(Full(v))})
 
   def buildSetBooleanValue(accessor: Method, columnName: String): (T, Boolean, Boolean) => Unit =
-  (inst, v, isNull) => doField(inst, accessor, {case f: MappedDate[T] => f.st(Empty)})
+  (inst, v, isNull) => doField(inst, accessor, {case f: MappedDate[_] => f.st(Empty)})
 
   /**
    * Given the driver type, return the string required to create the column in the database

@@ -214,7 +214,7 @@ object Props {
       // if we've got a propety file, create name/value pairs and turn them into a Map
       case Full(prop) =>
         Map(prop.entrySet.toArray.flatMap{
-            case s: JMap.Entry[String, String] => List((s.getKey, s.getValue))
+            case s: JMap.Entry[_, _] => List((s.getKey.toString, s.getValue.toString))
             case _ => Nil
           } :_*)
 

@@ -766,22 +766,31 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
   private[http] def contextFuncBuilder(f: S.AFuncHolder): S.AFuncHolder = {
     val currentMap = snippetMap.is
     val curLoc = S.location
+    val req: Req = S.request openOr Req.nil
+    val session = this
+
     val requestVarFunc: Function1[Function0[Any], Any] = RequestVarHandler.generateSnapshotRestorer()
     new S.ProxyFuncHolder(f) {
       override def apply(in: List[String]): Any =
       requestVarFunc(() =>
-        S.CurrentLocation.doWith(curLoc) {
-          snippetMap.doWith(snippetMap.is ++ currentMap) {
-            super.apply(in)
+        //S.init(req, session) {
+          S.CurrentLocation.doWith(curLoc) {
+            snippetMap.doWith(snippetMap.is ++ currentMap) {
+              super.apply(in)
+            }
           }
-        })
+        //}
+        )
 
       override def apply(in: FileParamHolder): Any =
-        requestVarFunc(() => S.CurrentLocation.doWith(curLoc) {
-          snippetMap.doWith(snippetMap.is ++ currentMap) {
-            super.apply(in)
-          }
-        })
+        requestVarFunc(() => 
+          S.init(req, session){
+            S.CurrentLocation.doWith(curLoc) {
+              snippetMap.doWith(snippetMap.is ++ currentMap) {
+                super.apply(in)
+              }
+            }
+          })
     }
   }
 
@@ -1103,10 +1112,24 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
   def getAsyncComponent(id: String): Box[LiftCometActor] = synchronized(asyncById.get(id))
 
   /**
-   * Adds a new COmet actor to this session
+   * Adds a new Comet actor to this session
    */
   private[http] def addCometActor(act: LiftCometActor): Unit = synchronized {
     asyncById(act.uniqueId) = act
+  }
+
+  private[liftweb] def addAndInitCometActor(act: LiftCometActor,
+                                            theType: Box[String],
+                                            name: Box[String],
+                                            defaultXml: NodeSeq,
+                                            attributes: Map[String, String]) = {
+     val what = (theType -> name)
+     synchronized {
+       asyncById(act.uniqueId) = act
+       asyncComponents(what) = act
+     }
+     act.callInitCometActor(this, theType, name, defaultXml, attributes)
+     act ! PerformSetupComet
   }
 
   /**
@@ -1137,14 +1160,12 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
                 val ret = constr.newInstance().asInstanceOf[LiftCometActor]
                 ret.callInitCometActor(this, Full(contType), name, defaultXml, attributes)
 
-                // ret.link(this)
                 ret ! PerformSetupComet
                 ret.asInstanceOf[LiftCometActor]
               } or tryo((e: Throwable) => Log.info("Comet find by type Failed to instantiate " + cls.getName, e)) {
                 val constr = cls.getConstructor(this.getClass, classOf[Box[String]], classOf[NodeSeq], classOf[Map[String, String]])
                 val ret = constr.newInstance(this, name, defaultXml, attributes).asInstanceOf[LiftCometActor];
-                //  ret.start
-                // ret.link(this)
+
                 ret ! PerformSetupComet
                 ret.asInstanceOf[LiftCometActor]
               }

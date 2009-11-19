@@ -24,16 +24,69 @@ private[liftweb] object VarConstants {
   val initedSuffix = "_inited_?"
 }
 
+trait HasCalcDefaultValue[T] {
+  protected def calcDefaultValue: T
+}
+
+trait MemoizeVar[K, V]  {
+  protected def coreVar: AnyVar[LRU[K, V], _]
+
+  protected def buildLRU = new LRU[K, V](cacheSize)
+
+  /**
+   * The number of entries that will be memoized
+   */
+  protected def cacheSize: Int = 200
+
+  def apply(key: K): Box[V] = get(key)
+
+  def apply(key: K, dflt: => V): V = get(key, dflt)
+
+  def get(key: K): Box[V] = synchronized {
+    coreVar.is.get(key)
+  }
+
+  def get(key: K, dflt: => V): V = synchronized {
+    get(key) match {
+      case Full(v) => v
+      case _ =>
+        val ret = dflt
+        set(key, ret)
+        ret
+    }
+  }
+
+  def set(key: K, value: V): Unit = synchronized {
+    coreVar.is.update(key, value)
+  }
+
+  def update(key: K, value: V): Unit = set(key,value)
+}
+
+abstract class AnyVar[T, MyType <: AnyVar[T, MyType]](dflt: => T) extends AnyVarTrait[T, MyType] {
+  self: MyType =>
+
+  protected def calcDefaultValue: T = dflt
+}
+
 /**
  * Abstract a request or a session scoped variable.
  */
-abstract class AnyVar[T, MyType <: AnyVar[T, MyType]](dflt: => T) extends PSettableValueHolder[T] {
+trait AnyVarTrait[T, MyType <: AnyVarTrait[T, MyType]] extends PSettableValueHolder[T] with HasCalcDefaultValue[T] {
   self: MyType =>
   protected lazy val name = VarConstants.varPrefix+getClass.getName+"_"+__nameSalt
   protected def findFunc(name: String): Box[T]
   protected def setFunc(name: String, value: T): Unit
   protected def clearFunc(name: String): Unit
   protected def wasInitialized(name: String): Boolean
+
+
+  protected def calcDefaultValue: T
+
+  /**
+   * A non-side-effecting test if the value was initialized
+   */
+  protected def testWasSet(name: String): Boolean
 
   protected def __nameSalt = ""
 
@@ -45,7 +98,7 @@ abstract class AnyVar[T, MyType <: AnyVar[T, MyType]](dflt: => T) extends PSetta
   def is: T = synchronized {
     findFunc(name) match {
       case Full(v) => v
-      case _ => val ret = dflt
+      case _ => val ret = calcDefaultValue
         testInitialized
         apply(ret)
         // Use findFunc so that we clear the "unread" flag
@@ -71,6 +124,21 @@ abstract class AnyVar[T, MyType <: AnyVar[T, MyType]](dflt: => T) extends PSetta
    * Shadow of the apply method
    */
   def set(what: T): T = apply(what)
+
+  /**
+   * Has this Var been set or accessed and had its default value calculated
+   */
+  def set_? : Boolean = testWasSet(name)
+
+  /**
+   * Set the Var if it has not been calculated
+   */
+  def setIsUnset(value: => T): T = synchronized {
+    if (!set_?) {
+      set(value)
+    }
+    this.is
+  }
 
   /**
    * Set the session variable

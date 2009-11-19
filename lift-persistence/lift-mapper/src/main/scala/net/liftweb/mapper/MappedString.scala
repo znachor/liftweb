@@ -147,7 +147,7 @@ abstract class MappedString[T<:Mapper[T]](val fieldOwner: T,val maxLen: Int) ext
 
   def asJsExp: JsExp = JE.Str(is)
 
-  def apply(ov: String): T = apply(Full(ov))
+  override def apply(ov: String): T = apply(Full(ov))
 
   def jdbcFriendly(field : String): String = data.get
 
@@ -194,8 +194,11 @@ abstract class MappedString[T<:Mapper[T]](val fieldOwner: T,val maxLen: Int) ext
    */
   def valUnique(msg: => String)(value: String): List[FieldError] =
   fieldOwner.getSingleton.findAll(By(this,value)).
-  filter(!_.comparePrimaryKeys(this.fieldOwner)).
-  map(x =>FieldError(this, Text(msg)))
+  filter(!_.comparePrimaryKeys(this.fieldOwner)) match {
+    case Nil => Nil
+    case x :: _ => List(FieldError(this, Text(msg))) // issue 179
+  }
+  
 
   /**
    * Make sure the field matches a regular expression
@@ -208,7 +211,7 @@ abstract class MappedString[T<:Mapper[T]](val fieldOwner: T,val maxLen: Int) ext
   /**
    * Given the driver type, return the string required to create the column in the database
    */
-  def fieldCreatorString(dbType: DriverType, colName: String): String = colName+" VARCHAR("+maxLen+")" + notNullAppender()
+  def fieldCreatorString(dbType: DriverType, colName: String): String = colName+" "+dbType.varcharColumnType(maxLen) + notNullAppender()
 
 }
 

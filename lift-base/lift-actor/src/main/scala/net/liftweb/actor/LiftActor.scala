@@ -26,12 +26,17 @@ object LAScheduler {
   @volatile
   var onSameThread = false
 
+  /**
+  * Set this variable to the number of threads to allocate in the thread pool
+  */
+  @volatile var threadPoolSize = 16 // issue 194
+
   @volatile
   var createExecutor: () => ILAExecute = () => {
     new ILAExecute {
       import _root_.java.util.concurrent.{Executors, Executor}
 
-      private val es: Executor = Executors.newCachedThreadPool()
+      private val es: Executor = Executors.newFixedThreadPool(threadPoolSize)
 
       def execute(f: () => Unit): Unit =
       es.execute(new Runnable{def run() {f()}})
