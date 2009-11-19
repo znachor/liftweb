@@ -1,4 +1,6 @@
-package net.liftweb.mapper.view
+package net.liftweb
+package mapper
+package view
 
 import scala.xml.{Group, Elem, NodeSeq}
 import scala.collection.mutable.{Map => mMap}

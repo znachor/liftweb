@@ -1,4 +1,5 @@
-package net.liftweb.mapper
+package net.liftweb
+package mapper
 
 /*
  * Copyright 2006-2008 WorldWide Conferencing, LLC
@@ -23,7 +24,7 @@ import _root_.net.liftweb.util._
 import Helpers._
 import _root_.java.util.Date
 import _root_.net.liftweb.http._
-import _root_.net.liftweb.widgets.autocomplete._
+// import _root_.net.liftweb.widgets.autocomplete._
 import _root_.net.liftweb.http.jquery.{JqSHtml}
 import _root_.scala.xml.NodeSeq
 import js._
@@ -31,7 +32,7 @@ import js._
 abstract class MappedEnum[T<:Mapper[T], ENUM <: Enumeration](val fieldOwner: T, val enum: ENUM) extends MappedField[ENUM#Value, T] {
   private var data: ENUM#Value = defaultValue
   private var orgData: ENUM#Value = defaultValue
-  def defaultValue: ENUM#Value = enum.elements.next
+  def defaultValue: ENUM#Value = enum.values.toList.head
   def dbFieldClass = classOf[ENUM#Value]
 
   /**
@@ -121,16 +122,18 @@ abstract class MappedEnum[T<:Mapper[T], ENUM <: Enumeration](val fieldOwner: T, 
     * Build a list for the select.  Return a tuple of (String, String) where the first string
     * is the id.string of the Value and the second string is the Text name of the Value.
     */
-  def buildDisplayList: List[(Int, String)] = enum.elements.toList.map(a => (a.id, a.toString))
+  def buildDisplayList: List[(Int, String)] = enum.values.toList.map(a => (a.id, a.toString))
 
   /**
    * Create an input field for the item
    */
   override def _toForm: Box[NodeSeq] =
+    /*
     if (autocomplete_?)
       Full(AutoComplete.autocompleteObj[Int](buildDisplayList, Full(toInt),
                                       v => this.set(fromInt(v))))
     else
+    */
       Full(SHtml.selectObj[Int](buildDisplayList, Full(toInt),
                                 v => this.set(fromInt(v))))
 }

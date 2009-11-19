@@ -1,4 +1,5 @@
-package net.liftweb.mapper
+package net.liftweb
+package mapper
 
 /*
  * Copyright 2006-2008 WorldWide Conferencing, LLC
@@ -202,7 +203,7 @@ trait JsonComet {
       case _ => Empty
     }
 
-    def values: List[Enum#Value] = enum.elements.toList
+    def values: List[Enum#Value] = enum.values.toList
   }
 
 }

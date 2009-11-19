@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package net.liftweb.mapper
+package net.liftweb
+package mapper
 
 import _root_.org.specs._
 import _root_.org.specs.runner.JUnit3

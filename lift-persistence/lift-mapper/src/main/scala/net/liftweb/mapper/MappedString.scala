@@ -1,4 +1,5 @@
-package net.liftweb.mapper
+package net.liftweb
+package mapper
 
 /*
  * Copyright 2006-2009 WorldWide Conferencing, LLC
@@ -128,7 +129,7 @@ abstract class MappedString[T<:Mapper[T]](val fieldOwner: T,val maxLen: Int) ext
 
   override def setFromAny(in: Any): String = {
     in match {
-      case seq: Seq[_] if !seq.isEmpty => seq.map(setFromAny)(0)
+      case seq: Seq[_] if !seq.isEmpty => seq.map(setFromAny).apply(0)
       case (s: String) :: _ => this.set(s)
       case null => this.set(null)
       case s: String => this.set(s)

@@ -1,4 +1,5 @@
-package net.liftweb.mapper
+package net.liftweb
+package mapper
 
 
 import _root_.net.liftweb.util._

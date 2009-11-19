@@ -1,4 +1,5 @@
-package net.liftweb.mapper
+package net.liftweb
+package mapper
 
 /*
  * Copyright 2006-2008 WorldWide Conferencing, LLC

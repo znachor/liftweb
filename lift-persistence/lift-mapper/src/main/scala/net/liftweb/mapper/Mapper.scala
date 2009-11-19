@@ -1,4 +1,5 @@
-package net.liftweb.mapper
+package net.liftweb
+package mapper
 
 /*
  * Copyright 2006-2009 WorldWide Conferencing, LLC
@@ -145,7 +146,7 @@ trait Mapper[A<:Mapper[A]] extends BaseMapper {
    * @param func called with displayHtml, fieldId, form
    */
   def flatMapFieldTitleForm[T]
-  (func: (NodeSeq, Box[NodeSeq], NodeSeq) => Seq[T]): List[T] =
+  (func: (NodeSeq, Box[NodeSeq], NodeSeq) => scala.collection.Seq[T]): List[T] =
   getSingleton.flatMapFieldTitleForm(this, func)
 
   /**

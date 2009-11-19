@@ -1,4 +1,5 @@
-package net.liftweb.mapper
+package net.liftweb
+package mapper
 
 /*
  * Copyright 2006-2008 WorldWide Conferencing, LLC
@@ -583,8 +584,8 @@ def menus: List[Menu] = sitemap // issue 182
     }
 
     bind("user", changePasswordXhtml,
-         "old_pwd" -> SHtml.password("", oldPassword = _),
-         "new_pwd" -> SHtml.password_*("", LFuncHolder(newPassword = _)),
+         "old_pwd" -> SHtml.password("", s => oldPassword = s),
+         "new_pwd" -> SHtml.password_*("", LFuncHolder(s => newPassword = s)),
          "submit" -> SHtml.submit(S.??("change"), testAndSet _))
   }
 

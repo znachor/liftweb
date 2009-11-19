@@ -1,4 +1,6 @@
-package net.liftweb.mapper.view
+package net.liftweb
+package mapper
+package view
 
 import net.liftweb.mapper.{Mapper,
                            MappedField

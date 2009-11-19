@@ -1,4 +1,5 @@
-package net.liftweb.mapper
+package net.liftweb
+package mapper
 
 /*
  * Copyright 2006-2009 WorldWide Conferencing, LLC
@@ -35,7 +36,7 @@ trait BaseMetaMapper {
 
   def dbTableName: String
   def _dbTableNameLC: String
-  def mappedFields: Seq[BaseMappedField];
+  def mappedFields: scala.collection.Seq[BaseMappedField];
   def dbAddTable: Box[() => Unit]
 
   def dbIndexes: List[BaseIndex[RealType]]
@@ -214,7 +215,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
   //type OtherMapper = KeyedMapper[_, (T forSome {type T})]
   //type OtherMetaMapper = KeyedMetaMapper[_, OtherMapper]
 
-  def findAllFields(fields: Seq[SelectableField],
+  def findAllFields(fields: scala.collection.Seq[SelectableField],
                     by: QueryParam[A]*): List[A] =
   findMapFieldDb(dbDefaultConnectionIdentifier,
                  fields, by :_*)(v => Full(v))
