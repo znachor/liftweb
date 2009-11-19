@@ -80,20 +80,20 @@ object LiftRules extends Factory {
   /**
    * The HTTP authentication mechanism that ift will perform. See <i>LiftRules.protectedResource</i>
    */
-  var authentication: HttpAuthentication = NoAuthentication
+  @volatile var authentication: HttpAuthentication = NoAuthentication
 
   /**
    * A function that takes the HTTPSession and the contextPath as parameters
    * and returns a LiftSession reference. This can be used in cases subclassing
    * LiftSession is necessary.
    */
-  var sessionCreator: (HTTPSession, String) => LiftSession = {
+  @volatile var sessionCreator: (HTTPSession, String) => LiftSession = {
     case (httpSession, contextPath) => new LiftSession(contextPath, httpSession.sessionId, Full(httpSession))
   }
 
-  var enableContainerSessions = true
+  @volatile var enableContainerSessions = true
 
-  var getLiftSession: (Req) => LiftSession = (req) => _getLiftSession(req)
+  @volatile var getLiftSession: (Req) => LiftSession = (req) => _getLiftSession(req)
 
   /**
    * Returns a LiftSession instance.
@@ -126,12 +126,12 @@ object LiftRules extends Factory {
   /**
    * The path to handle served resources
    */
-  var resourceServerPath = "classpath"
+  @volatile var resourceServerPath = "classpath"
 
   /**
    * Holds the JS library specific UI artifacts. By efault it uses JQuery's artifacts
    */
-  var jsArtifacts: JSArtifacts = JQueryArtifacts
+  @volatile var jsArtifacts: JSArtifacts = JQueryArtifacts
 
   /**
    * Use this PartialFunction to to automatically add static URL parameters
@@ -150,20 +150,20 @@ object LiftRules extends Factory {
    * the request was made on, but can do the multi-server thing
    * as well)
    */
-  var cometServer: () => String = () => S.contextPath
+  @volatile var cometServer: () => String = () => S.contextPath
 
   /**
    * The maximum concurrent requests.  If this number of
    * requests are being serviced for a given session, messages
    * will be sent to all Comet requests to terminate
    */
-  var maxConcurrentRequests = 2
+  @volatile var maxConcurrentRequests = 2
 
   /**
    * A partial function that determines content type based on an incoming
    * Req and Accept header
    */
-  var determineContentType: PartialFunction[(Box[Req], Box[String]), String] = {
+  @volatile var determineContentType: PartialFunction[(Box[Req], Box[String]), String] = {
     case (_, Full(accept)) if this.useXhtmlMimeType && accept.toLowerCase.contains("application/xhtml+xml") =>
       "application/xhtml+xml; charset=utf-8"
     case _ => "text/html; charset=utf-8"
@@ -211,30 +211,30 @@ object LiftRules extends Factory {
   /**
    * The maximum allowed size of a complete mime multi-part POST.  Default 8MB
    */
-  var maxMimeSize: Long = 8 * 1024 * 1024
+  @volatile var maxMimeSize: Long = 8 * 1024 * 1024
 
   /**
    * Should pages that are not found be passed along the request processing chain to the
    * next handler outside Lift?
    */
-  var passNotFoundToChain = false
+  @volatile var passNotFoundToChain = false
 
   /**
    * The maximum allowed size of a single file in a mime multi-part POST.
    * Default 7MB
    */
-  var maxMimeFileSize: Long = 7 * 1024 * 1024
+  @volatile var maxMimeFileSize: Long = 7 * 1024 * 1024
 
   /**
    * The function referenced here is called if there's a localization lookup failure
    */
-  var localizationLookupFailureNotice: Box[(String, Locale) => Unit] = Empty
+  @volatile var localizationLookupFailureNotice: Box[(String, Locale) => Unit] = Empty
 
   /**
    * The default location to send people if SiteMap access control fails. The path is
    * expressed a a List[String]
    */
-  var siteMapFailRedirectLocation: List[String] = List()
+  @volatile var siteMapFailRedirectLocation: List[String] = List()
 
   private[http] def notFoundOrIgnore(requestState: Req, session: Box[LiftSession]): Box[LiftResponse] = {
     if (passNotFoundToChain) Empty
@@ -261,7 +261,7 @@ object LiftRules extends Factory {
    * If you don't want lift to send the application/xhtml+xml mime type to those browsers
    * that understand it, then set this to  { @code false }
    */
-  var useXhtmlMimeType: Boolean = true
+  @volatile var useXhtmlMimeType: Boolean = true
 
 
   private def _stringToXml(s: String): NodeSeq = Text(s)
@@ -272,14 +272,14 @@ object LiftRules extends Factory {
    * but you can change this to attempt to parse the XML in the String and
    * return the NodeSeq.
    */
-  var localizeStringToXml: String => NodeSeq = _stringToXml _
+  @volatile var localizeStringToXml: String => NodeSeq = _stringToXml _
 
   /**
    * The base name of the resource bundle
    */
-  var resourceNames: List[String] = List("lift")
+  @volatile var resourceNames: List[String] = List("lift")
 
-  var noticesToJsCmd: () => JsCmd = () => {
+  @volatile var noticesToJsCmd: () => JsCmd = () => {
     import builtin.snippet._
 
     val func: (() => List[NodeSeq], String, MetaData) => NodeSeq = (f, title, attr) => f() map (e => <li>{e}</li>) match {
@@ -315,34 +315,34 @@ object LiftRules extends Factory {
   /**
    * The base name of the resource bundle of the lift core code
    */
-  var liftCoreResourceName = "i18n.lift-core"
+  @volatile var liftCoreResourceName = "i18n.lift-core"
 
   /**
    * Where to send the user if there's no comet session
    */
-  var noCometSessionPage = "/"
+  @volatile var noCometSessionPage = "/"
 
   /**
    * Put a function that will calculate the request timeout based on the
    * incoming request.
    */
-  var calcRequestTimeout: Box[Req => Int] = Empty
+  @volatile var calcRequestTimeout: Box[Req => Int] = Empty
 
   /**
    * If you want the standard (non-AJAX) request timeout to be something other than
    * 10 seconds, put the value here
    */
-  var stdRequestTimeout: Box[Int] = Empty
+  @volatile var stdRequestTimeout: Box[Int] = Empty
 
   /**
    * If you want the AJAX request timeout to be something other than 120 seconds, put the value here
    */
-  var cometRequestTimeout: Box[Int] = Empty
+  @volatile var cometRequestTimeout: Box[Int] = Empty
 
   /**
    * If a Comet request fails timeout for this period of time. Default value is 10 seconds
    */
-  var cometFailureRetryTimeout: Long = 10 seconds
+  @volatile var cometFailureRetryTimeout: Long = 10 seconds
 
   /**
    * The dispatcher that takes a Snippet and converts it to a
@@ -388,31 +388,31 @@ object LiftRules extends Factory {
    * If the request times out (or returns a non-Response) you can
    * intercept the response here and create your own response
    */
-  var requestTimedOut: Box[(Req, Any) => Box[LiftResponse]] = Empty
+ @volatile  var requestTimedOut: Box[(Req, Any) => Box[LiftResponse]] = Empty
 
   /**
    * A function that takes the current HTTP request and returns the current
    */
-  var timeZoneCalculator: Box[HTTPRequest] => TimeZone = defaultTimeZoneCalculator _
+  @volatile var timeZoneCalculator: Box[HTTPRequest] => TimeZone = defaultTimeZoneCalculator _
 
   def defaultTimeZoneCalculator(request: Box[HTTPRequest]): TimeZone = TimeZone.getDefault
 
   /**
    * How many times do we retry an Ajax command before calling it a failure?
    */
-  var ajaxRetryCount: Box[Int] = Empty
+  @volatile var ajaxRetryCount: Box[Int] = Empty
 
   /**
    * The JavaScript to execute at the begining of an
    * Ajax request (for example, showing the spinning working thingy)
    */
-  var ajaxStart: Box[() => JsCmd] = Empty
+  @volatile var ajaxStart: Box[() => JsCmd] = Empty
 
   /**
    * The function that calculates if the response should be rendered in
    * IE6/7 compatibility mode
    */
-  var calcIEMode: () => Boolean =
+  @volatile var calcIEMode: () => Boolean =
   () => (for (r <- S.request) yield r.isIE6 || r.isIE7 ||
           r.isIE8) openOr true
 
@@ -420,23 +420,23 @@ object LiftRules extends Factory {
    * The JavaScript to execute at the end of an
    * Ajax request (for example, removing the spinning working thingy)
    */
-  var ajaxEnd: Box[() => JsCmd] = Empty
+  @volatile var ajaxEnd: Box[() => JsCmd] = Empty
 
   /**
    * The default action to take when the JavaScript action fails
    */
-  var ajaxDefaultFailure: Box[() => JsCmd] =
+  @volatile var ajaxDefaultFailure: Box[() => JsCmd] =
   Full(() => JsCmds.Alert(S.??("ajax.error")))
 
   /**
    * A function that takes the current HTTP request and returns the current
    */
-  var localeCalculator: Box[HTTPRequest] => Locale = defaultLocaleCalculator _
+  @volatile var localeCalculator: Box[HTTPRequest] => Locale = defaultLocaleCalculator _
 
   def defaultLocaleCalculator(request: Box[HTTPRequest]) =
     request.flatMap(_.locale).openOr(Locale.getDefault())
 
-  var resourceBundleFactories = RulesSeq[ResourceBundleFactoryPF]
+  @volatile var resourceBundleFactories = RulesSeq[ResourceBundleFactoryPF]
 
   /**
    * User for Comet handling to resume a continuation
@@ -536,9 +536,9 @@ object LiftRules extends Factory {
       }) {}
 
 
-  private[http] var ending = false
+  @volatile private[http] var ending = false
 
-  private[http] var doneBoot = false;
+  @volatile private[http] var doneBoot = false;
 
   /**
    * Holds user's DispatchPF functions that will be executed in a stateless context. This means that
@@ -574,17 +574,17 @@ object LiftRules extends Factory {
   /**
    * Contains the Ajax URI path used by Lift to process Ajax requests.
    */
-  var ajaxPath = "ajax_request"
+  @volatile var ajaxPath = "ajax_request"
 
   /**
    * Contains the Comet URI path used by Lift to process Comet requests.
    */
-  var cometPath = "comet_request"
+  @volatile var cometPath = "comet_request"
 
   /**
    * Computes the Comet path by adding additional tokens on top of cometPath
    */
-  var calcCometPath: String => JsExp = prefix => {
+  @volatile var calcCometPath: String => JsExp = prefix => {
     Str(prefix + "/" + cometPath + "/") +
             JsRaw("Math.floor(Math.random() * 100000000000)") +
             Str(S.session.map(s => S.encodeURL("/" + s.uniqueId)) openOr "")
@@ -604,10 +604,10 @@ object LiftRules extends Factory {
    * If there is an alternative way of calculating the context path
    * (by default inspecting the X-Lift-ContextPath header)
    */
-  var calculateContextPath: HTTPRequest => Box[String] =
+  @volatile var calculateContextPath: HTTPRequest => Box[String] =
   defaultCalcContextPath _
 
-  private var _context: HTTPContext = _
+  @volatile private var _context: HTTPContext = _
 
   /**
    * Returns the HTTPContext
@@ -755,7 +755,7 @@ object LiftRules extends Factory {
       ret
     }, headers, cookies, session)
 
-  var defaultHeaders: PartialFunction[(NodeSeq, Req), List[(String, String)]] = {
+  @volatile var defaultHeaders: PartialFunction[(NodeSeq, Req), List[(String, String)]] = {
     case _ => List("Expires" -> Helpers.nowAsInternetDate,
       "Cache-Control" ->
               "no-cache; private; no-store; must-revalidate; max-stale=0; post-check=0; pre-check=0; max-age=0",
@@ -811,7 +811,7 @@ object LiftRules extends Factory {
    * Set to false if you do not want Ajax/Comet requests that are not associated with a session
    * to cause a page reload
    */
-  var redirectAjaxOnSessionLoss = true
+  @volatile var redirectAjaxOnSessionLoss = true
 
   /**
    * Holds the falure information when a snippet can not be executed.
@@ -837,7 +837,7 @@ object LiftRules extends Factory {
    * a default implementation is already appended.
    *
    */
-  var exceptionHandler = RulesSeq[ExceptionHandlerPF].append {
+  @volatile var exceptionHandler = RulesSeq[ExceptionHandlerPF].append {
     case (Props.RunModes.Development, r, e) =>
       XhtmlResponse((<html> <body>Exception occured while processing{r.uri}<pre>{showException(e)}</pre> </body> </html>), ResponseInfo.docType(r), List("Content-Type" -> "text/html; charset=utf-8"), Nil, 500, S.ieMode)
 
@@ -952,72 +952,72 @@ object LiftRules extends Factory {
   /**
    * Tells Lift if the Comet JavaScript shoukd be included. By default it is set to true.
    */
-  var autoIncludeComet: LiftSession => Boolean = session => true
+  @volatile var autoIncludeComet: LiftSession => Boolean = session => true
 
   /**
    * Tells Lift if the Ajax JavaScript shoukd be included. By default it is set to true.
    */
-  var autoIncludeAjax: LiftSession => Boolean = session => true
+  @volatile var autoIncludeAjax: LiftSession => Boolean = session => true
 
   /**
    * Define the XHTML validator
    */
-  var xhtmlValidator: Box[XHtmlValidator] = Empty // Full(TransitionalXHTML1_0Validator)
+  @volatile var xhtmlValidator: Box[XHtmlValidator] = Empty // Full(TransitionalXHTML1_0Validator)
 
   /**
    * Returns the JavaScript that manages Ajax requests.
    */
-  var renderAjaxScript: LiftSession => JsCmd = session => ScriptRenderer.ajaxScript
+  @volatile var renderAjaxScript: LiftSession => JsCmd = session => ScriptRenderer.ajaxScript
 
-  var ajaxPostTimeout = 5000
+  @volatile var ajaxPostTimeout = 5000
 
-  var cometGetTimeout = 140000
+  @volatile var cometGetTimeout = 140000
 
-  var supplimentalHeaders: HTTPResponse => Unit = s => s.addHeaders(List(HTTPParam("X-Lift-Version", liftVersion)))
+  @volatile var supplimentalHeaders: HTTPResponse => Unit = s => s.addHeaders(List(HTTPParam("X-Lift-Version", liftVersion)))
 
-  var calcIE6ForResponse: () => Boolean = () => S.request.map(_.isIE6) openOr false
+  @volatile var calcIE6ForResponse: () => Boolean = () => S.request.map(_.isIE6) openOr false
 
-  var flipDocTypeForIE6 = true
+  @volatile var flipDocTypeForIE6 = true
 
   /**
    * By default lift uses a garbage-collection mechanism of removing unused bound functions from LiftSesssion.
    * Setting this to false will disable this mechanims and there will be no Ajax polling requests attempted.
    */
-  var enableLiftGC = true;
+  @volatile var enableLiftGC = true;
 
   /**
    * If Lift garbage collection is enabled, functions that are not seen in the page for this period of time
    * (given in milliseonds) will be discarded, hence eligibe for garbage collection.
    * The default value is 10 minutes.
    */
-  var unusedFunctionsLifeTime: Long = 10 minutes
+  @volatile var unusedFunctionsLifeTime: Long = 10 minutes
 
   /**
    * The polling interval for background Ajax requests to prevent functions of being garbage collected.
    * Default value is set to 75 seconds.
    */
-  var liftGCPollingInterval: Long = 75 seconds
+  @volatile var liftGCPollingInterval: Long = 75 seconds
 
   /**
    * Put a test for being logged in into this function
    */
-  var loggedInTest: Box[() => Boolean] = Empty
+  @volatile var loggedInTest: Box[() => Boolean] = Empty
 
   /**
    * The polling interval for background Ajax requests to keep functions to not be garbage collected.
    * This will be applied if the Ajax request will fail. Default value is set to 15 seconds.
    */
-  var liftGCFailureRetryTimeout: Long = 15 seconds
+  @volatile var liftGCFailureRetryTimeout: Long = 15 seconds
 
   /**
    * Returns the JavaScript that manages Comet requests.
    */
-  var renderCometScript: LiftSession => JsCmd = session => ScriptRenderer.cometScript
+  @volatile var renderCometScript: LiftSession => JsCmd = session => ScriptRenderer.cometScript
 
   /**
    * Renders that JavaScript that holds Comet identification information
    */
-  var renderCometPageContents: (LiftSession, Seq[CometVersionPair]) => JsCmd =
+  @volatile var renderCometPageContents: (LiftSession, Seq[CometVersionPair]) => JsCmd =
   (session, vp) => JsCmds.Run(
     "var lift_toWatch = " + vp.map(p => p.guid.encJs + ": " + p.version).mkString("{", " , ", "}") + ";"
     )
@@ -1026,10 +1026,18 @@ object LiftRules extends Factory {
    * Holds the last update time of the Ajax request. Based on this server mayreturn HTTP 304 status
    * indicating the client to used the cached information.
    */
-  var ajaxScriptUpdateTime: LiftSession => Long = session => {
+  @volatile var ajaxScriptUpdateTime: LiftSession => Long = session => {
     object when extends SessionVar[Long](millis)
     when.is
   }
+
+  /**
+   * When a request is parsed into a Req object, certain suffixes are explicitly split from
+   * the last part of the request URI.  If the suffix is contained in this list, it is explicitly split.
+   * The default list is: "html", "htm", "jpg", "png", "gif", "xml", "rss", "json"
+   */
+  @volatile var explicitlyParsedSuffixes: Set[String] =
+  Set("html", "htm", "jpg", "png", "gif", "xml", "rss", "json")
 
   /**
    * The global multipart progress listener:
@@ -1037,14 +1045,14 @@ object LiftRules extends Factory {
    *    pContentLength - The total number of bytes, which are being read. May be -1, if this number is unknown.
    *    pItems - The number of the field, which is currently being read. (0 = no item so far, 1 = first item is being read, ...)
    */
-  var progressListener: (Long, Long, Int) => Unit = (_, _, _) => ()
+  @volatile var progressListener: (Long, Long, Int) => Unit = (_, _, _) => ()
 
   /**
    * The function that converts a fieldName, contentType, fileName and an InputStream into
    * a FileParamHolder.  By default, create an in-memory instance.  Use OnDiskFileParamHolder
    * to create an on-disk version
    */
-  var handleMimeFile: (String, String, String, InputStream) => FileParamHolder =
+  @volatile var handleMimeFile: (String, String, String, InputStream) => FileParamHolder =
   (fieldName, contentType, fileName, inputStream) =>
           new InMemFileParamHolder(fieldName, contentType, fileName, Helpers.readWholeStream(inputStream))
 
@@ -1052,7 +1060,7 @@ object LiftRules extends Factory {
    * Holds the last update time of the Comet request. Based on this server mayreturn HTTP 304 status
    * indicating the client to used the cached information.
    */
-  var cometScriptUpdateTime: LiftSession => Long = session => {
+  @volatile var cometScriptUpdateTime: LiftSession => Long = session => {
     object when extends SessionVar[Long](millis)
     when.is
   }
@@ -1060,17 +1068,17 @@ object LiftRules extends Factory {
   /**
    * The name of the Ajax script that manages Ajax rewuests.
    */
-  var ajaxScriptName: () => String = () => "liftAjax.js"
+  @volatile var ajaxScriptName: () => String = () => "liftAjax.js"
 
   /**
    * The name of the Comet script that manages Comet rewuests.
    */
-  var cometScriptName: () => String = () => "cometAjax.js"
+  @volatile var cometScriptName: () => String = () => "cometAjax.js"
 
   /**
    * Returns the Comet script as a JavaScript response
    */
-  var serveCometScript: (LiftSession, Req) => Box[LiftResponse] =
+  @volatile var serveCometScript: (LiftSession, Req) => Box[LiftResponse] =
   (liftSession, requestState) => {
     val modTime = cometScriptUpdateTime(liftSession)
 
@@ -1084,7 +1092,7 @@ object LiftRules extends Factory {
   /**
    * Returns the Ajax script as a JavaScript response
    */
-  var serveAjaxScript: (LiftSession, Req) => Box[LiftResponse] =
+  @volatile var serveAjaxScript: (LiftSession, Req) => Box[LiftResponse] =
   (liftSession, requestState) => {
     val modTime = ajaxScriptUpdateTime(liftSession)
 
@@ -1095,17 +1103,17 @@ object LiftRules extends Factory {
               Nil, 200))
   }
 
-  var templateCache: Box[TemplateCache[(Locale, List[String]), NodeSeq]] = Empty
+  @volatile var templateCache: Box[TemplateCache[(Locale, List[String]), NodeSeq]] = Empty
 
   /**
    * A function to format a Date... can be replaced by a function that is user-specific
    */
-  var formatDate: Date => String = date => date match {case null => LiftRules.formatDate(new Date(0L)) case s => toInternetDate(s)}
+  @volatile var formatDate: Date => String = date => date match {case null => LiftRules.formatDate(new Date(0L)) case s => toInternetDate(s)}
 
   /**
    * A function that parses a String into a Date... can be replaced by something that's user-specific
    */
-  var parseDate: String => Box[Date] = str => str match {
+  @volatile var parseDate: String => Box[Date] = str => str match {
     case null => Empty
     case s => Helpers.toDate(s)
   }
@@ -1117,7 +1125,7 @@ object LiftRules extends Factory {
    *
    * @see RequestVar#logUnreadVal
    */
-  var logUnreadRequestVars = true
+  @volatile var logUnreadRequestVars = true
 }
 
 case object BreakOut
@@ -1138,7 +1146,7 @@ object RulesSeq {
  *
  */
 trait RulesSeq[T] {
-  private var rules: List[T] = Nil
+  @volatile private var rules: List[T] = Nil
 
   private def safe_?(f: => Any) {
     LiftRules.doneBoot match {

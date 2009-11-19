@@ -214,7 +214,9 @@ object Req {
       else {
         if (last.indexOf(".", firstDot + 1) != -1) -1 // if there are multiple dots, don't split out
         else {
-          if (len - firstDot > 5) -1 // if the "suffix" is more than 5 chars long, don't split it out
+          val suffix = last.substring(firstDot + 1)
+          // if the suffix isn't in the list of suffixes we care about, don't split it
+          if (!LiftRules.explicitlyParsedSuffixes.contains(suffix.toLowerCase)) -1
           else firstDot
         }
       }
