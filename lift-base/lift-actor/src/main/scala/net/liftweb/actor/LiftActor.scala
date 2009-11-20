@@ -221,8 +221,9 @@ with ForwardableActor[Any, Any] {
   /**
    * Compatible with Scala Actors' !? method
    */
-  def !?(timeout: Long, message: Any): Box[Any] = 
-  this !! (message, timeout)
+  def !?(timeout: Long, message: Any): Box[Any] =  {
+    this.!!(message, timeout)
+  }
 
 
   def !!(msg: Any, timeout: Long): Box[Any] = {
