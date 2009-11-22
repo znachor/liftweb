@@ -39,3 +39,6 @@ test-output
 *.iml
 *.ipr
 *.iws
+
+# SBT
+lib_managed
