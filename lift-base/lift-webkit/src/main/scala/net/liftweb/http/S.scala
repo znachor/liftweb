@@ -216,9 +216,9 @@ object S extends HasParams {
       rc => Box(rc.inCookies.filter(_.name == name)).
               map(_.clone().asInstanceOf[HTTPCookie]))
 
-/**
-* Get the cookie value for the given cookie
-*/
+  /**
+   * Get the cookie value for the given cookie
+   */
   def cookieValue(name: String): Box[String] =
   for {
     cookie <- findCookie(name)
