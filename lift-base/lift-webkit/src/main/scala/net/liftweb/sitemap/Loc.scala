@@ -312,6 +312,11 @@ trait Loc[T] {
     Set(allParams.flatMap{case s: Loc.LocGroup => s.group case _ => Nil} :_*)
 
   def inGroup_?(group: String): Boolean = groupSet.contains(group)
+
+  def init() {
+    params.foreach(_ onCreate(this))
+  }
+  
 }
 
 
@@ -340,6 +345,8 @@ object Loc {
     override val params: List[LocParam[Unit]]
   ) extends Loc[Unit] {
     override val defaultValue: Box[Unit] = Full(())
+
+    init()
   }
 
   case class DataLoc[T](
@@ -350,25 +357,19 @@ object Loc {
     xparams: LocParam[T]*
   ) extends Loc[T] {
     override val params = xparams.toList
+ 
+    init()
   }
 
-  def checkProtected[T](link: Link[T], params: List[LocParam[T]]): Unit = {
-    params.map {
-      case Loc.HttpAuthProtected(role) => LiftRules.httpAuthProtectedResource.append(
-          new LiftRules.HttpAuthProtectedResourcePF() {
-            def isDefinedAt(in: ParsePath) = in.partPath == link.uriList
-            def apply(in: ParsePath): Box[Role] = role()
-          })
-
-      case x => x
-    }
-  }
 
   /**
    * Algebraic data type for parameters that modify handling of a Loc
    * in a SiteMap
    */ 
-  sealed trait LocParam[-T]
+  sealed trait LocParam[-T] {
+    def onCreate(loc: Loc[_]){
+    }
+  }
 
   /**
    * A type alias for LocParam instances that are applicable to any Loc
@@ -380,7 +381,17 @@ object Loc {
    * and only a user assigned to this role or to a role that is child-of this role
    * can access it.
    */
-  case class HttpAuthProtected(role: () => Box[Role]) extends AnyLocParam
+  case class HttpAuthProtected(role: () => Box[Role]) extends AnyLocParam {
+    
+    override def onCreate(loc: Loc[_]) {
+      LiftRules.httpAuthProtectedResource.append(
+        new LiftRules.HttpAuthProtectedResourcePF() {
+          def isDefinedAt(in: ParsePath) = in.partPath == loc.link.uriList
+          def apply(in: ParsePath): Box[Role] = role()
+        }
+      )
+    }
+  }
 
   /**
    * Allows you to generate an early response for the location rather than
