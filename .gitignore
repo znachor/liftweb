@@ -42,3 +42,4 @@ test-output
 
 # SBT
 lib_managed
+!project/build
