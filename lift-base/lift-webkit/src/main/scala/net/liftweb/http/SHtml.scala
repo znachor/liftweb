@@ -920,23 +920,33 @@ object SHtml {
     fmapFunc(BinFuncHolder(f2))(name => <input type="file" name={name}/>)
   }
 
+  /** Holds a form control as HTML along with some user defined value */
   case class ChoiceItem[T](key: T, xhtml: NodeSeq)
 
+  /** Holds a series of choices: HTML for input controls alongside some user defined value */
   case class ChoiceHolder[T](items: Seq[ChoiceItem[T]]) {
+    /** Retrieve the ChoiceItem that has the given key, throwing NoSuchElementException if there is no matching ChoiceItem */
     def apply(in: T) = items.filter(_.key == in).first.xhtml
 
+    /** Retrieve the nth ChoiceItem, 0-based */
     def apply(in: Int) = items(in).xhtml
 
+    /** Apply a function to each ChoiceItem, collecting the results */
     def map[A](f: ChoiceItem[T] => A) = items.map(f)
 
+    /** Apply a function to each ChoiceItem, concatenating the results */
     def flatMap[A](f: ChoiceItem[T] => Iterable[A]) = items.flatMap(f)
 
+    /** Return the ChoiceItems that the given function returns true for */
     def filter(f: ChoiceItem[T] => Boolean) = items.filter(f)
 
+    /** Generate a simple form by calling ChoiceItem.htmlize on each ChoiceItem and concatenating the resulting HTML */
     def toForm: NodeSeq = flatMap(ChoiceHolder.htmlize)
   }
 
+   
   object ChoiceHolder {
+    /** Convert a ChoiceItem into a span containing the control and the toString of the key */
     var htmlize: ChoiceItem[_] => NodeSeq = c => (<span>{c.xhtml}&nbsp;{c.key.toString}<br/> </span>)
   }
 
@@ -944,12 +954,19 @@ object SHtml {
 
   private def setId(in: Box[String]) = in match {case Full(id) => new UnprefixedAttribute("id", Text(id), Null); case _ => Null}
 
+  /**
+   * Generate a ChoiceHolder of possible checkbox type inputs that calls back to the given function when the form is submitted.
+   *
+   * @param possible complete sequence of possible values, each a separate checkbox when rendered
+   * @param actual values to be preselected
+   * @param func function to receive all values corresponding to the checked boxes
+   * @param attrs sequence of attributes to apply to each checkbox input element
+   * @return ChoiceHolder containing the checkboxes and values in order
+   */
   def checkbox[T](possible: Seq[T], actual: Seq[T], func: Seq[T] => Any, attrs: (String, String)*): ChoiceHolder[T] = {
     val len = possible.length
-    fmapFunc(LFuncHolder((strl: List[String]) => {func(strl.firstOption.toList.map(toInt(_)).filter(x => x >= 0 && x < len).map(possible(_))); true})) {
+    fmapFunc(LFuncHolder((strl: List[String]) => {func(strl.map(toInt(_)).filter(x => x >= 0 && x < len).map(possible(_))); true})) {
       name =>
-
-
               ChoiceHolder(possible.toList.zipWithIndex.map(p =>
                       ChoiceItem(p._1,
                         attrs.foldLeft(<input type="checkbox" name={name} value={p._2.toString}/>)(_ % _) %

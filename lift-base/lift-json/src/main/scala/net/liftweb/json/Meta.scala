@@ -64,7 +64,7 @@ private[json] object Meta {
       fieldMapping(unmangleName(f), f.getType, f.getGenericType)
     }.toList
 
-    def orderedConstructorArgs(clazz: Class[_]) = {
+    def orderedConstructorArgs(clazz: Class[_]): Iterable[Field] = {
       safePrimaryConstructorOf(clazz) match {
         case Some(x) => 
           val names = paranamer.lookupParameterNames(x)
@@ -120,7 +120,7 @@ private[json] object Meta {
                                    classOf[java.lang.Short], classOf[Date], classOf[Symbol])
 
     def safePrimaryConstructorOf[A](cl: Class[A]): Option[JConstructor[A]] = 
-      cl.getDeclaredConstructors.toList match {
+      cl.getDeclaredConstructors.toList.asInstanceOf[List[JConstructor[A]]] match {
         case Nil => None
         case x :: xs => Some[JConstructor[A]](x)
       }
