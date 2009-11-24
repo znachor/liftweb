@@ -23,83 +23,191 @@ import Helpers._
 import _root_.scala.xml._
 import _root_.scala.reflect.Manifest
 
-object WizardRules {
-  @volatile var dbConnections: List[ConnectionIdentifier] = List(DefaultConnectionIdentifier)
+object WizardRules extends Factory {
+  val dbConnectionsForTransaction: FactoryMaker[List[ConnectionIdentifier]] =
+  new FactoryMaker[List[ConnectionIdentifier]](() => Nil) {}
 
   private def m[T](implicit man: Manifest[T]): Manifest[T] = man
 
-  private def textInfo(field: SettableValueHolder{type ValueType = String}) = SHtml.text(field.is, field.set _)
-private def intInfo(field: SettableValueHolder{type ValueType = Int}) = SHtml.text(field.is.toString,s => Helpers.asInt(s).foreach(field.set _))
+  private def textInfo(field: SettableValueHolder {type ValueType = String}) = SHtml.text(field.is, field.set _)
 
+  private def intInfo(field: SettableValueHolder {type ValueType = Int}) = SHtml.text(field.is.toString, s => Helpers.asInt(s).foreach(field.set _))
 
+  /**
+   * FIXME make configurable
+   */
+  def vendForm[T](man: Manifest[T]): Box[(T, T => Unit) => NodeSeq] = Empty
+
+  val allTemplatePath: FactoryMaker[List[String]] = new FactoryMaker[List[String]](() => List("templates-hidden", "wizard-all")) {}
 
 }
 
-trait Wizard {
-  @volatile private[this] var _screenList: List[Screen] = Nil
-  private object ScreenVars extends RequestVar[Map[String, (WizardVar[_], Any)]](Map())
-  private object CurrentScreen extends RequestVar[Box[Screen]](calcFirstScreen)
-  private object PrevSnapshot extends RequestVar[Box[WizardSnapshot]](Empty)
-  private object Referer extends WizardVar[String](S.referer openOr "/")
+case class WizardFieldInfo(field: FieldIdentifier, text: NodeSeq, help: Box[NodeSeq], input: NodeSeq)
 
-def toForm = {
-  Referer.is // touch to capture the referer
-  val nextId = Helpers.nextFuncName
-  val prevId = Helpers.nextFuncName
-  val cancelId = Helpers.nextFuncName
-
-  val theScreen = currentScreen openOr S.redirectTo(Referer.is)
-
-  val nextButton = theScreen.nextButton % ("onclick" -> ("document.getElementById("+nextId.encJs+").submit()"))
-  val prevButton = theScreen.prevButton % ("onclick" -> ("document.getElementById("+prevId.encJs+").submit()"))
-  val cancelButton = theScreen.cancelButton % ("onclick" -> ("document.getElementById("+cancelId.encJs+").submit()"))
-
-
-  val url = S.uri
-  val snapshot = createSnapshot
-
-  def doNext() {
-    this.nextScreen
-    if (currentScreen.isEmpty) S.redirectTo(Referer.is)
+trait Wizard extends DispatchSnippet with Factory {
+  def dispatch = {
+    case _ => ignore => this.toForm
   }
 
-  <form id={nextId} action={url} method="post">{
-      SHtml.hidden(() => snapshot.restore())
-    }
-    <table>
-      {
-        theScreen.screenFields.map(f =>
-        <tr><td>{f.titleAsHtml}</td><td>{f.toForm}</td></tr>)
-      }
-    </table>
-    {
-    S.formGroup(4)(SHtml.hidden(() => doNext()))
+  @volatile private[this] var _screenList: List[Screen] = Nil
+  private object ScreenVars extends RequestVar[Map[String, (WizardVar[_], Any)]](Map())
+  protected object CurrentScreen extends RequestVar[Box[Screen]](calcFirstScreen)
+  private object PrevSnapshot extends RequestVar[Box[WizardSnapshot]](Empty)
+  private object Referer extends WizardVar[String](S.referer openOr "/")
+  protected object OnFirstScreen extends RequestVar[Boolean](true)
 
+
+  def toForm = {
+    Referer.is // touch to capture the referer
+    val nextId = Helpers.nextFuncName
+    val prevId = Helpers.nextFuncName
+    val cancelId = Helpers.nextFuncName
+
+    val theScreen = currentScreen openOr S.redirectTo(Referer.is)
+
+    val (nextButton, finishButton) =
+    if (!theScreen.isLastScreen)
+    (Full(theScreen.nextButton % ("onclick" -> ("document.getElementById(" + nextId.encJs + ").submit()"))), Empty)
+    else
+    (Empty, Full(theScreen.finishButton % ("onclick" -> ("document.getElementById(" + nextId.encJs + ").submit()"))))
+
+    val prevButton: Box[Elem] = if (OnFirstScreen) Empty else
+    Full(theScreen.prevButton % ("onclick" -> ("document.getElementById(" + prevId.encJs + ").submit()")))
+
+    val cancelButton: Elem = theScreen.cancelButton % ("onclick" -> ("document.getElementById(" + cancelId.encJs + ").submit()"))
+
+
+    val url = S.uri
+    val snapshot = createSnapshot
+
+    def doNext() {
+      this.nextScreen
+      if (currentScreen.isEmpty) S.redirectTo(Referer.is)
     }
-      </form> ++
-   <form id={prevId} action={url} method="post">{
-       SHtml.hidden(() => {snapshot.restore(); this.prevScreen})
-     }</form> ++
-   <form id={cancelId} action={url} method="post">{
-       SHtml.hidden(() => {snapshot.restore(); S.redirectTo(Referer.is)})
-     }</form> ++ prevButton ++ cancelButton ++ nextButton
-}
+
+    renderAll(wizardTop, theScreen.screenTop,
+              theScreen.screenFields.map(f => WizardFieldInfo(f, f.titleAsHtml, f.helpAsHtml, f.toForm)),
+              prevButton, Full(cancelButton),
+              nextButton,
+              finishButton, theScreen.screenBottom, wizardBottom, nextId, prevId, cancelId)
+  }
+
+  protected def renderAll(wizardTop: Box[Elem],
+                          screenTop: Box[Elem],
+                          fields: List[WizardFieldInfo],
+                          prev: Box[Elem],
+                          cancel: Box[Elem],
+                          next: Box[Elem],
+                          finish: Box[Elem],
+                          screenBottom: Box[Elem],
+                          wizardBottom: Box[Elem], nextId: String, prevId: String, cancelId: String): NodeSeq = {
+
+    val notices: List[(NoticeType.Value, NodeSeq, Box[String])] = S.getNotices
+
+
+    def bindFieldLine(xhtml: NodeSeq): NodeSeq = {
+
+      fields.flatMap {
+        f =>
+        val myNotices = notices.filter(fi => fi._3.isDefined && fi._3 == f.field.uniqueFieldId)
+        bind("wizard", xhtml, "label" -> f.text, "form" -> f.input,
+             "help" -> NodeSeq.Empty,
+             FuncBindParam("field_errors", xml => {
+              myNotices match {
+                case Nil => NodeSeq.Empty
+                case xs => bind("wizard", xml, "error" ->
+                                (innerXml => xs.flatMap {case (_, msg, _) => bind("wizard", innerXml, "bind" -> msg)}))
+              }
+            }))
+      }
+    }
+
+    def url = S.uri
+
+    val snapshot = createSnapshot
+
+    def doNext() {
+      this.nextScreen
+      if (currentScreen.isEmpty) S.redirectTo(Referer.is)
+    }
+
+
+    def bindFields(xhtml: NodeSeq): NodeSeq =
+    <form id={nextId} action={url} method="post">{S.formGroup(-1)(SHtml.hidden(() => snapshot.restore()))}{
+        bind("wizard", xhtml, "line" -> bindFieldLine _)}{
+        S.formGroup(4)(SHtml.hidden(() => doNext()))}</form> ++
+    <form id={prevId} action={url} method="post">{SHtml.hidden(() => {snapshot.restore(); this.prevScreen})}</form> ++
+    <form id={cancelId} action={url} method="post">{SHtml.hidden(() => {snapshot.restore(); S.redirectTo(Referer.is)})}</form>
+
+    Helpers.bind("wizard", allTemplate,
+                 "screen_number" -> Text(CurrentScreen.is.map(s => (s.myScreenNum + 1).toString) openOr ""),
+                 "total_screens" -> Text(screenCount.toString),
+                 FuncBindParam("wizard_top", xml => (wizardTop.map(top => bind("wizard", xml, "bind" -%> top)) openOr NodeSeq.Empty)),
+                 FuncBindParam("screen_top", xml => (screenTop.map(top => bind("wizard", xml, "bind" -%> top)) openOr NodeSeq.Empty)),
+                 FuncBindParam("wizard_bottom", xml => (wizardBottom.map(bottom => bind("wizard", xml, "bind" -%> bottom)) openOr NodeSeq.Empty)),
+                 FuncBindParam("screen_bottom", xml => (screenBottom.map(bottom => bind("wizard", xml, "bind" -%> bottom)) openOr NodeSeq.Empty)),
+                 "prev" -> (prev openOr Unparsed("&nbsp;")),
+                 "next" -> ((next or finish) openOr Unparsed("&nbsp;")),
+                 "cancel" -> (cancel openOr Unparsed("&nbsp;")),
+                 "errors" -> NodeSeq.Empty,  // FIXME deal with errors
+                 FuncBindParam("fields", bindFields _))
+
+  }
+
+ 
+
+  protected def allTemplatePath: List[String] = WizardRules.allTemplatePath.vend
+
+  protected def allTemplateNodeSeq: NodeSeq =
+  <div>
+    <wizard:wizard_top> <div> <wizard:bind/> </div> </wizard:wizard_top>
+    <wizard:screen_top> <div> <wizard:bind/> </div> </wizard:screen_top>
+    <wizard:errors> <div> <ul> <wizard:item> <li> <wizard:bind/> </li> </wizard:item> </ul> </div> </wizard:errors>
+    <div> <wizard:fields>
+        <table>
+          <wizard:line>
+            <tr>
+              <td>
+                <wizard:label error_style="error"/> <wizard:help/> <wizard:field_errors> <ul> <wizard:error> <li> <wizard:bind/> </li> </wizard:error> </ul> </wizard:field_errors>
+              </td>
+              <td> <wizard:form/> </td>
+            </tr>
+          </wizard:line>
+        </table>
+          </wizard:fields> </div>
+    <div> <table> <tr> <td> <wizard:prev/> </td> <td> <wizard:cancel/> </td> <td> <wizard:next/> </td> </tr> </table> </div>
+    <wizard:screen_bottom> <div> <wizard:bind/> </div> </wizard:screen_bottom>
+    <wizard:wizard_bottom> <div> <wizard:bind/> </div> </wizard:wizard_bottom>
+  </div>
+
+  protected def allTemplate: NodeSeq = TemplateFinder.findAnyTemplate(allTemplatePath) openOr allTemplateNodeSeq
+
+  /**
+   * What additional attributes should be put on the
+   */
+  protected def formAttrs: MetaData = scala.xml.Null
+
+  protected def wizardTop: Box[Elem] = None
+
+  protected def wizardBottom: Box[Elem] = None
 
   class WizardSnapshot(private[wizard] val screenVars: Map[String, (WizardVar[_], Any)],
                        val currentScreen: Box[Screen],
-                       private[wizard] val snapshot: Box[WizardSnapshot]) {
+                       private[wizard] val snapshot: Box[WizardSnapshot],
+                       private val firstScreen: Boolean) {
     def restore() {
       ScreenVars.set(screenVars)
       CurrentScreen.set(currentScreen)
       PrevSnapshot.set(snapshot)
+      OnFirstScreen.set(firstScreen)
     }
   }
-  
+
   private def _register(screen: Screen) {
     _screenList = _screenList ::: List(screen)
   }
 
-  def dbConnections: List[ConnectionIdentifier] = WizardRules.dbConnections
+  def dbConnections: List[ConnectionIdentifier] = WizardRules.dbConnectionsForTransaction.vend
 
   /**
    * The ordered list of Screens
@@ -107,11 +215,16 @@ def toForm = {
   def screens: List[Screen] = _screenList
 
   /**
+   * Total number of screens in the wizard
+   */
+  lazy val screenCount = screens.size
+
+  /**
    * Given the current screen, what's the next screen?
    */
-  def calcScreenAfter(which: Screen): Box[Screen] = 
-    screens.dropWhile(_ ne which).drop(1).firstOption
-  
+  def calcScreenAfter(which: Screen): Box[Screen] =
+  screens.dropWhile(_ ne which).drop(1).firstOption
+
 
   /**
    * What's the first screen in this wizard
@@ -128,7 +241,7 @@ def toForm = {
 
   def currentScreen: Box[Screen] = CurrentScreen.is
 
-  def createSnapshot = new WizardSnapshot(ScreenVars.is, CurrentScreen.is, PrevSnapshot.is)
+  def createSnapshot = new WizardSnapshot(ScreenVars.is, CurrentScreen.is, PrevSnapshot.is, OnFirstScreen.is)
 
   /**
    * This method will be called within a transactional block when the last screen is completed
@@ -136,7 +249,7 @@ def toForm = {
   protected def finish(): Unit
 
   def nextScreen {
-    for {
+    for{
       screen <- CurrentScreen.is
     } {
       screen.validate match {
@@ -145,6 +258,7 @@ def toForm = {
           PrevSnapshot.set(Full(snapshot))
           val nextScreen = screen.nextScreen
           CurrentScreen.set(screen.nextScreen)
+          OnFirstScreen.set(false)
 
           nextScreen match {
             case Empty =>
@@ -168,12 +282,14 @@ def toForm = {
   }
 
   def prevScreen {
-    for {
+    for{
       snapshot <- PrevSnapshot.is
     } {
       snapshot.restore()
     }
   }
+
+  protected def vendForm[T](implicit man: Manifest[T]): Box[(T, T => Unit) => NodeSeq] = Empty
 
   /**
    * By default, are all the fields on all the screen in this wizardn on the confirm screen?
@@ -187,6 +303,7 @@ def toForm = {
     override def toString = screenName
 
     @volatile private[this] var _fieldList: List[Field] = Nil
+
     private def _register(field: Field) {
       _fieldList = _fieldList ::: List(field)
     }
@@ -198,10 +315,14 @@ def toForm = {
 
     val myScreenNum = screens.length
 
+    def screenTop: Box[Elem] = Empty
+
+    def screenBottom: Box[Elem] = Empty
+
     /**
      * The name of the screen.  Override this to change the screen name
      */
-    def screenName: String = "Screen "+(myScreenNum + 1)
+    def screenName: String = "Screen " + (myScreenNum + 1)
 
     def screenNameAsHtml: NodeSeq = Text(screenName)
 
@@ -221,7 +342,10 @@ def toForm = {
 
     def nextScreen: Box[Screen] = calcScreenAfter(this)
 
+  def isLastScreen = nextScreen.isEmpty
+
     implicit def boxOfScreen(in: Screen): Box[Screen] = Box !! in
+
     /**
      * By default, are all the fields on this screen on the confirm screen?
      */
@@ -234,7 +358,10 @@ def toForm = {
      * Is this screen a confirm screen?
      */
     def confirmScreen_? = false
-  
+
+
+    protected def vendForm[T](implicit man: Manifest[T]): Box[(T, T => Unit) => NodeSeq] = Empty
+
     /**
      * Define a field within the screen
      */
@@ -250,7 +377,7 @@ def toForm = {
 
       def is = currentValue.is
 
-def get = is
+      def get = is
 
       def set(v: ValueType) = currentValue.set(v)
 
@@ -271,7 +398,13 @@ def get = is
        */
       def editable_? = true
 
-def toForm: NodeSeq
+      def toForm: NodeSeq = {
+        val func: Box[(ValueType, ValueType => Unit) => NodeSeq] =
+        Screen.this.vendForm(manifest) or Wizard.this.vendForm(manifest) or WizardRules.vendForm(manifest) or
+        LiftRules.vendForm(manifest)
+
+        func.map(f => f(is, set _)) openOr NodeSeq.Empty
+      }
 
       /**
        * Is this field on the confirm screen
@@ -313,16 +446,13 @@ def toForm: NodeSeq
     }
 
     override protected def testWasSet(name: String): Boolean = {
-      val bn = name+"_inited_?"
+      val bn = name + "_inited_?"
       WizardVarHandler.get(name).isDefined || (WizardVarHandler.get(bn) openOr false)
     }
   }
-  
-
-  private[wizard] object WizardVarHandler /* extends LoanWrapper */ {
-    //def vals = ScreenVars.is
 
 
+  private[wizard] object WizardVarHandler {
     def get[T](name: String): Box[T] =
     ScreenVars.is.get(name).map(_._2.asInstanceOf[T])
 
@@ -338,7 +468,9 @@ def toForm: NodeSeq
 trait IntField extends FieldIdentifier {
   self: Wizard#Screen#Field =>
   type ValueType = Int
+
   def default = 0
+
   lazy val manifest = buildIt[Int]
 
   def minVal(len: Int, msg: => String): Int => List[FieldError] = s =>
@@ -346,230 +478,19 @@ trait IntField extends FieldIdentifier {
 
   def maxVal(len: Int, msg: => String): Int => List[FieldError] = s =>
   if (s > len) List(FieldError(this, Text(msg))) else Nil
-
-  def toForm: NodeSeq = SHtml.text(this.is.toString, s => Helpers.asInt(s).foreach(this.set _))
 }
 
 trait StringField extends FieldIdentifier {
   self: Wizard#Screen#Field =>
   type ValueType = String
+
   def default = ""
+
   lazy val manifest = buildIt[String]
 
-  def minLen(len: Int, msg: => String): String => List[FieldError] = s => 
+  def minLen(len: Int, msg: => String): String => List[FieldError] = s =>
   if (s.length < len) List(FieldError(this, Text(msg))) else Nil
 
   def maxLen(len: Int, msg: => String): String => List[FieldError] = s =>
   if (s.length > len) List(FieldError(this, Text(msg))) else Nil
-
-  def toForm: NodeSeq = SHtml.text(this.is, this.set _)
 }
-
-/*
- object Wizard {
- trait Field extends SettableValueHolder {
- def validate: List[FieldError]
-
- /**
-  * Should this field appear on the confirmation page
-  */
- def confirmPage_? = true
-
- def asBindParam: BindParam
-
- /**
-  * The localized display name of this field
-  */
- def displayName: NodeSeq = Text(bindName)
-
- def bindName: String
-
- def toForm: Box[NodeSeq]
- }
-
- trait LocalField extends Field {
- object currentValue extends WizardVar[ValueType](default) {
- override protected def __nameSalt = randomString(20)
- }
-
- def default: ValueType
-
- def is = currentValue.is
-
- def set(v: ValueType) = currentValue.set(v)
-
- }
-
- object Field {
- }
-
- private object NextScreen extends RequestVar[Box[Screen]](Empty) {
- def unapply(x: Any): Option[Screen] = this.is
- }
-
- private object ScreenVars extends RequestVar[Map[String, (WizardVar[_], Any)]](Map())
-
- trait Screen {
- def templateName: Box[String] = Empty
-
- def locale: Locale = S.locale
-
- def template: NodeSeq = templateName.flatMap(s => TemplateFinder.findAnyTemplate(s.roboSplit("/"), locale)) openOr NodeSeq.Empty
-
- def nextScreen: Box[Screen] = Empty
-
- def finished: () => Unit = () => ()
-
- def fields: List[Field] = Nil
-
- def validate: List[FieldError] = fields.flatMap(_.validate)
-
- def howManyMore_? : Box[Int] = Empty
-
- def lastScreen_? = true
-
- def buildContinuation: NodeSeq = {
- val currentScreenVars = ScreenVars.is
- SHtml.hidden(() => ScreenVars.set(currentScreenVars))
- }
-
- def screenContent(in: NodeSeq) = {
-
-
- <form mathod="post" action={S.uri}>{buildContinuation}{bind(bindName, template, fields.map(_.asBindParam): _*)}</form> % formAttrs
- }
-
- def formAttrs: MetaData = Null
-
- def bindName = "wizard"
-
- def &>(other: Screen): Screen = {
- val self = this
- new ProxyScreen {
- def proxyTo = self
-
- override def nextScreen: Box[Screen] = Full(other)
- }
- }
-
- /*
-  def &>[Me <: Screen](other: PartialFunction[Me, Screen]): Screen = {
-  val self = this
-  new ProxyScreen {
-  def proxyTo = self
-  override def nextScreen: Box[Screen] = if ()
-  }
-  }
-  */
- }
-
- trait ProxyScreen extends Screen {
- def proxyTo: Screen
-
- override def dispatch = proxyTo.dispatch
-
- override def templateName: Box[String] = proxyTo.templateName
-
- override def locale: Locale = proxyTo.locale
-
- override def template: NodeSeq = proxyTo.template
-
- override def nextScreen: Box[Screen] = proxyTo.nextScreen
-
- override def finished: () => Unit = proxyTo.finished
-
- override def fields: List[Field] = proxyTo.fields
-
- override def validate: List[FieldError] = proxyTo.validate
-
- override def howManyMore_? : Box[Int] = proxyTo.howManyMore_?
-
- override def lastScreen_? = proxyTo.lastScreen_?
-
- override def buildContinuation: NodeSeq = proxyTo.buildContinuation
-
- override def screenContent(in: NodeSeq) = proxyTo.screenContent(in)
-
-
- override def formAttrs: MetaData = proxyTo.formAttrs
-
- override def bindName = proxyTo.bindName
- }
-
-
- object Screen {
- }
-
- /**
-  * Keep request-local information around without the nastiness of naming session variables
-  * or the type-unsafety of casting the results.
-  * RequestVars share their value through the scope of the current HTTP
-  * request.  They have no value at the beginning of request servicing
-  * and their value is discarded at the end of request processing.  They
-  * are helpful to share values across many snippets.
-  *
-  * @param dflt - the default value of the session variable
-  */
- abstract class WizardVar[T](dflt: => T) extends NonCleanAnyVar[T](dflt) {
- override protected def findFunc(name: String): Box[T] = WizardVarHandler.get(name)
-
- override protected def setFunc(name: String, value: T): Unit = WizardVarHandler.set(name, this, value)
-
- override protected def clearFunc(name: String): Unit = WizardVarHandler.clear(name)
-
- override protected def wasInitialized(name: String): Boolean = {
- val bn = name + "_inited_?"
- val old: Boolean = WizardVarHandler.get(bn) openOr false
- WizardVarHandler.set(bn, this, true)
- old
- }
- }
-
- private object WizardVarHandler /* extends LoanWrapper */ {
- //def vals = ScreenVars.is
-
-
- def get[T](name: String): Box[T] =
- ScreenVars.is.get(name).map(_._2.asInstanceOf[T])
-
-
- def set[T](name: String, from: WizardVar[_], value: T): Unit =
- ScreenVars.set(ScreenVars.is + (name -> (from, value)))
-
- def clear(name: String): Unit =
- ScreenVars.set(ScreenVars.is - name)
- }
-
-
- /*
-  case class WizardPage[T] (
-  val setup: (block: T => T),
-  def next: Option[WizardPage[T],
-  ) {
-  def next_> (block: T => T) =
-  new WizardPage(setup, Wizard(block))
-  def choose...?
-  }
-  object Wizard { def apply(block: T => T) = WizardPage(block, None) }
-
-  Wizard { t =>
-  [bind snippets for first page]
-  } next_> { t =>
-  [second page]
-  } choose {
-  case t if t.something =>
-  next_> { t =>
-  [third if something]
-  } next_> {
-  [fourth, if something]
-  } next_> {
-  [fifth & last, if something]
-  }
-  case t =>
-  next_> {
-  [third and final if not something]
-  }
-  */
- }
-
- */

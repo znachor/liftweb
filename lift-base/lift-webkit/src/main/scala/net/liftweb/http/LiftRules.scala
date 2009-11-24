@@ -1035,7 +1035,18 @@ object LiftRules extends Factory {
   }
 
   /**
-   * When a request is parsed into a Req object, certain suffixes are explicitly split from
+   * Given a type manifest, vend a form
+   */
+    def vendForm[T](implicit man: Manifest[T]): Box[(T, T => Unit) => NodeSeq] = (man.toString match {
+      case "java.lang.String" => Full((s: String, setter: String => Unit) => SHtml.text(s, setter))
+      case "int" => Full((i: Int, setter: Int => Unit) => SHtml.text(i.toString, s => Helpers.asInt(s).foreach(setter)))
+      case _ => Empty
+    }) map (_.asInstanceOf[(T, T => Unit) => NodeSeq])
+
+   // val vendFormFactory = FactoryMaker[Manifest[_] => Box[(_, _ => Unit) => NodeSeq]] = new FactoryMaker(() => 30 seconds) {}
+
+  /**
+   *  When a request is parsed into a Req object, certain suffixes are explicitly split from
    * the last part of the request URI.  If the suffix is contained in this list, it is explicitly split.
    * The default list is: "html", "htm", "jpg", "png", "gif", "xml", "rss", "json"
    */

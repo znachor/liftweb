@@ -30,7 +30,6 @@ import _root_.net.liftweb.util._
 class WizardTest extends Runner(WizardSpec) with JUnit
 object WizardSpec extends Specification {
   val session : LiftSession = new LiftSession("", Helpers.randomString(20), Empty)
-  WizardRules.dbConnections = Nil
 
   val MyWizard = new Wizard {
     object completeInfo extends WizardVar(false)
@@ -47,7 +46,7 @@ object WizardSpec extends Specification {
         override def validation = minLen(2, S ?? "Name Too Short") ::
         maxLen(40, S ?? "Name Too Long") :: super.validation
       }
-      
+
       val age = new Field with IntField {
         def title = S ?? "Age"
 
