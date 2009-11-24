@@ -265,7 +265,7 @@ trait CRUDify[KeyType, CrudType <: KeyedMapper[KeyType, CrudType]] {
 
           def defaultValue = Empty
 
-          def params = Nil
+          def params = deleteMenuLocParams
 
           /**
            * What's the text of the link?
@@ -296,6 +296,12 @@ trait CRUDify[KeyType, CrudType <: KeyedMapper[KeyType, CrudType]] {
           }
         }))
   }
+
+  /**
+   * Override to include new Params for the delete menu
+   */
+  def deleteMenuLocParams: List[Loc.LocParam[CrudType]] = Nil
+
 
   def deleteMenuName = S.??("Delete")+" "+displayName
 
