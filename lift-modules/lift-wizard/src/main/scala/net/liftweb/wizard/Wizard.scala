@@ -23,12 +23,13 @@ import Helpers._
 import _root_.scala.xml._
 import _root_.scala.reflect.Manifest
 
-object WizardRules extends Factory {
+object WizardRules extends Factory with FormVendor {
   val dbConnectionsForTransaction: FactoryMaker[List[ConnectionIdentifier]] =
   new FactoryMaker[List[ConnectionIdentifier]](() => Nil) {}
 
   private def m[T](implicit man: Manifest[T]): Manifest[T] = man
 
+  /*
   private def textInfo(field: SettableValueHolder {type ValueType = String}) = SHtml.text(field.is, field.set _)
 
   private def intInfo(field: SettableValueHolder {type ValueType = Int}) = SHtml.text(field.is.toString, s => Helpers.asInt(s).foreach(field.set _))
@@ -37,9 +38,29 @@ object WizardRules extends Factory {
    * FIXME make configurable
    */
   def vendForm[T](man: Manifest[T]): Box[(T, T => Unit) => NodeSeq] = Empty
+*/
 
   val allTemplatePath: FactoryMaker[List[String]] = new FactoryMaker[List[String]](() => List("templates-hidden", "wizard-all")) {}
+  private object currentWizards extends SessionVar[Set[String]](Set())
 
+  private[wizard] def registerWizardSession(): String = {
+    S.synchronizeForSession {
+      val ret = Helpers.nextFuncName
+      currentWizards.set(currentWizards.is + ret)
+      ret
+    }
+  }
+
+  private[wizard] def isValidWizardSession(id: String): Boolean =
+    S.synchronizeForSession {
+      currentWizards.is.contains(id)
+    }
+
+  private[wizard] def deregisterWizardSession(id: String) {
+    S.synchronizeForSession {
+      currentWizards.set(currentWizards.is - id)
+    }
+  }
 }
 
 case class WizardFieldInfo(field: FieldIdentifier, text: NodeSeq, help: Box[NodeSeq], input: NodeSeq)
@@ -49,47 +70,56 @@ trait Wizard extends DispatchSnippet with Factory {
     case _ => ignore => this.toForm
   }
 
+  implicit def elemInABox(in: Elem): Box[Elem] = Full(in)
+
   @volatile private[this] var _screenList: List[Screen] = Nil
   private object ScreenVars extends RequestVar[Map[String, (WizardVar[_], Any)]](Map())
   protected object CurrentScreen extends RequestVar[Box[Screen]](calcFirstScreen)
   private object PrevSnapshot extends RequestVar[Box[WizardSnapshot]](Empty)
   private object Referer extends WizardVar[String](S.referer openOr "/")
   protected object OnFirstScreen extends RequestVar[Boolean](true)
+  private object FirstTime extends WizardVar[Boolean](true)
+  private object CurrentSession extends WizardVar[String](WizardRules.registerWizardSession())
 
 
   def toForm = {
     Referer.is // touch to capture the referer
+    CurrentSession.is
+
+    if (FirstTime) {
+      FirstTime.set(false)
+      val localSnapshot = createSnapshot
+      S.redirectTo(S.uri, () => localSnapshot.restore)
+    }
+
     val nextId = Helpers.nextFuncName
     val prevId = Helpers.nextFuncName
     val cancelId = Helpers.nextFuncName
 
-    val theScreen = currentScreen openOr S.redirectTo(Referer.is)
+    val theScreen = currentScreen openOr {
+      WizardRules.deregisterWizardSession(CurrentSession.is)
+      S.redirectTo(Referer.is)
+    }
 
     val (nextButton, finishButton) =
     if (!theScreen.isLastScreen)
-    (Full(theScreen.nextButton % ("onclick" -> ("document.getElementById(" + nextId.encJs + ").submit()"))), Empty)
+      (Full(theScreen.nextButton % ("onclick" -> ("document.getElementById(" + nextId.encJs + ").submit()"))), Empty)
     else
-    (Empty, Full(theScreen.finishButton % ("onclick" -> ("document.getElementById(" + nextId.encJs + ").submit()"))))
+      (Empty, Full(theScreen.finishButton % ("onclick" -> ("document.getElementById(" + nextId.encJs + ").submit()"))))
 
     val prevButton: Box[Elem] = if (OnFirstScreen) Empty else
-    Full(theScreen.prevButton % ("onclick" -> ("document.getElementById(" + prevId.encJs + ").submit()")))
+      Full(theScreen.prevButton % ("onclick" -> ("document.getElementById(" + prevId.encJs + ").submit()")))
 
     val cancelButton: Elem = theScreen.cancelButton % ("onclick" -> ("document.getElementById(" + cancelId.encJs + ").submit()"))
 
 
     val url = S.uri
-    val snapshot = createSnapshot
-
-    def doNext() {
-      this.nextScreen
-      if (currentScreen.isEmpty) S.redirectTo(Referer.is)
-    }
 
     renderAll(wizardTop, theScreen.screenTop,
-              theScreen.screenFields.map(f => WizardFieldInfo(f, f.titleAsHtml, f.helpAsHtml, f.toForm)),
-              prevButton, Full(cancelButton),
-              nextButton,
-              finishButton, theScreen.screenBottom, wizardBottom, nextId, prevId, cancelId)
+      theScreen.screenFields.map(f => WizardFieldInfo(f, f.titleAsHtml, f.helpAsHtml, f.toForm)),
+      prevButton, Full(cancelButton),
+      nextButton,
+      finishButton, theScreen.screenBottom, wizardBottom, nextId, prevId, cancelId)
   }
 
   protected def renderAll(wizardTop: Box[Elem],
@@ -102,23 +132,23 @@ trait Wizard extends DispatchSnippet with Factory {
                           screenBottom: Box[Elem],
                           wizardBottom: Box[Elem], nextId: String, prevId: String, cancelId: String): NodeSeq = {
 
-    val notices: List[(NoticeType.Value, NodeSeq, Box[String])] = S.getNotices
+    val notices: List[(NoticeType.Value, NodeSeq, Box[String])] = S.getAllNotices
 
 
     def bindFieldLine(xhtml: NodeSeq): NodeSeq = {
 
       fields.flatMap {
         f =>
-        val myNotices = notices.filter(fi => fi._3.isDefined && fi._3 == f.field.uniqueFieldId)
-        bind("wizard", xhtml, "label" -> f.text, "form" -> f.input,
-             "help" -> NodeSeq.Empty,
-             FuncBindParam("field_errors", xml => {
-              myNotices match {
-                case Nil => NodeSeq.Empty
-                case xs => bind("wizard", xml, "error" ->
-                                (innerXml => xs.flatMap {case (_, msg, _) => bind("wizard", innerXml, "bind" -> msg)}))
-              }
-            }))
+            val myNotices = notices.filter(fi => fi._3.isDefined && fi._3 == f.field.uniqueFieldId)
+            bind("wizard", xhtml, "label" -> f.text, "form" -> f.input,
+              "help" -> NodeSeq.Empty,
+              FuncBindParam("field_errors", xml => {
+                myNotices match {
+                  case Nil => NodeSeq.Empty
+                  case xs => bind("wizard", xml, "error" ->
+                      (innerXml => xs.flatMap {case (_, msg, _) => bind("wizard", innerXml, "bind" -> msg)}))
+                }
+              }))
       }
     }
 
@@ -133,52 +163,53 @@ trait Wizard extends DispatchSnippet with Factory {
 
 
     def bindFields(xhtml: NodeSeq): NodeSeq =
-    <form id={nextId} action={url} method="post">{S.formGroup(-1)(SHtml.hidden(() => snapshot.restore()))}{
-        bind("wizard", xhtml, "line" -> bindFieldLine _)}{
-        S.formGroup(4)(SHtml.hidden(() => doNext()))}</form> ++
-    <form id={prevId} action={url} method="post">{SHtml.hidden(() => {snapshot.restore(); this.prevScreen})}</form> ++
-    <form id={cancelId} action={url} method="post">{SHtml.hidden(() => {snapshot.restore(); S.redirectTo(Referer.is)})}</form>
+      <form id={nextId} action={url} method="post">{S.formGroup(-1)(SHtml.hidden(() => snapshot.restore()))}{bind("wizard", xhtml, "line" -> bindFieldLine _)}{S.formGroup(4)(SHtml.hidden(() => {doNext(); val localSnapshot = createSnapshot; S.redirectTo(url, () => localSnapshot.restore)}))}</form> ++
+          <form id={prevId} action={url} method="post">{SHtml.hidden(() => {snapshot.restore(); this.prevScreen; val localSnapshot = createSnapshot; S.redirectTo(url, () => localSnapshot.restore)})}</form> ++
+          <form id={cancelId} action={url} method="post">{SHtml.hidden(() => {
+            snapshot.restore();
+            WizardRules.deregisterWizardSession(CurrentSession.is)
+            S.redirectTo(Referer.is)
+          })}</form>
 
     Helpers.bind("wizard", allTemplate,
-                 "screen_number" -> Text(CurrentScreen.is.map(s => (s.myScreenNum + 1).toString) openOr ""),
-                 "total_screens" -> Text(screenCount.toString),
-                 FuncBindParam("wizard_top", xml => (wizardTop.map(top => bind("wizard", xml, "bind" -%> top)) openOr NodeSeq.Empty)),
-                 FuncBindParam("screen_top", xml => (screenTop.map(top => bind("wizard", xml, "bind" -%> top)) openOr NodeSeq.Empty)),
-                 FuncBindParam("wizard_bottom", xml => (wizardBottom.map(bottom => bind("wizard", xml, "bind" -%> bottom)) openOr NodeSeq.Empty)),
-                 FuncBindParam("screen_bottom", xml => (screenBottom.map(bottom => bind("wizard", xml, "bind" -%> bottom)) openOr NodeSeq.Empty)),
-                 "prev" -> (prev openOr Unparsed("&nbsp;")),
-                 "next" -> ((next or finish) openOr Unparsed("&nbsp;")),
-                 "cancel" -> (cancel openOr Unparsed("&nbsp;")),
-                 "errors" -> NodeSeq.Empty,  // FIXME deal with errors
-                 FuncBindParam("fields", bindFields _))
+      "screen_number" -> Text(CurrentScreen.is.map(s => (s.myScreenNum + 1).toString) openOr ""),
+      "total_screens" -> Text(screenCount.toString),
+      FuncBindParam("wizard_top", xml => (wizardTop.map(top => bind("wizard", xml, "bind" -%> top)) openOr NodeSeq.Empty)),
+      FuncBindParam("screen_top", xml => (screenTop.map(top => bind("wizard", xml, "bind" -%> top)) openOr NodeSeq.Empty)),
+      FuncBindParam("wizard_bottom", xml => (wizardBottom.map(bottom => bind("wizard", xml, "bind" -%> bottom)) openOr NodeSeq.Empty)),
+      FuncBindParam("screen_bottom", xml => (screenBottom.map(bottom => bind("wizard", xml, "bind" -%> bottom)) openOr NodeSeq.Empty)),
+      "prev" -> (prev openOr Unparsed("&nbsp;")),
+      "next" -> ((next or finish) openOr Unparsed("&nbsp;")),
+      "cancel" -> (cancel openOr Unparsed("&nbsp;")),
+      "errors" -> NodeSeq.Empty, // FIXME deal with errors
+      FuncBindParam("fields", bindFields _))
 
   }
 
- 
 
   protected def allTemplatePath: List[String] = WizardRules.allTemplatePath.vend
 
   protected def allTemplateNodeSeq: NodeSeq =
-  <div>
+    <div>
     <wizard:wizard_top> <div> <wizard:bind/> </div> </wizard:wizard_top>
     <wizard:screen_top> <div> <wizard:bind/> </div> </wizard:screen_top>
     <wizard:errors> <div> <ul> <wizard:item> <li> <wizard:bind/> </li> </wizard:item> </ul> </div> </wizard:errors>
     <div> <wizard:fields>
-        <table>
-          <wizard:line>
-            <tr>
-              <td>
-                <wizard:label error_style="error"/> <wizard:help/> <wizard:field_errors> <ul> <wizard:error> <li> <wizard:bind/> </li> </wizard:error> </ul> </wizard:field_errors>
-              </td>
-              <td> <wizard:form/> </td>
-            </tr>
-          </wizard:line>
-        </table>
-          </wizard:fields> </div>
+    <table>
+    <wizard:line>
+    <tr>
+    <td>
+    <wizard:label error_style="error"/> <wizard:help/> <wizard:field_errors> <ul> <wizard:error> <li> <wizard:bind/> </li> </wizard:error> </ul> </wizard:field_errors>
+    </td>
+    <td> <wizard:form/> </td>
+    </tr>
+    </wizard:line>
+    </table>
+    </wizard:fields> </div>
     <div> <table> <tr> <td> <wizard:prev/> </td> <td> <wizard:cancel/> </td> <td> <wizard:next/> </td> </tr> </table> </div>
     <wizard:screen_bottom> <div> <wizard:bind/> </div> </wizard:screen_bottom>
     <wizard:wizard_bottom> <div> <wizard:bind/> </div> </wizard:wizard_bottom>
-  </div>
+    </div>
 
   protected def allTemplate: NodeSeq = TemplateFinder.findAnyTemplate(allTemplatePath) openOr allTemplateNodeSeq
 
@@ -200,6 +231,9 @@ trait Wizard extends DispatchSnippet with Factory {
       CurrentScreen.set(currentScreen)
       PrevSnapshot.set(snapshot)
       OnFirstScreen.set(firstScreen)
+      if (!WizardRules.isValidWizardSession(CurrentSession.is)) {
+        S.redirectTo(Referer.is)
+      }
     }
   }
 
@@ -223,7 +257,7 @@ trait Wizard extends DispatchSnippet with Factory {
    * Given the current screen, what's the next screen?
    */
   def calcScreenAfter(which: Screen): Box[Screen] =
-  screens.dropWhile(_ ne which).drop(1).firstOption
+    screens.dropWhile(_ ne which).drop(1).firstOption
 
 
   /**
@@ -264,12 +298,14 @@ trait Wizard extends DispatchSnippet with Factory {
             case Empty =>
               def useAndFinish(in: List[ConnectionIdentifier]) {
                 in match {
-                  case Nil => finish()
+                  case Nil =>
+                    WizardRules.deregisterWizardSession(CurrentSession.is)
+                    finish()
 
                   case x :: xs => DB.use(x) {
-                      conn =>
-                      useAndFinish(xs)
-                    }
+                    conn =>
+                        useAndFinish(xs)
+                  }
                 }
               }
               useAndFinish(dbConnections)
@@ -342,7 +378,7 @@ trait Wizard extends DispatchSnippet with Factory {
 
     def nextScreen: Box[Screen] = calcScreenAfter(this)
 
-  def isLastScreen = nextScreen.isEmpty
+    def isLastScreen = nextScreen.isEmpty
 
     implicit def boxOfScreen(in: Screen): Box[Screen] = Box !! in
 
@@ -401,7 +437,7 @@ trait Wizard extends DispatchSnippet with Factory {
       def toForm: NodeSeq = {
         val func: Box[(ValueType, ValueType => Unit) => NodeSeq] =
         Screen.this.vendForm(manifest) or Wizard.this.vendForm(manifest) or WizardRules.vendForm(manifest) or
-        LiftRules.vendForm(manifest)
+            LiftRules.vendForm(manifest)
 
         func.map(f => f(is, set _)) openOr NodeSeq.Empty
       }
@@ -416,6 +452,8 @@ trait Wizard extends DispatchSnippet with Factory {
       def validation: List[ValueType => List[FieldError]] = Nil
 
       override lazy val uniqueFieldId: Box[String] = Full(Helpers.hash(this.getClass.getName))
+
+      override def toString = is.toString
     }
 
     Wizard.this._register(this)
@@ -454,14 +492,14 @@ trait Wizard extends DispatchSnippet with Factory {
 
   private[wizard] object WizardVarHandler {
     def get[T](name: String): Box[T] =
-    ScreenVars.is.get(name).map(_._2.asInstanceOf[T])
+      ScreenVars.is.get(name).map(_._2.asInstanceOf[T])
 
 
     def set[T](name: String, from: WizardVar[_], value: T): Unit =
-    ScreenVars.set(ScreenVars.is + (name -> (from, value)))
+      ScreenVars.set(ScreenVars.is + (name -> (from, value)))
 
     def clear(name: String): Unit =
-    ScreenVars.set(ScreenVars.is - name)
+      ScreenVars.set(ScreenVars.is - name)
   }
 }
 
@@ -474,10 +512,10 @@ trait IntField extends FieldIdentifier {
   lazy val manifest = buildIt[Int]
 
   def minVal(len: Int, msg: => String): Int => List[FieldError] = s =>
-  if (s < len) List(FieldError(this, Text(msg))) else Nil
+      if (s < len) List(FieldError(this, Text(msg))) else Nil
 
   def maxVal(len: Int, msg: => String): Int => List[FieldError] = s =>
-  if (s > len) List(FieldError(this, Text(msg))) else Nil
+      if (s > len) List(FieldError(this, Text(msg))) else Nil
 }
 
 trait StringField extends FieldIdentifier {
@@ -489,8 +527,8 @@ trait StringField extends FieldIdentifier {
   lazy val manifest = buildIt[String]
 
   def minLen(len: Int, msg: => String): String => List[FieldError] = s =>
-  if (s.length < len) List(FieldError(this, Text(msg))) else Nil
+      if (s.length < len) List(FieldError(this, Text(msg))) else Nil
 
   def maxLen(len: Int, msg: => String): String => List[FieldError] = s =>
-  if (s.length > len) List(FieldError(this, Text(msg))) else Nil
+      if (s.length > len) List(FieldError(this, Text(msg))) else Nil
 }

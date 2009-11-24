@@ -1856,6 +1856,16 @@ for {
     private[this] val _sessionLife: Boolean = functionLifespan_?
   }
 
+  /**
+   * Execute code synchronized to the current session object
+   */
+  def synchronizeForSession[T](f: => T): T = {
+    session match {
+      case Full(s) => s.synchronized(f)
+      case _ => f
+    }
+  }
+
   private[http] class ProxyFuncHolder(proxyTo: AFuncHolder, _owner: Box[String]) extends AFuncHolder {
     def this(proxyTo: AFuncHolder) = this (proxyTo, Empty)
 
@@ -1875,7 +1885,7 @@ for {
   }
 
   /**
-   * Impersonates a function that will be called when uploading files
+   *  Impersonates a function that will be called when uploading files
    */
   @serializable
   private final class BinFuncHolder(val func: FileParamHolder => Any, val owner: Box[String]) extends AFuncHolder {
@@ -2102,6 +2112,12 @@ for {
    * Returns the current notices
    */
   def getNotices: List[(NoticeType.Value, NodeSeq, Box[String])] = p_notice.toList
+
+  /**
+   * Returns the current and "old" notices
+   */
+  def getAllNotices: List[(NoticeType.Value, NodeSeq, Box[String])] = p_notice.toList ++ oldNotices.is
+
 
   /**
    * Returns only ERROR notices

@@ -16,6 +16,13 @@
 package webapptest
 
 import _root_.org.mortbay.jetty.Server
+import net.liftweb.example.snippet.MyWizard
+import net.liftweb.http.{S, LiftSession}
+import org.specs.runner.Runner
+import org.specs.runner.JUnit
+import org.specs.Specification
+import net.liftweb.util.Helpers
+import net.liftweb.common.Empty
 //import _root_.org.mortbay.jetty.servlet.Context
 import _root_.org.mortbay.jetty.servlet.ServletHolder
 import _root_.org.mortbay.jetty.webapp.WebAppContext
@@ -48,7 +55,7 @@ object JettyTestServer {
     server_.join()
   }
 
-  def browse(startPath: String, f:(WebTester) => Unit) = {
+  def browse(startPath: String, f: (WebTester) => Unit) = {
     val wc = new WebTester()
     try {
       wc.setScriptingEnabled(false)
@@ -66,3 +73,104 @@ object JettyTestServer {
 
 }
 
+class WizardTest extends Runner(WizardSpec) with JUnit
+object WizardSpec extends Specification {
+  val session: LiftSession = new LiftSession("", Helpers.randomString(20), Empty)
+
+  "A Wizard can be defined" in {
+    MyWizard.nameAndAge.screenName must_== "Screen 1"
+
+    MyWizard.favoritePet.screenName must_== "Screen 3"
+  }
+
+  "A field must have a correct Manifest" in {
+    MyWizard.nameAndAge.age.manifest.erasure.getName must_== classOf[Int].getName
+  }
+
+  "A wizard must transition from first screen to second screen" in {
+    S.initIfUninitted(session) {
+      MyWizard.currentScreen.open_! must_== MyWizard.nameAndAge
+
+      MyWizard.nextScreen
+
+      MyWizard.currentScreen.open_! must_== MyWizard.nameAndAge
+
+      MyWizard.nameAndAge.name.set("David")
+      MyWizard.nameAndAge.age.set(14)
+
+      MyWizard.nextScreen
+
+      MyWizard.currentScreen.open_! must_== MyWizard.parentName
+
+      MyWizard.prevScreen
+
+      MyWizard.currentScreen.open_! must_== MyWizard.nameAndAge
+
+      MyWizard.nameAndAge.age.set(45)
+
+      MyWizard.nextScreen
+
+      MyWizard.currentScreen.open_! must_== MyWizard.favoritePet
+
+      S.clearCurrentNotices
+
+      MyWizard.favoritePet.petName.set("Elwood")
+
+      MyWizard.nextScreen
+
+      MyWizard.currentScreen must_== Empty
+
+      MyWizard.completeInfo.is must_== true
+    }
+  }
+
+  "A wizard must be able to snapshot itself" in {
+    val ss = S.initIfUninitted(session) {
+      MyWizard.currentScreen.open_! must_== MyWizard.nameAndAge
+
+      MyWizard.nextScreen
+
+      MyWizard.currentScreen.open_! must_== MyWizard.nameAndAge
+
+      MyWizard.nameAndAge.name.set("David")
+      MyWizard.nameAndAge.age.set(14)
+
+      MyWizard.nextScreen
+
+      MyWizard.currentScreen.open_! must_== MyWizard.parentName
+
+      MyWizard.createSnapshot
+    }
+
+    S.initIfUninitted(session) {
+      MyWizard.currentScreen.open_! must_== MyWizard.nameAndAge
+
+
+    }
+
+
+    S.initIfUninitted(session) {
+      ss.restore()
+
+      MyWizard.prevScreen
+
+      MyWizard.currentScreen.open_! must_== MyWizard.nameAndAge
+
+      MyWizard.nameAndAge.age.set(45)
+
+      MyWizard.nextScreen
+
+      MyWizard.currentScreen.open_! must_== MyWizard.favoritePet
+
+      S.clearCurrentNotices
+
+      MyWizard.favoritePet.petName.set("Elwood")
+
+      MyWizard.nextScreen
+
+      MyWizard.currentScreen must_== Empty
+
+      MyWizard.completeInfo.is must_== true
+    }
+  }
+}
