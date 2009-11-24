@@ -96,7 +96,8 @@
              <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
              <properties>
                <archetypeCatalog>local</archetypeCatalog>
-               <archetypeRepository>local</archetypeRepository>
+               <!--<archetypeRepository>local</archetypeRepository>-->
+               <archetypeRepository>${settings.localRepository}</archetypeRepository>
                <archetypeGroupId>${project.groupId}</archetypeGroupId>
                <archetypeArtifactId>${project.artifactId}</archetypeArtifactId>
                <archetypeVersion>${project.version}</archetypeVersion>
