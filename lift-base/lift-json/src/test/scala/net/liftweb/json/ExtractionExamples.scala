@@ -58,7 +58,7 @@ object ExtractionExamples extends Specification {
     parse("""{ "elems": [1,2,3] }""").extract[OList] mustEqual OList(Some(List(1,2,3)))
   }
 
-  "Missing List can be extracted as an empty List" in {
+  "Missing JSON array can be extracted as an empty List" in {
     parse(missingChildren).extract[Person] mustEqual Person("joe", Address("Bulevard", "Helsinki"), Nil)
   }
 
