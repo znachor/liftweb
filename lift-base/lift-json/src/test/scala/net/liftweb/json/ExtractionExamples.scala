@@ -58,6 +58,10 @@ object ExtractionExamples extends Specification {
     parse("""{ "elems": [1,2,3] }""").extract[OList] mustEqual OList(Some(List(1,2,3)))
   }
 
+  "Missing List can be extracted as an empty List" in {
+    parse(missingChildren).extract[Person] mustEqual Person("joe", Address("Bulevard", "Helsinki"), Nil)
+  }
+
   /* Does not work yet.
   "List extraction example" in {
     val json = parse(testJson)
@@ -88,6 +92,17 @@ object ExtractionExamples extends Specification {
       "age": 3
     }
   ]
+}
+"""
+
+  val missingChildren =
+"""
+{
+  "name": "joe",
+  "address": {
+    "street": "Bulevard",
+    "city": "Helsinki"
+  }
 }
 """
 

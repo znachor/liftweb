@@ -109,7 +109,7 @@ object Extraction {
         }
         newInstance(targetType, args.flatMap(build(newRoot, _, argStack)), newRoot) :: Nil
       case ListConstructor(path, targetType, args) => 
-        val arr = fieldValue(root, path).asInstanceOf[JArray]
+        val arr = safeFieldValue(root, path).getOrElse(JArray(Nil)).asInstanceOf[JArray]
         arr.arr.map(elem => newInstance(targetType, args.flatMap(build(elem, _, argStack)), elem)) :: argStack
       case ListOfPrimitives(path, elementType) =>
         val arr = fieldValue(root, path).asInstanceOf[JArray]
@@ -127,9 +127,13 @@ object Extraction {
         }
     }
 
-    def fieldValue(json: JValue, path: String) = (json \ path) match {
-      case JField(_, value) => value
-      case x => fail("Expected JField but got " + x + ", json='" + json + "', path='" + path + "'")
+    def safeFieldValue(json: JValue, path: String) = (json \ path) match {
+      case JField(_, value) => Some(value)
+      case x => None
+    }
+
+    def fieldValue(json: JValue, path: String) = safeFieldValue(json, path).getOrElse {
+      fail("Expected JField but got " + (json \ path) + ", json='" + json + "', path='" + path + "'")
     }
 
     build(json, mapping, Nil).head.asInstanceOf[A]
