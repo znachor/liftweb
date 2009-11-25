@@ -687,7 +687,10 @@ object LiftRules extends Factory {
   }
 
   /**
-   * Obtain the resource as an XML by name
+   * Obtain the resource as an XML by name. If you're using this to load a template, consider using
+   * the TemplateFinder object instead.
+   *
+   * @see TemplateFinder
    */
   def loadResourceAsXml(name: String): Box[NodeSeq] = loadResourceAsString(name).flatMap(s => PCDataXmlParser(s))
 
