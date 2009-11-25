@@ -82,10 +82,10 @@
     ~ Modules Setting
   -->
   <modules>
+    <module>lift-wizard</module>
     <!-- FIXME 280
     <module>lift-testkit</module>
     <module>lift-osgi</module>
-    <module>lift-wizard</module>
     <module>lift-widgets</module>
     <module>lift-machine</module>
     -->

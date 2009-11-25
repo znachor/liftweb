@@ -225,7 +225,9 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
                       by: QueryParam[A]*):
   List[A] = findMapFieldDb(dbId, fields, by :_*)(v => Full(v))
 
-  private def dealWithPrecache(ret: List[A], by: Seq[QueryParam[A]]): List[A] = {
+  private def dealWithPrecache(ret: List[A], by: Seq[QueryParam[A]]): List[A] = ret
+  /* FIXME 280
+  {
 
     val precache: List[PreCache[A, _, _]] = by.toList.flatMap{case j: PreCache[A, _, _] => List[PreCache[A, _, _]](j) case _ => Nil}
     for (j <- precache) {
@@ -267,8 +269,8 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
 
       for (i <- ret) {
 
-        val field: MappedForeignKey[FT, A, _] =
-        getActualField(i, j.field).asInstanceOf[MappedForeignKey[FT, A, _]]
+        val field: MappedForeignKey[FT, A, MT] =
+        getActualField(i, j.field).asInstanceOf[MappedForeignKey[FT, A, MT]]
 
         map.get(field.is) match {
           case Some(v) => field._primeObj(Full(v))
@@ -280,6 +282,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
 
     ret
   }
+  */
 
   def findAll(by: QueryParam[A]*): List[A] =
   dealWithPrecache(findMapDb(dbDefaultConnectionIdentifier, by :_*)
