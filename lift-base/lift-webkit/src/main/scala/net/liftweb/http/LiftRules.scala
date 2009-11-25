@@ -33,7 +33,7 @@ import auth._
 import _root_.java.util.concurrent.{ConcurrentHashMap => CHash}
 import _root_.scala.reflect.Manifest
 
-object LiftRules extends Factory {
+object LiftRules extends Factory with FormVendor {
   val noticesContainerId = "lift__noticesContainer__"
 
   type DispatchPF = PartialFunction[Req, () => Box[LiftResponse]];
@@ -687,7 +687,10 @@ object LiftRules extends Factory {
   }
 
   /**
-   * Obtain the resource as an XML by name
+   * Obtain the resource as an XML by name. If you're using this to load a template, consider using
+   * the TemplateFinder object instead.
+   *
+   * @see TemplateFinder
    */
   def loadResourceAsXml(name: String): Box[NodeSeq] = loadResourceAsString(name).flatMap(s => PCDataXmlParser(s))
 
@@ -1031,13 +1034,46 @@ object LiftRules extends Factory {
     when.is
   }
 
+
+
+   // val vendFormFactory = FactoryMaker[Manifest[_] => Box[(_, _ => Unit) => NodeSeq]] = new FactoryMaker(() => 30 seconds) {}
+
   /**
-   * When a request is parsed into a Req object, certain suffixes are explicitly split from
+   *  When a request is parsed into a Req object, certain suffixes are explicitly split from
    * the last part of the request URI.  If the suffix is contained in this list, it is explicitly split.
    * The default list is: "html", "htm", "jpg", "png", "gif", "xml", "rss", "json"
    */
-  @volatile var explicitlyParsedSuffixes: Set[String] =
-  Set("html", "htm", "jpg", "png", "gif", "xml", "rss", "json")
+  @volatile var explicitlyParsedSuffixes: Set[String] = Set("json","rss","atom","do","3dm",
+    "3dmf","a","aab","aam","aas","abc","acgi","afl","ai","aif","aifc","aiff",
+    "aim","aip","ani","aos","aps","arc","arj","art","asf","asm","asp","asx","au","avi","avs",
+    "bcpio","bin","bm","bmp","boo","book","boz","bsh","bz","bz2","c","c++","cat","cc","ccad",
+    "cco","cdf","cer","cha","chat","class","com","conf","cpio","cpp","cpt","crl","crt","csh",
+    "css","cxx","dcr","deepv","def","der","dif","dir","dl","doc","dot","dp","drw","dump","dv",
+    "dvi","dwf","dwg","dxf","dxr","el","elc","env","eps","es","etx","evy","exe","f","f77",
+    "f90","fdf","fif","fli","flo","flx","fmf","for","fpx","frl","funk","g","g3","gif","gl","gsd",
+    "gsm","gsp","gss","gtar","gz","gzip","h","hdf","help","hgl","hh","hlb","hlp","hpg","hpgl",
+    "hqx","hta","htc","htm","html","htmls","htt","htx","ice","ico","idc","ief","iefs","iges","igs",
+    "ima","imap","inf","ins","ip","isu","it","iv","ivr","ivy","jam","jav","java","jcm","jfif",
+    "jfif-tbnl","jpe","jpeg","jpg","jps","js","jut","kar","ksh","la","lam","latex","lha","lhx",
+    "list","lma","log","lsp","lst","lsx","ltx","lzh","lzx","m","m1v","m2a","m2v","m3u","man","map",
+    "mar","mbd","mc$","mcd","mcf","mcp","me","mht","mhtml","mid","midi","mif","mime","mjf","mjpg",
+    "mm","mme","mod","moov","mov","movie","mp2","mp3","mpa","mpc","mpe","mpeg","mpg","mpga","mpp",
+    "mpt","mpv","mpx","mrc","ms","mv","my","mzz","nap","naplps","nc","ncm","nif","niff","nix",
+    "nsc","nvd","o","oda","omc","omcd","omcr","p","p10","p12","p7a","p7c","p7m","p7r","p7s","part",
+    "pas","pbm","pcl","pct","pcx","pdb","pdf","pfunk","pgm","pic","pict","pkg","pko","pl","plx","pm",
+    "pm4","pm5","png","pnm","pot","pov","ppa","ppm","pps","ppt","ppz","pre","prt","ps","psd",
+    "pvu","pwz","py","pyc","qcp","qd3","qd3d","qif","qt","qtc","qti","qtif","ra","ram","ras",
+    "rast","rexx","rf","rgb","rm","rmi","rmm","rmp","rng","rnx","roff","rp","rpm","rt","rtf","rtx",
+    "rv","s","s3m","saveme","sbk","scm","sdml","sdp","sdr","sea","set","sgm","sgml","sh","shar",
+    "shtml","sid","sit","skd","skm","skp","skt","sl","smi","smil","snd","sol","spc","spl","spr",
+    "sprite","src","ssi","ssm","sst","step","stl","stp","sv4cpio","sv4crc","svf","svr","swf","t",
+    "talk","tar","tbk","tcl","tcsh","tex","texi","texinfo","text","tgz","tif","tiff","tr","tsi",
+    "tsp","tsv","turbot","txt","uil","uni","unis","unv","uri","uris","ustar","uu","uue","vcd","vcs",
+    "vda","vdo","vew","viv","vivo","vmd","vmf","voc","vos","vox","vqe","vqf","vql","vrml","vrt",
+    "vsd","vst","vsw","w60","w61","w6w","wav","wb1","wbmp","web","wiz","wk1","wmf","wml","wmlc",
+    "wmls","wmlsc","word","wp","wp5","wp6","wpd","wq1","wri","wrl","wrz","wsc","wsrc","wtk","x-png",
+    "xbm","xdr","xgz","xif","xl","xla","xlb","xlc","xld","xlk","xll","xlm","xls","xlt","xlv","xlw",
+    "xm","xml","xmz","xpix","xpm","xsr","xwd","xyz","z","zip","zoo","zsh")
 
   /**
    * The global multipart progress listener:
@@ -1126,6 +1162,12 @@ object LiftRules extends Factory {
    * @see RequestVar#logUnreadVal
    */
   @volatile var logUnreadRequestVars = true
+
+  private def ctor() {
+    appendGlobalFormBuilder(FormBuilderLocator[String]((value, setter) => SHtml.text(value, setter)))
+    appendGlobalFormBuilder(FormBuilderLocator[Int]((value, setter) => SHtml.text(value.toString, s => Helpers.asInt(s).foreach((setter)))))
+  }
+  ctor()
 }
 
 case object BreakOut
@@ -1253,4 +1295,82 @@ abstract class GenericValidtor extends XHtmlValidator {
 
 object TransitionalXHTML1_0Validator extends GenericValidtor {
   val ngurl = "http://www.w3.org/2002/08/xhtml/xhtml1-transitional.xsd"
+}
+
+
+trait FormVendor {
+  /**
+   * Given a type manifest, vend a form
+   */
+  def vendForm[T](implicit man: Manifest[T]): Box[(T, T => Unit) => NodeSeq] = {
+    val name = man.toString
+    val first: Option[List[FormBuilderLocator[_]]] = requestForms.is.get(name) orElse sessionForms.is.get(name)
+
+    first match {
+      case Some(x :: _) => Full(x.func.asInstanceOf[(T, T => Unit) => NodeSeq])
+      case _ => if (globalForms.containsKey(name)) {
+        globalForms.get(name).headOption.map(_.func.asInstanceOf[(T, T => Unit) => NodeSeq])
+      } else Empty
+    }
+  }
+
+  private val globalForms: CHash[String, List[FormBuilderLocator[_]]] = new CHash
+
+  def prependGlobalFormBuilder[T](builder: FormBuilderLocator[T]) {
+    globalForms.synchronized {
+      val name = builder.manifest.toString
+      if (globalForms.containsKey(name)) {
+        globalForms.put(name, builder :: globalForms.get(name))
+      } else {
+        globalForms.put(name, List(builder))
+      }
+    }
+  }
+
+  def appendGlobalFormBuilder[T](builder: FormBuilderLocator[T]) {
+    globalForms.synchronized {
+      val name = builder.manifest.toString
+      if (globalForms.containsKey(name)) {
+        globalForms.put(name, builder :: globalForms.get(name))
+      } else {
+        globalForms.put(name, List(builder))
+      }
+    }
+  }
+
+  def prependSessionFormBuilder[T](builder: FormBuilderLocator[T]) {
+    sessionForms.set(prependBuilder(builder, sessionForms))
+  }
+
+  def appendSessionFormBuilder[T](builder: FormBuilderLocator[T]) {
+    sessionForms.set(appendBuilder(builder, sessionForms))
+  }
+
+  def prependRequestFormBuilder[T](builder: FormBuilderLocator[T]) {
+    requestForms.set(prependBuilder(builder, requestForms))
+  }
+
+  def appendRequestFormBuilder[T](builder: FormBuilderLocator[T]) {
+    requestForms.set(appendBuilder(builder, requestForms))
+  }
+
+  def doWith[F, T](builder: FormBuilderLocator[T])(f: => F): F =
+    requestForms.doWith(prependBuilder(builder, requestForms))(f)
+
+
+  private def prependBuilder(builder: FormBuilderLocator[_], to: Map[String, List[FormBuilderLocator[_]]]):
+  Map[String, List[FormBuilderLocator[_]]] = {
+    val name = builder.manifest.toString
+    to + (name -> (builder :: to.getOrElse(name, Nil)))
+  }
+
+  private def appendBuilder(builder: FormBuilderLocator[_], to: Map[String, List[FormBuilderLocator[_]]]):
+  Map[String, List[FormBuilderLocator[_]]] = {
+    val name = builder.manifest.toString
+    to + (name -> (builder :: to.getOrElse(name, Nil)))
+  }
+
+
+  private object sessionForms extends SessionVar[Map[String, List[FormBuilderLocator[_]]]](Map())
+  private object requestForms extends SessionVar[Map[String, List[FormBuilderLocator[_]]]](Map())
 }

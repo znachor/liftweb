@@ -603,9 +603,11 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
                   try {
                     fnc()
                   } finally {
+                    /* Sometimes we need the func to stay around
                     LiftSession.this.synchronized {
                       messageCallback -= funcName
                     }
+                    */
                   }
                 })
                 funcName
@@ -783,7 +785,7 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
         )
 
       override def apply(in: FileParamHolder): Any =
-        requestVarFunc(() => 
+        requestVarFunc(() =>
           S.init(req, session){
             S.CurrentLocation.doWith(curLoc) {
               snippetMap.doWith(snippetMap.is ++ currentMap) {

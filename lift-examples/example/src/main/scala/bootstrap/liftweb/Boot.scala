@@ -28,11 +28,10 @@ import example._
 import comet._
 import model._
 import lib._
-import snippet.{definedLocale, Template, AllJson, RuntimeStats}
-
 import _root_.net.liftweb.mapper.{DB, ConnectionManager, Schemifier, DefaultConnectionIdentifier, ConnectionIdentifier}
 
 import _root_.java.sql.{Connection, DriverManager}
+import snippet._
 
 
 /**
@@ -57,14 +56,19 @@ class Boot {
     XmlServer.init()
 
     LiftRules.dispatch.prepend(NamedPF("Login Validation") {
-        case Req("login" :: page , "", _)
-          if !LoginStuff.is && page.head != "validate" =>
-          () => Full(RedirectResponse("/login/validate"))
-      })
+      case Req("login" :: page, "", _)
+        if !LoginStuff.is && page.head != "validate" =>
+        () => Full(RedirectResponse("/login/validate"))
+    })
 
     LiftRules.snippetDispatch.append(NamedPF("Template")
-                                     (Map("Template" -> Template,
-                                          "AllJson" -> AllJson)))
+          (Map("Template" -> Template,
+      "AllJson" -> AllJson)))
+
+    LiftRules.snippetDispatch.append {
+      case "MyWizard" => MyWizard
+      case "WizardChallenge" => WizardChallenge
+    }
 
     LiftRules.snippetDispatch.append(Map("runtime_stats" -> RuntimeStats))
 
@@ -72,29 +76,29 @@ class Boot {
      * Show the spinny image when an Ajax call starts
      */
     LiftRules.ajaxStart =
-    Full(() => LiftRules.jsArtifacts.show("ajax-loader").cmd)
+        Full(() => LiftRules.jsArtifacts.show("ajax-loader").cmd)
 
     /*
      * Make the spinny image go away when it ends
      */
     LiftRules.ajaxEnd =
-    Full(() => LiftRules.jsArtifacts.hide("ajax-loader").cmd)
+        Full(() => LiftRules.jsArtifacts.hide("ajax-loader").cmd)
 
     LiftRules.early.append(makeUtf8)
 
     LiftSession.onBeginServicing = RequestLogger.beginServicing _ ::
-    LiftSession.onBeginServicing
+        LiftSession.onBeginServicing
 
     LiftSession.onEndServicing = RequestLogger.endServicing _ ::
-    LiftSession.onEndServicing
+        LiftSession.onEndServicing
 
-    LiftRules.setSiteMap(SiteMap(MenuInfo.menu :_*))
+    LiftRules.setSiteMap(SiteMap(MenuInfo.menu: _*))
 
     ThingBuilder.boot()
 
     // Dump information about session every 10 minutes
-    SessionMaster.sessionWatchers = SessionInfoDumper :: 
-    SessionMaster.sessionWatchers
+    SessionMaster.sessionWatchers = SessionInfoDumper ::
+        SessionMaster.sessionWatchers
 
     // Dump browser information each time a new connection is made
     LiftSession.onBeginServicing = BrowserLogger.haveSeenYou _ :: LiftSession.onBeginServicing
@@ -114,63 +118,65 @@ object RequestLogger {
   def endServicing(session: LiftSession, req: Req,
                    response: Box[LiftResponse]) {
     val delta = millis - startTime.is
-    Log.info("At "+(timeNow)+" Serviced "+req.uri+" in "+(delta)+"ms "+(
-        response.map(r => " Headers: "+r.toResponse.headers) openOr ""
-      ))
+    Log.info("At " + (timeNow) + " Serviced " + req.uri + " in " + (delta) + "ms " + (
+        response.map(r => " Headers: " + r.toResponse.headers) openOr ""
+        ))
   }
 }
 
 object MenuInfo {
   import Loc._
 
-  def menu: List[Menu] =  Menu(Loc("home", List("index"), "Home")) ::
-  Menu(Loc("Interactive", List("interactive"), "Interactive Stuff"),
-       Menu(Loc("chat", List("chat"), "Comet Chat", Unless(() => Props.inGAE, "Disabled for GAE"))),
-       Menu(Loc("longtime", List("longtime"), "Updater", Unless(() => Props.inGAE, "Disabled for GAE"))),
-       Menu(Loc("ajax", List("ajax"), "AJAX Samples")),
-       Menu(Loc("ajax form", List("ajax-form"), "AJAX Form")),
-       Menu(Loc("js confirm", List("rhodeisland"), "Modal Dialog")),
-       Menu(Loc("json", List("json"), "JSON Messaging")),
-       Menu(Loc("json_more", List("json_more"), "More JSON")),
-       Menu(Loc("form_ajax", List("form_ajax"), "Ajax and Forms"))
-  ) ::
-  Menu(Loc("Persistence", List("persistence"), "Persistence", Unless(() => Props.inGAE, "Disabled for GAE")),
-       Menu(Loc("xml fun", List("xml_fun"), "XML Fun", Unless(() => Props.inGAE, "Disabled for GAE"))),
-       Menu(Loc("database", List("database"), "Database", Unless(() => Props.inGAE, "Disabled for GAE"))),
-       Menu(Loc("simple", Link(List("simple"), true, "/simple/index"),
-                "Simple Forms", Unless(() => Props.inGAE, "Disabled for GAE"))),
-       Menu(Loc("template", List("template"), "Templates", Unless(() => Props.inGAE, "Disabled for GAE")))) ::
-  Menu(Loc("Templating", List("templating", "index"), "Templating"),
-       Menu(Loc("Surround", List("templating", "surround"), "Surround")),
-       Menu(Loc("Embed", List("templating", "embed"), "Embed")),
-       Menu(Loc("eval-order", List("templating", "eval_order"), "Evalutation Order")),
-       Menu(Loc("select-o-matuc", List("templating", "selectomatic"), "Select <div>s")),
+  def menu: List[Menu] = Menu(Loc("home", List("index"), "Home")) ::
+      Menu(Loc("Interactive", List("interactive"), "Interactive Stuff"),
+        Menu(Loc("chat", List("chat"), "Comet Chat", Unless(() => Props.inGAE, "Disabled for GAE"))),
+        Menu(Loc("longtime", List("longtime"), "Updater", Unless(() => Props.inGAE, "Disabled for GAE"))),
+        Menu(Loc("ajax", List("ajax"), "AJAX Samples")),
+        Menu(Loc("ajax form", List("ajax-form"), "AJAX Form")),
+        Menu(Loc("js confirm", List("rhodeisland"), "Modal Dialog")),
+        Menu(Loc("json", List("json"), "JSON Messaging")),
+        Menu(Loc("json_more", List("json_more"), "More JSON")),
+        Menu(Loc("form_ajax", List("form_ajax"), "Ajax and Forms"))
+        ) ::
+      Menu(Loc("Persistence", List("persistence"), "Persistence", Unless(() => Props.inGAE, "Disabled for GAE")),
+        Menu(Loc("xml fun", List("xml_fun"), "XML Fun", Unless(() => Props.inGAE, "Disabled for GAE"))),
+        Menu(Loc("database", List("database"), "Database", Unless(() => Props.inGAE, "Disabled for GAE"))),
+        Menu(Loc("simple", Link(List("simple"), true, "/simple/index"),
+          "Simple Forms", Unless(() => Props.inGAE, "Disabled for GAE"))),
+        Menu(Loc("template", List("template"), "Templates", Unless(() => Props.inGAE, "Disabled for GAE")))) ::
+      Menu(Loc("Templating", List("templating", "index"), "Templating"),
+        Menu(Loc("Surround", List("templating", "surround"), "Surround")),
+        Menu(Loc("Embed", List("templating", "embed"), "Embed")),
+        Menu(Loc("eval-order", List("templating", "eval_order"), "Evalutation Order")),
+        Menu(Loc("select-o-matuc", List("templating", "selectomatic"), "Select <div>s")),
         Menu(Loc("Simple Wizard", List("simple_wizard"), "Simple Wizard")),
-       Menu(Loc("head", List("templating", "head"), "<head/> tag"))) ::
-  Menu(Loc("ws", List("ws"), "Web Services", Unless(() => Props.inGAE, "Disabled for GAE"))) ::
-  Menu(Loc("lang", List("lang"), "Localization")) ::
-  Menu(Loc("menu_top", List("menu", "index"), "Menus"),
-       Menu(Loc("menu_one", List("menu", "one"), "First Submenu")),
-       Menu(Loc("menu_two", List("menu", "two"), "Second Submenu (has more)"),
-            Menu(Loc("menu_two_one", List("menu", "two_one"),
-                     "First (2) Submenu")),
-            Menu(Loc("menu_two_two", List("menu", "two_two"),
-                     "Second (2) Submenu"))
-	  ),
-       Menu(Loc("menu_three", List("menu", "three"), "Third Submenu")),
-       Menu(Loc("menu_four", List("menu", "four"), "Forth Submenu"))
-  ) ::
-  Menu(WikiStuff) ::
-  Menu(Loc("Misc", List("misc"), "Misc code"),
-       Menu(Loc("guess", List("guess"), "Number Guessing")),
-       Menu(Loc("arc", List("arc"), "Arc Challenge #1")) ,
-       Menu(Loc("file_upload", List("file_upload"), "File Upload")),
-       Menu(Loc("login", Link(List("login"), true, "/login/index"),
-                <xml:group>Requiring Login <strike>SiteMap</strike></xml:group>)),
-       Menu(Loc("count", List("count"), "Counting"))) ::
-  Menu(Loc("lift", ExtLink("http://liftweb.net"),
-           <xml:group><i>Lift</i> project home</xml:group>)) ::
-  Nil
+        Menu(Loc("head", List("templating", "head"), "<head/> tag"))) ::
+      Menu(Loc("ws", List("ws"), "Web Services", Unless(() => Props.inGAE, "Disabled for GAE"))) ::
+      Menu(Loc("lang", List("lang"), "Localization")) ::
+      Menu(Loc("menu_top", List("menu", "index"), "Menus"),
+        Menu(Loc("menu_one", List("menu", "one"), "First Submenu")),
+        Menu(Loc("menu_two", List("menu", "two"), "Second Submenu (has more)"),
+          Menu(Loc("menu_two_one", List("menu", "two_one"),
+            "First (2) Submenu")),
+          Menu(Loc("menu_two_two", List("menu", "two_two"),
+            "Second (2) Submenu"))
+          ),
+        Menu(Loc("menu_three", List("menu", "three"), "Third Submenu")),
+        Menu(Loc("menu_four", List("menu", "four"), "Forth Submenu"))
+        ) ::
+      Menu(WikiStuff) ::
+      Menu(Loc("Misc", List("misc"), "Misc code"),
+        Menu(Loc("guess", List("guess"), "Number Guessing")),
+        Menu(Loc("Wiz", List("wiz"), "Wizard")),
+        Menu(Loc("Wiz2", List("wiz2"), "Wizard Challenge")),
+        Menu(Loc("arc", List("arc"), "Arc Challenge #1")),
+        Menu(Loc("file_upload", List("file_upload"), "File Upload")),
+        Menu(Loc("login", Link(List("login"), true, "/login/index"),
+          <xml:group>Requiring Login<strike>SiteMap</strike> </xml:group>)),
+        Menu(Loc("count", List("count"), "Counting"))) ::
+      Menu(Loc("lift", ExtLink("http://liftweb.net"),
+        <xml:group> <i>Lift</i>project home</xml:group>)) ::
+      Nil
 }
 
 /**
@@ -183,7 +189,7 @@ object DBVendor extends ConnectionManager {
 
   private lazy val chooseDriver = Props.mode match {
     case Props.RunModes.Production => "org.apache.derby.jdbc.EmbeddedDriver"
-    case _ =>  "org.h2.Driver"
+    case _ => "org.h2.Driver"
   }
 
 
@@ -215,30 +221,30 @@ object DBVendor extends ConnectionManager {
   }
 
   def newConnection(name: ConnectionIdentifier): Box[Connection] =
-  synchronized {
-    pool match {
-      case Nil if poolSize < maxPoolSize =>
-        val ret = createOne
-        poolSize = poolSize + 1
-        ret.foreach(c => pool = c :: pool)
-        ret
+    synchronized {
+      pool match {
+        case Nil if poolSize < maxPoolSize =>
+          val ret = createOne
+          poolSize = poolSize + 1
+          ret.foreach(c => pool = c :: pool)
+          ret
 
-      case Nil => wait(1000L); newConnection(name)
-      case x :: xs => try {
+        case Nil => wait(1000L); newConnection(name)
+        case x :: xs => try {
           x.setAutoCommit(false)
           Full(x)
         } catch {
           case e => try {
-              pool = xs
-              poolSize = poolSize - 1
-              x.close
-              newConnection(name)
-            } catch {
-              case e => newConnection(name)
-            }
+            pool = xs
+            poolSize = poolSize - 1
+            x.close
+            newConnection(name)
+          } catch {
+            case e => newConnection(name)
+          }
         }
+      }
     }
-  }
 
   def releaseConnection(conn: Connection): Unit = synchronized {
     pool = conn :: pool
@@ -251,7 +257,7 @@ object BrowserLogger {
 
   def haveSeenYou(session: LiftSession, request: Req) {
     if (!HaveSeenYou.is) {
-      Log.info("Created session "+session.uniqueId+" IP: {"+request.request.remoteAddress+"} UserAgent: {{"+request.userAgent.openOr("N/A")+"}}")
+      Log.info("Created session " + session.uniqueId + " IP: {" + request.request.remoteAddress + "} UserAgent: {{" + request.userAgent.openOr("N/A") + "}}")
       HaveSeenYou(true)
     }
   }
@@ -261,6 +267,7 @@ object SessionInfoDumper extends LiftActor {
   private var lastTime = millis
 
   val tenMinutes: Long = 10 minutes
+
   protected def messageHandler =
     {
       case SessionWatcherInfo(sessions) =>
@@ -268,21 +275,21 @@ object SessionInfoDumper extends LiftActor {
           lastTime = millis
           val rt = Runtime.getRuntime
           rt.gc
-	  
+
           RuntimeStats.lastUpdate = timeNow
-            RuntimeStats.totalMem = rt.totalMemory
+          RuntimeStats.totalMem = rt.totalMemory
           RuntimeStats.freeMem = rt.freeMemory
           RuntimeStats.sessions = sessions.size
-	  
+
           val dateStr: String = timeNow.toString
-          Log.info("[MEMDEBUG] At "+dateStr+" Number of open sessions: "+sessions.size)
-          Log.info("[MEMDEBUG] Free Memory: "+pretty(rt.freeMemory))
-          Log.info("[MEMDEBUG] Total Memory: "+pretty(rt.totalMemory))
+          Log.info("[MEMDEBUG] At " + dateStr + " Number of open sessions: " + sessions.size)
+          Log.info("[MEMDEBUG] Free Memory: " + pretty(rt.freeMemory))
+          Log.info("[MEMDEBUG] Total Memory: " + pretty(rt.totalMemory))
         }
     }
-  
+
 
   private def pretty(in: Long): String =
-  if (in > 1000L) pretty(in / 1000L)+","+(in % 1000L)
-  else in.toString
+    if (in > 1000L) pretty(in / 1000L) + "," + (in % 1000L)
+    else in.toString
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2008 WorldWide Conferencing, LLC
+ * Copyright 2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,69 +13,68 @@
  * See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package webapptest
 
-import _root_.org.mortbay.jetty.Server
-import net.liftweb.example.snippet.MyWizard
-import net.liftweb.http.{S, LiftSession}
-import org.specs.runner.Runner
-import org.specs.runner.JUnit
-import org.specs.Specification
-import net.liftweb.util.Helpers
-import net.liftweb.common.Empty
-//import _root_.org.mortbay.jetty.servlet.Context
-import _root_.org.mortbay.jetty.servlet.ServletHolder
-import _root_.org.mortbay.jetty.webapp.WebAppContext
+package net.liftweb.wizard
 
-import _root_.net.sourceforge.jwebunit.junit.WebTester
-import _root_.junit.framework.AssertionFailedError
+import _root_.org.scalacheck._
+import _root_.org.scalacheck.Prop.forAll
+import _root_.org.specs.Specification
+import _root_.org.specs.runner.{Runner, JUnit}
+import _root_.org.specs.ScalaCheck
 
-object JettyTestServer {
-  private val serverPort_ = System.getProperty("SERVLET_PORT", "8989").toInt
-  private var baseUrl_ = "http://127.0.0.1:" + serverPort_
-
-  private val server_ : Server = {
-    val server = new Server(serverPort_)
-    val context = new WebAppContext()
-    context.setServer(server)
-    context.setContextPath("/")
-    context.setWar("src/main/webapp")
-    //val context = new Context(_server, "/", Context.SESSIONS)
-    //context.addFilter(new FilterHolder(new LiftFilter()), "/");
-    server.addHandler(context)
-    server
-  }
-
-  def urlFor(path: String) = baseUrl_ + path
-
-  def start() = server_.start()
-
-  def stop() = {
-    server_.stop()
-    server_.join()
-  }
-
-  def browse(startPath: String, f: (WebTester) => Unit) = {
-    val wc = new WebTester()
-    try {
-      wc.setScriptingEnabled(false)
-      wc.beginAt(JettyTestServer.urlFor(startPath))
-      f(wc)
-    } catch {
-      case exc: AssertionFailedError => {
-        System.err.println("serveur response: ", wc.getServeurResponse())
-        throw exc
-      }
-    } finally {
-      wc.closeBrowser()
-    }
-  }
-
-}
+import _root_.net.liftweb._
+import http._
+import common._
+import _root_.net.liftweb.util._
 
 class WizardTest extends Runner(WizardSpec) with JUnit
 object WizardSpec extends Specification {
-  val session: LiftSession = new LiftSession("", Helpers.randomString(20), Empty)
+  val session : LiftSession = new LiftSession("", Helpers.randomString(20), Empty)
+
+  val MyWizard = new Wizard {
+    object completeInfo extends WizardVar(false)
+
+    def finish() {
+      S.notice("Thank you for registering your pet")
+      completeInfo.set(true)
+    }
+
+    val nameAndAge = new Screen {
+      val name = new Field with StringField {
+        def title = S ?? "First Name"
+
+        override def validation = minLen(2, S ?? "Name Too Short") ::
+        maxLen(40, S ?? "Name Too Long") :: super.validation
+      }
+
+      val age = new Field with IntField {
+        def title = S ?? "Age"
+
+        override def validation = minVal(5, S ?? "Too young") ::
+        maxVal(120, S ?? "You should be dead") :: super.validation
+      }
+
+      override def nextScreen = if (age.is < 18) parentName else favoritePet
+    }
+
+    val parentName = new Screen {
+      val parentName = new Field with StringField {
+        def title = S ?? "Mom or Dad's name"
+
+        override def validation = minLen(2, S ?? "Name Too Short") ::
+        maxLen(40, S ?? "Name Too Long") :: super.validation
+      }
+    }
+
+    val favoritePet = new Screen {
+      val petName = new Field with StringField {
+        def title = S ?? "Pet's name"
+
+        override def validation = minLen(2, S ?? "Name Too Short") ::
+        maxLen(40, S ?? "Name Too Long") :: super.validation
+      }
+    }
+  }
 
   "A Wizard can be defined" in {
     MyWizard.nameAndAge.screenName must_== "Screen 1"
