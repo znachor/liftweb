@@ -20,6 +20,7 @@ import _root_.java.util.concurrent.{ConcurrentHashMap => CHash}
 import _root_.java.lang.ThreadLocal
 import _root_.scala.reflect.Manifest
 import common._
+import xml.NodeSeq
 
 /**
  * A trait that does basic dependency injection.
@@ -39,7 +40,7 @@ trait SimpleInjector extends Injector {
    * inject[Date] or inject[List[Map[String, PaymentThing]]].  The
    * appropriate Manifest will be
    */
-  implicit def inject[T](implicit man: Manifest[T]): Box[T] = 
+  implicit def inject[T](implicit man: Manifest[T]): Box[T] =
   (Box !! diHash.get(man.toString)).flatMap(f => Helpers.tryo(f.apply())).asInstanceOf[Box[T]]
 
   /**
@@ -122,7 +123,7 @@ trait StackableMaker[T] extends Maker[T] {
  */
 class MakerStack[T](subMakers: PValueHolder[Maker[T]]*) extends StackableMaker[T] {
   private val _sub: List[PValueHolder[Maker[T]]] = subMakers.toList
-    
+
   override implicit def make: Box[T] = super.make or find(_sub)
 }
 
@@ -151,3 +152,6 @@ object Vendor {
   implicit def valToVender[T](value: T): Vendor[T] = apply(value)
   implicit def funcToVender[T](f: () => T): Vendor[T] = apply(f)
 }
+
+
+case class FormBuilderLocator[T](func: (T, T => Unit) => NodeSeq)(implicit val manifest: Manifest[T])

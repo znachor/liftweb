@@ -33,7 +33,7 @@ import auth._
 import _root_.java.util.concurrent.{ConcurrentHashMap => CHash}
 import _root_.scala.reflect.Manifest
 
-object LiftRules extends Factory {
+object LiftRules extends Factory with FormVendor {
   val noticesContainerId = "lift__noticesContainer__"
 
   type DispatchPF = PartialFunction[Req, () => Box[LiftResponse]];
@@ -1034,8 +1034,12 @@ object LiftRules extends Factory {
     when.is
   }
 
+
+
+   // val vendFormFactory = FactoryMaker[Manifest[_] => Box[(_, _ => Unit) => NodeSeq]] = new FactoryMaker(() => 30 seconds) {}
+
   /**
-   * When a request is parsed into a Req object, certain suffixes are explicitly split from
+   *  When a request is parsed into a Req object, certain suffixes are explicitly split from
    * the last part of the request URI.  If the suffix is contained in this list, it is explicitly split.
    * The default list is: "html", "htm", "jpg", "png", "gif", "xml", "rss", "json"
    */
@@ -1158,6 +1162,12 @@ object LiftRules extends Factory {
    * @see RequestVar#logUnreadVal
    */
   @volatile var logUnreadRequestVars = true
+
+  private def ctor() {
+    appendGlobalFormBuilder(FormBuilderLocator[String]((value, setter) => SHtml.text(value, setter)))
+    appendGlobalFormBuilder(FormBuilderLocator[Int]((value, setter) => SHtml.text(value.toString, s => Helpers.asInt(s).foreach((setter)))))
+  }
+  ctor()
 }
 
 case object BreakOut
@@ -1285,4 +1295,82 @@ abstract class GenericValidtor extends XHtmlValidator {
 
 object TransitionalXHTML1_0Validator extends GenericValidtor {
   val ngurl = "http://www.w3.org/2002/08/xhtml/xhtml1-transitional.xsd"
+}
+
+
+trait FormVendor {
+  /**
+   * Given a type manifest, vend a form
+   */
+  def vendForm[T](implicit man: Manifest[T]): Box[(T, T => Unit) => NodeSeq] = {
+    val name = man.toString
+    val first: Option[List[FormBuilderLocator[_]]] = requestForms.is.get(name) orElse sessionForms.is.get(name)
+
+    first match {
+      case Some(x :: _) => Full(x.func.asInstanceOf[(T, T => Unit) => NodeSeq])
+      case _ => if (globalForms.containsKey(name)) {
+        globalForms.get(name).headOption.map(_.func.asInstanceOf[(T, T => Unit) => NodeSeq])
+      } else Empty
+    }
+  }
+
+  private val globalForms: CHash[String, List[FormBuilderLocator[_]]] = new CHash
+
+  def prependGlobalFormBuilder[T](builder: FormBuilderLocator[T]) {
+    globalForms.synchronized {
+      val name = builder.manifest.toString
+      if (globalForms.containsKey(name)) {
+        globalForms.put(name, builder :: globalForms.get(name))
+      } else {
+        globalForms.put(name, List(builder))
+      }
+    }
+  }
+
+  def appendGlobalFormBuilder[T](builder: FormBuilderLocator[T]) {
+    globalForms.synchronized {
+      val name = builder.manifest.toString
+      if (globalForms.containsKey(name)) {
+        globalForms.put(name, builder :: globalForms.get(name))
+      } else {
+        globalForms.put(name, List(builder))
+      }
+    }
+  }
+
+  def prependSessionFormBuilder[T](builder: FormBuilderLocator[T]) {
+    sessionForms.set(prependBuilder(builder, sessionForms))
+  }
+
+  def appendSessionFormBuilder[T](builder: FormBuilderLocator[T]) {
+    sessionForms.set(appendBuilder(builder, sessionForms))
+  }
+
+  def prependRequestFormBuilder[T](builder: FormBuilderLocator[T]) {
+    requestForms.set(prependBuilder(builder, requestForms))
+  }
+
+  def appendRequestFormBuilder[T](builder: FormBuilderLocator[T]) {
+    requestForms.set(appendBuilder(builder, requestForms))
+  }
+
+  def doWith[F, T](builder: FormBuilderLocator[T])(f: => F): F =
+    requestForms.doWith(prependBuilder(builder, requestForms))(f)
+
+
+  private def prependBuilder(builder: FormBuilderLocator[_], to: Map[String, List[FormBuilderLocator[_]]]):
+  Map[String, List[FormBuilderLocator[_]]] = {
+    val name = builder.manifest.toString
+    to + (name -> (builder :: to.getOrElse(name, Nil)))
+  }
+
+  private def appendBuilder(builder: FormBuilderLocator[_], to: Map[String, List[FormBuilderLocator[_]]]):
+  Map[String, List[FormBuilderLocator[_]]] = {
+    val name = builder.manifest.toString
+    to + (name -> (builder :: to.getOrElse(name, Nil)))
+  }
+
+
+  private object sessionForms extends SessionVar[Map[String, List[FormBuilderLocator[_]]]](Map())
+  private object requestForms extends SessionVar[Map[String, List[FormBuilderLocator[_]]]](Map())
 }
