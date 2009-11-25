@@ -380,24 +380,7 @@ trait NodeResponse extends LiftResponse {
   def flipDocTypeForIE6 = false
 
   def toResponse = {
-    val encoding: String = if (!includeXmlVersion) "" else
-      (out, headers.ciGet("Content-Type")) match {
-        case (up: Unparsed, _) => ""
-
-        case (_, Empty) | (_, Failure(_, _, _)) =>
-          "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-
-        case (_, Full(s)) if (s.toLowerCase.startsWith("text/html")) =>
-          "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-
-        case (_, Full(s)) if (s.toLowerCase.startsWith("text/xml") ||
-                s.toLowerCase.startsWith("text/xhtml") ||
-                s.toLowerCase.startsWith("application/xml") ||
-                s.toLowerCase.startsWith("application/xhtml+xml")) =>
-          "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-
-        case _ => ""
-      }
+    val encoding: String = if (!includeXmlVersion) "" else _encoding
 
     val doc = docType.map(_ + "\n") openOr ""
 
@@ -419,6 +402,9 @@ trait NodeResponse extends LiftResponse {
 
     InMemoryResponse(ret.getBytes("UTF-8"), headers, cookies, code)
   }
+
+    private val _encoding: String =
+   LiftRules.calculateXmlHeader(this, out, headers.ciGet("Content-Type"))
 }
 
 case class XhtmlResponse(out: Node, docType: Box[String],

@@ -422,6 +422,24 @@ object LiftRules extends Factory with FormVendor {
    */
   @volatile var ajaxEnd: Box[() => JsCmd] = Empty
 
+  @volatile var calculateXmlHeader: (NodeResponse, Node, Box[String]) => String = {
+    case (_, up: Unparsed, _) => ""
+
+    case (_, _, Empty) | (_, _, Failure(_, _, _)) =>
+      "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+
+    case (_, _, Full(s)) if (s.toLowerCase.startsWith("text/html")) =>
+      "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+
+    case (_, _, Full(s)) if (s.toLowerCase.startsWith("text/xml") ||
+        s.toLowerCase.startsWith("text/xhtml") ||
+        s.toLowerCase.startsWith("application/xml") ||
+        s.toLowerCase.startsWith("application/xhtml+xml")) =>
+      "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+
+    case _ => ""
+  }
+
   /**
    * The default action to take when the JavaScript action fails
    */
