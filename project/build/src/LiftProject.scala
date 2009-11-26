@@ -42,14 +42,14 @@ trait Libs extends ManagedProject {
     def hibernateEntityManager = "org.hibernate" % "hibernate-entitymanager" % "3.2.1.ga"
 
     // TODO: Exclude servlet API in smack and smackx
-    val smack  = "jivesoftware" % "smack"  % "3.1.0"
-    val smackx = "jivesoftware" % "smackx" % "3.1.0"
+    def smack  = "jivesoftware" % "smack"  % "3.1.0"
+    def smackx = "jivesoftware" % "smackx" % "3.1.0"
 
     // OSGi - provided
-    val scalamodulesCore = "org.scalamodules"       % "scalamodules-core"      % "1.1-SNAPSHOT"
-    val osgiCompendium   = "org.apache.felix"       % "org.osgi.compendium"    % "1.2.0"
-    val paxWeb           = "org.ops4j.pax.web"      % "pax-web-bundle"         % "0.6.0"
-    val paxSwissbox      = "org.ops4j.pax.swissbox" % "pax-swissbox-extender"  % "0.2.0"
+    def scalamodulesCore = "org.scalamodules"       % "scalamodules-core"      % "1.1-SNAPSHOT"
+    def osgiCompendium   = "org.apache.felix"       % "org.osgi.compendium"    % "1.2.0"
+    def paxWeb           = "org.ops4j.pax.web"      % "pax-web-bundle"         % "0.6.0"
+    def paxSwissbox      = "org.ops4j.pax.swissbox" % "pax-swissbox-extender"  % "0.2.0"
 
     def loggingSimple = Set(slf4jApi    % C,
                             slf4jSimple % T)
