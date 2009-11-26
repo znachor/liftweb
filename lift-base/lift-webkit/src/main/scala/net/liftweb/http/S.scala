@@ -599,8 +599,8 @@ object S extends HasParams {
    * @see LiftRules.resourceBundleFactories
    */
   def resourceBundles: List[ResourceBundle] = {
-    _resBundle.value match {
-      case Nil => {
+    _resBundle.box match {
+      case Full(Nil) => {
         _resBundle.set(LiftRules.resourceNames.flatMap(name => tryo(
           List(ResourceBundle.getBundle(name, locale))
           ).openOr(
@@ -608,7 +608,10 @@ object S extends HasParams {
           )))
         _resBundle.value
       }
-      case bundles => bundles
+      case Full(bundles) => bundles
+      case _ => throw new IllegalStateException("Attempted to use resource bundles outside of an initialized S scope. " +
+                                                "S only usable when initialized, such as during request processing. " +
+                                                "Did you call S.? from Boot?")
     }
   }
 
