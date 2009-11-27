@@ -319,16 +319,12 @@ object DB {
    */
   def exec[T](statement: PreparedStatement)(f: (ResultSet) => T): T = {
     queryTimeout.foreach(to => statement.setQueryTimeout(to))
-    Helpers.calcTime {
-      val rs = statement.executeQuery
-      try {
-        (statement, f(rs))
-      } finally {
-        statement.close
-        rs.close
-      }
-    } match {
-      case (time, (query, res)) => runLogger(query, time); res
+    val rs = statement.executeQuery
+    try {
+      f(rs)
+    } finally {
+      statement.close
+      rs.close
     }
   }
 
@@ -401,10 +397,14 @@ object DB {
 
   private def runPreparedStatement[T](st: PreparedStatement)(f: (PreparedStatement) => T): T = {
     queryTimeout.foreach(to => st.setQueryTimeout(to))
-    try {
-      f(st)
-    } finally {
-      st.close
+    Helpers.calcTime {
+      try {
+        (st,f(st))
+      } finally {
+        st.close
+      }
+    } match {
+      case (time, (query, res)) => runLogger(query, time); res
     }
   }
 
