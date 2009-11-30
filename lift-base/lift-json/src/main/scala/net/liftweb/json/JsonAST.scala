@@ -48,7 +48,7 @@ object JsonAST {
     }
 
     // FIXME this must be tail recursive
-    def \\(nameToFind: String): JObject = {
+    def \\(nameToFind: String): JValue = {
       def find(json: JValue): List[JField] = json match {
         case JObject(l) => l.foldLeft(List[JField]())((a, e) => a ::: find(e))
         case JArray(l) => l.foldLeft(List[JField]())((a, e) => a ::: find(e))
@@ -56,7 +56,10 @@ object JsonAST {
         case JField(_, value) => find(value)
         case _ => Nil
       }
-      JObject(find(this))
+      find(this) match {
+        case x :: Nil => x
+        case x => JObject(x)
+      }
     }
 
     def \[A <: JValue](clazz: Class[A]): List[A#Values] = findDirect(children, json => json match {
