@@ -109,10 +109,10 @@ object Extraction {
         }
         newInstance(targetType, args.flatMap(build(newRoot, _, argStack)), newRoot) :: Nil
       case ListConstructor(path, targetType, args) => 
-        val arr = fieldValue(root, path).asInstanceOf[JArray]
+        val arr = asArray(safeFieldValue(root, path).getOrElse(JArray(Nil)), path)
         arr.arr.map(elem => newInstance(targetType, args.flatMap(build(elem, _, argStack)), elem)) :: argStack
       case ListOfPrimitives(path, elementType) =>
-        val arr = fieldValue(root, path).asInstanceOf[JArray]
+        val arr = asArray(fieldValue(root, path), path)
         arr.arr.map(elem => newPrimitive(elementType, elem)) :: argStack
       case Optional(m) =>
         // FIXME Remove this try-catch.
@@ -127,9 +127,19 @@ object Extraction {
         }
     }
 
-    def fieldValue(json: JValue, path: String) = (json \ path) match {
-      case JField(_, value) => value
-      case x => fail("Expected JField but got " + x + ", json='" + json + "', path='" + path + "'")
+    def asArray(json: JValue, path: String) = json match {
+      case a: JArray => a
+      case _ => fail("Expected JArray but got " + json + "', path='" + path + "'")
+    }
+
+
+    def safeFieldValue(json: JValue, path: String) = (json \ path) match {
+      case JField(_, value) => Some(value)
+      case x => None
+    }
+
+    def fieldValue(json: JValue, path: String) = safeFieldValue(json, path).getOrElse {
+      fail("Expected JField but got " + (json \ path) + ", json='" + json + "', path='" + path + "'")
     }
 
     build(json, mapping, Nil).head.asInstanceOf[A]

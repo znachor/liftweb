@@ -200,7 +200,7 @@ object JsonAST {
       case '\t' => "\\t"
       case '"'  => "\\\""
       case '\\' => "\\\\"
-      case c if ((c >= '\u0000' && c < '\u001f') || (c >= '\u0080' && c < '\u00a0') || (c >= '\u2000' && c < '\u2100')) => "\\u%04x".format(c.asInstanceOf[Int])
+      case c if ((c >= '\u0000' && c < '\u001f') || (c >= '\u0080' && c < '\u00a0') || (c >= '\u2000' && c < '\u2100')) => "\\u%04x".format(c: Int)
       case c => c
     }).mkString
 }
