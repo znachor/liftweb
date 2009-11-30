@@ -62,15 +62,16 @@ object JsonAST {
       }
     }
 
-    def \[A <: JValue](clazz: Class[A]): List[A#Values] = findDirect(children, json => json match {
-      case x if x.getClass == clazz => true
-      case _ => false
-    }).asInstanceOf[List[A]] map { _.values }
+    def \[A <: JValue](clazz: Class[A]): List[A#Values] = 
+      findDirect(children, typePredicate(clazz) _).asInstanceOf[List[A]] map { _.values }
 
-    def \\[A <: JValue](clazz: Class[A]): List[A#Values] = (this filter {
+    def \\[A <: JValue](clazz: Class[A]): List[A#Values] = 
+      (this filter typePredicate(clazz) _).asInstanceOf[List[A]] map { _.values }
+
+    private def typePredicate[A <: JValue](clazz: Class[A])(json: JValue) = json match {
       case x if x.getClass == clazz => true
       case _ => false
-    }).asInstanceOf[List[A]] map { _.values }
+    }
 
     def apply(i: Int): JValue = JNothing
 
