@@ -26,20 +26,25 @@ object JsonAST {
     type Values
 
     def \(nameToFind: String): JValue = {
-      def find(xs: List[JValue]): List[JValue] = xs.flatMap {
-        case JObject(l) => l.filter {
-            case JField(name, value) if name == nameToFind => true
-            case _ => false
-          }
-        case JArray(l) => find(l)
-        case field @ JField(name, value) if name == nameToFind => field :: Nil
-        case _ => Nil
+      val p = (json: JValue) => json match {
+        case JField(name, value) if name == nameToFind => true
+        case _ => false
       }
-      find(children) match {
+      findDirect(children, p) match {
         case Nil => JNothing
         case x :: Nil => x
         case x => JArray(x)
       }
+    }
+
+    private def findDirect(xs: List[JValue], p: JValue => Boolean): List[JValue] = xs.flatMap {
+      case JObject(l) => l.filter {
+        case x if p(x) => true
+        case _ => false
+      }
+      case JArray(l) => findDirect(l, p)
+      case x if p(x) => x :: Nil
+      case _ => Nil
     }
 
     // FIXME this must be tail recursive
@@ -53,6 +58,16 @@ object JsonAST {
       }
       JObject(find(this))
     }
+
+    def \[A <: JValue](clazz: Class[A]): List[A#Values] = findDirect(children, json => json match {
+      case x if x.getClass == clazz => true
+      case _ => false
+    }).asInstanceOf[List[A]] map { _.values }
+
+    def \\[A <: JValue](clazz: Class[A]): List[A#Values] = (this filter {
+      case x if x.getClass == clazz => true
+      case _ => false
+    }).asInstanceOf[List[A]] map { _.values }
 
     def apply(i: Int): JValue = JNothing
 
