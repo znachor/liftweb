@@ -47,6 +47,11 @@ object Examples extends Specification {
     (for { JField("name", JString(y)) <- json } yield y) mustEqual List("joe", "Mary", "Mazy")
   }
 
+  "Unbox values using XPath-like type expression" in {
+    parse(objArray) \ "children" \\ classOf[JInt] mustEqual List(5, 3)
+    parse(lotto) \ "lotto" \ "winning-numbers" \ classOf[JInt] mustEqual List(2, 45, 34, 23, 7, 5, 3)
+  }
+
   "Quoted example" in {
     val json = parse(quoted)
     List("foo \" \n \t \r bar") mustEqual json.values
