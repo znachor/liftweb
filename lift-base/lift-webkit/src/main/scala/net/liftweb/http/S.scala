@@ -746,6 +746,20 @@ for {
   req <- this.request
 } yield req.uri + (queryString.map(s => "?"+s) openOr "")
 
+  private object _skipXmlHeader extends TransientRequestVar(false)
+
+  /**
+   * If true, then the xml header at the beginning of
+   * the returned XHTML page will not be inserted.
+   *
+   */
+  def skipXmlHeader: Boolean = _skipXmlHeader.is
+
+  /**
+   * Set the skipXmlHeader flag
+   */
+  def skipXmlHeader_=(in: Boolean): Unit = _skipXmlHeader.set(in)
+
   /**
    * Redirects the browser to a given URL. Note that the underlying mechanism for redirects is to
    * throw a ResponseShortcutException, so if you're doing the redirect within a try/catch block,

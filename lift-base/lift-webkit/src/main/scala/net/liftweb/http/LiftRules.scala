@@ -422,7 +422,15 @@ object LiftRules extends Factory with FormVendor {
    */
   @volatile var ajaxEnd: Box[() => JsCmd] = Empty
 
+  /**
+   * An XML header is inserted at the very beginning of returned XHTML pages.
+   * This function defines the cases in which such a header is inserted.  The
+   * function takes a NodeResponse (the LiftResponse that is converting the
+   * XML to a stream of bytes), the Node (root node of the XML), and
+   * a Box containing the content type.
+   */
   @volatile var calculateXmlHeader: (NodeResponse, Node, Box[String]) => String = {
+    case _ if S.skipXmlHeader => ""
     case (_, up: Unparsed, _) => ""
 
     case (_, _, Empty) | (_, _, Failure(_, _, _)) =>
