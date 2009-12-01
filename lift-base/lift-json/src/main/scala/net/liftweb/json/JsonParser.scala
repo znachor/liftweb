@@ -199,11 +199,14 @@ object JsonParser {
           if (c == '\\') {
             cur = cur+1
             buf.charAt(cur) match {
-              case '"' => append('"')
-              case 'n' => append('\n')
-              case 't' => append('\t')
-              case 'r' => append('\r')
-              case 'b' => append('\b')
+              case '"'  => append('"')
+              case '\\' => append('\\')
+              case '/'  => append('/')
+              case 'b'  => append('\b')
+              case 'f'  => append('\f')
+              case 'n'  => append('\n')
+              case 'r'  => append('\r')
+              case 't'  => append('\t')
               case 'u' => 
                 val codePoint = Integer.parseInt(buf.substring(cur+1, cur+5), 16)
                 cur = cur+4
