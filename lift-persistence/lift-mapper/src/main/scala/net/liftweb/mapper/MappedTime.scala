@@ -27,6 +27,7 @@ import Helpers._
 import http._
 import S._
 import js._
+import json._
 
 import _root_.scala.xml.{NodeSeq}
 
@@ -60,6 +61,7 @@ abstract class MappedTime[T<:Mapper[T]](val fieldOwner: T) extends MappedField[D
   }
 
   def asJsExp = JE.Num(toLong)
+  def asJsonValue: JsonAST.JValue = JsonAST.JInt(toLong)
 
   /**
    * Get the JDBC SQL Type for this field
@@ -90,7 +92,10 @@ abstract class MappedTime[T<:Mapper[T]](val fieldOwner: T) extends MappedField[D
       value={is match {case null => "" case s => toInternetDate(s)}}/>)
   }
 
-  override def setFromAny(f : Any): Date = toDate(f).map(d => this.set(d)).openOr(this.is)
+  override def setFromAny(f : Any): Date = f match {
+    case JsonAST.JInt(v) => this.set(new Date(v.longValue))    
+    case f => toDate(f).map(d => this.set(d)).openOr(this.is)
+  }
 
   def jdbcFriendly(field : String) : Object = is match {
     case null => null

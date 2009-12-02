@@ -19,9 +19,10 @@ package net.liftweb.mapper
 import _root_.scala.collection.mutable.{ListBuffer, HashMap}
 import _root_.java.lang.reflect.Method
 import _root_.java.sql.{ResultSet, Types, PreparedStatement, Statement}
-import _root_.scala.xml.{Elem, Node, Text, NodeSeq, Null, TopScope, UnprefixedAttribute, MetaData}
+import _root_.scala.xml._
 import _root_.net.liftweb.util.Helpers._
 import _root_.net.liftweb.common.{Box, Empty, Full, Failure}
+import _root_.net.liftweb.json._
 import _root_.net.liftweb.util.{NamedPF, FieldError}
 import _root_.net.liftweb.http.{LiftRules, S, SHtml}
 import _root_.java.util.Date
@@ -554,6 +555,10 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
        case Full(im) => (for (indF <- indexedField(toSave)) yield (indF.dbIndexFieldIndicatesSaved_?)).openOr(true)
        case _ => false
        }*/
+  }
+
+  protected def encodeAsJSON_! (toEncode: A): JsonAST.JObject = {
+    JsonAST.JObject(this.mappedFieldList.map(fh => ??(fh.method, toEncode).asJsonField))
   }
 
 

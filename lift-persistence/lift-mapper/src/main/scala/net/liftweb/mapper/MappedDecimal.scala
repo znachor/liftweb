@@ -24,6 +24,7 @@ import _root_.net.liftweb.http.{S, SHtml}
 import _root_.java.util.Date
 import _root_.net.liftweb.util._
 import _root_.net.liftweb.common._
+import _root_.net.liftweb.json._
 import _root_.net.liftweb.http.js._
 import _root_.scala.xml.NodeSeq
 
@@ -110,6 +111,7 @@ abstract class MappedDecimal[T <: Mapper[T]] (val fieldOwner : T, val context : 
   }
 
   def asJsExp = JE.Num(is)
+  def asJsonValue: JsonAST.JValue = JsonAST.JDouble(is.doubleValue)
 
   def setFromAny (in : Any) : BigDecimal =
     in match {

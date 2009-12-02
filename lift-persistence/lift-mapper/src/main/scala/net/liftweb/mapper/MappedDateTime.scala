@@ -25,6 +25,7 @@ import util._
 import common._
 import Helpers._
 import http._
+import json._
 import S._
 import js._
 
@@ -44,6 +45,8 @@ abstract class MappedDateTime[T<:Mapper[T]](val fieldOwner: T) extends MappedFie
 
   def dbFieldClass = classOf[Date]
 
+
+  def asJsonValue: JsonAST.JValue = JsonAST.JInt(is.getTime)
 
   def toLong: Long = is match {
     case null => 0L
@@ -82,6 +85,7 @@ abstract class MappedDateTime[T<:Mapper[T]](val fieldOwner: T) extends MappedFie
   }
 
   override def setFromAny(f: Any): Date = f match {
+    case JsonAST.JInt(v) => this.set(new Date(v.longValue))
     case s: String => LiftRules.parseDate(s).map(d => this.set(d)).openOr(this.is)
     case (s: String) :: _ => LiftRules.parseDate(s).map(d => this.set(d)).openOr(this.is)
     case _ => this.is
