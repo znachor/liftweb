@@ -557,8 +557,38 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
        }*/
   }
 
+  /**
+   * This method will encode the instance as JSON.  It may reveal
+   * data in fields that might otherwise be proprietary.  It should
+   * be used with caution and only exposed as a public method
+   * after a security review.
+   */
   protected def encodeAsJSON_! (toEncode: A): JsonAST.JObject = {
-    JsonAST.JObject(this.mappedFieldList.map(fh => ??(fh.method, toEncode).asJsonField))
+    toEncode.runSafe {
+      JsonAST.JObject(JsonAST.JField("$persisted", 
+				     JsonAST.JBool(toEncode.persisted_?)) ::
+		      this.mappedFieldList.
+		      map(fh => ??(fh.method, toEncode).asJsonField))
+    }
+  }
+
+  protected def decodeFromJSON_!(json: JsonAST.JObject): A = {
+    val ret: A = createInstance
+    import JsonAST._
+
+    ret.runSafe {
+      for {
+	field <- json.obj
+	JField("$persisted", JBool(per)) <- field
+      } ret.persisted_? = per
+      
+      for {
+	field <- json.obj
+	meth <- _mappedFields.get(field.name)
+      } ??(meth, ret).setFromAny(field.value)
+    }
+
+    ret
   }
 
 

@@ -155,6 +155,8 @@ abstract class MappedEnumList[T<:Mapper[T], ENUM <: Enumeration](val fieldOwner:
 
   def asJsExp: JsExp = JE.JsArray(is.map(v => JE.Num(v.id)) :_*)
 
+  def asJsonValue: JsonAST.JValue = JsonAST.JInt(toLong)
+
   def real_convertToJDBCFriendly(value: Seq[ENUM#Value]): Object = new _root_.java.lang.Long(Helpers.toLong(value))
 
   private def toLong: Long = is.foldLeft(enum.Set64)((a,b) => a + b.asInstanceOf[enum.Value]).underlyingAsLong
@@ -168,6 +170,7 @@ abstract class MappedEnumList[T<:Mapper[T], ENUM <: Enumeration](val fieldOwner:
 
   override def setFromAny(in: Any): Seq[ENUM#Value] = {
     in match {
+      case JsonAST.JInt(bi) => this.set(fromLong(bi.longValue))
       case n: Long => this.set( fromLong(n))
       case n: Number => this.set(fromLong(n.longValue))
       case (n: Number) :: _ => this.set(fromLong(n.longValue))

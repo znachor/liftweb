@@ -115,6 +115,9 @@ abstract class MappedDecimal[T <: Mapper[T]] (val fieldOwner : T, val context : 
 
   def setFromAny (in : Any) : BigDecimal =
     in match {
+      // FIXME set for big decimal
+      // case JsonAST.JDouble(db) => MappedDecimal.this.setAll(java.math.BigDecimal.valueOf(db))
+      // case JsonAST.JInt(bi) => MappedDecimal.this.set(new java.math.BigDecimal(bi.bigInteger))
       case bd : BigDecimal => setAll(bd)
       case n :: _ => setFromString(n.toString)
       case Some(n) => setFromString(n.toString)
