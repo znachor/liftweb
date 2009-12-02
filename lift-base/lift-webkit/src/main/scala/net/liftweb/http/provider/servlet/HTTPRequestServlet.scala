@@ -10,7 +10,7 @@ import _root_.net.liftweb.util._
 import Helpers._
 
 class HTTPRequestServlet(val req: HttpServletRequest) extends HTTPRequest {
-  private val ctx = new HTTPServletContext(req.getSession.getServletContext)
+  private lazy val ctx = new HTTPServletContext(req.getSession.getServletContext)
 
   private val (hasContinuations_?, contSupport, getContinuation, getObject, setObject, suspend, resume) = {
     try {
@@ -28,7 +28,8 @@ class HTTPRequestServlet(val req: HttpServletRequest) extends HTTPRequest {
   }
 
 
-  def cookies: List[HTTPCookie] =
+  lazy val cookies: List[HTTPCookie] = {
+    req.getSession(false) // do this to make sure we capture the JSESSIONID cookie
     (Box !! req.getCookies).map(_.toList.map(c => HTTPCookie(c.getName,
       Box !! (c.getValue),
       Box !! (c.getDomain),
@@ -36,8 +37,9 @@ class HTTPRequestServlet(val req: HttpServletRequest) extends HTTPRequest {
       Box !! (c.getMaxAge),
       Box !! (c.getVersion),
       Box !! (c.getSecure)))) openOr Nil
+  }
 
-  def authType: Box[String] = Box !! req.getAuthType
+  lazy val authType: Box[String] = Box !! req.getAuthType
 
   def headers(name: String): List[String] = enumToList[String](req.getHeaders(name).asInstanceOf[_root_.java.util.Enumeration[String]])
 
@@ -50,20 +52,20 @@ class HTTPRequestServlet(val req: HttpServletRequest) extends HTTPRequest {
 
   def contentType = Box !! req.getContentType
 
-  def session = new HTTPServletSession(req getSession)
+  lazy val session = new HTTPServletSession(req getSession)
 
   def uri = req.getRequestURI
 
   def url = req.getRequestURL.toString
 
-  def queryString: Box[String] = Box !! req.getQueryString
+  lazy val queryString: Box[String] = Box !! req.getQueryString
 
   def param(name: String): List[String] = req.getParameterValues(name) match {case null => Nil case x => x.toList}
 
-  def params: List[HTTPParam] = enumToList[String](req.getParameterNames.asInstanceOf[_root_.java.util.Enumeration[String]]).
+  lazy val params: List[HTTPParam] = enumToList[String](req.getParameterNames.asInstanceOf[_root_.java.util.Enumeration[String]]).
           map(n => HTTPParam(n, param(n)))
 
-  def paramNames: List[String] = params map (_.name)
+  lazy val paramNames: List[String] = params map (_.name)
 
   def remoteAddress: String = req.getRemoteAddr
 
@@ -150,6 +152,4 @@ class HTTPRequestServlet(val req: HttpServletRequest) extends HTTPRequest {
   }
 
   def setCharacterEncoding(encoding: String) = req.setCharacterEncoding(encoding)
-
-
 }

@@ -168,7 +168,7 @@ class LiftServlet {
       // otherwise do a stateful response
       val liftSession = getLiftSession(req)
       S.init(req, liftSession) {
-        dispatchStatefulRequest(req, liftSession)
+        dispatchStatefulRequest(S.request.open_!, liftSession)
       }
     }
 

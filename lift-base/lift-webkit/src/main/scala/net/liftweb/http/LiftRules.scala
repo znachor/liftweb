@@ -747,12 +747,22 @@ object LiftRules extends Factory with FormVendor {
   val dispatch = RulesSeq[DispatchPF]
 
   /**
-   * Holds the user's rewrite functions that can alter the URI parts and query parameters
+   * Holds the user's rewrite functions that can alter the URI parts and query parameters.  This rewrite
+   * is performed very early in the HTTP request cycle and may not include any state.  This rewrite is meant
+   * to rewrite requests for statelessDispatch
    */
   val statelessRewrite = RulesSeq[RewritePF]
 
-    /**
-   * Holds the user's rewrite functions that can alter the URI parts and query parameters
+  /**
+   * Use statelessRewrite or statefuleRewrite
+   */
+  @deprecated
+  val rewrite = statelessRewrite
+  
+  /**
+   *  Holds the user's rewrite functions that can alter the URI parts and query parameters.
+   * This rewrite takes place within the scope of the S state so SessionVars and other session-related
+   * information is available.
    */
   val statefulRewrite = RulesSeq[RewritePF]
 

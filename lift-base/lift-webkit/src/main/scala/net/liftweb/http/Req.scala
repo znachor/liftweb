@@ -101,6 +101,21 @@ object FileParamHolder {
 object Req {
   object NilPath extends ParsePath(Nil, "", true, false)
 
+  def apply(original: Req, rewrite: List[LiftRules.RewritePF]): Req = {
+
+     def processRewrite(path: ParsePath, params: Map[String, String]): RewriteResponse =
+    NamedPF.applyBox(RewriteRequest(path, original.requestType, original.request), rewrite) match {
+      case Full(resp@RewriteResponse(_, _, true)) => resp
+      case _: EmptyBox[_] => RewriteResponse(path, params)
+      case Full(resp) => processRewrite(resp.path, params ++ resp.params)
+    }
+
+    val rewritten = processRewrite(original.path, Map.empty)
+
+    new Req(rewritten.path, original.contextPath, original.requestType, original.contentType, original.request,
+      original.nanoStart, original.nanoEnd, original.paramCalculator, original.addlParams ++ rewritten.params)
+  }
+
   def apply(request: HTTPRequest, rewrite: List[LiftRules.RewritePF], nanoStart: Long): Req = {
     val reqType = RequestType(request)
     val turi = request.uri.substring(request.contextPath.length)
@@ -186,7 +201,7 @@ object Req {
 
     new Req(rewritten.path, contextPath, reqType,
             contentType, request, nanoStart,
-            System.nanoTime, paramCalculator)
+            System.nanoTime, paramCalculator, Map())
   }
 
   private def fixURI(uri: String) = uri indexOf ";jsessionid" match {
@@ -196,7 +211,7 @@ object Req {
 
   def nil = new Req(NilPath, "", GetRequest, Empty, null,
                     System.nanoTime, System.nanoTime,
-                    () => ParamCalcInfo(Nil, Map.empty, Nil, Empty))
+                    () => ParamCalcInfo(Nil, Map.empty, Nil, Empty), Map())
 
   def parsePath(in: String): ParsePath = {
     val p1 = fixURI((in match {case null => "/"; case s if s.length == 0 => "/"; case s => s}).replaceAll("/+", "/"))
@@ -298,7 +313,8 @@ class Req(val path: ParsePath,
           val request: HTTPRequest,
           val nanoStart: Long,
           val nanoEnd: Long,
-          val paramCalculator: () => ParamCalcInfo) extends HasParams
+          private[http] val paramCalculator: () => ParamCalcInfo,
+          private[http] val addlParams: Map[String, String]) extends HasParams
 {
   override def toString = "Req(" + paramNames + ", " + params + ", " + path +
   ", " + contextPath + ", " + requestType + ", " + contentType + ")"
@@ -317,9 +333,10 @@ class Req(val path: ParsePath,
 
   def path(n: Int): String = head(path.wholePath.drop(n), null)
 
-  def param(n: String) = params.get(n) match {
-    case Some(s :: _) => Some(s)
-    case _ => None
+  def param(n: String): Box[String] =
+    params.get(n) match {
+    case Some(s :: _) => Full(s)
+    case _ => Empty
   }
 
   lazy val headers: List[(String, String)] =
@@ -336,9 +353,13 @@ class Req(val path: ParsePath,
   }
 
   lazy val ParamCalcInfo(paramNames: List[String],
-            params: Map[String, List[String]],
+            _params: Map[String, List[String]],
             uploadedFiles: List[FileParamHolder],
             body: Box[Array[Byte]]) = paramCalculator()
+
+  lazy val params: Map[String, List[String]] = addlParams.foldLeft(_params){
+    case (map, (key, value)) => map + (key -> (value :: map.getOrElse(key, Nil)))
+  }
 
   lazy val cookies = request.cookies match {
     case null => Nil

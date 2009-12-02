@@ -91,6 +91,7 @@ case class SessionWatcherInfo(sessions: Map[String, LiftSession])
 object SessionMaster extends LiftActor {
   private var sessions: Map[String, LiftSession] = Map.empty
   private object CheckAndPurge
+  private val lock = new ConcurrentLock
 
   def getSession(id: String, otherId: Box[String]): Box[LiftSession] = synchronized {
     otherId.flatMap(sessions.get) or Box(sessions.get(id))
@@ -107,7 +108,7 @@ object SessionMaster extends LiftActor {
    * Returns a LiftSession or Empty if not found
    */
   def getSession(httpSession: => HTTPSession, otherId: Box[String]): Box[LiftSession] =
-    synchronized {
+    lock.read {
       otherId.flatMap(sessions.get) or Box(sessions.get(httpSession.sessionId))
     }
 
@@ -115,15 +116,15 @@ object SessionMaster extends LiftActor {
    * Returns a LiftSession or Empty if not found
    */
   def getSession(req: HTTPRequest, otherId: Box[String]): Box[LiftSession] =
-    synchronized {
-      otherId.flatMap(sessions.get) or Box(sessions.get(req.session.sessionId))
+    lock.read {
+      otherId.flatMap(sessions.get) or req.sessionId.flatMap(id => sessions.get(id))
     }
 
   /**
    * Adds a new session to SessionMaster
    */
   def addSession(liftSession: LiftSession) {
-    synchronized {
+    lock.write {
       sessions = sessions + (liftSession.uniqueId -> liftSession)
     }
     liftSession.startSession()
@@ -134,7 +135,7 @@ object SessionMaster extends LiftActor {
 
   private val reaction: PartialFunction[Any, Unit] = {
     case RemoveSession(sessionId) =>
-      val ses = synchronized(sessions)
+      val ses = lock.read(sessions)
       ses.get(sessionId).foreach {
         s =>
                 try {
@@ -148,13 +149,13 @@ object SessionMaster extends LiftActor {
                   case e => Log.error("Failure in remove session", e)
 
                 } finally {
-                  synchronized {sessions = sessions - sessionId}
+                  lock.write {sessions = sessions - sessionId}
                 }
       }
 
     case CheckAndPurge =>
       val now = millis
-      val ses = synchronized {sessions}
+      val ses = lock.read {sessions}
       for ((id, session) <- ses.elements) {
         session.doCometActorCleanup()
         if (now - session.lastServiceTime > session.inactivityLength || session.markedForTermination) {
@@ -174,7 +175,7 @@ object SessionMaster extends LiftActor {
   private[http] def sendMsg(in: Any): Unit =
     if (!Props.inGAE) this ! in
     else {
-      this.synchronized {
+      lock.write {
         tryo {
           if (reaction.isDefinedAt(in)) reaction.apply(in)
         }
