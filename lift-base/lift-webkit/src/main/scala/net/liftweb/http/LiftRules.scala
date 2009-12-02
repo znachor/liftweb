@@ -585,18 +585,6 @@ object LiftRules extends Factory with FormVendor {
     }
   }
 
-  /*
-  private[http] def rewriteTable(req: HTTPRequest): List[RewritePF] = {
-    req match {
-      case null => rewrite.toList
-      case _ => SessionMaster.getSession(req, Empty) match {
-        case Full(s) => S.initIfUninitted(s) {
-          S.sessionRewriter.map(_.rewrite) ::: LiftRules.rewrite.toList
-        }
-        case _ => rewrite.toList
-      }
-    }
-  }*/
 
   /**
    * Contains the Ajax URI path used by Lift to process Ajax requests.

@@ -216,11 +216,23 @@ object ScriptRenderer {
         setTimeout("liftComet.lift_cometEntry();",100);
       },
 
+      lift_unlistWatch : function(watchId) {
+        var ret = [];
+        for (item in lift_toWatch) {
+          if (item !== watchId) {
+            ret.push(item);
+          }
+        }
+        lift_toWatch = ret;
+      },
+
       lift_handlerFailureFunc: function() {
         setTimeout("liftComet.lift_cometEntry();",""" + LiftRules.cometFailureRetryTimeout + """);
       },
 
       lift_cometEntry: function() {
+        var isEmpty = function(){for (var i in lift_toWatch) {return false} return true}();
+        if (!isEmpty) {
         """ +
           LiftRules.jsArtifacts.comet(AjaxInfo(JE.JsRaw("lift_toWatch"),
             "GET",
@@ -232,7 +244,7 @@ object ScriptRenderer {
           """
               }
             }
-          })();
+          }})();
           """ +
 
           LiftRules.jsArtifacts.onLoad(new JsCmd() {

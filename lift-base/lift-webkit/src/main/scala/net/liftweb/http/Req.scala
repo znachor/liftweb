@@ -103,7 +103,7 @@ object Req {
 
   def apply(original: Req, rewrite: List[LiftRules.RewritePF]): Req = {
 
-     def processRewrite(path: ParsePath, params: Map[String, String]): RewriteResponse =
+    def processRewrite(path: ParsePath, params: Map[String, String]): RewriteResponse =
     NamedPF.applyBox(RewriteRequest(path, original.requestType, original.request), rewrite) match {
       case Full(resp@RewriteResponse(_, _, true)) => resp
       case _: EmptyBox[_] => RewriteResponse(path, params)
@@ -191,7 +191,6 @@ object Req {
       } else if (reqType.get_?) {
         ParamCalcInfo(queryStringParam._1, queryStringParam._2 ++ localParams, Nil, Empty)
       } else if (contentType.dmap(false)(_.toLowerCase.startsWith("application/x-www-form-urlencoded"))) {
-        // val tmp = paramNames.map{n => (n, xlateIfGet(request.getParameterValues(n).toList))}
         val params = localParams ++ (request.params.sort {(s1, s2) => s1.name < s2.name}).map(n => (n.name, n.values))
         ParamCalcInfo(request paramNames, params, Nil, Empty)
       } else {
@@ -324,6 +323,18 @@ class Req(val path: ParsePath,
    */
   def xml_? = contentType != null && contentType.dmap(false)(_.toLowerCase.startsWith("text/xml"))
 
+  def snapshot = {
+    val paramCalc = paramCalculator()
+    new Req(path, 
+     contextPath, 
+     requestType, 
+     contentType, 
+     request.snapshot, 
+     nanoStart, 
+     nanoEnd, 
+     () => paramCalc,
+     addlParams)
+  }
   val section = path(0) match {case null => "default"; case s => s}
   val view = path(1) match {case null => "index"; case s@_ => s}
 

@@ -46,11 +46,21 @@ object LazyLoad extends DispatchSnippet {
     lazyLoadCount(lazyLoadCount.get + 1);
 
     val session = S.session
-    
+    val attrs = S.attrs   
+    val req = (S.request openOr Req.nil) snapshot
+
     val func = contextFuncBuilder(() => {
-      session.map(s => S.initIfUninitted(s) {
-                         s.findComet("AsyncRenderComet").map(_ ! Ready(Replace(id, xhtml)))
-	               })
+
+       session map {s =>
+         S.lightInit(req, s, attrs) {
+           for {comet <- s.findComet("AsyncRenderComet")
+                name <- comet.name if (name == id)} {
+             comet ! Ready(Replace(id, xhtml))
+           }
+         }
+        
+       }
+
     })
 
     AsyncRenderer ! Start(func)
@@ -58,7 +68,7 @@ object LazyLoad extends DispatchSnippet {
 
     <div id={id}></div> ++ (
       if (lazyLoadCount.get == 1) {
-        // Add the comet only once
+        // Add the comet only once per page
         session.map(_.addAndInitCometActor(new AsyncRenderComet(), 
                                            Full("AsyncRenderComet"), 
                                            Full(id), 
@@ -76,6 +86,7 @@ object LazyLoad extends DispatchSnippet {
 
 private case class Start(snapshot: AFuncHolder)
 private case class Ready(js: JsCmd)
+private case class StopClient
 
 
 /**
@@ -98,10 +109,21 @@ class AsyncRenderComet extends CometActor {
 
   var content = NodeSeq.Empty
 
-  override def lifespan: Box[TimeSpan] = Full(1 minute)
+  var stopClient = false
 
-  def render = content
+  override def lifespan: Box[TimeSpan] = Full(90 seconds)
+
+  def render: RenderOut = {
+    content
+  }
+
+  override protected def localSetup() {
+    ActorPing.schedule(this, StopClient, 1 minute)
+  }
+
+
   override def lowPriority : PartialFunction[Any, Unit] = {
     case Ready(js) => partialUpdate(js)
+    case StopClient => unWatch
   }
 }

@@ -769,31 +769,26 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
   private[http] def contextFuncBuilder(f: S.AFuncHolder): S.AFuncHolder = {
     val currentMap = snippetMap.is
     val curLoc = S.location
-    val req: Req = S.request openOr Req.nil
-    val session = this
 
     val requestVarFunc: Function1[Function0[Any], Any] = RequestVarHandler.generateSnapshotRestorer()
     new S.ProxyFuncHolder(f) {
       override def apply(in: List[String]): Any =
-      requestVarFunc(() =>
-        //S.init(req, session) {
+        requestVarFunc(() =>
           S.CurrentLocation.doWith(curLoc) {
             snippetMap.doWith(snippetMap.is ++ currentMap) {
               super.apply(in)
             }
           }
-        //}
         )
 
       override def apply(in: FileParamHolder): Any =
-        requestVarFunc(() =>
-          S.init(req, session){
-            S.CurrentLocation.doWith(curLoc) {
-              snippetMap.doWith(snippetMap.is ++ currentMap) {
-                super.apply(in)
-              }
+        requestVarFunc(() => 
+          S.CurrentLocation.doWith(curLoc) {
+            snippetMap.doWith(snippetMap.is ++ currentMap) {
+              super.apply(in)
             }
-          })
+          }
+        )
     }
   }
 
@@ -1152,7 +1147,10 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
     }
   }
 
-  private def findCometByType(contType: String, name: Box[String], defaultXml: NodeSeq, attributes: Map[String, String]): Box[LiftCometActor] = {
+  private def findCometByType(contType: String, 
+                              name: Box[String], 
+                              defaultXml: NodeSeq, 
+                              attributes: Map[String, String]): Box[LiftCometActor] = {
     findType[LiftCometActor](contType, LiftRules.buildPackage("comet") ::: ("lift.app.comet" :: Nil)).flatMap {
       cls =>
               tryo((e: Throwable) => e match {

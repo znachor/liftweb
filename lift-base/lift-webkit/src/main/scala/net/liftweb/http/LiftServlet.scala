@@ -388,7 +388,7 @@ class LiftServlet {
 
   private def convertAnswersToCometResponse(session: LiftSession, ret: Seq[AnswerRender], actors: List[(LiftCometActor, Long)]): LiftResponse = {
     val ret2: List[AnswerRender] = ret.toList
-    val jsUpdateTime = ret2.map(ar => "lift_toWatch['" + ar.who.uniqueId + "'] = '" + ar.when + "';").mkString("\n")
+    val jsUpdateTime = ret2.map(ar => "if (lift_toWatch['" + ar.who.uniqueId + "'] !== undefined) lift_toWatch['" + ar.who.uniqueId + "'] = '" + ar.when + "';").mkString("\n")
     val jsUpdateStuff = ret2.map {
       ar =>
               val ret = ar.response.toJavaScript(session, ar.displayAll)

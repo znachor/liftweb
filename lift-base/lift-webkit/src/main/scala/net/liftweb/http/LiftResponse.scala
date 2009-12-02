@@ -403,7 +403,7 @@ trait NodeResponse extends LiftResponse {
     InMemoryResponse(ret.getBytes("UTF-8"), headers, cookies, code)
   }
 
-    private val _encoding: String =
+   private val _encoding: String =
    LiftRules.calculateXmlHeader(this, out, headers.ciGet("Content-Type"))
 }
 

@@ -196,4 +196,11 @@ trait HTTPRequest {
    */
   def setCharacterEncoding(encoding: String)
 
+  /**
+   * Creates a new HTTPRequest instance as a copy of this one. It is used when
+   * snapshots of the current request context is created in order for this request object
+   * to be used on different threads (such as asynchronous template fragments processing).
+   * The new instance must not keep any reference to the container' instances.
+   */
+  def snapshot: HTTPRequest
 }

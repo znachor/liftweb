@@ -22,7 +22,6 @@ import _root_.net.liftweb.common._
 import _root_.net.liftweb.util._
 import Helpers._
 import js._
-import _root_.java.io.InputStream
 import _root_.java.util.{Locale, TimeZone, ResourceBundle}
 import _root_.java.util.concurrent.atomic.AtomicLong
 import _root_.net.liftweb.builtin.snippet._
@@ -1147,6 +1146,25 @@ for {
          ca <- Box.legacyNullTest(r.cookies).toList;
          c <- ca) yield c
 
+
+  private[liftweb] def lightInit[B](request: Req, 
+                                 session: LiftSession,
+                                 attrs: List[(Either[String, (String, String)], String)])(f: => B): B =
+    this._request.doWith(request) {
+      _sessionInfo.doWith(session) {
+        _lifeTime.doWith(false) {
+          _attrs.doWith(attrs) {
+            _resBundle.doWith(Nil) {
+              inS.doWith(true) {
+                f
+              }
+            }
+          }
+        }
+      }
+    }
+
+
   private def _init[B](request: Req, session: LiftSession)(f: () => B): B =
     this._request.doWith(request) {
       _sessionInfo.doWith(session) {
@@ -2001,32 +2019,6 @@ for {
       f(name)
     }
 
-/*
-  def render(xhtml: NodeSeq, httpRequest: HTTPRequest): NodeSeq = {
-    def doRender(session: LiftSession): NodeSeq =
-      session.processSurroundAndInclude("external render", xhtml)
-
-    if (inS.value) doRender(session.open_!)
-    else {
-      val req = Req(httpRequest, LiftRules.rewriteTable(httpRequest), System.nanoTime)
-      val ses: LiftSession = SessionMaster.getSession(httpRequest, Empty) match {
-        case Full(ret) =>
-          ret.fixSessionTime()
-          ret
-
-        case _ =>
-          val ret = LiftSession(httpRequest.session, req.contextPath)
-          ret.fixSessionTime()
-          SessionMaster.addSession(ret)
-          ret
-      }
-
-      init(req, ses) {
-        doRender(ses)
-      }
-    }
-  }
-  */
 
   /**
    * Similar with addFunctionMap but also returns the name.
