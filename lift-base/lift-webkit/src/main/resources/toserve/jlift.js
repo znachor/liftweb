@@ -236,7 +236,14 @@
 
             for (var i in qs) {
               var obj = qs[i];
-              ret[obj.name] = obj.value;
+              var cur = ret[obj.name];
+              if (!cur) {
+                ret[obj.name] = obj.value;
+              } else if (lift$.isArray(cur)) {
+                  cur.push(obj.value);
+              } else {
+                  ret[obj.name] = [cur, obj.value];
+              }
             }
 			return ret;
 		}
