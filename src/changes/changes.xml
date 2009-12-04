@@ -24,6 +24,9 @@
    see http://maven.apache.org/plugins/maven-changes-plugin/usage.html for full guide
    -->
     <release version="1.1-SNAPSHOT" date="" description="Lift 1.1 Snapshot">
+      <action dev="boisvert" type="fix" issue="" system="github">
+        Fixed typo in DerbyDriver.integerIndexColumnType: IDENITY -> IDENTITY
+      </action>
       <action dev="dchenbecker" type="fix" issue="211" system="github">
         Fixed Mapper to use DriverType.columnTypeMap everywhere
       </action>
