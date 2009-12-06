@@ -199,7 +199,7 @@ XPath + HOFs
 ------------
 
 Json AST can be queried using XPath like functions. Following REPL session shows the usage of 
-'\\', '\\\\', 'find', 'filter', 'map' and 'values' functions. 
+'\\', '\\\\', 'find', 'filter', 'map', 'remove' and 'values' functions. 
 
     The example json is:
 
@@ -243,29 +243,32 @@ Json AST can be queried using XPath like functions. Following REPL session shows
     scala> compact(render(json \\ "name"))
     res2: String = {"name":"Joe","name":"Marilyn"}
 
+    scala> compact(render((json remove { _ == JField("name", JString("Marilyn")) }) \\ "name"))
+    res3: String = {"name":"Joe"}
+
     scala> compact(render(json \ "person" \ "name"))
-    res3: String = "name":"Joe"
+    res4: String = "name":"Joe"
 
     scala> compact(render(json \ "person" \ "spouse" \ "person" \ "name"))
-    res4: String = "name":"Marilyn"
+    res5: String = "name":"Marilyn"
 
     scala> json find {
              case JField("name", _) => true
              case _ => false
            }
-    res5: Option[net.liftweb.json.JsonAST.JValue] = Some(JField(name,JString(Joe)))
+    res6: Option[net.liftweb.json.JsonAST.JValue] = Some(JField(name,JString(Joe)))
 
     scala> json filter {
              case JField("name", _) => true
              case _ => false
            }
-    res6: List[net.liftweb.json.JsonAST.JValue] = List(JField(name,JString(Joe)), JField(name,JString(Marilyn)))
+    res7: List[net.liftweb.json.JsonAST.JValue] = List(JField(name,JString(Joe)), JField(name,JString(Marilyn)))
 
     scala> json map {
              case JField("name", JString(s)) => JField("NAME", JString(s.toUpperCase))
              case x => x
            }
-    res7: net.liftweb.json.JsonAST.JValue = JObject(List(JField(person,JObject(List(
+    res8: net.liftweb.json.JsonAST.JValue = JObject(List(JField(person,JObject(List(
     JField(NAME,JString(JOE)), JField(age,JInt(35)), JField(spouse,JObject(List(
     JField(person,JObject(List(JField(NAME,JString(MARILYN)), JField(age,JInt(33)))))))))))))
 
