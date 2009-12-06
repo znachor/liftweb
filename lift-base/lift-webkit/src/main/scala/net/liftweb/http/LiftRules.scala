@@ -47,6 +47,7 @@ object LiftRules extends Factory with FormVendor {
   type HttpAuthProtectedResourcePF = PartialFunction[ParsePath, Box[Role]]
   type ExceptionHandlerPF = PartialFunction[(Props.RunModes.Value, Req, Throwable), LiftResponse]
   type ResourceBundleFactoryPF = PartialFunction[(String, Locale), ResourceBundle]
+  type SplitSuffixPF = PartialFunction[List[String], (List[String], String)]
 
   /**
    * A partial function that allows the application to define requests that should be
@@ -1064,14 +1065,36 @@ object LiftRules extends Factory with FormVendor {
     when.is
   }
 
+  /**
+   * Determins the path parts and suffix from given path parts
+   */
+  val suffixSplitters = RulesSeq[SplitSuffixPF].append {
+    case parts => 
+      val last = parts.last
+      val idx: Int = {
+        val firstDot = last.indexOf(".")
+        val len = last.length
+        if (firstDot + 1 == len) -1 // if the dot is the last character, don't split
+        else {
+          if (last.indexOf(".", firstDot + 1) != -1) -1 // if there are multiple dots, don't split out
+          else {
+            val suffix = last.substring(firstDot + 1)
+            // if the suffix isn't in the list of suffixes we care about, don't split it
+            if (!LiftRules.explicitlyParsedSuffixes.contains(suffix.toLowerCase)) -1
+            else firstDot
+          }
+        }
+      }
 
+      if (idx == -1) (parts, "")
+      else (parts.dropRight(1) ::: List(last.substring(0, idx)), last.substring(idx + 1))
 
-   // val vendFormFactory = FactoryMaker[Manifest[_] => Box[(_, _ => Unit) => NodeSeq]] = new FactoryMaker(() => 30 seconds) {}
+  }
 
   /**
    *  When a request is parsed into a Req object, certain suffixes are explicitly split from
    * the last part of the request URI.  If the suffix is contained in this list, it is explicitly split.
-   * The default list is: "html", "htm", "jpg", "png", "gif", "xml", "rss", "json"
+   * The default list is: "html", "htm", "jpg", "png", "gif", "xml", "rss", "json" ...
    */
   @volatile var explicitlyParsedSuffixes: Set[String] = Set("json","rss","atom","do","3dm",
     "3dmf","a","aab","aam","aas","abc","acgi","afl","ai","aif","aifc","aiff",
@@ -1107,7 +1130,7 @@ object LiftRules extends Factory with FormVendor {
 
   /**
    * The global multipart progress listener:
-   *     pBytesRead - The total number of bytes, which have been read so far.
+   *    pBytesRead - The total number of bytes, which have been read so far.
    *    pContentLength - The total number of bytes, which are being read. May be -1, if this number is unknown.
    *    pItems - The number of the field, which is currently being read. (0 = no item so far, 1 = first item is being read, ...)
    */

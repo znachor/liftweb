@@ -229,21 +229,6 @@ trait HttpHelpers { self: ListHelpers with StringHelpers  =>
     sb.toString
   }
 
-  /*
-  /**
-   * This appears to be unused. TODO: Remove?
-   */
-  private case class BailOut(seq: Long)
-
-  def longPoll[T](seq: Long, timeout: Helpers.TimeSpan, func: PartialFunction[Any, T])(implicit m: Manifest[T]): Box[T] = {
-    ActorPing.schedule(Actor.self, BailOut(seq), timeout)
-    receive(func orElse {case BailOut(seq) => null}) match {
-      case null => Empty
-      case r => Box.asA[T](r)(m)
-    }
-  }
-  */
-
   def findKids(in: NodeSeq, prefix: String, label: String): NodeSeq =
   in.filter(n => n.label == label && n.prefix == prefix).flatMap(_.child)
 
