@@ -1,89 +1,87 @@
 <?xml version="1.0"?>
 <archetype-descriptor name="lift-archetype-jpa-basic">
-  <!-- place the master POM into the root dir -->
   <fileSets>
     <fileSet encoding="UTF-8" filtered="true">
       <directory/>
       <includes>
-	<include>pom.xml</include>
-	<include>README</include>
+        <include>README</include>
       </includes>
     </fileSet>
   </fileSets>
   <modules>
     <!-- web module -->
     <module dir="web">
-    <!--<module name="web" id="web" dir="web">-->
+      <!--<module name="web" id="web" dir="web">-->
       <fileSets>
-	<!-- store the module pom -->
+        <!-- store the module pom -->
         <fileSet encoding="UTF-8" filtered="true" packaged="false">
           <directory/>
-	  <includes>
-	    <include>web/pom.xml</include>
-	  </includes>
-	</fileSet>
-	<!-- properly place Boot.scala -->
+          <includes>
+            <include>web/pom.xml</include>
+          </includes>
+        </fileSet>
+        <!-- properly place Boot.scala -->
         <fileSet encoding="UTF-8" filtered="true" packaged="false">
           <directory>src/main/scala/bootstrap/liftweb</directory>
-	  <includes>
-	    <include>Boot.scala</include>
-	  </includes>
-	</fileSet>
-	<!-- place main sources -->
+          <includes>
+            <include>Boot.scala</include>
+          </includes>
+        </fileSet>
+        <!-- place main sources -->
         <fileSet encoding="UTF-8" filtered="true" packaged="true">
           <directory>src/main/scala/</directory>
-	  <includes>
-	    <include>**/*.scala</include>
-	  </includes>
-	  <excludes>
-	    <exclude>**/Boot.scala</exclude>
-	  </excludes>
-	</fileSet>
-	<!-- place templates -->
+          <includes>
+            <include>**/*.scala</include>
+          </includes>
+          <excludes>
+            <exclude>**/Boot.scala</exclude>
+          </excludes>
+        </fileSet>
+        <!-- place templates -->
         <fileSet encoding="UTF-8" filtered="false" packaged="false">
           <directory>src/main/webapp</directory>
-	  <includes>
-	    <include>**/*</include>
-	    <include>templates-hidden/*</include>
-	  </includes>
-	</fileSet>
-	<!-- place resources -->
+          <includes>
+            <include>**/*</include>
+            <include>templates-hidden/*</include>
+          </includes>
+        </fileSet>
+        <!-- place resources -->
         <fileSet encoding="UTF-8" filtered="false" packaged="false">
           <directory>src/main/resources</directory>
-	  <includes>
-	    <include>**/*</include>
-	  </includes>
-	</fileSet>
+          <includes>
+            <include>**/*</include>
+          </includes>
+        </fileSet>
       </fileSets>
     </module>
     <!-- persistence module -->
     <module dir="spa">
-    <!--<module name="spa" id="spa" dir="spa">-->
+      <!--<module name="spa" id="spa" dir="spa">-->
       <fileSets>
         <fileSet encoding="UTF-8" filtered="true" packaged="false">
           <directory/>
-	  <includes>
-	    <include>spa/pom.xml</include>
-	  </includes>
-	</fileSet>
+          <includes>
+            <include>spa/pom.xml</include>
+          </includes>
+        </fileSet>
         <fileSet encoding="UTF-8" filtered="true" packaged="true">
           <directory>src/main/scala/</directory>
-	  <includes>
-	    <include>**/*.scala</include>
-	  </includes>
-	</fileSet>
+          <includes>
+            <include>**/*.scala</include>
+          </includes>
+        </fileSet>
         <fileSet encoding="UTF-8" filtered="true" packaged="true">
           <directory>src/test/scala/</directory>
-	  <includes>
-	    <include>**/*.scala</include>
-	  </includes>
-	</fileSet>
+          <includes>
+            <include>**/*.scala</include>
+          </includes>
+        </fileSet>
         <fileSet encoding="UTF-8" filtered="true" packaged="false">
           <directory>src/main/resources</directory>
-	  <includes>
-	    <include>**/*</include>
-	  </includes>
-	</fileSet>
+          <includes>
+            <include>**/*</include>
+          </includes>
+        </fileSet>
       </fileSets>
     </module>
   </modules>

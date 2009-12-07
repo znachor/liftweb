@@ -1,11 +1,9 @@
 <?xml version="1.0"?>
 <archetype-descriptor name="lift-archetype-jpa-basic">
-<!-- place the master POM into the root dir -->
   <fileSets>
     <fileSet encoding="UTF-8" filtered="true">
       <directory/>
       <includes>
-        <include>pom.xml</include>
         <include>README</include>
       </includes>
     </fileSet>
@@ -13,7 +11,7 @@
   <modules>
     <!-- web module -->
     <module dir="web">
-    <!--<module name="web" id="web" dir="web">-->
+      <!--<module name="web" id="web" dir="web">-->
       <fileSets>
         <!-- store the module pom -->
         <fileSet encoding="UTF-8" filtered="true" packaged="false">
@@ -58,7 +56,7 @@
     </module>
     <!-- persistence module -->
     <module dir="spa">
-    <!--<module name="spa" id="spa" dir="spa">-->
+      <!--<module name="spa" id="spa" dir="spa">-->
       <fileSets>
         <fileSet encoding="UTF-8" filtered="true" packaged="false">
           <directory/>

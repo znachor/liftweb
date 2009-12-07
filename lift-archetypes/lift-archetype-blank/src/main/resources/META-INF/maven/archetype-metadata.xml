@@ -2,13 +2,6 @@
 <archetype-descriptor name="lift-archetype-blank">
   <fileSets>
     <fileSet encoding="UTF-8" filtered="true">
-      <directory/>
-      <includes>
-        <include>pom.xml</include>
-        <include>**/*.properties</include>
-      </includes>
-    </fileSet>
-    <fileSet encoding="UTF-8" filtered="true">
       <directory>src/main/resources</directory>
     </fileSet>
     <fileSet encoding="UTF-8" filtered="true">
