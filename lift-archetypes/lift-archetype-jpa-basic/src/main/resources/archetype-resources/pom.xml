@@ -5,8 +5,6 @@
                              http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   #set($scala_version_unevaled = '\${scala.version}')
-  ## #set($scala_version = '${scala.version}')
-  ## #set($lift_version = '${lift.version}')
 
   <modelVersion>4.0.0</modelVersion>
   <groupId>$groupId</groupId>
