@@ -58,6 +58,8 @@
     <scala.version>2.7.7</scala.version>
     <slf4j.version>[1.5.6,)</slf4j.version>
 
+    <!-- vscaladoc settings -->
+    <maven.scaladoc.vscaladocVersion>1.2-SNAPSHOT</maven.scaladoc.vscaladocVersion>
     <vscaladoc.links.liftweb.baseurl>http://scala-tools.org/mvnsites-snapshots/liftweb</vscaladoc.links.liftweb.baseurl>
   </properties>
 
@@ -495,8 +497,11 @@
           <artifactId>maven-scala-plugin</artifactId>
           <version>2.12.2</version>
           <configuration>
+            <charset>${project.build.sourceEncoding}</charset>
+            <!--<bottom>Copyright &#169; {inceptionYear}-{currentYear} {organizationName}. All Rights Reserved.</bottom>-->
             <jvmArgs>
               <jvmArg>-Xmx1024m</jvmArg>
+              <jvmArg>-DpackageLinkDefs=file://${project.build.directory}/packageLinkDefs.properties</jvmArg>
             </jvmArgs>
             <args>
               <arg>-Xno-varargs-conversion</arg>
@@ -740,21 +745,13 @@
         <configuration>
           <charset>${project.build.sourceEncoding}</charset>
           <!--<bottom>Copyright &#169; {inceptionYear}-{currentYear} {organizationName}. All Rights Reserved.</bottom>-->
-          <vscaladocVersion>1.2-SNAPSHOT</vscaladocVersion>
           <jvmArgs>
             <jvmArg>-Xmx1024m</jvmArg>
             <jvmArg>-DpackageLinkDefs=file://${project.build.directory}/packageLinkDefs.properties</jvmArg>
           </jvmArgs>
-          <!--FIXME: see that sxr plugin works -->
-          <!--
-          <compilerPlugins>
-            <compilerPlugin>
-              <groupId>org.scala-tools.sxr</groupId>
-              <artifactId>sxr_${scala.version}</artifactId>
-              <version>0.2.3</version>
-            </compilerPlugin>
-          </compilerPlugins>
-          -->
+          <args>
+            <arg>-Xno-varargs-conversion</arg>
+          </args>
         </configuration>
       </plugin>
       <plugin>
@@ -833,7 +830,6 @@
                 <args>
                   <arg>-unchecked</arg>
                   <arg>-deprecation</arg>
-                  <arg>-Xno-varargs-conversion</arg>
                 </args>
               </configuration>
             </plugin>
