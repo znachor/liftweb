@@ -5,8 +5,8 @@
                              http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   #set($scala_version_unevaled = '\${scala.version}')
-  #set($scala_version = '${scala.version}')
-  #set($lift_version = '${lift.version}')
+  ## #set($scala_version = '${scala.version}')
+  ## #set($lift_version = '${lift.version}')
 
   <modelVersion>4.0.0</modelVersion>
   <groupId>$groupId</groupId>
@@ -16,7 +16,7 @@
   <name>$artifactId Project</name>
   <inceptionYear>2009</inceptionYear>
   <properties>
-    <scala.version>$scala_version</scala.version>
+    <scala.version>$scalaVersion</scala.version>
   </properties>
 
   <repositories>
@@ -25,7 +25,7 @@
       <name>Scala-Tools Maven2 Repository for Releases</name>
       <url>http://scala-tools.org/repo-releases</url>
     </repository>
-#if ($lift_version.endsWith("SNAPSHOT"))
+#if ($liftVersion.endsWith("SNAPSHOT"))
     <repository>
       <id>scala-tools.snapshots</id>
       <name>Scala-Tools Maven2 Repository for Snapshots</name>
@@ -47,7 +47,7 @@
     <dependency>
       <groupId>net.liftweb</groupId>
       <artifactId>lift-mapper</artifactId>
-      <version>$lift_version</version>
+      <version>$liftVersion</version>
     </dependency>
     <dependency>
       <groupId>javax.servlet</groupId>

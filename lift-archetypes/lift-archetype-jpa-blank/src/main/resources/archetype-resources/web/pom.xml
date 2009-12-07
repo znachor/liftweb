@@ -32,7 +32,7 @@
     <dependency>
       <groupId>net.liftweb</groupId>
       <artifactId>lift-jpa</artifactId>
-      <version>$lift_version</version>
+      <version>$liftVersion</version>
     </dependency>
     <dependency>
       <groupId>javax.servlet</groupId>

@@ -10,7 +10,7 @@
 
   #set($spa_suffix = '-spa')
   #set($web_suffix = '-web')
-  
+
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>$groupId</groupId>
@@ -32,7 +32,7 @@
     <dependency>
       <groupId>net.liftweb</groupId>
       <artifactId>lift-jpa</artifactId>
-      <version>$lift_version</version>
+      <version>$liftVersion</version>
     </dependency>
     <dependency>
       <groupId>javax.servlet</groupId>
