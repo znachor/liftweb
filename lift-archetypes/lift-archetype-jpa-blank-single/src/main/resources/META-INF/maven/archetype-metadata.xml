@@ -1,6 +1,5 @@
 <?xml version="1.0"?>
 <archetype-descriptor name="lift-archetype-jpa-basic">
-  <!-- place the master POM into the root dir -->
   <fileSets>
     <fileSet encoding="UTF-8" filtered="true">
       <directory/>
