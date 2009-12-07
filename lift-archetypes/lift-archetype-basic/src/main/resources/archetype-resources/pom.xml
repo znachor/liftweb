@@ -4,9 +4,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
                              http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
-  #set( $scala_version_unevaled = '\${scala.version}' )
-  #set( $scala_version = '${scala.version}' )
-  #set( $lift_version = '${lift.version}' )
+  #set($scala_version_unevaled = '\${scala.version}')
+  #set($scala_version = '${scala.version}')
+  #set($lift_version = '${lift.version}')
 
   <modelVersion>4.0.0</modelVersion>
   <groupId>$groupId</groupId>
@@ -168,6 +168,7 @@
       <plugin>
         <groupId>org.scala-tools</groupId>
         <artifactId>maven-scala-plugin</artifactId>
+        <version>2.12.2</version>
       </plugin>
     </plugins>
   </reporting>
