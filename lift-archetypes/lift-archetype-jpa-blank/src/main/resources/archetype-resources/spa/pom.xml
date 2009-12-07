@@ -3,10 +3,10 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
                              http://maven.apache.org/xsd/maven-4.0.0.xsd">
-#set($sv = '${scala.version}')
-#parse('ext.vm')
-  <modelVersion>4.0.0</modelVersion>
 
+  #set($spa_suffix = '-spa')
+
+  <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>$groupId</groupId>
     <artifactId>$artifactId</artifactId>
@@ -14,7 +14,7 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>${artifactId}-spa</artifactId>
+  <artifactId>$artifactId$spa_suffix</artifactId>
   <name>$artifactId Spa</name>
 
   <dependencies>
@@ -49,14 +49,7 @@
   </dependencies>
 
   <build>
-    <plugins>
-      <plugin>
-	<artifactId>maven-surefire-plugin</artifactId>
-	<configuration>
-	  <redirectTestOutputToFile>true</redirectTestOutputToFile>
-	</configuration>
-      </plugin>
-    </plugins>
+    <!--<plugins/>-->
   </build>
 
 </project>
