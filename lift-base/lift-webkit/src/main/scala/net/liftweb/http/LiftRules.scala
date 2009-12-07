@@ -47,6 +47,7 @@ object LiftRules extends Factory with FormVendor {
   type HttpAuthProtectedResourcePF = PartialFunction[ParsePath, Box[Role]]
   type ExceptionHandlerPF = PartialFunction[(Props.RunModes.Value, Req, Throwable), LiftResponse]
   type ResourceBundleFactoryPF = PartialFunction[(String, Locale), ResourceBundle]
+  type SplitSuffixPF = PartialFunction[List[String], (List[String], String)]
 
   /**
    * A partial function that allows the application to define requests that should be
@@ -1064,50 +1065,42 @@ object LiftRules extends Factory with FormVendor {
     when.is
   }
 
+  /**
+   * Determins the path parts and suffix from given path parts
+   */
+  val suffixSplitters = RulesSeq[SplitSuffixPF].append {
+    case parts => 
+      val last = parts.last
+      val idx: Int = {
+        val firstDot = last.indexOf(".")
+        val len = last.length
+        if (firstDot + 1 == len) -1 // if the dot is the last character, don't split
+        else {
+          if (last.indexOf(".", firstDot + 1) != -1) -1 // if there are multiple dots, don't split out
+          else {
+            val suffix = last.substring(firstDot + 1)
+            // if the suffix isn't in the list of suffixes we care about, don't split it
+            if (!LiftRules.explicitlyParsedSuffixes.contains(suffix.toLowerCase)) -1
+            else firstDot
+          }
+        }
+      }
 
+      if (idx == -1) (parts, "")
+      else (parts.dropRight(1) ::: List(last.substring(0, idx)), last.substring(idx + 1))
 
-   // val vendFormFactory = FactoryMaker[Manifest[_] => Box[(_, _ => Unit) => NodeSeq]] = new FactoryMaker(() => 30 seconds) {}
+  }
 
   /**
-   *  When a request is parsed into a Req object, certain suffixes are explicitly split from
+   * When a request is parsed into a Req object, certain suffixes are explicitly split from
    * the last part of the request URI.  If the suffix is contained in this list, it is explicitly split.
-   * The default list is: "html", "htm", "jpg", "png", "gif", "xml", "rss", "json"
+   * The default list is: "html", "htm", "jpg", "png", "gif", "xml", "rss", "json" ...
    */
-  @volatile var explicitlyParsedSuffixes: Set[String] = Set("json","rss","atom","do","3dm",
-    "3dmf","a","aab","aam","aas","abc","acgi","afl","ai","aif","aifc","aiff",
-    "aim","aip","ani","aos","aps","arc","arj","art","asf","asm","asp","asx","au","avi","avs",
-    "bcpio","bin","bm","bmp","boo","book","boz","bsh","bz","bz2","c","c++","cat","cc","ccad",
-    "cco","cdf","cer","cha","chat","class","com","conf","cpio","cpp","cpt","crl","crt","csh",
-    "css","cxx","dcr","deepv","def","der","dif","dir","dl","doc","dot","dp","drw","dump","dv",
-    "dvi","dwf","dwg","dxf","dxr","el","elc","env","eps","es","etx","evy","exe","f","f77",
-    "f90","fdf","fif","fli","flo","flx","fmf","for","fpx","frl","funk","g","g3","gif","gl","gsd",
-    "gsm","gsp","gss","gtar","gz","gzip","h","hdf","help","hgl","hh","hlb","hlp","hpg","hpgl",
-    "hqx","hta","htc","htm","html","htmls","htt","htx","ice","ico","idc","ief","iefs","iges","igs",
-    "ima","imap","inf","ins","ip","isu","it","iv","ivr","ivy","jam","jav","java","jcm","jfif",
-    "jfif-tbnl","jpe","jpeg","jpg","jps","js","jut","kar","ksh","la","lam","latex","lha","lhx",
-    "list","lma","log","lsp","lst","lsx","ltx","lzh","lzx","m","m1v","m2a","m2v","m3u","man","map",
-    "mar","mbd","mc$","mcd","mcf","mcp","me","mht","mhtml","mid","midi","mif","mime","mjf","mjpg",
-    "mm","mme","mod","moov","mov","movie","mp2","mp3","mpa","mpc","mpe","mpeg","mpg","mpga","mpp",
-    "mpt","mpv","mpx","mrc","ms","mv","my","mzz","nap","naplps","nc","ncm","nif","niff","nix",
-    "nsc","nvd","o","oda","omc","omcd","omcr","p","p10","p12","p7a","p7c","p7m","p7r","p7s","part",
-    "pas","pbm","pcl","pct","pcx","pdb","pdf","pfunk","pgm","pic","pict","pkg","pko","pl","plx","pm",
-    "pm4","pm5","png","pnm","pot","pov","ppa","ppm","pps","ppt","ppz","pre","prt","ps","psd",
-    "pvu","pwz","py","pyc","qcp","qd3","qd3d","qif","qt","qtc","qti","qtif","ra","ram","ras",
-    "rast","rexx","rf","rgb","rm","rmi","rmm","rmp","rng","rnx","roff","rp","rpm","rt","rtf","rtx",
-    "rv","s","s3m","saveme","sbk","scm","sdml","sdp","sdr","sea","set","sgm","sgml","sh","shar",
-    "shtml","sid","sit","skd","skm","skp","skt","sl","smi","smil","snd","sol","spc","spl","spr",
-    "sprite","src","ssi","ssm","sst","step","stl","stp","sv4cpio","sv4crc","svf","svr","swf","t",
-    "talk","tar","tbk","tcl","tcsh","tex","texi","texinfo","text","tgz","tif","tiff","tr","tsi",
-    "tsp","tsv","turbot","txt","uil","uni","unis","unv","uri","uris","ustar","uu","uue","vcd","vcs",
-    "vda","vdo","vew","viv","vivo","vmd","vmf","voc","vos","vox","vqe","vqf","vql","vrml","vrt",
-    "vsd","vst","vsw","w60","w61","w6w","wav","wb1","wbmp","web","wiz","wk1","wmf","wml","wmlc",
-    "wmls","wmlsc","word","wp","wp5","wp6","wpd","wq1","wri","wrl","wrz","wsc","wsrc","wtk","x-png",
-    "xbm","xdr","xgz","xif","xl","xla","xlb","xlc","xld","xlk","xll","xlm","xls","xlt","xlv","xlw",
-    "xm","xml","xmz","xpix","xpm","xsr","xwd","xyz","z","zip","zoo","zsh")
+  @volatile var explicitlyParsedSuffixes: Set[String] = knownSuffixes
 
   /**
    * The global multipart progress listener:
-   *     pBytesRead - The total number of bytes, which have been read so far.
+   *    pBytesRead - The total number of bytes, which have been read so far.
    *    pContentLength - The total number of bytes, which are being read. May be -1, if this number is unknown.
    *    pItems - The number of the field, which is currently being read. (0 = no item so far, 1 = first item is being read, ...)
    */

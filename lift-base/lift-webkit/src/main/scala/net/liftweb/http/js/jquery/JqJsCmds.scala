@@ -292,13 +292,13 @@ object JqJsCmds {
   object ModalDialog {
     def apply(html: NodeSeq) = new ModalDialog(html, Empty)
 
-    def apply(html: NodeSeq, css: String) = new ModalDialog(html, Full(css))
+    def apply(html: NodeSeq, css: JsObj) = new ModalDialog(html, Full(css))
   }
 
-  class ModalDialog(html: NodeSeq, css: Box[String]) extends JsCmd {
+  class ModalDialog(html: NodeSeq, css: Box[JsObj]) extends JsCmd {
     val toJsCmd = "jQuery.blockUI({ message: " + AltXML.toXML(Group(S.session.map(s =>
             s.fixHtml(s.processSurroundAndInclude("Modal Dialog", html))).openOr(html)), false, true, S.ieMode).encJs +
-            (css.map(w => ",  css: '" + w + "' ").openOr("")) + "});"
+            (css.map(",  css: " + _.toJsCmd + " ").openOr("")) + "});"
   }
 
   case object Unblock extends JsCmd {
