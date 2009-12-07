@@ -101,6 +101,8 @@
                <archetypeGroupId>${project.groupId}</archetypeGroupId>
                <archetypeArtifactId>${project.artifactId}</archetypeArtifactId>
                <archetypeVersion>${project.version}</archetypeVersion>
+               <!--<scalaVersion>${scala.version}</scalaVersion>-->
+               <!--<liftVersion>${project.version}</liftVersion>-->
                <groupId>test</groupId>
                <artifactId>sample-project</artifactId>
                <version>0.1</version>
