@@ -24,6 +24,9 @@
    -->
     <release version="1.1-SNAPSHOT" date="" description="Lift 1.1 Snapshot">
       <action dev="dchenbecker" type="fix" issue="232" system="github">
+        Added logging of bad prepared statements to help diagnose things.
+      </action>
+      <action dev="dchenbecker" type="fix" issue="231" system="github">
         Fixed Mapper to properly deal with generated values
       </action>
     </release>

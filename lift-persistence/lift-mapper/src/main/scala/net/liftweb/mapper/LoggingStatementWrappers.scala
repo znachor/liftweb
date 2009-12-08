@@ -83,10 +83,14 @@ object DBLog {
   def prepareStatement (conn : Connection, query : String, autoKeys : Array[String]) =
     proxyPreparedStatement(conn.prepareStatement(query, autoKeys), query)
 
-  private def proxyPreparedStatement(stmt : PreparedStatement, query : String) = {
-    Proxy.newProxyInstance(this.getClass.getClassLoader,
-                           Array(classOf[java.sql.PreparedStatement], classOf[DBLog]),
-                           new LoggedPreparedStatementHandler(query, stmt)).asInstanceOf[PreparedStatement]
+  private def proxyPreparedStatement(stmt : => PreparedStatement, query : String) = {
+    try {
+      Proxy.newProxyInstance(this.getClass.getClassLoader,
+                             Array(classOf[java.sql.PreparedStatement], classOf[DBLog]),
+                             new LoggedPreparedStatementHandler(query, stmt)).asInstanceOf[PreparedStatement]
+    } catch {
+      case sqle : SQLException => throw new SQLException("Error preparing statement: \"%s\"".format(query), sqle)
+    }
   }
 
   /**
