@@ -25,6 +25,7 @@ import _root_.java.util.Date
 import _root_.net.liftweb.http._
 import _root_.scala.xml.NodeSeq
 import js._
+import _root_.net.liftweb.json._
 
 abstract class MappedDouble[T<:Mapper[T]](val fieldOwner: T) extends MappedField[Double, T] {
 	private var data: Double = defaultValue
@@ -77,8 +78,12 @@ abstract class MappedDouble[T<:Mapper[T]](val fieldOwner: T) extends MappedField
 
 	def asJsExp = JE.Num(is)
 
+  def asJsonValue: JsonAST.JValue = JsonAST.JDouble(is)
+
 	override def setFromAny(in: Any): Double = {
 		in match {
+		  case JsonAST.JDouble(db) => this.set(db)
+		  case JsonAST.JInt(bi) => this.set(bi.doubleValue)
 			case n: Double => this.set(n)
 			case n: Number => this.set(n.doubleValue)
 			case (n: Number) :: _ => this.set(n.doubleValue)

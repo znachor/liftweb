@@ -20,8 +20,10 @@ import _root_.java.sql.{ResultSet, Types}
 import _root_.java.lang.reflect.Method
 import _root_.java.util.Date
 import _root_.net.liftweb.util._
+import Helpers._
 import _root_.net.liftweb.common._
 import _root_.net.liftweb.http.js._
+import _root_.net.liftweb.json._
 
 abstract class MappedBinary[T<:Mapper[T]](val fieldOwner: T) extends MappedField[Array[Byte], T] {
   private val data : FatLazy[Array[Byte]] =  FatLazy(defaultValue)
@@ -59,10 +61,17 @@ abstract class MappedBinary[T<:Mapper[T]](val fieldOwner: T) extends MappedField
 
   def asJsExp = throw new NullPointerException("No way")
 
-  override def setFromAny(f: Any): Array[Byte] =
-  this.set((if (f == null) null
-  else if (f.isInstanceOf[Array[Byte]]) f.asInstanceOf[Array[Byte]];
-  else f.toString.getBytes("UTF-8")))
+  def asJsonValue: JsonAST.JValue = is match {
+    case null => JsonAST.JNull
+    case value => JsonAST.JString(base64Encode(value))
+  }
+
+  override def setFromAny(f: Any): Array[Byte] = f match {
+    case null | JsonAST.JNull => this.set(null)
+    case JsonAST.JString(base64) => this.set(base64Decode(base64))
+    case array: Array[Byte] => this.set(array)
+    case s => this.set(s.toString.getBytes("UTF-8"))
+  }
 
   def jdbcFriendly(field : String) : Object = is
 
@@ -120,12 +129,20 @@ abstract class MappedText[T<:Mapper[T]](val fieldOwner: T) extends MappedField[S
 
   def asJsExp: JsExp = JE.Str(is)
 
+  def asJsonValue: JsonAST.JValue = is match {
+    case null => JsonAST.JNull 
+    case str => JsonAST.JString(str)
+  }
+
   protected def i_obscure_!(in: String): String = ""
 
     override def setFromAny(in: Any): String = {
     in match {
+      case JsonAST.JNull => this.set(null)
+      case JsonAST.JString(str) => this.set(str)
       case seq: Seq[_] if !seq.isEmpty => seq.map(setFromAny)(0)
       case (s: String) :: _ => this.set(s)
+      case s :: _ => this.setFromAny(s)
       case null => this.set(null)
       case s: String => this.set(s)
       case Some(s: String) => this.set(s)
@@ -206,10 +223,19 @@ abstract class MappedFakeClob[T<:Mapper[T]](val fieldOwner: T) extends MappedFie
 
   def asJsExp: JsExp = JE.Str(is)
 
+  def asJsonValue: JsonAST.JValue = is match {
+    case null => JsonAST.JNull 
+    case str => JsonAST.JString(str)
+  }
+
+
     override def setFromAny(in: Any): String = {
     in match {
+      case JsonAST.JNull => this.set(null)
+      case JsonAST.JString(str) => this.set(str)
       case seq: Seq[_] if !seq.isEmpty => seq.map(setFromAny)(0)
       case (s: String) :: _ => this.set(s)
+      case s :: _ => this.setFromAny(s)
       case null => this.set(null)
       case s: String => this.set(s)
       case Some(s: String) => this.set(s)

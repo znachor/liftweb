@@ -19,9 +19,10 @@ package net.liftweb.mapper
 import _root_.scala.collection.mutable.{ListBuffer, HashMap}
 import _root_.java.lang.reflect.Method
 import _root_.java.sql.{ResultSet, Types, PreparedStatement, Statement}
-import _root_.scala.xml.{Elem, Node, Text, NodeSeq, Null, TopScope, UnprefixedAttribute, MetaData}
+import _root_.scala.xml._
 import _root_.net.liftweb.util.Helpers._
 import _root_.net.liftweb.common.{Box, Empty, Full, Failure}
+import _root_.net.liftweb.json._
 import _root_.net.liftweb.util.{NamedPF, FieldError}
 import _root_.net.liftweb.http.{LiftRules, S, SHtml}
 import _root_.java.util.Date
@@ -554,6 +555,40 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
        case Full(im) => (for (indF <- indexedField(toSave)) yield (indF.dbIndexFieldIndicatesSaved_?)).openOr(true)
        case _ => false
        }*/
+  }
+
+  /**
+   * This method will encode the instance as JSON.  It may reveal
+   * data in fields that might otherwise be proprietary.  It should
+   * be used with caution and only exposed as a public method
+   * after a security review.
+   */
+  protected def encodeAsJSON_! (toEncode: A): JsonAST.JObject = {
+    toEncode.runSafe {
+      JsonAST.JObject(JsonAST.JField("$persisted", 
+				     JsonAST.JBool(toEncode.persisted_?)) ::
+		      this.mappedFieldList.
+		      map(fh => ??(fh.method, toEncode).asJsonField))
+    }
+  }
+
+  protected def decodeFromJSON_!(json: JsonAST.JObject): A = {
+    val ret: A = createInstance
+    import JsonAST._
+
+    ret.runSafe {
+      for {
+	field <- json.obj
+	JField("$persisted", JBool(per)) <- field
+      } ret.persisted_? = per
+      
+      for {
+	field <- json.obj
+	meth <- _mappedFields.get(field.name)
+      } ??(meth, ret).setFromAny(field.value)
+    }
+
+    ret
   }
 
 
