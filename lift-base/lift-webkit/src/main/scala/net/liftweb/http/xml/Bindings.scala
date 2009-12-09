@@ -4,11 +4,11 @@
 
 package net.liftweb.http.xml
 
-import _root.net.liftweb.{common, http, util}
+import _root_.net.liftweb.{common, http, util}
 import common.{Box,Full,Empty,Failure}
 import http.TemplateFinder.findAnyTemplate
 import util.Props
-import scala.xml.NodeSeq
+import scala.xml.{NodeSeq, Text}
 
 object Bindings {
     type Binding = NodeSeq => NodeSeq
