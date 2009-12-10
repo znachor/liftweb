@@ -372,7 +372,9 @@ object LiftRules extends Factory with FormVendor {
         "skip_doc_type" -> SkipDocType,
         "xml_group" -> XmlGroup,
         "XmlGroup" -> XmlGroup,
-        "lazy-load" -> LazyLoad
+        "lazy-load" -> LazyLoad,
+        "html5" -> HTML5,
+        "HTML5" -> HTML5
         ))
   }
   setupSnippetDispatch()
