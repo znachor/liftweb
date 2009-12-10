@@ -22,7 +22,7 @@
     </action>
    see http://maven.apache.org/plugins/maven-changes-plugin/usage.html for full guide
    -->
-    <release version="1.1-SNAPSHOT" date="" description="Lift 1.1 Snapshot">
+    <release version="1.1-M8" date="2009-12-10" description="Lift 1.1 Milestone 8">
       <action dev="boisvert" type="add" issue="" system="">
         Added new built-in &lt;lift:html5&gt; snippet that sets HTML5 DOCTYPE on the XHTML response
       </action>
