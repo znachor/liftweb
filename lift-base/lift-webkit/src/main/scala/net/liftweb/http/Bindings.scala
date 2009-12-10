@@ -13,11 +13,10 @@
  * See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package net.liftweb.http.xml
+package net.liftweb.http
 
-import _root_.net.liftweb.{common, http, util}
+import _root_.net.liftweb.{common, util}
 import common.{Box,Full,Empty,Failure}
-import http.TemplateFinder.findAnyTemplate
 import util.Props
 import scala.xml.{NodeSeq, Text}
 
@@ -36,7 +35,7 @@ object Bindings {
         def bind(xhtml: NodeSeq): NodeSeq = binding.apply(xhtml)
 
         def bind(templatePath: List[String]): NodeSeq = {
-            findAnyTemplate(templatePath) map binding match {
+            TemplateFinder.findAnyTemplate(templatePath) map binding match {
                 case Full(xhtml) => xhtml
                 case Failure(msg, ex, _) if Props.mode == Props.RunModes.Development => Text(ex.map(_.getMessage).openOr(msg))
                 case Empty if Props.mode == Props.RunModes.Development => Text("Unable to find template with path " + templatePath.mkString("/", "/", ""))
