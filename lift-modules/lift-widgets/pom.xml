@@ -28,7 +28,7 @@
   <parent>
     <groupId>net.liftweb</groupId>
     <artifactId>lift-modules</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.1-M8</version>
   </parent>
   <artifactId>lift-widgets</artifactId>
 
