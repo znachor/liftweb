@@ -261,21 +261,21 @@ object JsonParser {
               cur = cur+4
               return BoolVal(true)
             }
-            error("expected boolean")
+            fail("expected boolean")
           case 'f' =>
             fieldNameMode = true
             if (buf.charAt(cur+1) == 'a' && buf.charAt(cur+2) == 'l' && buf.charAt(cur+3) == 's' && buf.charAt(cur+4) == 'e' && isDelimiter(buf.charAt(cur+5))) {
               cur = cur+5
               return BoolVal(false)
             }
-            error("expected boolean")
+            fail("expected boolean")
           case 'n' =>
             fieldNameMode = true
             if (buf.charAt(cur+1) == 'u' && buf.charAt(cur+2) == 'l' && buf.charAt(cur+3) == 'l' && isDelimiter(buf.charAt(cur+4))) {
               cur = cur+4
               return NullVal
             }
-            error("expected null")
+            fail("expected null")
           case ':' =>
             fieldNameMode = false
             cur = cur+1
@@ -292,7 +292,7 @@ object JsonParser {
             fieldNameMode = true
             return parseValue
           case c if isDelimiter(c) => cur = cur+1
-          case c => error("unknown token " + c)
+          case c => fail("unknown token " + c)
         }
       }
       End
