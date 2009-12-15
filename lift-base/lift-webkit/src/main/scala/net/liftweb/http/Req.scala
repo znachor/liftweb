@@ -436,7 +436,7 @@ class Req(val path: ParsePath,
 
   def testFor304(lastModified: Long, headers: (String, String)*): Box[LiftResponse] =
   if (!testIfModifiedSince(lastModified))
-  Full(InMemoryResponse(new Array[Byte](0), ("Content-Type" -> "text/plain; charset=utf-8") :: headers.toList, Nil, 304))
+  Full(InMemoryResponse(new Array[Byte](0), headers.toList, Nil, 304))
   else
   Empty
 
