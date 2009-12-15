@@ -213,6 +213,12 @@
       <email>irc [at] indrajit [dot] com</email>
       <timezone>+5.5</timezone>
     </developer>
+    <developer>
+      <id>jonifreeman</id>
+      <name>Joni Freeman</name>
+      <email>joni [dot] freeman [at] reaktor [dot] fi</email>
+      <timezone>+2</timezone>
+    </developer>
   </developers>
 
   <!--
