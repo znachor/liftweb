@@ -24,6 +24,11 @@ object Examples extends Specification {
     compact(render(json \ "person" \ "name")) mustEqual "\"name\":\"Joe\""
   }
 
+  "Remove example" in {
+    val json = parse(person) remove { _ == JField("name", "Marilyn") }
+    compact(render(json \\ "name")) mustEqual """{"name":"Joe"}"""
+  }
+
   "Queries on person example" in {
     val json = parse(person)
     val filtered = json filter {

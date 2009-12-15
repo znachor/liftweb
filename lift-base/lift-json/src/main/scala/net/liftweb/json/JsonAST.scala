@@ -85,7 +85,7 @@ object JsonAST {
     }
 
     def fold[A](z: A)(f: (A, JValue) => A): A = {
-      def loop(acc: A, v: JValue) = {
+      def rec(acc: A, v: JValue) = {
         val newAcc = f(acc, v)
         v match {
           case JObject(l) => l.foldLeft(newAcc)((a, e) => e.fold(a)(f))
@@ -94,20 +94,20 @@ object JsonAST {
           case _ => newAcc
         }
       }
-      loop(z, this)
+      rec(z, this)
     }
 
     def map(f: JValue => JValue): JValue = {
-      def loop(v: JValue): JValue = v match {
-        case JObject(l) => f(JObject(l.map(f => loop(f) match {
+      def rec(v: JValue): JValue = v match {
+        case JObject(l) => f(JObject(l.map(f => rec(f) match {
           case x: JField => x
           case x => JField(f.name, x)
         })))
-        case JArray(l) => f(JArray(l.map(loop)))
-        case JField(name, value) => f(JField(name, loop(value)))
+        case JArray(l) => f(JArray(l.map(rec)))
+        case JField(name, value) => f(JField(name, rec(value)))
         case x => f(x)
       }
-      loop(this)
+      rec(this)
     }
 
     def find(p: JValue => Boolean): Option[JValue] = {
@@ -140,6 +140,11 @@ object JsonAST {
         case (x, y) => JArray(x :: y :: Nil)
       }
       append(this, other)
+    }
+
+    def remove(p: JValue => Boolean): JValue = this map {
+      case x if p(x) => JNothing
+      case x => x
     }
 
     def extract[A](implicit formats: Formats, mf: scala.reflect.Manifest[A]) = 
