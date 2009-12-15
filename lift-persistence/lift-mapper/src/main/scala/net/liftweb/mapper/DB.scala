@@ -895,10 +895,21 @@ trait ProtoDBVendor extends ConnectionManager {
   protected def maxPoolSize = 4
 
   /**
-   * How is a connection created?
+   * The absolute maximum that this pool can extend to
+   * The default is 20.  Override this method to change.
+   */
+  protected def doNotExpandBeyond = 20
+
+  /**
+   * The logic for whether we can expand the pool beyond the current size.  By
+   * default, the logic tests allowTemporaryPoolExpansion &amp;&amp; poolSize &lt;= doNotExpandBeyond
+   */
+  protected def canExpand_? : Boolean = allowTemporaryPoolExpansion && poolSize <= doNotExpandBeyond
+
+  /**
+   *   How is a connection created?
    */
   protected def createOne: Box[Connection]
-
 
   /**
    * Test the connection.  By default, setAutoCommit(false),
@@ -921,7 +932,7 @@ trait ProtoDBVendor extends ConnectionManager {
           val curSize = poolSize
           wait(50L)
           // if we've waited 50 ms and the pool is still empty, temporarily expand it
-          if (pool.isEmpty && poolSize == curSize && allowTemporaryPoolExpansion) {
+          if (pool.isEmpty && poolSize == curSize && canExpand_?) {
             tempMaxSize += 1
           }
           newConnection(name)
