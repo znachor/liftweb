@@ -3,6 +3,7 @@ package net.liftweb.mapper
 import org.specs._
 import _root_.org.specs.runner.{JUnit3, ConsoleRunner}
 
+/* FIXME 280
 class ManyToManySpecsAsTest extends JUnit3(ManyToManySpecs)
 object ManyToManySpecsRunner extends ConsoleRunner(ManyToManySpecs)
 
@@ -72,3 +73,4 @@ class PersonCompany extends Mapper[PersonCompany] {
   object company extends MappedLongForeignKey(this, Company)
 }
 object PersonCompany extends PersonCompany with MetaMapper[PersonCompany]
+FIXME 280 */
