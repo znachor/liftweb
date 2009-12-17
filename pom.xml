@@ -522,6 +522,10 @@
               <goals>
                 <goal>add-source</goal>
               </goals>
+              <configuration>
+                <sourceDir>${project.basedir}/src/main/scala</sourceDir>
+                <testSourceDir>${project.basedir}/src/test/scala</testSourceDir>
+              </configuration>
             </execution>
             <execution>
               <id>scala-compile</id>
