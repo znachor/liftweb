@@ -514,6 +514,14 @@
             </args>
           </configuration>
           <executions>
+            <!-- Ensure consistency in availability of scala directory in the source path
+              for other plugins (e.g., maven-source-plugin) relying on source path -->
+            <execution>
+              <id>scala-add-source</id>
+              <goals>
+                <goal>add-source</goal>
+              </goals>
+            </execution>
             <execution>
               <id>scala-compile</id>
               <phase>process-resources</phase>
