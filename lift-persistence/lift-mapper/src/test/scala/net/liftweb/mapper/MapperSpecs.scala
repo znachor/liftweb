@@ -23,6 +23,7 @@ import _root_.org.specs.runner.ConsoleRunner
 import _root_.net.liftweb.common._
 import _root_.net.liftweb.util._
 import Helpers._
+import _root_.net.liftweb.json._
 import _root_.java.sql.{Connection, DriverManager}
 
 //import _root_.net.liftweb.mapper.DBVendors.{MySqlRunner, DerbyRunner}
@@ -83,6 +84,24 @@ object MapperSpecs extends Specification {
 
           elwood.id.is must be_<(madeline.id.is)
         }
+
+	"basic JSON encoding/decoding works" in {
+	  cleanup()
+	  val m = SampleModel.findAll().head
+	  val json = m.encodeAsJson()
+	  val rebuilt = SampleModel.buildFromJson(json)
+	  m must_== rebuilt
+	}
+
+	"Can JSON decode and write back" in {
+	  cleanup()
+	  val m = SampleModel.find(2).open_!
+	  val json = m.encodeAsJson()
+	  val rebuilt = SampleModel.buildFromJson(json)
+	  rebuilt.firstName("yak").save
+	  val recalled = SampleModel.find(2).open_!
+	  recalled.firstName.is must_== "yak"
+	}
 
 
         "Like works" in {
@@ -368,6 +387,9 @@ class SampleTag extends LongKeyedMapper[SampleTag] with IdPK {
 object SampleModel extends SampleModel with KeyedMetaMapper[Long, SampleModel] {
   override def dbAddTable = Full(populate _)
 
+  def encodeAsJson(in: SampleModel): JsonAST.JObject = encodeAsJSON_!(in)
+  def buildFromJson(json: JsonAST.JObject): SampleModel = decodeFromJSON_!(json)
+
   private def populate {
     create.firstName("Elwood").save
     create.firstName("Madeline").save
@@ -386,6 +408,8 @@ class SampleModel extends KeyedMapper[Long, SampleModel] {
   object notNull extends MappedString(this, 32) {
     override def dbNotNull_? = true
   }
+
+  def encodeAsJson(): JsonAST.JObject = SampleModel.encodeAsJson(this)
 }
 
 /**
@@ -516,4 +540,3 @@ object Dog2 extends Dog2 with LongKeyedMetaMapper[Dog2] {
     new _root_.java.util.Date(1257089309453L)
   }
 }
-*/

@@ -69,13 +69,42 @@ object JsonASTSpec extends Specification with JValueGen with ScalaCheck {
     forAll(reorderProp) must pass
   } 
 
+  "Remove all" in {
+    val removeAllProp = (x: JValue) => (x remove { _ => true }) == JNothing
+    forAll(removeAllProp) must pass
+  }
+
+  "Remove nothing" in {
+    val removeNothingProp = (x: JValue) => (x remove { _ => false }) == x
+    forAll(removeNothingProp) must pass
+  }
+
+  "Remove removes only matching elements (in case of a field, its value is set to JNothing)" in {
+    val removeProp = (json: JValue, x: Class[_ <: JValue]) => {
+      val removed = json remove typePredicate(x)
+      val Diff(c, a, d) = json diff removed
+      val elemsLeft = removed filter {
+        case JField(_, JNothing) => false
+        case _ => true 
+      }
+      c == JNothing && a == JNothing && elemsLeft.forall(_.getClass != x)
+    }
+    forAll(removeProp) must pass
+  }
+
   private def reorderFields(json: JValue) = json map {
     case JObject(xs) => JObject(xs.reverse)
     case x => x
   }
 
+  private def typePredicate(clazz: Class[_])(json: JValue) = json match {
+    case x if x.getClass == clazz => true
+    case _ => false
+  }
+
   implicit def arbJValue: Arbitrary[JValue] = Arbitrary(genJValue)
   implicit def arbJObject: Arbitrary[JObject] = Arbitrary(genObject)
+  implicit def arbJValueClass: Arbitrary[Class[_ <: JValue]] = Arbitrary(genJValueClass)
 }
 
 */

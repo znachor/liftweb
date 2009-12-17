@@ -28,7 +28,7 @@ import Helpers._
 import http._
 import S._
 import js._
-
+import json._
 import _root_.scala.xml.{NodeSeq}
 
 /**
@@ -60,6 +60,7 @@ abstract class MappedDate[T<:Mapper[T]](val fieldOwner: T) extends MappedField[D
   }
 
   def asJsExp = JE.Num(toLong)
+  def asJsonValue: JsonAST.JValue = JsonAST.JInt(toLong)
 
   /**
    * Get the JDBC SQL Type for this field
@@ -91,6 +92,7 @@ abstract class MappedDate[T<:Mapper[T]](val fieldOwner: T) extends MappedField[D
   }
 
   override def setFromAny(f : Any): Date = f match {
+    case JsonAST.JInt(v) => this.set(new Date(v.longValue))    
     case s: String => LiftRules.parseDate(s).map(d => this.set(d)).openOr(this.is)
     case (s: String) :: _ => LiftRules.parseDate(s).map(d => this.set(d)).openOr(this.is)
     case _ => this.is

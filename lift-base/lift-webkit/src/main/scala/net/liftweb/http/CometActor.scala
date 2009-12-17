@@ -531,6 +531,8 @@ trait CometActor extends LiftActor with LiftCometActor with BindHelpers {
     listeners = Nil
   }
 
+  def unWatch = partialUpdate(Call("liftComet.lift_unlistWatch", uniqueId))
+
   protected def partialUpdate(cmd: => JsCmd) {
     this ! PartialUpdateMsg(() => cmd)
   }

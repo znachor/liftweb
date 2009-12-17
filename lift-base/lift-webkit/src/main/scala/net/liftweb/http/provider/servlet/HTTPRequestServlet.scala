@@ -13,7 +13,7 @@ import _root_.net.liftweb.util._
 import Helpers._
 
 class HTTPRequestServlet(val req: HttpServletRequest) extends HTTPRequest {
-  private val ctx = new HTTPServletContext(req.getSession.getServletContext)
+  private lazy val ctx = new HTTPServletContext(req.getSession.getServletContext)
 
   private val (hasContinuations_?, contSupport, getContinuation, getObject, setObject, suspend, resume) = {
     try {
@@ -31,7 +31,8 @@ class HTTPRequestServlet(val req: HttpServletRequest) extends HTTPRequest {
   }
 
 
-  def cookies: List[HTTPCookie] =
+  lazy val cookies: List[HTTPCookie] = {
+    req.getSession(false) // do this to make sure we capture the JSESSIONID cookie
     (Box !! req.getCookies).map(_.toList.map(c => HTTPCookie(c.getName,
       Box !! (c.getValue),
       Box !! (c.getDomain),
@@ -39,8 +40,9 @@ class HTTPRequestServlet(val req: HttpServletRequest) extends HTTPRequest {
       Box !! (c.getMaxAge),
       Box !! (c.getVersion),
       Box !! (c.getSecure)))) openOr Nil
+  }
 
-  def authType: Box[String] = Box !! req.getAuthType
+  lazy val authType: Box[String] = Box !! req.getAuthType
 
   def headers(name: String): List[String] = enumToList[String](req.getHeaders(name).asInstanceOf[_root_.java.util.Enumeration[String]])
 
@@ -53,20 +55,20 @@ class HTTPRequestServlet(val req: HttpServletRequest) extends HTTPRequest {
 
   def contentType = Box !! req.getContentType
 
-  def session = new HTTPServletSession(req getSession)
+  lazy val session = new HTTPServletSession(req getSession)
 
   def uri = req.getRequestURI
 
   def url = req.getRequestURL.toString
 
-  def queryString: Box[String] = Box !! req.getQueryString
+  lazy val queryString: Box[String] = Box !! req.getQueryString
 
   def param(name: String): List[String] = req.getParameterValues(name) match {case null => Nil case x => x.toList}
 
-  def params: List[HTTPParam] = enumToList[String](req.getParameterNames.asInstanceOf[_root_.java.util.Enumeration[String]]).
+  lazy val params: List[HTTPParam] = enumToList[String](req.getParameterNames.asInstanceOf[_root_.java.util.Enumeration[String]]).
           map(n => HTTPParam(n, param(n)))
 
-  def paramNames: List[String] = params map (_.name)
+  lazy val paramNames: List[String] = params map (_.name)
 
   def remoteAddress: String = req.getRemoteAddr
 
@@ -154,5 +156,84 @@ class HTTPRequestServlet(val req: HttpServletRequest) extends HTTPRequest {
 
   def setCharacterEncoding(encoding: String) = req.setCharacterEncoding(encoding)
 
+  def snapshot: HTTPRequest  = new OfflineRequestSnapshot(this)
+
+}
+
+private class OfflineRequestSnapshot(req: HTTPRequest) extends HTTPRequest {
+
+  private val _cookies = List(req.cookies :_*)
+
+  private val _headers = List(req.headers :_*)
+
+  private val _params = List(req.params :_*)
+
+ 
+  def cookies: List[HTTPCookie] = _cookies
+
+  val authType: Box[String] = req.authType
+
+  def headers(name: String): List[String] = _headers.filter(_.name == name).map(_.name)
+
+  def headers: List[HTTPParam] = _headers
+
+  val contextPath: String = req.contextPath
+
+  val context: HTTPContext = req.context
+
+  val contentType: Box[String] = req.contentType
+
+  val uri: String = req.uri
+
+  val url: String = req.url
+
+  val queryString: Box[String] = req.queryString
+
+  def param(name: String): List[String] = _params.filter(_.name == name).map(_.name)
+
+  def params: List[HTTPParam] = _params
+
+  def paramNames: List[String] = _params.map(_.name)
+
+  val session: HTTPSession = req.session
+
+  val sessionId: Box[String] = req.sessionId
+
+  val remoteAddress: String = req.remoteAddress
+
+  val remotePort: Int = req.remotePort
+
+  val remoteHost: String = req.remoteHost
+
+  val serverName: String = req.serverName
+
+  val scheme: String = req.scheme
+
+  val serverPort: Int = req.serverPort
+
+  val method: String = req.method
+
+  val hasSuspendResumeSupport_? : Option[Any] = req.hasSuspendResumeSupport_?
+
+  def suspend(timeout: Long): Nothing = 
+    throw new UnsupportedOperationException("Cannot suspend a snapshot")
+
+  def resume(what: AnyRef): Unit = 
+    throw new UnsupportedOperationException("Cannot resume a snapshot")
+
+  def inputStream: InputStream = 
+    throw new UnsupportedOperationException("InputStream is not available")
+
+  val multipartContent_? : Boolean = req.multipartContent_?
+
+  def extractFiles: List[ParamHolder] = 
+    throw new UnsupportedOperationException("It is unsafe to extract files")
+
+  val locale: Box[Locale] = req.locale
+
+  def setCharacterEncoding(encoding: String) = 
+    throw new UnsupportedOperationException("It is unsafe to set the character encoding ")
+
+  def snapshot = this
 
 }

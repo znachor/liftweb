@@ -169,7 +169,7 @@ class LiftServlet {
       // otherwise do a stateful response
       val liftSession = getLiftSession(req)
       S.init(req, liftSession) {
-        dispatchStatefulRequest(req, liftSession)
+        dispatchStatefulRequest(S.request.open_!, liftSession)
       }
     }
 
@@ -202,6 +202,7 @@ class LiftServlet {
           try {
             try {
               liftSession.runParams(req)
+              S.functionLifespan(true) {
               pf(toMatch)() match {
                 case Full(v) =>
                   (true, Full(LiftRules.convertResponse((liftSession.checkRedirect(v), Nil,
@@ -213,6 +214,7 @@ class LiftServlet {
                 case f: Failure =>
                   (true, Full(liftSession.checkRedirect(req.createNotFound(f))))
               }
+              }
             } catch {
               case ite: _root_.java.lang.reflect.InvocationTargetException if (ite.getCause.isInstanceOf[ResponseShortcutException]) =>
                 (true, Full(liftSession.handleRedirect(ite.getCause.asInstanceOf[ResponseShortcutException], req)))
@@ -222,7 +224,12 @@ class LiftServlet {
               case e => (true, NamedPF.applyBox((Props.mode, req, e), LiftRules.exceptionHandler.toList))
 
             }
+
           } finally {
+             if (S.functionMap.size > 0) {
+                liftSession.updateFunctionMap(S.functionMap, S.uri, millis)
+                S.clearFunctionMap
+              }
             liftSession.notices = S.getNotices
           }
 
@@ -382,7 +389,7 @@ class LiftServlet {
 
   private def convertAnswersToCometResponse(session: LiftSession, ret: Seq[AnswerRender], actors: List[(LiftCometActor, Long)]): LiftResponse = {
     val ret2: List[AnswerRender] = ret.toList
-    val jsUpdateTime = ret2.map(ar => "lift_toWatch['" + ar.who.uniqueId + "'] = '" + ar.when + "';").mkString("\n")
+    val jsUpdateTime = ret2.map(ar => "if (lift_toWatch['" + ar.who.uniqueId + "'] !== undefined) lift_toWatch['" + ar.who.uniqueId + "'] = '" + ar.when + "';").mkString("\n")
     val jsUpdateStuff = ret2.map {
       ar =>
               val ret = ar.response.toJavaScript(session, ar.displayAll)

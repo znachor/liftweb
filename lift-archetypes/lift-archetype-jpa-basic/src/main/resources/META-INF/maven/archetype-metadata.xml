@@ -1,35 +1,42 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <archetype-descriptor name="lift-archetype-jpa-basic">
-<!-- place the master POM into the root dir -->
+  <requiredProperties>
+    <requiredProperty key="scalaVersion">
+      <defaultValue>${scala.version}</defaultValue>
+    </requiredProperty>
+    <requiredProperty key="liftVersion">
+      <defaultValue>${lift.version}</defaultValue>
+    </requiredProperty>
+  </requiredProperties>
   <fileSets>
-    <fileSet filtered="true">
+    <fileSet encoding="UTF-8" filtered="true">
       <directory/>
       <includes>
-        <include>pom.xml</include>
         <include>README</include>
       </includes>
     </fileSet>
   </fileSets>
   <modules>
     <!-- web module -->
-    <module name="web" id="web" dir="web">
+    <module dir="web">
+      <!--<module name="web" id="web" dir="web">-->
       <fileSets>
         <!-- store the module pom -->
-        <fileSet filtered="true" packaged="false">
+        <fileSet encoding="UTF-8" filtered="true" packaged="false">
           <directory/>
           <includes>
             <include>web/pom.xml</include>
           </includes>
         </fileSet>
         <!-- properly place Boot.scala -->
-        <fileSet filtered="true" packaged="false">
+        <fileSet encoding="UTF-8" filtered="true" packaged="false">
           <directory>src/main/scala/bootstrap/liftweb</directory>
           <includes>
             <include>Boot.scala</include>
           </includes>
         </fileSet>
         <!-- place main sources -->
-        <fileSet filtered="true" packaged="true">
+        <fileSet encoding="UTF-8" filtered="true" packaged="true">
           <directory>src/main/scala/</directory>
           <includes>
             <include>**/*.scala</include>
@@ -39,7 +46,7 @@
           </excludes>
         </fileSet>
         <!-- place templates -->
-        <fileSet filtered="false" packaged="false">
+        <fileSet encoding="UTF-8" filtered="false" packaged="false">
           <directory>src/main/webapp</directory>
           <includes>
             <include>**/*</include>
@@ -47,7 +54,7 @@
           </includes>
         </fileSet>
         <!-- place resources -->
-        <fileSet filtered="false" packaged="false">
+        <fileSet encoding="UTF-8" filtered="false" packaged="false">
           <directory>src/main/resources</directory>
           <includes>
             <include>**/*</include>
@@ -56,27 +63,28 @@
       </fileSets>
     </module>
     <!-- persistence module -->
-    <module name="spa" id="spa" dir="spa">
+    <module dir="spa">
+      <!--<module name="spa" id="spa" dir="spa">-->
       <fileSets>
-        <fileSet filtered="true" packaged="false">
+        <fileSet encoding="UTF-8" filtered="true" packaged="false">
           <directory/>
           <includes>
             <include>spa/pom.xml</include>
           </includes>
         </fileSet>
-        <fileSet filtered="true" packaged="true">
+        <fileSet encoding="UTF-8" filtered="true" packaged="true">
           <directory>src/main/scala/</directory>
           <includes>
             <include>**/*.scala</include>
           </includes>
         </fileSet>
-        <fileSet filtered="true" packaged="true">
+        <fileSet encoding="UTF-8" filtered="true" packaged="true">
           <directory>src/test/scala/</directory>
           <includes>
             <include>**/*.scala</include>
           </includes>
         </fileSet>
-        <fileSet filtered="true" packaged="false">
+        <fileSet encoding="UTF-8" filtered="true" packaged="false">
           <directory>src/main/resources</directory>
           <includes>
             <include>**/*</include>

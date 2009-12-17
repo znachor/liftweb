@@ -20,9 +20,10 @@ package mapper
 import _root_.scala.collection.mutable.{ListBuffer, HashMap}
 import _root_.java.lang.reflect.Method
 import _root_.java.sql.{ResultSet, Types, PreparedStatement, Statement}
-import _root_.scala.xml.{Elem, Node, Text, NodeSeq, Null, TopScope, UnprefixedAttribute, MetaData}
+import _root_.scala.xml._
 import _root_.net.liftweb.util.Helpers._
 import _root_.net.liftweb.common.{Box, Empty, Full, Failure}
+import _root_.net.liftweb.json._
 import _root_.net.liftweb.util.{NamedPF, FieldError}
 import _root_.net.liftweb.http.{LiftRules, S, SHtml}
 import _root_.java.util.Date
@@ -199,7 +200,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
 
       DB.prepareStatement(query, conn) {
         st =>
-        setStatementFields(st, bl, 1)
+        setStatementFields(st, bl, 1, conn)
         DB.exec(st) {
           rs =>
           if (rs.next) rs.getLong(1)
@@ -301,7 +302,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
 
       DB.prepareStatement(query, conn) {
         st =>
-        setStatementFields(st, bl, 1)
+        setStatementFields(st, bl, 1, conn)
         st.executeUpdate
         true
       }
@@ -336,7 +337,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
       val (query, start, max) = addEndStuffs(addFields(selectStatement, false, bl, conn), bl, conn)
       DB.prepareStatement(query, conn) {
         st =>
-        setStatementFields(st, bl, 1)
+        setStatementFields(st, bl, 1, conn)
         DB.exec(st)(createInstances(dbId, _, start, max, f))
       }
     }
@@ -419,64 +420,64 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
   }
 
 
-  private[mapper] def setStatementFields(st: PreparedStatement, by: List[QueryParam[A]], curPos: Int): Int = {
+  private[mapper] def setStatementFields(st: PreparedStatement, by: List[QueryParam[A]], curPos: Int, conn: SuperConnection): Int = {
     by match {
       case Nil => curPos
       case Cmp(field, _, Full(value), _, _) :: xs =>
-        st.setObject(curPos, field.convertToJDBCFriendly(value), field.targetSQLType)
-        setStatementFields(st, xs, curPos + 1)
+        st.setObject(curPos, field.convertToJDBCFriendly(value), conn.driverType.columnTypeMap(field.targetSQLType))
+        setStatementFields(st, xs, curPos + 1, conn)
 
       case ByList(field, vals) :: xs => {
           var newPos = curPos
           vals.foreach(v => {
               st.setObject(newPos,
                            field.convertToJDBCFriendly(v),
-                           field.targetSQLType)
+                           conn.driverType.columnTypeMap(field.targetSQLType))
               newPos = newPos + 1
             })
-          setStatementFields(st, xs, newPos)
+          setStatementFields(st, xs, newPos, conn)
         }
 
       case (in: InThing[A]) :: xs =>
         val newPos = in.innerMeta.setStatementFields(st, in.queryParams,
-                                                     curPos)
-        setStatementFields(st, xs, newPos)
+                                                     curPos, conn)
+        setStatementFields(st, xs, newPos, conn)
 
       case BySql(query, who, params @ _*) :: xs => {
           params.toList match {
-            case Nil => setStatementFields(st, xs, curPos)
+            case Nil => setStatementFields(st, xs, curPos, conn)
             case List(i: Int) =>
               st.setInt(curPos, i)
-              setStatementFields(st, xs, curPos + 1)
+              setStatementFields(st, xs, curPos + 1, conn)
             case List(lo: Long) =>
               st.setLong(curPos, lo)
-              setStatementFields(st, xs, curPos + 1)
+              setStatementFields(st, xs, curPos + 1, conn)
             case List(s: String) =>
               st.setString(curPos, s)
-              setStatementFields(st, xs, curPos + 1)
+              setStatementFields(st, xs, curPos + 1, conn)
               // Allow specialization of time-related values based on the input parameter
             case List(t: _root_.java.sql.Timestamp) =>
               st.setTimestamp(curPos, t)
-              setStatementFields(st, xs, curPos + 1)
+              setStatementFields(st, xs, curPos + 1, conn)
             case List(d: _root_.java.sql.Date) =>
               st.setDate(curPos, d)
-              setStatementFields(st, xs, curPos + 1)
+              setStatementFields(st, xs, curPos + 1, conn)
             case List(t: _root_.java.sql.Time) =>
               st.setTime(curPos, t)
-              setStatementFields(st, xs, curPos + 1)
+              setStatementFields(st, xs, curPos + 1, conn)
               // java.util.Date goes last, since it's a superclass of java.sql.{Date,Time,Timestamp}
             case List(d: Date) =>
               st.setTimestamp(curPos, new _root_.java.sql.Timestamp(d.getTime))
-              setStatementFields(st, xs, curPos + 1)
-            case List(field: BaseMappedField) => st.setObject(curPos, field.jdbcFriendly, field.targetSQLType)
-              setStatementFields(st, xs, curPos + 1)
+              setStatementFields(st, xs, curPos + 1, conn)
+            case List(field: BaseMappedField) => st.setObject(curPos, field.jdbcFriendly, conn.driverType.columnTypeMap(field.targetSQLType))
+              setStatementFields(st, xs, curPos + 1, conn)
 
             case p :: ps =>
-              setStatementFields(st, BySql[A](query, who, p) :: BySql[A](query, who, ps: _*) :: xs, curPos)
+              setStatementFields(st, BySql[A](query, who, p) :: BySql[A](query, who, ps: _*) :: xs, curPos, conn)
           }
         }
       case _ :: xs => {
-          setStatementFields(st, xs, curPos)
+          setStatementFields(st, xs, curPos, conn)
         }
     }
   }
@@ -523,7 +524,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
             st =>
             val indVal = indexedField(toDelete)
             indVal.map{indVal =>
-              st.setObject(1, indVal.jdbcFriendly(im), indVal.targetSQLType(im))
+              st.setObject(1, indVal.jdbcFriendly(im), conn.driverType.columnTypeMap(indVal.targetSQLType(im)))
 
               st.executeUpdate == 1
             } openOr false
@@ -558,6 +559,40 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
        case Full(im) => (for (indF <- indexedField(toSave)) yield (indF.dbIndexFieldIndicatesSaved_?)).openOr(true)
        case _ => false
        }*/
+  }
+
+  /**
+   * This method will encode the instance as JSON.  It may reveal
+   * data in fields that might otherwise be proprietary.  It should
+   * be used with caution and only exposed as a public method
+   * after a security review.
+   */
+  protected def encodeAsJSON_! (toEncode: A): JsonAST.JObject = {
+    toEncode.runSafe {
+      JsonAST.JObject(JsonAST.JField("$persisted", 
+				     JsonAST.JBool(toEncode.persisted_?)) ::
+		      this.mappedFieldList.
+		      map(fh => ??(fh.method, toEncode).asJsonField))
+    }
+  }
+
+  protected def decodeFromJSON_!(json: JsonAST.JObject): A = {
+    val ret: A = createInstance
+    import JsonAST._
+
+    ret.runSafe {
+      for {
+	field <- json.obj
+	JField("$persisted", JBool(per)) <- field
+      } ret.persisted_? = per
+      
+      for {
+	field <- json.obj
+	meth <- _mappedFields.get(field.name)
+      } ??(meth, ret).setFromAny(field.value)
+    }
+
+    ret
   }
 
 
@@ -666,7 +701,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
                   }
 
                   indexedField(toSave).foreach(indVal =>  st.setObject(colNum, indVal.jdbcFriendly(indexMap.open_!),
-                                                                       indVal.targetSQLType(indexMap.open_!)))
+                                                                       conn.driverType.columnTypeMap(indVal.targetSQLType(indexMap.open_!))))
                   st.executeUpdate
                   true
                 }
@@ -696,9 +731,10 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
                 }
               }
 
-              val pkNames = (mappedColumnInfo.filter(_._2.dbPrimaryKey_?).map(_._1)).toList
+              // Figure out which columns are auto-generated
+              val generatedColumns = (mappedColumnInfo.filter(_._2.dbAutogenerated_?).map(_._1)).toList
 
-              val ret = conn.driverType.performInsert(conn, query, prepStat, MapperRules.quoteTableName(_dbTableNameLC), pkNames) {
+              val ret = conn.driverType.performInsert(conn, query, prepStat, MapperRules.quoteTableName(_dbTableNameLC), generatedColumns) {
                 case Right(count) => count == 1
                 case Left(rs) => runAppliers(rs)
               }
@@ -1540,7 +1576,7 @@ trait KeyedMetaMapper[Type, A<:KeyedMapper[Type, A]] extends MetaMapper[A] with 
                         mkString(", ")+
                         " FROM "+MapperRules.quoteTableName(_dbTableNameLC)+" WHERE "+MapperRules.quoteColumnName(field._dbColumnNameLC)+" = ?", conn) {
       st =>
-      st.setObject(1, field.makeKeyJDBCFriendly(key), field.targetSQLType(field._dbColumnNameLC))
+      st.setObject(1, field.makeKeyJDBCFriendly(key), conn.driverType.columnTypeMap(field.targetSQLType(field._dbColumnNameLC)))
       DB.exec(st) {
         rs =>
         val mi = buildMapper(rs)
@@ -1569,7 +1605,7 @@ trait KeyedMetaMapper[Type, A<:KeyedMapper[Type, A]] extends MetaMapper[A] with 
       val (query, start, max) = addEndStuffs(addFields(selectStatement,false,  bl, conn), bl, conn)
       DB.prepareStatement(query, conn) {
         st =>
-        setStatementFields(st, bl, 1)
+        setStatementFields(st, bl, 1, conn)
         DB.exec(st) {
           rs =>
           val mi = buildMapper(rs)

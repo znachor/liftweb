@@ -119,7 +119,7 @@ trait Wizard extends DispatchSnippet with Factory {
       theScreen.screenFields.map(f => WizardFieldInfo(f, f.titleAsHtml, f.helpAsHtml, f.toForm)),
       prevButton, Full(cancelButton),
       nextButton,
-      finishButton, theScreen.screenBottom, wizardBottom, nextId, prevId, cancelId)
+      finishButton, theScreen.screenBottom, wizardBottom, nextId, prevId, cancelId, theScreen)
   }
 
   protected def renderAll(wizardTop: Box[Elem],
@@ -130,7 +130,7 @@ trait Wizard extends DispatchSnippet with Factory {
                           next: Box[Elem],
                           finish: Box[Elem],
                           screenBottom: Box[Elem],
-                          wizardBottom: Box[Elem], nextId: String, prevId: String, cancelId: String): NodeSeq = {
+                          wizardBottom: Box[Elem], nextId: String, prevId: String, cancelId: String, theScreen: Screen): NodeSeq = {
 
     val notices: List[(NoticeType.Value, NodeSeq, Box[String])] = S.getAllNotices
 
@@ -163,7 +163,10 @@ trait Wizard extends DispatchSnippet with Factory {
 
 
     def bindFields(xhtml: NodeSeq): NodeSeq =
-      <form id={nextId} action={url} method="post">{S.formGroup(-1)(SHtml.hidden(() => snapshot.restore()))}{bind("wizard", xhtml, "line" -> bindFieldLine _)}{S.formGroup(4)(SHtml.hidden(() => {doNext(); val localSnapshot = createSnapshot; S.redirectTo(url, () => localSnapshot.restore)}))}</form> ++
+      (<form id={nextId} action={url} method="post">{S.formGroup(-1)(SHtml.hidden(() =>
+          snapshot.restore()))}{bind("wizard", xhtml, "line" -> bindFieldLine _)}{S.formGroup(4)(SHtml.hidden(() =>
+          {doNext(); val localSnapshot = createSnapshot; S.redirectTo(url, () => localSnapshot.restore)}))}</form> %
+          theScreen.additionalAttributes) ++
           <form id={prevId} action={url} method="post">{SHtml.hidden(() => {snapshot.restore(); this.prevScreen; val localSnapshot = createSnapshot; S.redirectTo(url, () => localSnapshot.restore)})}</form> ++
           <form id={cancelId} action={url} method="post">{SHtml.hidden(() => {
             snapshot.restore();
@@ -338,14 +341,22 @@ trait Wizard extends DispatchSnippet with Factory {
   trait Screen {
     override def toString = screenName
 
+    /**
+     * any additional parameters that need to be put in the on the form (e.g., mime type)
+     */
+    def additionalAttributes: MetaData =
+      if (hasUploadField) new UnprefixedAttribute("enctype", Text("multipart/form-data"), Null) else Null
+
     @volatile private[this] var _fieldList: List[Field] = Nil
 
     private def _register(field: Field) {
       _fieldList = _fieldList ::: List(field)
     }
 
+    protected def hasUploadField: Boolean = screenFields.foldLeft(false)(_ | _.uploadField_?)
+
     /**
-     * A list of fields in this screen
+     *  A list of fields in this screen
      */
     def screenFields = _fieldList
 
@@ -413,6 +424,11 @@ trait Wizard extends DispatchSnippet with Factory {
 
       def is = currentValue.is
 
+      /**
+       * Set to true if this field is part of a multi-part mime upload
+       */
+      def uploadField_? = false
+
       def get = is
 
       def set(v: ValueType) = currentValue.set(v)
@@ -430,7 +446,7 @@ trait Wizard extends DispatchSnippet with Factory {
       def helpAsHtml: Box[NodeSeq] = help.map(Text.apply)
 
       /**
-       * Is the field editable
+       *  Is the field editable
        */
       def editable_? = true
 
@@ -487,6 +503,12 @@ trait Wizard extends DispatchSnippet with Factory {
       val bn = name + "_inited_?"
       WizardVarHandler.get(name).isDefined || (WizardVarHandler.get(bn) openOr false)
     }
+
+    /**
+     * Different Vars require different mechanisms for synchronization.  This method implements
+     * the Var specific synchronization mechanism
+     */
+    def doSync[F](f: => F): F = f // no sync necessary for RequestVars... always on the same thread
   }
 
 

@@ -20,13 +20,13 @@ package mapper
 import _root_.scala.collection.mutable._
 import _root_.java.lang.reflect.Method
 import _root_.java.sql.{ResultSet, Types}
-import _root_.scala.xml.{Text, Node, NodeSeq, Group,
-                         Elem, Null, PrefixedAttribute, MetaData}
+import _root_.scala.xml._
 import _root_.java.util.Date
 import _root_.net.liftweb.http.{S, SHtml}
 import _root_.net.liftweb.http.S._
 import _root_.net.liftweb.http.js._
 import _root_.net.liftweb.common._
+import _root_.net.liftweb.json._
 import _root_.net.liftweb.util._
 import Helpers._
 
@@ -89,6 +89,10 @@ trait BaseMappedField extends SelectableField with Bindable with MixableMappedFi
   def dbDisplay_? = true
 
   def dbIncludeInForm_? = dbDisplay_?
+
+  def asJsonField: JsonAST.JField = JsonAST.JField(name, asJsonValue)
+
+  def asJsonValue: JsonAST.JValue
 
 
   /**

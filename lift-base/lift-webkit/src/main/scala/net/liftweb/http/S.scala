@@ -23,7 +23,6 @@ import _root_.net.liftweb.common._
 import _root_.net.liftweb.util._
 import Helpers._
 import js._
-import _root_.java.io.InputStream
 import _root_.java.util.{Locale, TimeZone, ResourceBundle}
 import _root_.java.util.concurrent.atomic.AtomicLong
 import _root_.net.liftweb.builtin.snippet._
@@ -600,8 +599,8 @@ object S extends HasParams {
    * @see LiftRules.resourceBundleFactories
    */
   def resourceBundles: List[ResourceBundle] = {
-    _resBundle.value match {
-      case Nil => {
+    _resBundle.box match {
+      case Full(Nil) => {
         _resBundle.set(LiftRules.resourceNames.flatMap(name => tryo(
           List(ResourceBundle.getBundle(name, locale))
           ).openOr(
@@ -609,7 +608,10 @@ object S extends HasParams {
           )))
         _resBundle.value
       }
-      case bundles => bundles
+      case Full(bundles) => bundles
+      case _ => throw new IllegalStateException("Attempted to use resource bundles outside of an initialized S scope. " +
+                                                "S only usable when initialized, such as during request processing. " +
+                                                "Did you call S.? from Boot?")
     }
   }
 
@@ -743,6 +745,20 @@ def uriAndQueryString: Box[String] =
 for {
   req <- this.request
 } yield req.uri + (queryString.map(s => "?"+s) openOr "")
+
+  private object _skipXmlHeader extends TransientRequestVar(false)
+
+  /**
+   * If true, then the xml header at the beginning of
+   * the returned XHTML page will not be inserted.
+   *
+   */
+  def skipXmlHeader: Boolean = _skipXmlHeader.is
+
+  /**
+   * Set the skipXmlHeader flag
+   */
+  def skipXmlHeader_=(in: Boolean): Unit = _skipXmlHeader.set(in)
 
   /**
    * Redirects the browser to a given URL. Note that the underlying mechanism for redirects is to
@@ -1106,12 +1122,21 @@ for {
     }
   }
 
-  private def _innerInit[B](f: () => B): B = {
+  private def doStatefulRewrite(old: Req): Req = {
+    // Don't even try to rewrite Req.nil
+    if (!old.path.partPath.isEmpty && (old.request ne null))
+      Req(old, S.sessionRewriter.map(_.rewrite) ::: LiftRules.statefulRewrite.toList)
+    else old
+  }
+
+  private def _innerInit[B](request: Req, f: () => B): B = {
     _lifeTime.doWith(false) {
       _attrs.doWith(Nil) {
           _resBundle.doWith(Nil) {
             inS.doWith(true) {
+              _request.doWith(doStatefulRewrite(request)) {
                 _nest2InnerInit(f)
+              }
           }
         }
       }
@@ -1126,6 +1151,25 @@ for {
          ca <- Box.legacyNullTest(r.cookies).toList;
          c <- ca) yield c
 
+
+  private[liftweb] def lightInit[B](request: Req,
+                                 session: LiftSession,
+                                 attrs: List[(Either[String, (String, String)], String)])(f: => B): B =
+    this._request.doWith(request) {
+      _sessionInfo.doWith(session) {
+        _lifeTime.doWith(false) {
+          _attrs.doWith(attrs) {
+            _resBundle.doWith(Nil) {
+              inS.doWith(true) {
+                f
+              }
+            }
+          }
+        }
+      }
+    }
+
+
   private def _init[B](request: Req, session: LiftSession)(f: () => B): B =
     this._request.doWith(request) {
       _sessionInfo.doWith(session) {
@@ -1133,7 +1177,7 @@ for {
           TransientRequestVarHandler(Full(session),
             RequestVarHandler(Full(session),
               _responseCookies.doWith(CookieHolder(getCookies(containerRequest), Nil)) {
-                _innerInit(f)
+                _innerInit(request, f)
               }
             )
           )
@@ -1970,23 +2014,13 @@ for {
     case _ => f
   }
 
-  /**
-   * Maps a function with an random generated and name
-   */
-  def jsonFmapFunc[T](in: Any => JsObj)(f: String => T): T = //
-    {
-      val name = formFuncName
-      addFunctionMap(name, SFuncHolder((s: String) => JSONParser.parse(s).map(in) openOr js.JE.JsObj()))
-      f(name)
-    }
-
   def render(xhtml: NodeSeq, httpRequest: HTTPRequest): NodeSeq = {
     def doRender(session: LiftSession): NodeSeq =
       session.processSurroundAndInclude("external render", xhtml)
 
     if (inS.value) doRender(session.open_!)
     else {
-      val req = Req(httpRequest, LiftRules.rewriteTable(httpRequest), System.nanoTime)
+      val req = Req(httpRequest, LiftRules.statelessRewrite.toList, System.nanoTime)
       val ses: LiftSession = SessionMaster.getSession(httpRequest, Empty) match {
         case Full(ret) =>
           ret.fixSessionTime()
@@ -2004,6 +2038,17 @@ for {
       }
     }
   }
+
+  /**
+   * Maps a function with an random generated and name
+   */
+  def jsonFmapFunc[T](in: Any => JsObj)(f: String => T): T = //
+    {
+      val name = formFuncName
+      addFunctionMap(name, SFuncHolder((s: String) => JSONParser.parse(s).map(in) openOr js.JE.JsObj()))
+      f(name)
+    }
+
 
   /**
    * Similar with addFunctionMap but also returns the name.

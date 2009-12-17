@@ -12,18 +12,41 @@
 
   <body>
     <!-- mini guide
-   <action
-      dev     = "Id of developer who committed the change - must be same as the one in POM"
-      type    = "add|fix|remove|update"
-      issue   = "(optional) Id of the issue related to this change"
-      system  = "(optional) Set this to 'github' if this action has an issue id"
-      due-to  = "(optional) Name of the person 'non-committer' to be credited for this change"
-      >
-     description
-   </action>
+    <action
+        dev     = "Id of developer who committed the change - must be same as the one in POM"
+        type    = "add|fix|remove|update"
+        issue   = "(optional) Id of the issue related to this change"
+        system  = "(optional) Set this to 'github' if this action has an issue id"
+        due-to  = "(optional) Name of the person 'non-committer' to be credited for this change">
+      Short description of the change
+    </action>
    see http://maven.apache.org/plugins/maven-changes-plugin/usage.html for full guide
    -->
     <release version="1.1-SNAPSHOT" date="" description="Lift 1.1 Snapshot">
+      <action dev="dchenbecker" type="fix" issue="232" system="github">
+        Added logging of bad prepared statements to help diagnose things.
+      </action>
+      <action dev="dchenbecker" type="fix" issue="231" system="github">
+        Fixed Mapper to properly deal with generated values
+      </action>
+    </release>
+
+    <release version="1.1-M8" date="2009-12-10" description="Lift 1.1 Milestone 8">
+      <action dev="boisvert" type="add" issue="" system="">
+        Added new built-in &lt;lift:html5&gt; snippet that sets HTML5 DOCTYPE on the XHTML response
+      </action>
+      <action dev="boisvert" type="fix" issue="218" system="github">
+        JqJsCmds.ModalDialog now takes JsObj argument to work with BlockUI v2.x
+      </action>
+      <action dev="boisvert" type="fix" issue="" system="github">
+        Fixed typo in DerbyDriver.integerIndexColumnType: IDENITY -> IDENTITY
+      </action>
+      <action dev="dchenbecker" type="fix" issue="211" system="github">
+        Fixed Mapper to use DriverType.columnTypeMap everywhere
+      </action>
+      <action dev="dchenbecker" type="fix" issue="210" system="github">
+        Fixed Mapper logging to properly log inserts, updates and deletes
+      </action>
       <action dev="Kris Nuttycombe" type="fix" issue="139" system="github">
         Breaking Changes:
 
@@ -58,7 +81,7 @@
 
         DataLoc[T] subclass of Loc was added to facilitate the use of the new more typeful LocParam subtypes.
 
-        A few changes to Link: 
+        A few changes to Link:
 
         Since Link.createLink creates a Box[Text] (and not a clickable link) a couple of methods were added to create the intermediate, unboxed
         values in order that subclasses can more easily manipulate the resulting path:
@@ -67,8 +90,7 @@
         Link.createPath(value: T): String //creates the String representation of the path that is subsequently turned into XML and boxed by Link.createLink
       </action>
 
-
-      <action dev="Marius Danciu" type="fix" issue="56" system="github">
+      <action dev="marius.danciu" type="fix" issue="56" system="github">
         Allowing page fragments wrapped by &lt;lift:lazy-load&gt; node to be processed and loaded asynchronously.
       </action>
 
@@ -93,19 +115,35 @@
       </action>
 
       <action dev="indrajitr" type="update" issue="156" system="github" due-to="econoplas">
-        Update hibernate-entitymanager to 3.4.0.GA
+        Update hibernate-entitymanager to 3.4.0.GA.
       </action>
 
       <action dev="indrajitr" type="update" issue="168" system="github" due-to="awhitford">
         Adjust javax.mail version range to avoid issues when Sun's repo is used and
-        honor javax.activation being transitively pulled up my javax.mail
+        honor javax.activation being transitively pulled up my javax.mail.
+      </action>
+
+      <action dev="indrajitr" type="fix" issue="180" system="github">
+        Fix scala:doc and vscaladoc configuration along with provision for module specific configuration for packageLinkDefs.
+      </action>
+
+      <action dev="indrajitr" type="update" issue="203" system="github">
+        Enforce Maven version 2.1.0 or higher, but lower than 3.0.
+      </action>
+
+      <action dev="indrajitr" type="fix" issue="161" system="github">
+        Upgrade Lift archetypes to use the new archetype metadata format. Enhance/fix archetype integration tests during build.
+      </action>
+
+      <action dev="indrajitr" type="fix" issue="227" system="github">
+        Enhance archetype metadata not to depend on ext.vm and allow one to set Lift version (-DliftVersion) or Scala version (-DscalaVersion) during archetype:generate.
       </action>
 
       <action dev="dchenbecker" type="add" issue="148" system="github">
         Add ability to call JS code after AJAX form submit
       </action>
 
-      <action dev="dchenbecker" type="add" issue="181">
+      <action dev="dchenbecker" type="add" issue="181" system="github">
         Add AJAX editable field generator to SHtml, add AjaxEditableField to Mapper.
       </action>
 

@@ -24,8 +24,9 @@ import _root_.net.liftweb.http.{S, SHtml}
 import _root_.java.util.Date
 import _root_.net.liftweb.util._
 import _root_.net.liftweb.common._
+import _root_.net.liftweb.json._
 import _root_.net.liftweb.http.js._
-import _root_.scala.xml.NodeSeq
+import _root_.scala.xml._
 
 abstract class MappedBoolean[T<:Mapper[T]](val fieldOwner: T) extends MappedField[Boolean, T] {
   private var data : Box[Boolean] = Full(defaultValue)
@@ -52,6 +53,8 @@ abstract class MappedBoolean[T<:Mapper[T]](val fieldOwner: T) extends MappedFiel
   override def readPermission_? = true
   override def writePermission_? = true
 
+     def asJsonValue: JsonAST.JValue = JsonAST.JBool(is)
+
   def real_convertToJDBCFriendly(value: Boolean): Object = new _root_.java.lang.Integer(if (value) 1 else 0)
 
   def jdbcFriendly(field : String) = data.map(v => new _root_.java.lang.Integer(if(v) 1 else 0)) openOr null
@@ -61,11 +64,13 @@ abstract class MappedBoolean[T<:Mapper[T]](val fieldOwner: T) extends MappedFiel
   override def setFromAny(in: Any): Boolean = {
     in match {
       case b: Boolean => this.set(b)
+      case JsonAST.JBool(v) => this.set(v)
       case (b: Boolean) :: _ => this.set(b)
       case Some(b: Boolean) => this.set(b)
       case Full(b: Boolean) => this.set(b)
       case Empty | Failure(_, _, _) | None => this.set(false)
       case (s: String) :: _ => this.set(toBoolean(s))
+      case s :: _ => this.setFromAny(s)
       case null => this.set(false)
       case s: String => this.set(toBoolean(s))
       case o => this.set(toBoolean(o))

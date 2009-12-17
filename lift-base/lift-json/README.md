@@ -199,7 +199,7 @@ XPath + HOFs
 ------------
 
 Json AST can be queried using XPath like functions. Following REPL session shows the usage of 
-'\\', '\\\\', 'find', 'filter', 'map' and 'values' functions. 
+'\\', '\\\\', 'find', 'filter', 'map', 'remove' and 'values' functions. 
 
     The example json is:
 
@@ -234,8 +234,8 @@ Json AST can be queried using XPath like functions. Following REPL session shows
       )
 
     scala> json \\ "spouse"
-    res0: net.liftweb.json.JsonAST.JValue = JObject(List(JField(spouse,JObject(List(
-          JField(person,JObject(List(JField(name,JString(Marilyn)), JField(age,JInt(33))))))))))
+    res0: net.liftweb.json.JsonAST.JValue = JField(spouse,JObject(List(
+          JField(person,JObject(List(JField(name,JString(Marilyn)), JField(age,JInt(33))))))))
 
     scala> compact(render(res0))
     res1: String = {"spouse":{"person":{"name":"Marilyn","age":33}}}
@@ -243,36 +243,39 @@ Json AST can be queried using XPath like functions. Following REPL session shows
     scala> compact(render(json \\ "name"))
     res2: String = {"name":"Joe","name":"Marilyn"}
 
+    scala> compact(render((json remove { _ == JField("name", JString("Marilyn")) }) \\ "name"))
+    res3: String = {"name":"Joe"}
+
     scala> compact(render(json \ "person" \ "name"))
-    res3: String = "name":"Joe"
+    res4: String = "name":"Joe"
 
     scala> compact(render(json \ "person" \ "spouse" \ "person" \ "name"))
-    res4: String = "name":"Marilyn"
+    res5: String = "name":"Marilyn"
 
     scala> json find {
              case JField("name", _) => true
              case _ => false
            }
-    res5: Option[net.liftweb.json.JsonAST.JValue] = Some(JField(name,JString(Joe)))
+    res6: Option[net.liftweb.json.JsonAST.JValue] = Some(JField(name,JString(Joe)))
 
     scala> json filter {
              case JField("name", _) => true
              case _ => false
            }
-    res6: List[net.liftweb.json.JsonAST.JValue] = List(JField(name,JString(Joe)), JField(name,JString(Marilyn)))
+    res7: List[net.liftweb.json.JsonAST.JValue] = List(JField(name,JString(Joe)), JField(name,JString(Marilyn)))
 
     scala> json map {
              case JField("name", JString(s)) => JField("NAME", JString(s.toUpperCase))
              case x => x
            }
-    res7: net.liftweb.json.JsonAST.JValue = JObject(List(JField(person,JObject(List(
+    res8: net.liftweb.json.JsonAST.JValue = JObject(List(JField(person,JObject(List(
     JField(NAME,JString(JOE)), JField(age,JInt(35)), JField(spouse,JObject(List(
     JField(person,JObject(List(JField(NAME,JString(MARILYN)), JField(age,JInt(33)))))))))))))
 
     scala> json.values
     res8: net.liftweb.json.JsonAST.JValue#Values = Map(person -> Map(name -> Joe, age -> 35, spouse -> Map(person -> Map(name -> Marilyn, age -> 33))))
 
-Indexed path expressions work too.
+Indexed path expressions work too and values can be unboxed using type expressions.
 
     scala> val json = parse("""
              { "name": "joe",
@@ -294,6 +297,15 @@ Indexed path expressions work too.
 
     scala> (json \ "children")(1) \ "name"
     res1: net.liftweb.json.JsonAST.JValue = JField(name,JString(Mazy))
+
+    scala> json \\ classOf[JInt]
+    res2: List[net.liftweb.json.JsonAST.JInt#Values] = List(5, 3)
+
+    scala> json \ "children" \\ classOf[JString]
+    res3: List[net.liftweb.json.JsonAST.JString#Values] = List(Mary, Mazy)
+
+    scala> json \ "children" \ classOf[JField] 
+    res4: List[(String, net.liftweb.json.JsonAST.JField#value.Values)] = List((name,Mary), (age,5), (name,Mazy), (age,3))
 
 Extracting values
 =================

@@ -26,6 +26,7 @@ import _root_.java.util.Date
 import _root_.scala.xml.{NodeSeq, Text, Unparsed}
 import _root_.net.liftweb.http.{S, SHtml}
 import _root_.net.liftweb.http.js._
+import _root_.net.liftweb.json._
 import S._
 
 abstract class MappedLongForeignKey[T<:Mapper[T],O<:KeyedMapper[Long, O]](theOwner: T, foreign: => KeyedMetaMapper[Long, O])
@@ -155,6 +156,8 @@ abstract class MappedEnumList[T<:Mapper[T], ENUM <: Enumeration](val fieldOwner:
 
   def asJsExp: JsExp = JE.JsArray(is.map(v => JE.Num(v.id)) :_*)
 
+  def asJsonValue: JsonAST.JValue = JsonAST.JInt(toLong)
+
   def real_convertToJDBCFriendly(value: Seq[ENUM#Value]): Object = new _root_.java.lang.Long(Helpers.toLong(value))
 
   private def rot(in: Int): Long = 1L << in
@@ -171,6 +174,7 @@ abstract class MappedEnumList[T<:Mapper[T], ENUM <: Enumeration](val fieldOwner:
 
   override def setFromAny(in: Any): Seq[ENUM#Value] = {
     in match {
+      case JsonAST.JInt(bi) => this.set(fromLong(bi.longValue))
       case n: Long => this.set( fromLong(n))
       case n: Number => this.set(fromLong(n.longValue))
       case (n: Number) :: _ => this.set(fromLong(n.longValue))
@@ -257,6 +261,8 @@ abstract class MappedNullableLong[T<:Mapper[T]](val fieldOwner: T) extends Mappe
 
   def asJsExp = is.map(v => JE.Num(v)) openOr JE.JsNull
 
+  def asJsonValue: JsonAST.JValue = is.map(v => JsonAST.JInt(v)) openOr JsonAST.JNull
+
   override def readPermission_? = true
   override def writePermission_? = true
 
@@ -274,12 +280,15 @@ abstract class MappedNullableLong[T<:Mapper[T]](val fieldOwner: T) extends Mappe
     in match {
       case n: Long => this.set(Full(n))
       case n: Number => this.set(Full(n.longValue))
+      case JsonAST.JNothing | JsonAST.JNull => this.set(Empty)
+      case JsonAST.JInt(n) => this.set(Full(n.longValue))
       case (n: Number) :: _ => this.set(Full(n.longValue))
       case Some(n: Number) => this.set(Full(n.longValue))
       case Full(n: Number) => this.set(Full(n.longValue))
       case Empty | Failure(_, _, _) => this.set(Empty)
       case None => this.set(Empty)
       case (s: String) :: _ => this.set(Helpers.asLong(s))
+      case s :: _ => this.setFromAny(s)
       case null => this.set(Empty)
       case s: String => this.set(Helpers.asLong(s))
       case o => this.set(Helpers.asLong(o))
@@ -344,6 +353,8 @@ abstract class MappedLong[T<:Mapper[T]](val fieldOwner: T) extends MappedField[L
 
   def asJsExp = JE.Num(is)
 
+       def asJsonValue: JsonAST.JValue = JsonAST.JInt(is)
+
   override def readPermission_? = true
   override def writePermission_? = true
 
@@ -357,6 +368,7 @@ abstract class MappedLong[T<:Mapper[T]](val fieldOwner: T) extends MappedField[L
   override def setFromAny(in: Any): Long = {
     in match {
       case n: Long => this.set(n)
+      case JsonAST.JInt(bigint) => this.set(bigint.longValue)
       case n: Number => this.set(n.longValue)
       case (n: Number) :: _ => this.set(n.longValue)
       case Some(n: Number) => this.set(n.longValue)
@@ -364,6 +376,7 @@ abstract class MappedLong[T<:Mapper[T]](val fieldOwner: T) extends MappedField[L
       case Empty | Failure(_, _, _) => this.set(0L)
       case None => this.set(0L)
       case (s: String) :: _ => this.set(toLong(s))
+      case s :: _ => this.setFromAny(s)
       case null => this.set(0L)
       case s: String => this.set(toLong(s))
       case o => this.set(toLong(o))

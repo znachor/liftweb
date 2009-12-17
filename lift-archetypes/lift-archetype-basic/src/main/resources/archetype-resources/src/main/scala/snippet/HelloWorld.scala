@@ -1,10 +1,10 @@
-package ${packageName}.snippet
+package ${package}.snippet
 
 import _root_.scala.xml.{NodeSeq, Text}
 import _root_.net.liftweb.util._
 import _root_.net.liftweb.common._
 import _root_.java.util.Date
-import ${packageName}.lib._
+import ${package}.lib._
 import Helpers._
 
 class HelloWorld {
@@ -12,7 +12,7 @@ class HelloWorld {
 
   def howdy(in: NodeSeq): NodeSeq =
   Helpers.bind("b", in, "time" -> date.map(d => Text(d.toString)))
-   
+
   /*
    lazy val date: Date = DependencyFactory.time.vend // create the date via factory
 

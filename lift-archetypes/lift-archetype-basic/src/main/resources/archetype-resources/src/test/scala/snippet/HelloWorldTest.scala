@@ -1,4 +1,4 @@
-package ${packageName}.snippet
+package ${package}.snippet
 
 import org.specs._
 import org.specs.runner.JUnit3
@@ -29,7 +29,7 @@ object HelloWorldTestSpecs extends Specification {
   }
 
   "HelloWorld Snippet" should {
-    "Put the time in the node" in {     
+    "Put the time in the node" in {
       val hello = new HelloWorld
       Thread.sleep(1000) // make sure the time changes
 

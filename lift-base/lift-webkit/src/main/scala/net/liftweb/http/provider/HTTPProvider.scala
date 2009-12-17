@@ -52,7 +52,7 @@ trait HTTPProvider {
       LiftRules.early.toList.foreach(_(req))
     }
 
-    val newReq = Req(req, LiftRules.rewriteTable(req), System.nanoTime)
+    val newReq = Req(req, LiftRules.statelessRewrite.toList, System.nanoTime)
 
     URLRewriter.doWith(url => NamedPF.applyBox(resp.encodeUrl(url), LiftRules.urlDecorate.toList) openOr resp.encodeUrl(url)) {
       if (!(isLiftRequest_?(newReq) && actualServlet.service(newReq, resp))) {

@@ -69,8 +69,12 @@ abstract class MappedEnum[T<:Mapper[T], ENUM <: Enumeration](val fieldOwner: T, 
 
   def asJsExp = JE.Num(is.id)
 
+  def asJsonValue: JsonAST.JValue = JsonAST.JInt(is.id)
+
+
   override def setFromAny(in: Any): ENUM#Value = {
     in match {
+      case JsonAST.JInt(bi) => this.set(fromInt(bi.intValue))
       case n: Int => this.set(fromInt(n))
       case n: Long => this.set(fromInt(n.toInt))
       case n: Number => this.set(fromInt(n.intValue))
@@ -113,10 +117,15 @@ abstract class MappedEnum[T<:Mapper[T], ENUM <: Enumeration](val fieldOwner: T, 
    */
   def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.enumColumnType + notNullAppender()
 
+  /*
+  Mapper dependency on Widgets is the wrong order.  There should be a trait in Widgets that's
+  mixed into this class that provides autocomplete.  dpp 2009/12/01
+
   /**
    * Whether or not to use autocomplete in toForm
    */
   def autocomplete_? = false
+*/
 
   /**
     * Build a list for the select.  Return a tuple of (String, String) where the first string
@@ -128,7 +137,7 @@ abstract class MappedEnum[T<:Mapper[T], ENUM <: Enumeration](val fieldOwner: T, 
    * Create an input field for the item
    */
   override def _toForm: Box[NodeSeq] =
-    /*
+  /*
     if (autocomplete_?)
       Full(AutoComplete.autocompleteObj[Int](buildDisplayList, Full(toInt),
                                       v => this.set(fromInt(v))))
@@ -211,6 +220,8 @@ abstract class MappedInt[T<:Mapper[T]](val fieldOwner: T) extends MappedField[In
 
   def asJsExp = JE.Num(is)
 
+  def asJsonValue: JsonAST.JValue = JsonAST.JInt(is)
+
   protected def real_i_set_!(value : Int) : Int = {
     if (value != data) {
       data = value
@@ -230,6 +241,7 @@ abstract class MappedInt[T<:Mapper[T]](val fieldOwner: T) extends MappedField[In
   override def setFromAny(in: Any): Int = {
     in match {
       case n: Int => this.set(n)
+      case JsonAST.JInt(bigint) => this.set(bigint.intValue)
       case n: Number => this.set(n.intValue)
       case (n: Number) :: _ => this.set(n.intValue)
       case Some(n: Number) => this.set(n.intValue)

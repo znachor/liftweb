@@ -52,6 +52,12 @@
       <artifactId>lift-webkit</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <!-- need net.liftweb.util net.liftweb.http-->
+      <groupId>${project.groupId}</groupId>
+      <artifactId>lift-json</artifactId>
+      <version>${project.version}</version>
+    </dependency>
     <!--TODO: Avoid hard dependency on lift-widgets (UI level package)-->
     <!--
     <dependency>

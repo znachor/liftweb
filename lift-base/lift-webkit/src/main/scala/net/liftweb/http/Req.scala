@@ -102,6 +102,21 @@ object FileParamHolder {
 object Req {
   object NilPath extends ParsePath(Nil, "", true, false)
 
+  def apply(original: Req, rewrite: List[LiftRules.RewritePF]): Req = {
+
+    def processRewrite(path: ParsePath, params: Map[String, String]): RewriteResponse =
+    NamedPF.applyBox(RewriteRequest(path, original.requestType, original.request), rewrite) match {
+      case Full(resp@RewriteResponse(_, _, true)) => resp
+      case _: EmptyBox[_] => RewriteResponse(path, params)
+      case Full(resp) => processRewrite(resp.path, params ++ resp.params)
+    }
+
+    val rewritten = processRewrite(original.path, Map.empty)
+
+    new Req(rewritten.path, original.contextPath, original.requestType, original.contentType, original.request,
+      original.nanoStart, original.nanoEnd, original.paramCalculator, original.addlParams ++ rewritten.params)
+  }
+
   def apply(request: HTTPRequest, rewrite: List[LiftRules.RewritePF], nanoStart: Long): Req = {
     val reqType = RequestType(request)
     val turi = request.uri.substring(request.contextPath.length)
@@ -121,14 +136,7 @@ object Req {
 
 
     // val (uri, path, localSingleParams) = processRewrite(tmpUri, tmpPath, TreeMap.empty)
-    val rewritten = {
-      request.sessionId.flatMap(id => SessionMaster.getSession(id, Empty)) match {
-        case Full(session) => S.initIfUninitted(session) {
-            processRewrite(tmpPath, Map.empty)
-          }
-        case _ => processRewrite(tmpPath, Map.empty)
-      }
-    }
+    val rewritten = processRewrite(tmpPath, Map.empty)
 
     val localParams: Map[String, List[String]] = Map(rewritten.params.toList.map {case (name, value) => name -> List(value)}: _*)
 
@@ -177,7 +185,6 @@ object Req {
       } else if (reqType.get_?) {
         ParamCalcInfo(queryStringParam._1, queryStringParam._2 ++ localParams, Nil, Empty)
       } else if (contentType.dmap(false)(_.toLowerCase.startsWith("application/x-www-form-urlencoded"))) {
-        // val tmp = paramNames.map{n => (n, xlateIfGet(request.getParameterValues(n).toList))}
         val params = localParams ++ (request.params.sort {(s1, s2) => s1.name < s2.name}).map(n => (n.name, n.values))
         ParamCalcInfo(request paramNames, params, Nil, Empty)
       } else {
@@ -187,7 +194,7 @@ object Req {
 
     new Req(rewritten.path, contextPath, reqType,
             contentType, request, nanoStart,
-            System.nanoTime, paramCalculator)
+            System.nanoTime, paramCalculator, Map())
   }
 
   private def fixURI(uri: String) = uri indexOf ";jsessionid" match {
@@ -197,7 +204,7 @@ object Req {
 
   def nil = new Req(NilPath, "", GetRequest, Empty, null,
                     System.nanoTime, System.nanoTime,
-                    () => ParamCalcInfo(Nil, Map.empty, Nil, Empty))
+                    () => ParamCalcInfo(Nil, Map.empty, Nil, Empty), Map())
 
   def parsePath(in: String): ParsePath = {
     val p1 = fixURI((in match {case null => "/"; case s if s.length == 0 => "/"; case s => s}).replaceAll("/+", "/"))
@@ -207,25 +214,7 @@ object Req {
     val orgLst = p1.replaceAll("/$", "/index").split("/").
     toList.map(_.trim).filter(_.length > 0)
 
-    val last = orgLst.last
-    val idx: Int = {
-      val firstDot = last.indexOf(".")
-      val len = last.length
-      if (firstDot + 1 == len) -1 // if the dot is the last character, don't split
-      else {
-        if (last.indexOf(".", firstDot + 1) != -1) -1 // if there are multiple dots, don't split out
-        else {
-          val suffix = last.substring(firstDot + 1)
-          // if the suffix isn't in the list of suffixes we care about, don't split it
-          if (!LiftRules.explicitlyParsedSuffixes.contains(suffix.toLowerCase)) -1
-          else firstDot
-        }
-      }
-    }
-
-    val (lst, suffix) = if (idx == -1) (orgLst, "")
-    else (orgLst.dropRight(1) ::: List(last.substring(0, idx)),
-          last.substring(idx + 1))
+    val (lst, suffix) = NamedPF(orgLst, LiftRules.suffixSplitters.toList)
 
     ParsePath(lst.map(urlDecode), suffix, front, back)
   }
@@ -299,7 +288,8 @@ class Req(val path: ParsePath,
           val request: HTTPRequest,
           val nanoStart: Long,
           val nanoEnd: Long,
-          val paramCalculator: () => ParamCalcInfo) extends HasParams
+          private[http] val paramCalculator: () => ParamCalcInfo,
+          private[http] val addlParams: Map[String, String]) extends HasParams
 {
   override def toString = "Req(" + paramNames + ", " + params + ", " + path +
   ", " + contextPath + ", " + requestType + ", " + contentType + ")"
@@ -309,6 +299,18 @@ class Req(val path: ParsePath,
    */
   def xml_? = contentType != null && contentType.dmap(false)(_.toLowerCase.startsWith("text/xml"))
 
+  def snapshot = {
+    val paramCalc = paramCalculator()
+    new Req(path,
+     contextPath,
+     requestType,
+     contentType,
+     request.snapshot,
+     nanoStart,
+     nanoEnd,
+     () => paramCalc,
+     addlParams)
+  }
   val section = path(0) match {case null => "default"; case s => s}
   val view = path(1) match {case null => "index"; case s@_ => s}
 
@@ -318,9 +320,10 @@ class Req(val path: ParsePath,
 
   def path(n: Int): String = head(path.wholePath.drop(n), null)
 
-  def param(n: String) = params.get(n) match {
-    case Some(s :: _) => Some(s)
-    case _ => None
+  def param(n: String): Box[String] =
+    params.get(n) match {
+    case Some(s :: _) => Full(s)
+    case _ => Empty
   }
 
   lazy val headers: List[(String, String)] =
@@ -337,9 +340,13 @@ class Req(val path: ParsePath,
   }
 
   lazy val ParamCalcInfo(paramNames: List[String],
-            params: Map[String, List[String]],
+            _params: Map[String, List[String]],
             uploadedFiles: List[FileParamHolder],
             body: Box[Array[Byte]]) = paramCalculator()
+
+  lazy val params: Map[String, List[String]] = addlParams.foldLeft(_params){
+    case (map, (key, value)) => map + (key -> (value :: map.getOrElse(key, Nil)))
+  }
 
   lazy val cookies = request.cookies match {
     case null => Nil
@@ -423,7 +430,7 @@ class Req(val path: ParsePath,
 
   def testFor304(lastModified: Long, headers: (String, String)*): Box[LiftResponse] =
   if (!testIfModifiedSince(lastModified))
-  Full(InMemoryResponse(new Array[Byte](0), ("Content-Type" -> "text/plain; charset=utf-8") :: headers.toList, Nil, 304))
+  Full(InMemoryResponse(new Array[Byte](0), headers.toList, Nil, 304))
   else
   Empty
 

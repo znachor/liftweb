@@ -27,24 +27,29 @@ object JsonAST {
     type Values
 
     def \(nameToFind: String): JValue = {
-      def find(xs: List[JValue]): List[JValue] = xs.flatMap {
-        case JObject(l) => l.filter {
-            case JField(name, value) if name == nameToFind => true
-            case _ => false
-          }
-        case JArray(l) => find(l)
-        case field @ JField(name, value) if name == nameToFind => field :: Nil
-        case _ => Nil
+      val p = (json: JValue) => json match {
+        case JField(name, value) if name == nameToFind => true
+        case _ => false
       }
-      find(children) match {
+      findDirect(children, p) match {
         case Nil => JNothing
         case x :: Nil => x
         case x => JArray(x)
       }
     }
 
+    private def findDirect(xs: List[JValue], p: JValue => Boolean): List[JValue] = xs.flatMap {
+      case JObject(l) => l.filter {
+        case x if p(x) => true
+        case _ => false
+      }
+      case JArray(l) => findDirect(l, p)
+      case x if p(x) => x :: Nil
+      case _ => Nil
+    }
+
     // FIXME this must be tail recursive
-    def \\(nameToFind: String): JObject = {
+    def \\(nameToFind: String): JValue = {
       def find(json: JValue): List[JField] = json match {
         case JObject(l) => l.foldLeft(List[JField]())((a, e) => a ::: find(e))
         case JArray(l) => l.foldLeft(List[JField]())((a, e) => a ::: find(e))
@@ -52,7 +57,21 @@ object JsonAST {
         case JField(_, value) => find(value)
         case _ => Nil
       }
-      JObject(find(this))
+      find(this) match {
+        case x :: Nil => x
+        case x => JObject(x)
+      }
+    }
+
+    def \[A <: JValue](clazz: Class[A]): List[A#Values] = 
+      findDirect(children, typePredicate(clazz) _).asInstanceOf[List[A]] map { _.values }
+
+    def \\[A <: JValue](clazz: Class[A]): List[A#Values] = 
+      (this filter typePredicate(clazz) _).asInstanceOf[List[A]] map { _.values }
+
+    private def typePredicate[A <: JValue](clazz: Class[A])(json: JValue) = json match {
+      case x if x.getClass == clazz => true
+      case _ => false
     }
 
     def apply(i: Int): JValue = JNothing
@@ -67,7 +86,7 @@ object JsonAST {
     }
 
     def fold[A](z: A)(f: (A, JValue) => A): A = {
-      def loop(acc: A, v: JValue) = {
+      def rec(acc: A, v: JValue) = {
         val newAcc = f(acc, v)
         v match {
           case JObject(l) => l.foldLeft(newAcc)((a, e) => e.fold(a)(f))
@@ -76,20 +95,20 @@ object JsonAST {
           case _ => newAcc
         }
       }
-      loop(z, this)
+      rec(z, this)
     }
 
     def map(f: JValue => JValue): JValue = {
-      def loop(v: JValue): JValue = v match {
-        case JObject(l) => f(JObject(l.map(f => loop(f) match {
+      def rec(v: JValue): JValue = v match {
+        case JObject(l) => f(JObject(l.map(f => rec(f) match {
           case x: JField => x
           case x => JField(f.name, x)
         })))
-        case JArray(l) => f(JArray(l.map(loop)))
-        case JField(name, value) => f(JField(name, loop(value)))
+        case JArray(l) => f(JArray(l.map(rec)))
+        case JField(name, value) => f(JField(name, rec(value)))
         case x => f(x)
       }
-      loop(this)
+      rec(this)
     }
 
     def find(p: JValue => Boolean): Option[JValue] = {
@@ -122,6 +141,11 @@ object JsonAST {
         case (x, y) => JArray(x :: y :: Nil)
       }
       append(this, other)
+    }
+
+    def remove(p: JValue => Boolean): JValue = this map {
+      case x if p(x) => JNothing
+      case x => x
     }
 
     def extract[A](implicit formats: Formats, mf: scala.reflect.Manifest[A]) = 
@@ -196,12 +220,14 @@ object JsonAST {
   }
 
   private def quote(s: String) = (s.map { 
-      case '\r' => "\\r"
-      case '\n' => "\\n"
-      case '\t' => "\\t"
       case '"'  => "\\\""
       case '\\' => "\\\\"
-      case c if ((c >= '\u0000' && c < '\u001f') || (c >= '\u0080' && c < '\u00a0') || (c >= '\u2000' && c < '\u2100')) => "\\u%04x".format(c.asInstanceOf[Int])
+      case '\b' => "\\b"
+      case '\f' => "\\f"
+      case '\n' => "\\n"
+      case '\r' => "\\r"
+      case '\t' => "\\t"
+      case c if ((c >= '\u0000' && c < '\u001f') || (c >= '\u0080' && c < '\u00a0') || (c >= '\u2000' && c < '\u2100')) => "\\u%04x".format(c: Int)
       case c => c
     }).mkString
 }

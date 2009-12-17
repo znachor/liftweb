@@ -43,7 +43,9 @@
     ~ More Project Information
   -->
   <name>Lift Archetypes</name>
-  <description>Standard archetypes for Lift</description>
+  <description>
+    Standard archetypes for Lift Web Framework.
+  </description>
 
   <!--
     ~ Environment Settings
@@ -63,16 +65,61 @@
   <modules>
     <module>lift-archetype-blank</module>
     <module>lift-archetype-basic</module>
-    <module>lift-archetype-jpa-basic</module>
-    <module>lift-archetype-jpa-blank</module>
     <module>lift-archetype-jpa-blank-single</module>
+    <module>lift-archetype-jpa-blank</module>
+    <module>lift-archetype-jpa-basic</module>
   </modules>
 
   <!--
     ~ Build Settings
   -->
   <build>
-    <!-- <pluginManagement/> -->
+     <pluginManagement>
+       <plugins>
+         <plugin>
+           <groupId>org.apache.maven.plugins</groupId>
+           <artifactId>maven-invoker-plugin</artifactId>
+           <version>1.5</version>
+           <configuration>
+             <!--<debug>true</debug>-->
+             <streamLogs>true</streamLogs>
+             <!--<localRepositoryPath>${project.build.directory}/it-repo</localRepositoryPath>-->
+             <!--<settingsFile>${project.basedir}/src/it/settings.xml</settingsFile>-->
+             <!--<setupIncludes>-->
+               <!--<setupInclude>sample</setupInclude>-->
+             <!--</setupIncludes>-->
+             <pomIncludes>
+               <pomInclude>sample</pomInclude>
+               <!--<pomInclude>sample/sample-project/pom.xml</pomInclude>-->
+               <!--<pomInclude>sample</pomInclude>-->
+             </pomIncludes>
+             <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
+             <properties>
+               <archetypeCatalog>local</archetypeCatalog>
+               <!--<archetypeRepository>local</archetypeRepository>-->
+               <archetypeRepository>${settings.localRepository}</archetypeRepository>
+               <archetypeGroupId>${project.groupId}</archetypeGroupId>
+               <archetypeArtifactId>${project.artifactId}</archetypeArtifactId>
+               <archetypeVersion>${project.version}</archetypeVersion>
+               <!--<scalaVersion>${scala.version}</scalaVersion>-->
+               <!--<liftVersion>${project.version}</liftVersion>-->
+               <groupId>test</groupId>
+               <artifactId>sample-project</artifactId>
+               <version>0.1</version>
+               <!--<package>test</package>-->
+             </properties>
+           </configuration>
+           <executions>
+             <execution>
+               <goals>
+                 <goal>install</goal>
+                 <goal>run</goal>
+               </goals>
+             </execution>
+           </executions>
+         </plugin>
+       </plugins>
+     </pluginManagement>
     <!-- <plugins/> -->
   </build>
 

@@ -25,6 +25,11 @@ object Examples extends Specification {
     compact(render(json \ "person" \ "name")) mustEqual "\"name\":\"Joe\""
   }
 
+  "Remove example" in {
+    val json = parse(person) remove { _ == JField("name", "Marilyn") }
+    compact(render(json \\ "name")) mustEqual """{"name":"Joe"}"""
+  }
+
   "Queries on person example" in {
     val json = parse(person)
     val filtered = json filter {
@@ -46,6 +51,12 @@ object Examples extends Specification {
     compact(render((json \ "children")(0) \ "name")) mustEqual "\"name\":\"Mary\""
     compact(render((json \ "children")(1) \ "name")) mustEqual "\"name\":\"Mazy\""
     (for { JField("name", JString(y)) <- json } yield y) mustEqual List("joe", "Mary", "Mazy")
+  }
+
+  "Unbox values using XPath-like type expression" in {
+    parse(objArray) \ "children" \\ classOf[JInt] mustEqual List(5, 3)
+    parse(lotto) \ "lotto" \ "winning-numbers" \ classOf[JInt] mustEqual List(2, 45, 34, 23, 7, 5, 3)
+    parse(lotto) \\ "winning-numbers" \ classOf[JInt] mustEqual List(2, 45, 34, 23, 7, 5, 3)
   }
 
   "Quoted example" in {

@@ -1,4 +1,4 @@
-package ${packageName}.model
+package ${package}.model
 
 import _root_.net.liftweb.mapper._
 import _root_.net.liftweb.util._

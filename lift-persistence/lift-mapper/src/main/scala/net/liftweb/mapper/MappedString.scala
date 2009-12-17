@@ -27,6 +27,7 @@ import _root_.scala.xml.{NodeSeq, Text, Elem}
 import _root_.net.liftweb.http.{S}
 import _root_.net.liftweb.util.{FieldError}
 import _root_.net.liftweb.http.js._
+import _root_.net.liftweb.json._
 import S._
 
 /**
@@ -101,6 +102,8 @@ abstract class MappedString[T<:Mapper[T]](val fieldOwner: T,val maxLen: Int) ext
   protected def i_is_! = data.get
   protected def i_was_! = orgData.get
 
+   def asJsonValue: JsonAST.JValue = JsonAST.JString(is)
+
   /**
    * Called after the field is saved to the database
    */
@@ -131,6 +134,8 @@ abstract class MappedString[T<:Mapper[T]](val fieldOwner: T,val maxLen: Int) ext
     in match {
       case seq: Seq[_] if !seq.isEmpty => seq.map(setFromAny).apply(0)
       case (s: String) :: _ => this.set(s)
+      case s :: _ => this.setFromAny(s)
+      case JsonAST.JString(v) => this.set(v)
       case null => this.set(null)
       case s: String => this.set(s)
       case Some(s: String) => this.set(s)

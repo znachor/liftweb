@@ -92,6 +92,7 @@ case class SessionWatcherInfo(sessions: Map[String, LiftSession])
 object SessionMaster extends LiftActor {
   private var sessions: Map[String, LiftSession] = Map.empty
   private object CheckAndPurge
+  private val lock = new ConcurrentLock
 
   def getSession(id: String, otherId: Box[String]): Box[LiftSession] = synchronized {
     otherId.flatMap(sessions.get) or Box(sessions.get(id))
@@ -108,7 +109,7 @@ object SessionMaster extends LiftActor {
    * Returns a LiftSession or Empty if not found
    */
   def getSession(httpSession: => HTTPSession, otherId: Box[String]): Box[LiftSession] =
-    synchronized {
+    lock.read {
       otherId.flatMap(sessions.get) or Box(sessions.get(httpSession.sessionId))
     }
 
@@ -116,15 +117,15 @@ object SessionMaster extends LiftActor {
    * Returns a LiftSession or Empty if not found
    */
   def getSession(req: HTTPRequest, otherId: Box[String]): Box[LiftSession] =
-    synchronized {
-      otherId.flatMap(sessions.get) or Box(sessions.get(req.session.sessionId))
+    lock.read {
+      otherId.flatMap(sessions.get) or req.sessionId.flatMap(id => sessions.get(id))
     }
 
   /**
    * Adds a new session to SessionMaster
    */
   def addSession(liftSession: LiftSession) {
-    synchronized {
+    lock.write {
       sessions = sessions + (liftSession.uniqueId -> liftSession)
     }
     liftSession.startSession()
@@ -135,7 +136,7 @@ object SessionMaster extends LiftActor {
 
   private val reaction: PartialFunction[Any, Unit] = {
     case RemoveSession(sessionId) =>
-      val ses = synchronized(sessions)
+      val ses = lock.read(sessions)
       ses.get(sessionId).foreach {
         s =>
                 try {
@@ -149,13 +150,13 @@ object SessionMaster extends LiftActor {
                   case e => Log.error("Failure in remove session", e)
 
                 } finally {
-                  synchronized {sessions = sessions - sessionId}
+                  lock.write {sessions = sessions - sessionId}
                 }
       }
 
     case CheckAndPurge =>
       val now = millis
-      val ses = synchronized {sessions}
+      val ses = lock.read {sessions}
       for ((id, session) <- ses.elements) {
         session.doCometActorCleanup()
         if (now - session.lastServiceTime > session.inactivityLength || session.markedForTermination) {
@@ -175,7 +176,7 @@ object SessionMaster extends LiftActor {
   private[http] def sendMsg(in: Any): Unit =
     if (!Props.inGAE) this ! in
     else {
-      this.synchronized {
+      lock.write {
         tryo {
           if (reaction.isDefinedAt(in)) reaction.apply(in)
         }
@@ -769,31 +770,26 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
   private[http] def contextFuncBuilder(f: S.AFuncHolder): S.AFuncHolder = {
     val currentMap = snippetMap.is
     val curLoc = S.location
-    val req: Req = S.request openOr Req.nil
-    val session = this
 
     val requestVarFunc: Function1[Function0[Any], Any] = RequestVarHandler.generateSnapshotRestorer()
     new S.ProxyFuncHolder(f) {
       override def apply(in: List[String]): Any =
-      requestVarFunc(() =>
-        //S.init(req, session) {
+        requestVarFunc(() =>
           S.CurrentLocation.doWith(curLoc) {
             snippetMap.doWith(snippetMap.is ++ currentMap) {
               super.apply(in)
             }
           }
-        //}
         )
 
       override def apply(in: FileParamHolder): Any =
-        requestVarFunc(() =>
-          S.init(req, session){
-            S.CurrentLocation.doWith(curLoc) {
-              snippetMap.doWith(snippetMap.is ++ currentMap) {
-                super.apply(in)
-              }
+        requestVarFunc(() => 
+          S.CurrentLocation.doWith(curLoc) {
+            snippetMap.doWith(snippetMap.is ++ currentMap) {
+              super.apply(in)
             }
-          })
+          }
+        )
     }
   }
 
@@ -1152,7 +1148,10 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
     }
   }
 
-  private def findCometByType(contType: String, name: Box[String], defaultXml: NodeSeq, attributes: Map[String, String]): Box[LiftCometActor] = {
+  private def findCometByType(contType: String, 
+                              name: Box[String], 
+                              defaultXml: NodeSeq, 
+                              attributes: Map[String, String]): Box[LiftCometActor] = {
     findType[LiftCometActor](contType, LiftRules.buildPackage("comet") ::: ("lift.app.comet" :: Nil)).flatMap {
       cls =>
               tryo((e: Throwable) => e match {
