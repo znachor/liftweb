@@ -56,6 +56,10 @@ class Boot {
 
     XmlServer.init()
 
+    LiftRules.statelessDispatchTable.append {
+      case r @ Req("stateless" :: _, "", GetRequest) => StatelessHtml.render(r) _
+    }
+
     LiftRules.dispatch.prepend(NamedPF("Login Validation") {
       case Req("login" :: page, "", _)
         if !LoginStuff.is && page.head != "validate" =>
