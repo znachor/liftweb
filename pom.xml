@@ -50,11 +50,10 @@
     <!-- Necessary until we move to maven-compiler-plugin-2.1 (MCOMPILER-70) -->
     <maven.compiler.encoding>${project.build.sourceEncoding}</maven.compiler.encoding>
     <project.reporting.outputEncoding>${project.build.sourceEncoding}</project.reporting.outputEncoding>
-    <!-- TODO: for lift-build_date.
+    <!-- TODO: for lift_build_date.
          http://maven.apache.org/guides/introduction/introduction-to-the-pom.html#Available_Variables -->
     <!--<maven.build.timestamp.format/>-->
 
-    <!--<scala.version>[2.7.5,2.7.6),(2.7.6,2.7.7]</scala.version>-->
     <scala.version>2.7.7</scala.version>
     <slf4j.version>[1.5.6,)</slf4j.version>
 
@@ -469,6 +468,8 @@
     ~ Build Settings
   -->
   <build>
+    <sourceDirectory>${project.basedir}/src/main/scala</sourceDirectory>
+    <testSourceDirectory>${project.basedir}/src/test/scala</testSourceDirectory>
     <extensions>
       <extension>
         <groupId>org.apache.maven.wagon</groupId>
@@ -491,7 +492,6 @@
           </configuration>
           <executions>
             <execution>
-              <id>default-enforce</id>
               <goals>
                 <goal>enforce</goal>
               </goals>
@@ -501,7 +501,7 @@
         <plugin>
           <groupId>org.scala-tools</groupId>
           <artifactId>maven-scala-plugin</artifactId>
-          <version>2.12.2</version>
+          <version>2.13.1</version>
           <configuration>
             <charset>${project.build.sourceEncoding}</charset>
             <!--<bottom>Copyright &#169; {inceptionYear}-{currentYear} {organizationName}. All Rights Reserved.</bottom>-->
@@ -514,30 +514,9 @@
             </args>
           </configuration>
           <executions>
-            <!-- Ensure availability of scala directory in the source path
-              for maven-source-plugin:jar-no-fork bound to the 'package' phase by default -->
             <execution>
-              <id>scala-add-source</id>
-              <phase>prepare-package</phase>
-              <goals>
-                <goal>add-source</goal>
-              </goals>
-              <configuration>
-                <sourceDir>${project.basedir}/src/main/scala</sourceDir>
-                <testSourceDir>${project.basedir}/src/test/scala</testSourceDir>
-              </configuration>
-            </execution>
-            <execution>
-              <id>scala-compile</id>
-              <phase>process-resources</phase>
               <goals>
                 <goal>compile</goal>
-              </goals>
-            </execution>
-            <execution>
-              <id>scala-testCompile</id>
-              <phase>process-test-resources</phase>
-              <goals>
                 <goal>testCompile</goal>
               </goals>
             </execution>
@@ -546,7 +525,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-jar-plugin</artifactId>
-          <version>2.2</version>
+          <version>2.3</version>
           <configuration>
             <archive>
               <manifest>
@@ -580,7 +559,7 @@
           <executions>
             <execution>
               <id>default-copy-resources</id>
-              <phase>pre-site</phase>
+              <phase>process-resources</phase>
               <goals>
                 <goal>copy-resources</goal>
               </goals>
@@ -617,7 +596,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-changes-plugin</artifactId>
-          <version>2.1</version>
+          <version>2.3</version>
           <configuration>
             <issueLinkTemplatePerSystem>
               <github>%URL%/%ISSUE%/find</github>
@@ -650,8 +629,6 @@
           </configuration>
           <executions>
             <execution>
-              <id>default-bundle</id>
-              <phase>package</phase>
               <goals>
                 <goal>bundle</goal>
               </goals>
@@ -774,7 +751,7 @@
       <plugin>
         <groupId>org.scala-tools</groupId>
         <artifactId>maven-scala-plugin</artifactId>
-        <version>2.12.2</version>
+        <version>2.13.1</version>
         <configuration>
           <charset>${project.build.sourceEncoding}</charset>
           <!--<bottom>Copyright &#169; {inceptionYear}-{currentYear} {organizationName}. All Rights Reserved.</bottom>-->
@@ -817,7 +794,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-changes-plugin</artifactId>
-        <version>2.1</version>
+        <version>2.3</version>
         <inherited>false</inherited>
         <configuration>
           <issueLinkTemplatePerSystem>
