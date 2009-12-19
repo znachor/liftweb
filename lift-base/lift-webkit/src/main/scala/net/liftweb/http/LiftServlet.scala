@@ -278,7 +278,9 @@ class LiftServlet {
 
       LiftRules.cometLogger.debug("AJAX Request: " + liftSession.uniqueId + " " + requestState.params)
       tryo {LiftSession.onBeginServicing.foreach(_(liftSession, requestState))}
-      val ret = requestState.param("__lift__GC") match {
+
+      val ret = try {
+        requestState.param("__lift__GC") match {
         case Full(_) =>
           liftSession.updateFuncByOwner(RenderVersion.get, millis)
           Full(JavaScriptResponse(js.JsCmds.Noop))
@@ -310,6 +312,9 @@ class LiftServlet {
           } finally {
             liftSession.updateFunctionMap(S.functionMap, RenderVersion.get, millis)
           }
+        }
+      } catch {
+        case e => NamedPF.applyBox((Props.mode, requestState, e), LiftRules.exceptionHandler.toList);
       }
       tryo {LiftSession.onEndServicing.foreach(_(liftSession, requestState, ret))}
       ret
