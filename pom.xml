@@ -518,6 +518,19 @@
             </args>
           </configuration>
           <executions>
+            <!-- Ensure availability of scala directory in the source path
+              for maven-source-plugin:jar-no-fork bound to the 'package' phase by default -->
+            <execution>
+              <id>scala-add-source</id>
+              <phase>prepare-package</phase>
+              <goals>
+                <goal>add-source</goal>
+              </goals>
+              <configuration>
+                <sourceDir>${project.basedir}/src/main/scala</sourceDir>
+                <testSourceDir>${project.basedir}/src/test/scala</testSourceDir>
+              </configuration>
+            </execution>
             <execution>
               <id>scala-compile</id>
               <phase>process-resources</phase>

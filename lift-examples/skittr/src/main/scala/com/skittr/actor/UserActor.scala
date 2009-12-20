@@ -4,7 +4,7 @@ package com.skittr.actor
  (c) 2007-2009 WorldWide Conferencing, LLC
  Distributed under an Apache License
  http://www.apache.org/licenses/LICENSE-2.0
-\*                                                 */
+ \*                                                 */
 
 import _root_.com.skittr.model._
 import _root_.scala.collection.mutable.{HashMap}
@@ -49,13 +49,13 @@ class UserActor extends LiftActor {
    * When the Actor is started, this method is invoked
    */
   def messageHandler =
-    {
-      // The user sends a message containing text and a source.  This can
-      // be from the web, from IM, from SMS, etc.
-      case SendMessage(text, src) =>
-        // create a new Message object to be added to the user's local message and sent
-        // to followers
-        val msg = Message(text, System.currentTimeMillis, userName, src)
+  {
+    // The user sends a message containing text and a source.  This can
+    // be from the web, from IM, from SMS, etc.
+    case SendMessage(text, src) =>
+      // create a new Message object to be added to the user's local message and sent
+      // to followers
+      val msg = Message(text, System.currentTimeMillis, userName, src)
       // add to our local messages (keeping only the maxMessages most recent messages)
       latestMsgs = (msg :: latestMsgs).take(maxMessages)
       // update all our followers (and ourselves) with the message
@@ -66,22 +66,22 @@ class UserActor extends LiftActor {
       if (src == "autogen") autoGen
       
       // someone is asking us for our messages
-      case GetMessages => reply(Messages(latestMsgs)) // send them back
+    case GetMessages => reply(Messages(latestMsgs)) // send them back
       
       // someone is asking us for our timeline
-      case GetTimeline => reply(Timeline(localTimeline))  // send it back
+    case GetTimeline => reply(Timeline(localTimeline))  // send it back
       
       // someone wants to know our name... tell them
-      case GetUserIdAndName => reply(UserIdInfo(userId, userName, fullName, friends))
+    case GetUserIdAndName => reply(UserIdInfo(userId, userName, fullName, friends))
       
       // shut the user down
-      case Bye =>
-        UserList.remove(userName)
+    case Bye =>
+      UserList.remove(userName)
       // this.exit(Bye)
       
       // set up the user
-        case Setup(id, name, full) =>
-          userId = id
+    case Setup(id, name, full) =>
+      userId = id
       userName = name
       fullName = full
       UserList.add(userName, this) // add the user to the list
@@ -89,16 +89,19 @@ class UserActor extends LiftActor {
       latestMsgs = MsgStore.findAll(By(MsgStore.who, userId),
                                     OrderBy(MsgStore.when, Descending),
                                     MaxRows(maxMessages)).map(s => Message(s.message, s.when, userName, s.source))
+
+      println("In setup for "+name+" latest "+latestMsgs)
+
       localTimeline = latestMsgs  // set the local timeline to our messages (the folks we follow will update us)
       // get friends
       friends = User.findAllByInsecureSql("SELECT users.* FROM users, friends WHERE users.id = friends.friend AND friends.owner = "+userId,
-					  IHaveValidatedThisSQL("dpp",
-								"08/23/08")).map(_.name.is).sort(_ < _)
+                                          IHaveValidatedThisSQL("dpp",
+                                                                "08/23/08")).map(_.name.is).sort(_ < _)
       reply("Done")
       
       // tell all our friends that we follow them
-      case ConfigFollowers =>
-        friends.flatMap(f => UserList.find(f).toList).foreach(_ ! AddFollower)
+    case ConfigFollowers =>
+      friends.flatMap(f => UserList.find(f).toList).foreach(_ ! AddFollower)
       // if the "autogen" property is set, then have each of the actors
       // randomly generate a message
       if (User.shouldAutogen_? || System.getProperty("autogen") != null) autoGen
@@ -106,12 +109,12 @@ class UserActor extends LiftActor {
       reply("Done")
       
       // if we add a friend,
-      case AddFriend(name) =>
-        friends = (name :: friends).sort(_ < _)
+    case AddFriend(name) =>
+      friends = (name :: friends).sort(_ < _)
       // find the user
       UserList.find(name).foreach{
         ua =>
-          ua ! AddFollower // tell him we're a follower
+        ua ! AddFollower // tell him we're a follower
         (ua !? GetUserIdAndName) match { // get the user info
           case UserIdInfo(id, _,_, _) => Friend.create.owner(userId).friend(id).save // and persist a friend connection in the DB
           case _ =>
@@ -119,15 +122,15 @@ class UserActor extends LiftActor {
       }
       
       // We are removing a friend
-      case RemoveFriend(name) =>
-        friends = friends.remove(_ == name)
+    case RemoveFriend(name) =>
+      friends = friends.remove(_ == name)
       // find the user
       UserList.find(name).foreach{
         ua =>
-          ua ! RemoveFollower // tell them we're no longer following
+        ua ! RemoveFollower // tell them we're no longer following
         (ua !? GetUserIdAndName) match { // delete from database
-	  case UserIdInfo(id, _,_,_) => Friend.findAll(By(Friend.owner, userId), By(Friend.friend, id)).foreach(_.delete_!)
-	  case _ =>
+          case UserIdInfo(id, _,_,_) => Friend.findAll(By(Friend.owner, userId), By(Friend.friend, id)).foreach(_.delete_!)
+          case _ =>
         }
       }
       // remove from local timeline
@@ -136,159 +139,160 @@ class UserActor extends LiftActor {
       timelineViewers.foreach(_ ! Timeline(localTimeline))
       
       // merge the messages (from a friend) into our local timeline
-      case MergeIntoTimeline(msg) => localTimeline = merge(localTimeline ::: msg)
+    case MergeIntoTimeline(msg) => localTimeline = merge(localTimeline ::: msg)
       
       // add someone who is watching the timeline.  This Actor will get updates each time
       // the local timeline updates.  We link to them so we can remove them if they exit
-      case AddTimelineViewer(who) =>
-        timelineViewers = who :: timelineViewers
+    case AddTimelineViewer(who) =>
+      println("Added timeline viewer "+who)
+      timelineViewers = who :: timelineViewers
       // this.link(sender.receiver)
       
       // remove the timeline viewer
-      case RemoveTimelineViewer(who) =>
-        timelineViewers = timelineViewers.remove(_ == who)
+    case RemoveTimelineViewer(who) =>
+      timelineViewers = timelineViewers.remove(_ == who)
       // this.unlink(sender.receiver)
       
       // Add an Actor to the list of folks who want to see when we get a message
       // this might be an IM or SMS output
-      case AddMessageViewer(who) =>
-        messageViewers = who :: messageViewers
+    case AddMessageViewer(who) =>
+      messageViewers = who :: messageViewers
       // this.link(sender.receiver)
       
       // removes the message viewer
-      case RemoveMessageViewer(who) =>
-        messageViewers = messageViewers.remove(_ == who)
+    case RemoveMessageViewer(who) =>
+      messageViewers = messageViewers.remove(_ == who)
       // this.unlink(sender.receiver)
       
       // add someone who is following us
-      case AddFollower(who) =>
-        followers = who :: followers // merge it in
+    case AddFollower(who) =>
+      followers = who :: followers // merge it in
       who ! MergeIntoTimeline(latestMsgs) // give the follower our messages to merge into his timeline
       
       // remove the follower
-      case RemoveFollower(who) =>  followers = followers.remove(_ == who) // filter out the sender of the message
+    case RemoveFollower(who) =>  followers = followers.remove(_ == who) // filter out the sender of the message
       
       // We get a message
-      case msg : Message =>
-        messageViewers.foreach(_ ! Messages(latestMsgs)) // send it to the message viewers
+    case msg : Message =>
+      messageViewers.foreach(_ ! Messages(latestMsgs)) // send it to the message viewers
       localTimeline = (msg :: localTimeline).take(maxMessages) // update our timeline
       timelineViewers.foreach(_ ! Timeline(localTimeline)) // send the updated timeline to the timeline viewers
       
       /*
-      // If someone is exiting, remove them from our lists
-      case Exit(who, why) =>
-        messageViewers = messageViewers.remove(_ == who)
-      timelineViewers = timelineViewers.remove(_ == who)
-      Log.info("Exitted from actor "+who+" why "+why)
-      */
+       // If someone is exiting, remove them from our lists
+       case Exit(who, why) =>
+       messageViewers = messageViewers.remove(_ == who)
+       timelineViewers = timelineViewers.remove(_ == who)
+       Log.info("Exitted from actor "+who+" why "+why)
+       */
       
-      case s => Log.info("User "+userName+" Got msg "+s)
-    }
+    case s => Log.info("User "+userName+" Got msg "+s)
+  }
 
   /**
    * Sort the list in reverse chronological order and take the first maxMessages elements
-  */
+   */
   private def merge(bigList: List[Message]) = bigList.sort((a,b) => b.when < a.when).take(maxMessages)
 
   /**
-  * Autogenerate and schedule a message
-  */
+   * Autogenerate and schedule a message
+   */
   def autoGen = ActorPing.schedule(this, SendMessage("This is a random message @ "+timeNow+" for "+userName, "autogen"), User.randomPeriod)
 }
 
 /**
-* These are the messages that can be sent to (or from) a UserActor
-*/
+ * These are the messages that can be sent to (or from) a UserActor
+ */
 sealed abstract class UserMsg
 
 /**
-* Send a message to a User (from the web, from IM, from SMS).  The Actor
-* will take care of persisting the information in the database.
-*
-* @param text - the text of the message
-* @param src - the source of the message
-*/
+ * Send a message to a User (from the web, from IM, from SMS).  The Actor
+ * will take care of persisting the information in the database.
+ *
+ * @param text - the text of the message
+ * @param src - the source of the message
+ */
 case class SendMessage(text: String, src: String) extends UserMsg
 
 /**
-* A message
-* @param text - the text of the message
-* @param when - when was the message processed by the user object (about the time it was sent)
-* @param who - who sent the message (the user name)
-* @param src - how was the message sent
-*/
+ * A message
+ * @param text - the text of the message
+ * @param when - when was the message processed by the user object (about the time it was sent)
+ * @param who - who sent the message (the user name)
+ * @param src - how was the message sent
+ */
 case class Message(text: String, when: Long, who: String, src: String) extends UserMsg
 
 /**
-* Tell the UserActor to set itself up with the given user id, name, and full name
-* @param userId - the primary key of the user in the database
-* @param userName - the name of the user (e.g., john)
-* @param fullName - the first and last name of the user "John Q. Public"
-*/
+ * Tell the UserActor to set itself up with the given user id, name, and full name
+ * @param userId - the primary key of the user in the database
+ * @param userName - the name of the user (e.g., john)
+ * @param fullName - the first and last name of the user "John Q. Public"
+ */
 case class Setup(userId: Long, userName: String, fullName: String) extends UserMsg
 
 /**
-* Add a timeline viewer
-*/
+ * Add a timeline viewer
+ */
 case class AddTimelineViewer(who: SimpleActor[Any]) extends UserMsg
 
 /**
-* Remove a timeline viewer
-*/
+ * Remove a timeline viewer
+ */
 case class RemoveTimelineViewer(who: SimpleActor[Any]) extends UserMsg
 
 /**
-* Add a message viewer
-*/
+ * Add a message viewer
+ */
 case class AddMessageViewer(who: SimpleActor[Any]) extends UserMsg
 
 /**
-* Remove a message viewer
-*/
+ * Remove a message viewer
+ */
 case class RemoveMessageViewer(who: SimpleActor[Any]) extends UserMsg
 
 /**
-* Add a follower to this User
-*/
+ * Add a follower to this User
+ */
 case class AddFollower(who: SimpleActor[Any]) extends UserMsg
 
 /**
-* Remove a follower
-*/
+ * Remove a follower
+ */
 case class RemoveFollower(who: SimpleActor[Any]) extends UserMsg
 
 /**
-* Sent from a user to a follower telling the follower to merge the user's messages
-* into the followers timeline
-* @param what the messages to merge into the timeline
-*/
+ * Sent from a user to a follower telling the follower to merge the user's messages
+ * into the followers timeline
+ * @param what the messages to merge into the timeline
+ */
 case class MergeIntoTimeline(what: List[Message]) extends UserMsg
 
 /**
-* Get the messages from the user
-*/
+ * Get the messages from the user
+ */
 case object GetMessages extends UserMsg
 
 /**
-* Get the timeline from the user
-*/
+ * Get the timeline from the user
+ */
 case object GetTimeline extends UserMsg
 
 /**
-* Tell the user to gracefully shut itself down
-*/
+ * Tell the user to gracefully shut itself down
+ */
 case object Bye extends UserMsg
 
 /**
-* Tell the user to load a list of followers and and send them the user's messages to merge
-* into the follower's timeline
-*/
+ * Tell the user to load a list of followers and and send them the user's messages to merge
+ * into the follower's timeline
+ */
 case object ConfigFollowers extends UserMsg
 
 /**
-* Ask the user for the userId, the name, and the fullName.  The user will
-* reply with a UserIdInfo message
-*/
+ * Ask the user for the userId, the name, and the fullName.  The user will
+ * reply with a UserIdInfo message
+ */
 case object GetUserIdAndName extends UserMsg
 
 /**

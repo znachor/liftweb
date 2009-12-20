@@ -28,19 +28,19 @@ class WatchUser extends CometActor {
 
   def render = {
     val ret: NodeSeq = (for (ua <- userActor;
-          user <- getUser(ua)) yield {
+                             user <- getUser(ua)) yield {
 	    bind("username" -> Text(user.name+" -> "+user.fullName) ,
-		 "content" -> <span>{friendList(user) ++
-		              ajaxForm(textarea("", msg => ua ! SendMessage(msg, "web")) % ("cols" -> "40") ++
-                                       submit("msg", () => true))
-                              }</span>) ++
+             "content" -> <span>{friendList(user) ++
+                                 ajaxForm(textarea("", msg => ua ! SendMessage(msg, "web")) % ("cols" -> "40") ++
+                                          submit("msg", () => true))
+            }</span>) ++
 	    messages.flatMap(msg => bind("username" -> Text(msg.who+" @ "+toInternetDate(msg.when)), "content" -> Text(msg.text)))
 	  }) openOr bind("username" -> Text("N/A"), "content" -> Text("N/A"))
     ret
   }
 
   override def lowPriority : PartialFunction[Any, Unit] = {
-      case Timeline(msg) =>
+    case Timeline(msg) =>
       messages = msg
       reRender(false)
   }
@@ -48,7 +48,11 @@ class WatchUser extends CometActor {
 
   override def localSetup {
     userActor = name.flatMap(name => UserList.find(name))
-    userActor.foreach{ua => ua ! AddTimelineViewer ;  messages = (ua !? GetTimeline) match {case Timeline(m) => m; case _ => Nil}}
+    userActor.foreach{ua => ua ! AddTimelineViewer(this) ;  messages = (ua !? GetTimeline) match {case Timeline(m) => m; case _ => Nil}}
+  }
+
+  override def localShutdown() {
+    userActor.foreach{ua => ua ! RemoveTimelineViewer(this)}
   }
 
   private def friendList(user: UserIdInfo): NodeSeq = <ul>{user.friends.map(f => <li><a href={"/user/"+f}>{f}</a>&nbsp;<a href={"/unfriend/"+f}>Unfriend</a></li>)}</ul>
