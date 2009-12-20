@@ -37,7 +37,7 @@
     ~ The Basics
   -->
   <groupId>net.liftweb</groupId>
-  <artifactId>project-parent</artifactId>
+  <artifactId>lift</artifactId>
   <version>2.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
@@ -286,6 +286,7 @@
     </snapshotRepository>
     <!-- Site omitted, each project/profile must provide their own -->
     <!--<site />-->
+  </distributionManagement>
 
   <!--
     ~ Build Settings
