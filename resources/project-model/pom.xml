@@ -639,7 +639,6 @@
           </configuration>
           <executions>
             <execution>
-              <phase>verify</phase>
               <goals>
                 <goal>check</goal>
               </goals>
@@ -680,7 +679,7 @@
   <!--
     ~ Reporting Settings
   -->
-  <!-- Reporting omitted, there won't be site of it's own -->
+  <!-- Reporting omitted, each project/profile must provide their own -->
   <!--<reporting/>-->
 
   <!--
@@ -688,22 +687,24 @@
   -->
   <profiles>
     <profile>
-      <id>detail</id>
+      <id>lift-debug</id>
       <build>
-        <pluginManagement>
-          <plugins>
-            <plugin>
-              <groupId>org.scala-tools</groupId>
-              <artifactId>maven-scala-plugin</artifactId>
-              <configuration>
-                <args>
-                  <arg>-unchecked</arg>
-                  <arg>-deprecation</arg>
-                </args>
-              </configuration>
-            </plugin>
-          </plugins>
-        </pluginManagement>
+        <plugins>
+          <plugin>
+            <groupId>org.scala-tools</groupId>
+            <artifactId>maven-scala-plugin</artifactId>
+            <configuration>
+              <args>
+                <arg>-unchecked</arg>
+                <arg>-deprecation</arg>
+              </args>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.rat</groupId>
+            <artifactId>apache-rat-plugin</artifactId>
+          </plugin>
+        </plugins>
       </build>
     </profile>
   </profiles>
