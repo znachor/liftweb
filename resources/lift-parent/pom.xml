@@ -559,11 +559,6 @@
                 <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                 <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
               </manifest>
-              <manifestEntries>
-                <!-- TODO: Deprecate and use Default Implementation Entries (Implementation-Version) -->
-                <lift_version>${pom.version}</lift_version>
-                <lift_build_date>${maven.build.timestamp}</lift_build_date>
-              </manifestEntries>
             </archive>
           </configuration>
         </plugin>
@@ -637,13 +632,6 @@
               <DynamicImport-Package>*</DynamicImport-Package>
             </instructions>
           </configuration>
-          <executions>
-            <execution>
-              <goals>
-                <goal>bundle</goal>
-              </goals>
-            </execution>
-          </executions>
         </plugin>
         <plugin>
           <groupId>org.apache.rat</groupId>
