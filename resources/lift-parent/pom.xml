@@ -689,10 +689,6 @@
               </args>
             </configuration>
           </plugin>
-          <plugin>
-            <groupId>org.apache.rat</groupId>
-            <artifactId>apache-rat-plugin</artifactId>
-          </plugin>
         </plugins>
       </build>
     </profile>
