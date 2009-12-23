@@ -1161,18 +1161,47 @@ object LiftRules extends Factory with FormVendor {
 
   @volatile var templateCache: Box[TemplateCache[(Locale, List[String]), NodeSeq]] = Empty
 
+  //////////////////////////////////////////////////////////////////////////////////////
+  // DATE AND TIME FORMATTING AND PARSING
+  //////////////////////////////////////////////////////////////////////////////////////
   /**
-   * A function to format a Date... can be replaced by a function that is user-specific
+   * A function to format a Date as a date and time ... can be replaced by a function that is user-specific
    */
-  @volatile var formatDate: Date => String = date => date match {case null => LiftRules.formatDate(new Date(0L)) case s => toInternetDate(s)}
+  @volatile var formatDateTime: Date => String = date => date match {case null => LiftRules.formatDate(new Date(0L)) case s => toInternetDate(s)}
+  /**
+   * A function to format a Date as a date, defaults to formatDateTime for backward compatibility
+  */
+  @volatile var formatDate: Date => String = formatDateTime
+  /**
+   * A function to format a Date as a time. By default uses Helpers.hourFormat which includes seconds but not time zone
+  */
+  @volatile var formatTime: Date => String = date => date match {
+    case null => ""
+    case _ => Helpers.hourFormat.format(date)
+  }
 
   /**
-   * A function that parses a String into a Date... can be replaced by something that's user-specific
+   * A function that parses a String representing a date and time into a Date... can be replaced by something that's user-specific
+   * By default uses Helpers.toDate which parses either as an "internet date" (date and time) or just a date if that fails.
    */
-  @volatile var parseDate: String => Box[Date] = str => str match {
+  @volatile var parseDateTime: String => Box[Date] = str => str match {
     case null => Empty
     case s => Helpers.toDate(s)
   }
+  /**
+   * A function that parses a String representing a date into a Date.
+   * Defaults to parseDateTime for backward comaptibility
+   */
+  @volatile var parseDate: String => Box[Date] = parseDateTime(parseDate)
+  /**
+   * A function that parses a String representing a time into a Date.
+   */
+  @volatile var parseTime: String => Box[Date] = _ match {
+    case null => Empty
+    case s => tryo{Helpers.hourFormat.parse(s)} or tryo {Helpers.timeFormatter.parse(s)}
+  }
+  
+  ///////////////////////////////////////////////////////////////////////////////////////////
 
   /**
    * This variable controls whether RequestVars that have been set but not subsequently
