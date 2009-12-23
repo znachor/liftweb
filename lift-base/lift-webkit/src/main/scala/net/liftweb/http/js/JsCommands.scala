@@ -480,7 +480,7 @@ object JsCmds {
 
   /**
    * Replaces the node having the provided id with the markup given by node
-   * 
+   *
    * @param id - the id of the node that will be replaced
    * @param node - the new node
    */
@@ -490,7 +490,7 @@ object JsCmds {
       """
   var parent = document.getElementById(""" + id.encJs + """);
   parent.innerHTML = """ + html + """;
-  for (var i = 0; i < parent.childNodes.length; i++) { 
+  for (var i = 0; i < parent.childNodes.length; i++) {
     var node = parent.childNodes[i];
     parent.parentNode.insertBefore(node.cloneNode(true), parent);
   }
@@ -502,7 +502,7 @@ object JsCmds {
 
   case class SetHtml(uid: String, content: NodeSeq) extends JsCmd {
     // we want eager evaluation of the snippets so they get evaluated in context
-    val toJsCmd = LiftRules.jsArtifacts.setHtml(uid, content).toJsCmd
+    val toJsCmd = LiftRules.jsArtifacts.setHtml(uid, Helpers.stripHead(content)).toJsCmd
   }
 
   /**
