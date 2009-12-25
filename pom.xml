@@ -59,7 +59,8 @@
 
     <!-- vscaladoc settings -->
     <maven.scaladoc.vscaladocVersion>1.2-SNAPSHOT</maven.scaladoc.vscaladocVersion>
-    <vscaladoc.links.liftweb.baseurl>http://scala-tools.org/mvnsites-snapshots/liftweb</vscaladoc.links.liftweb.baseurl>
+    <vscaladoc.links.liftweb.baseurl>${project.basedir}/../..</vscaladoc.links.liftweb.baseurl>
+    <vscaladoc.links.liftweb.pathsufix>target/site/scaladocs/</vscaladoc.links.liftweb.pathsufix>
   </properties>
 
   <!--
@@ -851,6 +852,7 @@
       <id>release</id>
       <properties>
         <vscaladoc.links.liftweb.baseurl>http://scala-tools.org/mvnsites/liftweb</vscaladoc.links.liftweb.baseurl>
+        <vscaladoc.links.liftweb.pathsufix>scaladocs/</vscaladoc.links.liftweb.pathsufix>
       </properties>
       <!--
       <build>
@@ -896,6 +898,10 @@
     </profile>
     <profile>
       <id>hudson</id>
+      <properties>
+        <vscaladoc.links.liftweb.baseurl>http://scala-tools.org/mvnsites-snapshots/liftweb</vscaladoc.links.liftweb.baseurl>
+        <vscaladoc.links.liftweb.pathsufix>scaladocs/</vscaladoc.links.liftweb.pathsufix>
+      </properties>
       <distributionManagement>
         <!--
         <repository>
