@@ -448,8 +448,8 @@
     ~ Build Settings
   -->
   <build>
-    <sourceDirectory>${project.basedir}/src/main/scala</sourceDirectory>
-    <testSourceDirectory>${project.basedir}/src/test/scala</testSourceDirectory>
+    <sourceDirectory>src/main/scala</sourceDirectory>
+    <testSourceDirectory>src/test/scala</testSourceDirectory>
     <extensions>
       <extension>
         <groupId>org.apache.maven.wagon</groupId>
