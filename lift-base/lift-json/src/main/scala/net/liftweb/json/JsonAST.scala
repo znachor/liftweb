@@ -302,7 +302,7 @@ trait Printer {
   def pretty(d: Document): String = pretty(d, new StringWriter).toString
 
   def pretty[A <: Writer](d: Document, out: A): A = {
-    d.format(80, out)
+    d.format(0, out)
     out
   }
 }

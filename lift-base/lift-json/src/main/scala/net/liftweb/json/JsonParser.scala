@@ -95,8 +95,8 @@ object JsonParser {
       vals.peekOption match {
         case Some(f: MField) => 
           f.value = v
-          val field = vals.pop[MField]
-          vals.peek[MObject] += field
+          val field = vals.pop(classOf[MField])
+          vals.peek(classOf[MObject]) += field
         case Some(o: MObject) => v match {
           case x: MField => o += x
           case _ => p.fail("expected field but got " + v)
@@ -107,13 +107,14 @@ object JsonParser {
     }
 
     def newValue(v: MValue) {
-      vals.peek[MValue] match {
+      vals.peek(classOf[MValue]) match {
         case f: MField =>
-          vals.pop[MField]
+          vals.pop(classOf[MField])
           f.value = v
-          vals.peek[MObject] += f
+          vals.peek(classOf[MObject]) += f
         case a: MArray =>
           a += v
+        case _ => p.fail("expected field or array")
       }
     }
 
@@ -127,9 +128,9 @@ object JsonParser {
         case DoubleVal(x)     => newValue(MDouble(x))
         case BoolVal(x)       => newValue(MBool(x))
         case NullVal          => newValue(MNull)
-        case CloseObj         => closeBlock(vals.pop[MValue])          
+        case CloseObj         => closeBlock(vals.pop(classOf[MValue]))
         case OpenArr          => vals.push(MArray())
-        case CloseArr         => closeBlock(vals.pop[MArray])
+        case CloseArr         => closeBlock(vals.pop(classOf[MArray]))
         case End              =>
       }
     } while (token != End)
@@ -141,16 +142,13 @@ object JsonParser {
     import java.util.LinkedList
     private[this] val stack = new LinkedList[MValue]()
 
-    def pop[A <: MValue] = stack.poll match {
-      case x: A => x
-      case x => parser.fail("unexpected " + x)
-    }
-
+    def pop[A <: MValue](expectedType: Class[A]) = convert(stack.poll, expectedType)
     def push(v: MValue) = stack.addFirst(v)
+    def peek[A <: MValue](expectedType: Class[A]) = convert(stack.peek, expectedType)
 
-    def peek[A <: MValue] = stack.peek match {
-      case x: A => x
-      case x => parser.fail("unexpected " + x)
+    private def convert[A <: MValue](x: MValue, expectedType: Class[A]): A = {
+      if (x == null) parser.fail("expected object or array")
+      try { x.asInstanceOf[A] } catch { case _: ClassCastException => parser.fail("unexpected " + x) }
     }
 
     def peekOption = if (stack isEmpty) None else Some(stack.peek)
@@ -263,21 +261,21 @@ object JsonParser {
               cur = cur+4
               return BoolVal(true)
             }
-            error("expected boolean")
+            fail("expected boolean")
           case 'f' =>
             fieldNameMode = true
             if (buf.charAt(cur+1) == 'a' && buf.charAt(cur+2) == 'l' && buf.charAt(cur+3) == 's' && buf.charAt(cur+4) == 'e' && isDelimiter(buf.charAt(cur+5))) {
               cur = cur+5
               return BoolVal(false)
             }
-            error("expected boolean")
+            fail("expected boolean")
           case 'n' =>
             fieldNameMode = true
             if (buf.charAt(cur+1) == 'u' && buf.charAt(cur+2) == 'l' && buf.charAt(cur+3) == 'l' && isDelimiter(buf.charAt(cur+4))) {
               cur = cur+4
               return NullVal
             }
-            error("expected null")
+            fail("expected null")
           case ':' =>
             fieldNameMode = false
             cur = cur+1
@@ -294,7 +292,7 @@ object JsonParser {
             fieldNameMode = true
             return parseValue
           case c if isDelimiter(c) => cur = cur+1
-          case c => error("unknown token " + c)
+          case c => fail("unknown token " + c)
         }
       }
       End
