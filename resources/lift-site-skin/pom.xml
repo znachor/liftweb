@@ -42,4 +42,53 @@
     Site skin used for Lift Framework.
   </description>
 
+  <!--
+    ~ Environment Settings
+  -->
+  <ciManagement>
+    <system>hudson</system>
+    <url>http://hudson.scala-tools.org/job/lift-site-skin/</url>
+    <notifiers>
+      <!-- TODO: Configure-->
+      <notifier/>
+    </notifiers>
+  </ciManagement>
+  <!-- <properties/> -->
+
+  <!--
+    ~ Dependency Settings
+  -->
+  <!-- <dependencyManagement/> -->
+  <!--<dependencies />-->
+
+  <!--
+    ~ Build Settings
+  -->
+  <build>
+    <!-- <pluginManagement/> -->
+    <!-- <plugins/> -->
+  </build>
+
+  <!--
+    ~ Reporting Settings
+  -->
+  <!-- <reporting/> -->
+
+  <!--
+    ~ Profile Settings
+  -->
+  <profiles>
+    <profile>
+      <id>lift-debug</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.rat</groupId>
+            <artifactId>apache-rat-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
 </project>
