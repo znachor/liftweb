@@ -235,7 +235,7 @@
   </scm>
   <ciManagement>
     <system>hudson</system>
-    <url>http://hudson.scala-tools.org/job/LiftProjectModel/</url>
+    <url>http://hudson.scala-tools.org/job/lift-parent/</url>
     <notifiers>
       <!-- TODO: Configure-->
       <notifier />
@@ -591,6 +591,7 @@
             <!--<branchName>Lift-${releaseVersion}</branchName>-->
             <scmCommentPrefix>[lift-release] </scmCommentPrefix>
             <!--<tag>Lift-${releaseVersion}</tag>-->
+            <releaseProfiles>lift-release</releaseProfiles>
           </configuration>
         </plugin>
         <plugin>
@@ -717,6 +718,14 @@
           </plugin>
         </plugins>
       </build>
+    </profile>
+    <profile>
+      <id>lift-hudson</id>
+      <!-- no-op at top level -->
+    </profile>
+    <profile>
+      <id>lift-release</id>
+      <!-- no-op at top level -->
     </profile>
   </profiles>
 
