@@ -22,9 +22,9 @@ object JsonAST {
 
   /** Concatenates a sequence of <code>JValue</code>s.
    * <p>
-   * Example:</br><code>
+   * Example:<pre>
    * concat(JInt(1), JInt(2)) == JArray(List(JInt(1), JInt(2)))
-   * </code>
+   * </pre>
    */
   def concat(xs: JValue*) = xs.foldLeft(JNothing: JValue)(_ ++ _)  
 
@@ -37,9 +37,9 @@ object JsonAST {
     /** XPath-like expression to query JSON fields by name. Matches only fields on
      * next level.
      * <p>
-     * Example:</br><code>
+     * Example:<pre>
      * json \ "name"
-     * </code>
+     * </pre>
      */
     def \(nameToFind: String): JValue = {
       val p = (json: JValue) => json match {
@@ -65,9 +65,9 @@ object JsonAST {
 
     /** XPath-like expression to query JSON fields by name. Returns all matching fields.
      * <p>
-     * Example:</br><code>
+     * Example:<pre>
      * json \\ "name"
-     * </code>
+     * </pre>
      */
     def \\(nameToFind: String): JValue = {
       def find(json: JValue): List[JField] = json match {
@@ -86,18 +86,18 @@ object JsonAST {
     /** XPath-like expression to query JSON fields by type. Matches only fields on
      * next level.
      * <p>
-     * Example:</br><code>
+     * Example:<pre>
      * json \ classOf[JInt]
-     * </code>
+     * </pre>
      */
     def \[A <: JValue](clazz: Class[A]): List[A#Values] = 
       findDirect(children, typePredicate(clazz) _).asInstanceOf[List[A]] map { _.values }
 
     /** XPath-like expression to query JSON fields by type. Returns all matching fields.
      * <p>
-     * Example:</br><code>
+     * Example:<pre>
      * json \\ classOf[JInt]
-     * </code>
+     * </pre>
      */
     def \\[A <: JValue](clazz: Class[A]): List[A#Values] = 
       (this filter typePredicate(clazz) _).asInstanceOf[List[A]] map { _.values }
@@ -110,24 +110,25 @@ object JsonAST {
     /** Return nth element from JSON.
      * Meaningful only to JArray, JObject and JField. Returns JNothing for other types.
      * <p>
-     * Example:</br><code>
+     * Example:<pre>
      * JArray(JInt(1) :: JInt(2) :: Nil)(1) == JInt(2)
-     * </code>
+     * </pre>
      */
     def apply(i: Int): JValue = JNothing
 
     /** Return unboxed values from JSON
      * <p>
-     * Example:</br><code>
+     * Example:<pre>
      * JObject(JField("name", JString("joe")) :: Nil).values == Map("name" -> "joe")
+     * </pre>
      */
     def values: Values
 
     /** Return direct child elements.
      * <p>
-     * Example:</br><code>
+     * Example:<pre>
      * JArray(JInt(1) :: JInt(2) :: Nil).children == List(JInt(1), JInt(2))
-     * </code>
+     * </pre>
      */
     def children = this match {
       case JObject(l) => l
@@ -155,9 +156,9 @@ object JsonAST {
     /** Return a new JValue resulting from applying the given function <code>f</code>
      * to each element in JSON.
      * <p>
-     * Example:</br><code>
+     * Example:<pre>
      * JArray(JInt(1) :: JInt(2) :: Nil) map { case JInt(x) => JInt(x+1); case x => x }
-     * </code>
+     * </pre>
      */
     def map(f: JValue => JValue): JValue = {
       def rec(v: JValue): JValue = v match {
@@ -174,9 +175,9 @@ object JsonAST {
 
     /** Return the first element from JSON which matches the given predicate.
      * <p>
-     * Example:</br><code>
+     * Example:<pre>
      * JArray(JInt(1) :: JInt(2) :: Nil) find { _ == JInt(2) } == Some(JInt(2))
-     * </code>
+     * </pre>
      */
     def find(p: JValue => Boolean): Option[JValue] = {
       def find(json: JValue): Option[JValue] = {
@@ -193,9 +194,9 @@ object JsonAST {
 
     /** Return a List of all elements which matches the given predicate.
      * <p>
-     * Example:</br><code>
+     * Example:<pre>
      * JArray(JInt(1) :: JInt(2) :: Nil) filter { case JInt(x) => x > 1; case _ => false }
-     * </code>
+     * </pre>
      */
     def filter(p: JValue => Boolean): List[JValue] = 
       fold(List[JValue]())((acc, e) => if (p(e)) e :: acc else acc).reverse
@@ -203,10 +204,10 @@ object JsonAST {
     /** Concatenate with another JSON.
      * This is a concatenation monoid: (JValue, ++, JNothing)
      * <p>
-     * Example:</br><code>
+     * Example:<pre>
      * JArray(JInt(1) :: JInt(2) :: Nil) ++ JArray(JInt(3) :: Nil) ==
      * JArray(List(JInt(1), JInt(2), JInt(3)))
-     * </code>
+     * </pre>
      */
     def ++(other: JValue) = {
       def append(value1: JValue, value2: JValue): JValue = (value1, value2) match {
@@ -226,9 +227,9 @@ object JsonAST {
 
     /** Return a JSON where all elements matching the given predicate are removed.
      * <p>
-     * Example:</br><code>
+     * Example:<pre>
      * JArray(JInt(1) :: JInt(2) :: JNull :: Nil) remove { _ == JNull }
-     * </code>
+     * </pre>
      */
     def remove(p: JValue => Boolean): JValue = this map {
       case x if p(x) => JNothing
@@ -237,10 +238,10 @@ object JsonAST {
 
     /** Extract a case class from a JSON.
      * <p>
-     * Example:</br><code>
+     * Example:<pre>
      * case class Person(name: String)
      * JObject(JField("name", JString("joe")) :: Nil).extract[Foo] == Person("joe")
-     * </code>
+     * </pre>
      */
     def extract[A](implicit formats: Formats, mf: scala.reflect.Manifest[A]) = 
       Extraction.extract(this)(formats, mf)
@@ -330,6 +331,12 @@ object JsonAST {
     }).mkString
 }
 
+/** Basic implicit conversions from primitive types into JSON.
+ * Example:<pre>
+ * import net.liftweb.json.Implicits._
+ * JObject(JField("name", "joe") :: Nil) == JObject(JField("name", JString("joe")) :: Nil)
+ * </pre>
+ */
 object Implicits extends Implicits
 trait Implicits {
   import JsonAST._
@@ -343,6 +350,12 @@ trait Implicits {
   implicit def string2jvalue(x: String) = JString(x)
 }
 
+/** A DSL to produce valid JSON.
+ * Example:<pre>
+ * import net.liftweb.json.JsonDSL._
+ * ("name", "joe") ~ ("age", 15) == JObject(JField("name",JString("joe")) :: JField("age",JInt(15)) :: Nil)
+ * </pre>
+ */
 object JsonDSL extends Implicits with Printer {
   import JsonAST._
 
@@ -377,13 +390,26 @@ object JsonDSL extends Implicits with Printer {
   }
 }
 
+/** Printer converts JSON to String.
+ * Before printing a <code>JValue</code> needs to be rendered into scala.text.Document.
+ * <p>
+ * Example:<pre>
+ * pretty(render(json))
+ * </pre>
+ * 
+ * @see JValue#render
+ */
 object Printer extends Printer
 trait Printer {
   import java.io._
   import scala.text._
 
+  /** Compact printing (no whitespace etc.)
+   */
   def compact(d: Document): String = compact(d, new StringWriter).toString
 
+  /** Compact printing (no whitespace etc.)
+   */
   def compact[A <: Writer](d: Document, out: A): A = {
     def layout(doc: Document): Unit = doc match {
       case DocText(s)      => out.write(s) 
@@ -398,8 +424,12 @@ trait Printer {
     out
   }
 
+  /** Pretty printing.
+   */
   def pretty(d: Document): String = pretty(d, new StringWriter).toString
 
+  /** Pretty printing.
+   */
   def pretty[A <: Writer](d: Document, out: A): A = {
     d.format(0, out)
     out
