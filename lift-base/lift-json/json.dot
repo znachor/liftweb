@@ -4,7 +4,7 @@ digraph json {
   ast -> ser [label="serialize"]
   ser -> ast [label="deserialize"]
 
-  ast -> ast [label="map, \\, merge, ..."]
+  ast -> ast [label="map, \\, merge, diff, remove, ..."]
 
   ast -> class [label="extract"]
   class -> ast [label="decompose"]
