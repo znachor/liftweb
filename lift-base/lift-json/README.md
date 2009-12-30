@@ -1,5 +1,38 @@
 Parsing and formatting utilities for JSON.
 
+A central concept in lift-json library is Json AST which models the structure of
+a JSON document as a syntax tree. 
+
+    sealed abstract class JValue
+    case object JNothing extends JValue // 'zero' for JValue
+    case object JNull extends JValue
+    case class JString(s: String) extends JValue
+    case class JDouble(num: Double) extends JValue
+    case class JInt(num: BigInt) extends JValue
+    case class JBool(value: Boolean) extends JValue
+    case class JField(name: String, value: JValue) extends JValue
+    case class JObject(obj: List[JField]) extends JValue 
+    case class JArray(arr: List[JValue]) extends JValue
+
+All features are implemented in terms of above AST. Functions are used to transform
+the AST itself, or to transform the AST between different formats. Common transformations
+are summarized in a following picture.
+
+![Json AST](json.png "Json AST")
+
+Summary of the features:
+
+* Fast JSON parser
+* LINQ style queries
+* Case classes can be used to extract values from parsed JSON
+* Diff & merge
+* DSL to produce valid JSON
+* XPath like expressions and HOFs to manipulate JSON
+* Pretty and compact printing
+* XML conversions
+* Serialization
+
+
 Parsing JSON
 ============
 
