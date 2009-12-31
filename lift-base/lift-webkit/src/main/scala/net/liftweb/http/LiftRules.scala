@@ -1189,6 +1189,9 @@ object LiftRules extends Factory with FormVendor {
    */
   @volatile var logUnreadRequestVars = true
 
+  /** Controls whether or not the service handling timing messages (Service request (GET) ... took ... Milliseconds) are logged. Defaults to true. */
+  @volatile var logServiceRequestTiming = true
+
   private def ctor() {
     appendGlobalFormBuilder(FormBuilderLocator[String]((value, setter) => SHtml.text(value, setter)))
     appendGlobalFormBuilder(FormBuilderLocator[Int]((value, setter) => SHtml.text(value.toString, s => Helpers.asInt(s).foreach((setter)))))
