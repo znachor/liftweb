@@ -397,7 +397,7 @@ object JsonDSL extends Implicits with Printer {
  * pretty(render(json))
  * </pre>
  * 
- * @see JsonAST#render
+ * @see net.liftweb.json.JsonAST#render
  */
 object Printer extends Printer
 trait Printer {

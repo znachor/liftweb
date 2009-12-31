@@ -380,11 +380,11 @@ By default the constructor parameter names must match json field names. However,
 field names contain characters which are not allowed characters in Scala identifiers. There's two 
 solutions for this (see src/test/scala/net/liftweb/json/LottoExample.scala for bigger example).
 
-1. Use back ticks.
+Use back ticks.
 
     scala> case class Person(\`first-name\`: String)
 
-2. Use map function to postprocess AST.
+Use map function to postprocess AST.
 
     scala> case class Person(firstname: String)
     scala> json map {
@@ -454,7 +454,7 @@ It is possible to plug in custom serializer + deserializer functions for any typ
 Now, if we have a non case class DateTime (thus, not supported by default), we can still serialize it
 by providing following functions.
 
-    scala> class DateTime(time: Long)
+    scala> class DateTime(val time: Long)
 
     scala> val hints = new ShortTypeHints(classOf[DateTime] :: Nil) {
              override def serialize: PartialFunction[Any, JObject] = {

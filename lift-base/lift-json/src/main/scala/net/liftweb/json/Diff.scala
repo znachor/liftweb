@@ -93,7 +93,7 @@ object Diff {
 
   private[json] trait Diffable { this: JValue =>
     /** Return a diff.
-     * @see Diff#diff
+     * @see net.liftweb.json.Diff#diff
      */
     def diff(other: JValue) = Diff.diff(this, other)
   }

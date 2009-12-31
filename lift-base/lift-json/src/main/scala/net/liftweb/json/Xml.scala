@@ -16,10 +16,14 @@ package net.liftweb.json
  * and limitations under the License.
  */
 
+/** Functions to convert between JSON and XML.
+ */
 object Xml {
   import JsonAST._
   import scala.xml._
 
+  /** Convert given XML to JSON.
+   */
   def toJson(xml: NodeSeq): JValue = {
     def empty_?(node: Node) = node.child.isEmpty
 
@@ -72,6 +76,8 @@ object Xml {
     }
   }
 
+  /** Convert given JSON to XML.
+   */
   def toXml(json: JValue): NodeSeq = {
     def toXml(name: String, json: JValue): NodeSeq = json match {
       case JObject(fields) => new XmlNode(name, fields flatMap { f => toXml(f.name, f.value) })
