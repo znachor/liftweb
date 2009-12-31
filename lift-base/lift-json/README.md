@@ -32,6 +32,34 @@ Summary of the features:
 * XML conversions
 * Serialization
 
+Installation
+============
+
+It comes with Lift, but non-Lift users can add lift-json as a dependency in following ways.
+
+* SBT users
+
+Add dependency to your project description:
+
+    val lift-json = "net.liftweb" % "lift-json" % "1.1-M8"
+
+* Maven users
+
+Add dependency to your pom:
+
+    <dependency>
+      <groupId>net.liftweb</groupId>
+      <artifactId>lift-json</artifactId>
+      <version>1.1-M8</version>
+    </dependency>
+
+* Others
+
+Download following jars:
+
+* http://scala-tools.org/repo-releases/net/liftweb/lift-json/1.1-M8/lift-json-1.1-M8.jar
+* http://mirrors.ibiblio.org/pub/mirrors/maven2/com/thoughtworks/paranamer/paranamer/2.1/paranamer-2.1.jar
+
 
 Parsing JSON
 ============
