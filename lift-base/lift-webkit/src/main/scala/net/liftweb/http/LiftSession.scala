@@ -1218,7 +1218,7 @@ trait LiftView {
  * Contains functions for obtaining templates
  */
 object TemplateFinder {
-  private val suffixes = List("html", "xhtml", "htm", "")
+  private val suffixes = List("html", "xhtml", "htm")
 
   import LiftRules.ViewDispatchPF
 
