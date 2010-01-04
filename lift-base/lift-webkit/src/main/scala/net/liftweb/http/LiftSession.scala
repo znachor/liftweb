@@ -214,7 +214,7 @@ object RenderVersion {
  * The LiftSession class containg the session state information
  */
 @serializable
-class LiftSession(val _contextPath: String, val uniqueId: String,
+class LiftSession(private[http] val _contextPath: String, val uniqueId: String,
                   val httpSession: Box[HTTPSession]) extends LiftMerge {
   import TemplateFinder._
 
@@ -464,7 +464,7 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
     for (loc <- S.location;
          template <- loc.template) yield template
 
-  def contextPath = (LiftRules.calcContextPath(this) or S.curRequestContextPath) openOr _contextPath
+  def contextPath = LiftRules.calculateContextPath() openOr _contextPath
 
   private[http] def processRequest(request: Req): Box[LiftResponse] = {
     ieMode.is // make sure this is primed
@@ -571,7 +571,7 @@ class LiftSession(val _contextPath: String, val uniqueId: String,
   }
 
   /**
-   *  Set a session-local variable to a value
+   * Set a session-local variable to a value
    *
    * @param name -- the name of the variable
    * @param value -- the value of the variable

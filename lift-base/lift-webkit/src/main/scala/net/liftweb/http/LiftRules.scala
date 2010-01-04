@@ -614,22 +614,16 @@ object LiftRules extends Factory with FormVendor {
             Str(S.session.map(s => S.encodeURL("/" + s.uniqueId)) openOr "")
   }
 
-  /**
-   * The default way of calculating the context path
-   */
-  def defaultCalcContextPath(request: HTTPRequest): Box[String] = {
-    request.header("X-Lift-ContextPath").map {
-      case s if s.trim == "/" => ""
-      case s => s.trim
-    }
-  }
 
   /**
    * If there is an alternative way of calculating the context path
-   * (by default inspecting the X-Lift-ContextPath header)
+   * (by default returning Empty)
+   *
+   * If this function returns an Empty, the contextPath provided by the container will be used. 
+   * 
    */
-  @volatile var calculateContextPath: HTTPRequest => Box[String] =
-  defaultCalcContextPath _
+  @volatile var calculateContextPath: () => Box[String] = () => Empty
+
 
   @volatile private var _context: HTTPContext = _
 
@@ -833,11 +827,6 @@ object LiftRules extends Factory with FormVendor {
    */
   val responseTransformers = RulesSeq[LiftResponse => LiftResponse]
 
-  /**
-   * Calculate the context path for a given session if it should be something different than
-   * the normal context path
-   */
-  val calcContextPath: LiftSession => Box[String] = _ => Empty
 
   /**
    * convertResponse is a PartialFunction that reduces a given Tuple4 into a
