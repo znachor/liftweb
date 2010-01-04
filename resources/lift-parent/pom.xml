@@ -479,18 +479,6 @@
               <github>%URL%/%ISSUE%/find</github>
             </issueLinkTemplatePerSystem>
           </configuration>
-          <executions>
-            <execution>
-              <id>default-changes-validate</id>
-              <phase>verify</phase>
-              <goals>
-                <goal>changes-validate</goal>
-              </goals>
-              <configuration>
-                <failOnError>true</failOnError>
-              </configuration>
-            </execution>
-          </executions>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
