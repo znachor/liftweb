@@ -23,60 +23,63 @@ object JsonParser {
 
   class ParseException(message: String, cause: Exception) extends Exception(message, cause)
 
-  sealed abstract class Token
-  case object OpenObj extends Token
-  case object CloseObj extends Token
-  case class FieldStart(name: String) extends Token
-  case object End extends Token
-  case class StringVal(value: String) extends Token
-  case class IntVal(value: BigInt) extends Token
-  case class DoubleVal(value: Double) extends Token
-  case class BoolVal(value: Boolean) extends Token
-  case object NullVal extends Token
-  case object OpenArr extends Token
-  case object CloseArr extends Token
+  private[json] sealed abstract class Token
+  private[json] case object OpenObj extends Token
+  private[json] case object CloseObj extends Token
+  private[json] case class FieldStart(name: String) extends Token
+  private[json] case object End extends Token
+  private[json] case class StringVal(value: String) extends Token
+  private[json] case class IntVal(value: BigInt) extends Token
+  private[json] case class DoubleVal(value: Double) extends Token
+  private[json] case class BoolVal(value: Boolean) extends Token
+  private[json] case object NullVal extends Token
+  private[json] case object OpenArr extends Token
+  private[json] case object CloseArr extends Token
 
-  trait MValue {
+  private[json] sealed trait MValue {
     def toJValue: JValue
   }
 
-  case class MField(name: String, var value: MValue) extends MValue {
+  private[json] case class MField(name: String, var value: MValue) extends MValue {
     def toJValue = JField(name, value.toJValue)
   }
 
-  case object MNull extends MValue {
+  private[json] case object MNull extends MValue {
     def toJValue = JNull
   }
 
-  case class MString(value: String) extends MValue {
+  private[json] case class MString(value: String) extends MValue {
     def toJValue = JString(value)
   }
 
-  case class MInt(value: BigInt) extends MValue {
+  private[json] case class MInt(value: BigInt) extends MValue {
     def toJValue = JInt(value)
   }
 
-  case class MDouble(value: Double) extends MValue {
+  private[json] case class MDouble(value: Double) extends MValue {
     def toJValue = JDouble(value)
   }
 
-  case class MBool(value: Boolean) extends MValue {
+  private[json] case class MBool(value: Boolean) extends MValue {
     def toJValue = JBool(value)
   }
 
-  trait MBlock[A <: MValue] {
+  private[json] trait MBlock[A <: MValue] {
     protected var elems = List[A]()
     def +=(f: A) = elems = f :: elems
   }
 
-  case class MObject() extends MValue with MBlock[MField] {
+  private[json] case class MObject() extends MValue with MBlock[MField] {
     def toJValue = JObject(elems.map(_.toJValue).reverse)
   }
 
-  case class MArray() extends MValue with MBlock[MValue] {
+  private[json] case class MArray() extends MValue with MBlock[MValue] {
     def toJValue = JArray(elems.map(_.toJValue).reverse)
   }
   
+  /** Return parsed JSON.
+   * @throws ParseException is thrown if parsing fails
+   */
   def parse(s: String): JValue = 
     try {
       parse0(s)
@@ -102,6 +105,7 @@ object JsonParser {
           case _ => p.fail("expected field but got " + v)
         }
         case Some(a: MArray) => a += v
+        case Some(x) => p.fail("expected field, array or object but got " + x)
         case None => root = Some(v.toJValue)
       }
     }
