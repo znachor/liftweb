@@ -51,3 +51,7 @@ object SafeNodeSeq {
     case _ => None
   }
 }
+
+trait Applier[T] {
+  def apply[R](f: T => R): R
+}
