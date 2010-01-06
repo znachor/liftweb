@@ -73,6 +73,7 @@ class Boot {
     LiftRules.snippetDispatch.append {
       case "MyWizard" => MyWizard
       case "WizardChallenge" => WizardChallenge
+      case "ScreenForm" => PersonScreen
     }
 
     LiftRules.snippetDispatch.append(Map("runtime_stats" -> RuntimeStats))
@@ -157,6 +158,7 @@ object MenuInfo {
         Menu(Loc("eval-order", List("templating", "eval_order"), "Evalutation Order")),
         Menu(Loc("select-o-matuc", List("templating", "selectomatic"), "Select <div>s")),
         Menu(Loc("Simple Wizard", List("simple_wizard"), "Simple Wizard")),
+        Menu(Loc("Simple Screen", List("simple_screen"), "Simple Screen")),
         Menu(Loc("head", List("templating", "head"), "<head/> tag"))) ::
       Menu(Loc("ws", List("ws"), "Web Services", Unless(() => Props.inGAE, "Disabled for GAE"))) ::
       Menu(Loc("lang", List("lang"), "Localization")) ::

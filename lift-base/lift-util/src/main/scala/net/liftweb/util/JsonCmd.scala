@@ -16,8 +16,8 @@
 
 package net.liftweb.util
 
-import _root_.scala.xml.NodeSeq
 import common._
+import xml.{Elem, NodeSeq}
 
 trait HasParams {
   def param(name: String): Box[String]
@@ -67,7 +67,11 @@ object FieldError {
   def apply(field: FieldIdentifier, msg: String) = new FieldError(field, Text(msg))
 }
 
-trait BaseField extends FieldIdentifier with SettableValueHolder {
+trait FieldContainer {
+  def allFields: Seq[BaseField]
+}
+
+trait BaseField extends FieldIdentifier with SettableValueHolder with FieldContainer {
   import scala.xml.Text
 
   /**
@@ -92,6 +96,11 @@ trait BaseField extends FieldIdentifier with SettableValueHolder {
    */
   def required_? = false
 
+  /**
+   * Is this an upload field so that a form that includes this field must be multi-part mime
+   */
+  def uploadField_? = false
+
 
   /**
    * Validate this field and return a list of Validation Issues
@@ -102,6 +111,8 @@ trait BaseField extends FieldIdentifier with SettableValueHolder {
    * The human name of this field
    */
   def name: String
+
+  def helpAsHtml: Box[NodeSeq] = Empty
 
 
   /**
@@ -123,6 +134,8 @@ trait BaseField extends FieldIdentifier with SettableValueHolder {
    * The display name of this field (e.g., "First Name")
    */
   def displayName: String = name
+
+  def allFields: Seq[BaseField] = List(this)
 }
 
 

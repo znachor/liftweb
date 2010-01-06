@@ -23,6 +23,7 @@ import _root_.net.liftweb.common._
 import _root_.java.util.Date
 import Helpers._
 
+import model._
 /**
  * An example of a wizard in Lift
  */
@@ -100,5 +101,15 @@ object WizardChallenge extends Wizard {
 
   def finish() {
     S.notice("Finished the challenge")
+  }
+}
+
+object PersonScreen extends LiftScreen {
+  object person extends ScreenVar(Person.create)
+
+  _register(() => person.is)
+
+  def finish() {
+    person.is.save
   }
 }
