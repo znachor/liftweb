@@ -63,7 +63,7 @@ object WizardRules extends Factory with FormVendor {
   }
 }
 
-case class WizardFieldInfo(field: FieldIdentifier, text: NodeSeq, help: Box[NodeSeq], input: NodeSeq)
+case class WizardFieldInfo(field: FieldIdentifier, text: NodeSeq, help: Box[NodeSeq], input: Box[NodeSeq])
 
 trait Wizard extends DispatchSnippet with Factory {
   def dispatch = {
@@ -116,7 +116,7 @@ trait Wizard extends DispatchSnippet with Factory {
     val url = S.uri
 
     renderAll(wizardTop, theScreen.screenTop,
-      theScreen.screenFields.map(f => WizardFieldInfo(f, f.titleAsHtml, f.helpAsHtml, f.toForm)),
+      theScreen.screenFields.map(f => WizardFieldInfo(f, f.displayHtml, f.helpAsHtml, f.toForm)),
       prevButton, Full(cancelButton),
       nextButton,
       finishButton, theScreen.screenBottom, wizardBottom, nextId, prevId, cancelId, theScreen)
@@ -412,11 +412,11 @@ trait Wizard extends DispatchSnippet with Factory {
     /**
      * Define a field within the screen
      */
-    trait Field extends FieldIdentifier with SettableValueHolder {
+    trait Field extends BaseField {
       type ValueType
       Screen.this._register(this)
 
-      object currentValue extends WizardVar[ValueType](default) {
+      object currentValue extends WizardVar[ValueType](setFilter.foldLeft(default)((nv, f) => f(nv))) {
         override protected def __nameSalt = randomString(20)
       }
 
@@ -431,15 +431,11 @@ trait Wizard extends DispatchSnippet with Factory {
 
       def get = is
 
-      def set(v: ValueType) = currentValue.set(v)
+      def set(v: ValueType) = currentValue.set(setFilter.foldLeft(v)((nv, f) => f(nv)))
 
       implicit def manifest: Manifest[ValueType]
 
       protected def buildIt[T](implicit man: Manifest[T]): Manifest[T] = man
-
-      def title: String
-
-      def titleAsHtml: NodeSeq = Text(title)
 
       def help: Box[String] = Empty
 
@@ -450,12 +446,12 @@ trait Wizard extends DispatchSnippet with Factory {
        */
       def editable_? = true
 
-      def toForm: NodeSeq = {
+      def toForm: Box[NodeSeq] = {
         val func: Box[(ValueType, ValueType => Unit) => NodeSeq] =
         Screen.this.vendForm(manifest) or Wizard.this.vendForm(manifest) or WizardRules.vendForm(manifest) or
             LiftRules.vendForm(manifest)
 
-        func.map(f => f(is, set _)) openOr NodeSeq.Empty
+        func.map(f => f(is, set _))
       }
 
       /**
@@ -463,9 +459,11 @@ trait Wizard extends DispatchSnippet with Factory {
        */
       def onConfirm_? = Screen.this.onConfirm_?
 
-      def validate: List[FieldError] = validation.flatMap(_.apply(is))
+      def validate: List[FieldError] = validations.flatMap(_.apply(is))
 
-      def validation: List[ValueType => List[FieldError]] = Nil
+      def validations: List[ValueType => List[FieldError]] = Nil
+
+      def setFilter: List[ValueType => ValueType] = Nil
 
       override lazy val uniqueFieldId: Box[String] = Full(Helpers.hash(this.getClass.getName))
 
