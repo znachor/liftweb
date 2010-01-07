@@ -24,6 +24,7 @@ import _root_.java.util.Date
 import Helpers._
 
 import model._
+
 /**
  * An example of a wizard in Lift
  */
@@ -107,9 +108,18 @@ object WizardChallenge extends Wizard {
 object PersonScreen extends LiftScreen {
   object person extends ScreenVar(Person.create)
 
+
+  override def screenTopTextAsHtml = Full(<b>A single screen with some input validation</b>)
+
   _register(() => person.is)
 
+  val shouldSave = new Field with BooleanField {
+    def name = "Save ?"
+  }
+
   def finish() {
-    person.is.save
+    if (shouldSave.is) {
+      person.is.save
+    }
   }
 }

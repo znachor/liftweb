@@ -292,7 +292,7 @@ trait LiftScreen extends AbstractScreen with DispatchSnippet {
       FuncBindParam("screen_top", xml => (screenTop.map(top => bind("wizard", xml, "bind" -%> top)) openOr NodeSeq.Empty)),
       FuncBindParam("wizard_bottom", xml => NodeSeq.Empty),
       FuncBindParam("screen_bottom", xml => (screenBottom.map(bottom => bind("wizard", xml, "bind" -%> bottom)) openOr NodeSeq.Empty)),
-      "prev" -> (Unparsed("&nbsp;")),
+      "prev" -> (Unparsed("&nbsp;") : NodeSeq),
       "next" -> ((finish) openOr Unparsed("&nbsp;")),
       "cancel" -> (cancel openOr Unparsed("&nbsp;")),
       "errors" -> NodeSeq.Empty, // FIXME deal with errors
@@ -366,6 +366,15 @@ trait IntField extends FieldIdentifier {
 
   def maxVal(len: Int, msg: => String): Int => List[FieldError] = s =>
       if (s > len) List(FieldError(this, Text(msg))) else Nil
+}
+
+trait BooleanField extends FieldIdentifier {
+  self: AbstractScreen#Field =>
+  type ValueType = Boolean
+
+  def default = false
+
+  lazy val manifest = buildIt[Boolean]
 }
 
 trait StringField extends FieldIdentifier {
