@@ -30,7 +30,7 @@ object UploadProgressDemo extends DispatchSnippet {
     } else {
       bind("ul", chooseTemplate("choose", "post", xhtml),
            "file_name" -> theUpload.is.map(v => Text(v.fileName)),
-           "mime_type" -> theUpload.is.map(v => Box.legacyNullTest(v.mimeType).map(Text).openOr(Text("No mime type supplied"))),
+           "mime_type" -> theUpload.is.map(v => Box.legacyNullTest(v.mimeType).map(x => Text(x)).openOr(Text("No mime type supplied"))),
            "length" -> theUpload.is.map(v => Text(v.file.length.toString)),
            "md5" -> theUpload.is.map(v => Text(hexEncode(md5(v.file))))
       )

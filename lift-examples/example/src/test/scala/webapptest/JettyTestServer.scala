@@ -15,6 +15,8 @@
  */
 package webapptest
 
+/* FIXME 280
+
 import _root_.org.mortbay.jetty.Server
 import net.liftweb.example.snippet.MyWizard
 import net.liftweb.http.{S, LiftSession}
@@ -175,4 +177,4 @@ object WizardSpec extends Specification {
   }
 }
 
-
+*/

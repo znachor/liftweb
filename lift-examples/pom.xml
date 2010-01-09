@@ -10,8 +10,8 @@
   <description>A set of examples site/webapp</description>
   <packaging>pom</packaging>
   <modules>
-    <!-- FIXME 280
     <module>example</module>
+    <!-- FIXME 280
     <module>examples-osgi</module>
     <module>skittr</module>
     <module>hellolift</module>
@@ -30,6 +30,11 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>lift-mapper</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>lift-widgets</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>

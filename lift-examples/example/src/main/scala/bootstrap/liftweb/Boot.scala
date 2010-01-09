@@ -15,7 +15,7 @@
  */
 package bootstrap.liftweb
 
-import _root_.net.liftweb._
+import net.liftweb._
 import common.{Box, Full, Empty, Failure}
 import util.{Helpers, Log, NamedPF, Props}
 import http._
@@ -25,7 +25,7 @@ import sitemap._
 import Helpers._
 
 import example._
-import widgets.autocomplete._
+import net.liftweb.widgets.autocomplete._
 import comet._
 import model._
 import lib._
