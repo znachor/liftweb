@@ -37,7 +37,7 @@
     </action>
    see http://maven.apache.org/plugins/maven-changes-plugin/usage.html for full guide
    -->
-    <release version="${project.version}" date="${publishDate}" description="Lift 2.0 Snapshot">
+    <release version="2.0-M1" date="${publishDate}" description="Lift 2.0 Milestone 1">
       <action dev="boisvert" type="fix" issue="273" system="github">
        Changed LiftRules.getResourceAsStream() to doWithResource() to ensure InputStream is always closed
        Removed duplicate LiftRules.finder()
@@ -106,6 +106,9 @@
         Extracted "Screen" code from Wizard for stand-alone
 	declarative input screens
       </action>
+      <action dev="indrajitr" type="enhancement">
+	    Restructure project (segregated into three logical projects: framework, archetypes, examples)
+	  </action>
     </release>
 
     <release version="1.1-M8" date="2009-12-10" description="Lift 1.1 Milestone 8">
