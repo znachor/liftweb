@@ -88,6 +88,72 @@ class DateTimeField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Fiel
 
 }
 
+
+
+class OptionalDateTimeField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[Box[Calendar], OwnerType] {
+  def owner = rec
+
+  def this(rec: OwnerType, value: Box[Calendar]) = {
+    this(rec)
+    set(value)
+  }
+
+  /**
+   * Sets the field value from an Any
+   */
+  def setFromAny(f : Any): Box[Box[Calendar]] = toDate(f) match {
+    case Full(d) => 
+      val cal = Calendar.getInstance()
+      cal.setTime(d)
+      Full(this.set(Full(cal)))
+
+    case Empty => Full(this.set(Empty))
+    case failure => failure.asA[Box[Calendar]]
+  }
+
+
+  def setFromString(s: String): Box[Box[Calendar]] = {
+   try{
+    val cal = Calendar.getInstance()
+    cal.setTime(parseInternetDate(s))
+
+     Full(set(Full(cal)))
+   } catch {
+     case e: Exception => Empty
+   }
+  }
+
+  private def elem =
+  S.fmapFunc(SFuncHolder(this.setFromAny(_))){funcName =>
+    <input type="text"
+      name={funcName}
+      value={value match { case Full(c) => toInternetDate(c.getTime); case _ => "" }}
+      tabindex={tabIndex toString}/>
+  }
+
+  def toForm = {
+    uniqueFieldId match {
+      case Full(id) =>
+        <div id={id+"_holder"}><div><label for={id+"_field"}>{displayName}</label></div>{elem % ("id" -> (id+"_field"))}<lift:msg id={id}/></div>
+      case _ => <div>{elem}</div>
+    }
+
+  }
+
+  def asXHtml: NodeSeq = {
+    var el = elem
+    uniqueFieldId match {
+      case Full(id) =>  el % ("id" -> (id+"_field"))
+      case _ => el
+    }
+  }
+
+  def defaultValue = Empty
+
+  def asJs = value.map(c => Str(toInternetDate(c.getTime))) openOr JsNull
+
+}
+
 import _root_.java.sql.{ResultSet, Types}
 import _root_.net.liftweb.mapper.{DriverType}
 

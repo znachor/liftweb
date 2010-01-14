@@ -29,21 +29,6 @@ class DoubleField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Numeri
 
   def owner = rec
 
-  private def toDouble(in: Any): Double = {
-    in match {
-      case null => 0.0
-      case i: Int => i
-      case n: Long => n
-      case n : Number => n.doubleValue
-      case (n: Number) :: _ => n.doubleValue
-      case Some(n) => toDouble(n)
-      case None => 0.0
-      case s: String => s.toDouble
-      case x :: xs => toDouble(x)
-      case o => toDouble(o.toString)
-	}
-  }
-
   /**
    * Sets the field value from an Any
    */
@@ -71,6 +56,36 @@ class DoubleField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Numeri
 
   def defaultValue = 0.0
 
+}
+
+
+
+class OptionalDoubleField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends OptionalNumericField[Double, OwnerType] {
+
+  def owner = rec
+
+  /**
+   * Sets the field value from an Any
+   */
+  def setFromAny(in: Any): Box[Box[Double]] = {
+    in match {
+      case (n: Double) => Full(this.set(Full(n)))
+      case (n: Number) => Full(this.set(Full(n.doubleValue)))
+      case (n: Number) :: _ => Full(this.set(Full(n.doubleValue)))
+      case Some(n: Number) => Full(this.set(Full(n.doubleValue)))
+      case null|None|Empty|Failure(_,_,_) => Full(this.set(Empty))
+      case (s: String) :: _ => setFromString(s)
+      case o => setFromString(o.toString)
+    }
+  }
+
+  def setFromString(s: String): Box[Box[Double]] = {
+    try{
+      Full(set(Full(java.lang.Double.parseDouble(s))))
+    } catch {
+      case (e: Exception) => valueCouldNotBeSet = true; Empty
+    }
+  }
 }
 
 import _root_.java.sql.{ResultSet, Types}
