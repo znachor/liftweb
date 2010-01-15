@@ -26,10 +26,38 @@ object ManyToManySpecsRunner extends ConsoleRunner(ManyToManySpecs)
 object ManyToManySpecs extends Specification {
   val provider = DBProviders.H2MemoryProvider
   private def ignoreLogger(f: => AnyRef): Unit = ()
-  def setupDB {
+  def withDB[T](p: =>T) {
+    val oldCalcDriver = DriverType.calcDriver
+    DriverType.calcDriver = _ => new DriverType("H2 with FKs disabled") {
+      def binaryColumnType = "BINARY"
+      def clobColumnType = "LONGVARCHAR"
+      def booleanColumnType = "BOOLEAN"
+      def dateTimeColumnType = "TIMESTAMP"
+      def dateColumnType = "DATE"
+      def timeColumnType = "TIME"
+      def integerColumnType = "INTEGER"
+      def integerIndexColumnType = "INTEGER NOT NULL AUTO_INCREMENT"
+      def enumColumnType = "BIGINT"
+      def longForeignKeyColumnType = "BIGINT"
+      def longIndexColumnType = "BIGINT NOT NULL AUTO_INCREMENT"
+      def enumListColumnType = "BIGINT"
+      def longColumnType = "BIGINT"
+      def doubleColumnType = "DOUBLE"
+    
+      override def pkDefinedByIndexColumn_? : Boolean = false
+      
+      override def supportsForeignKeys_? = false
+    
+      override def maxSelectLimit = "0";
+      override def defaultSchemaName = net.liftweb.common.Full("PUBLIC")
+    }
+
     provider.setupDB
-    Schemifier.destroyTables_!!(ignoreLogger _,  Person, Company, PersonCompany)
     Schemifier.schemify(true, ignoreLogger _, Person, Company, PersonCompany)
+    val ret = p
+    Schemifier.destroyTables_!!(ignoreLogger _,  Person, Company, PersonCompany)
+    DriverType.calcDriver = oldCalcDriver
+    ret
   }
   def createPerson = {
     val person = new Person
@@ -51,13 +79,13 @@ object ManyToManySpecs extends Specification {
   
   "ManyToMany" should {
     "skip broken joins in children" in {
-      setupDB
-      val person = createPerson
-      person.companies.joins.length must_== 10
-      person.companies.all.length must_== 8
+      withDB {
+        val person = createPerson
+        person.companies.joins.length must_== 10
+        person.companies.all.length must_== 8
+      }
     }
-    "handle missing joins in insertAll" in {
-      setupDB
+    "handle missing joins in insertAll" in withDB {
       val person = createPerson
       val c = new Company
       c.name ()= "new"
