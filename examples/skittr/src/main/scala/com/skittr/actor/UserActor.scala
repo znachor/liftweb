@@ -1,10 +1,20 @@
 package com.skittr.actor
 
-/*                                                *\
- (c) 2007-2009 WorldWide Conferencing, LLC
- Distributed under an Apache License
- http://www.apache.org/licenses/LICENSE-2.0
- \*                                                 */
+/*
+ * Copyright 2007-2010 WorldWide Conferencing, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions
+ * and limitations under the License.
+ */
 
 import _root_.com.skittr.model._
 import _root_.scala.collection.mutable.{HashMap}
@@ -101,7 +111,7 @@ class UserActor extends LiftActor {
       
       // tell all our friends that we follow them
     case ConfigFollowers =>
-      friends.flatMap(f => UserList.find(f).toList).foreach(_ ! AddFollower)
+      friends.flatMap(f => UserList.find(f).toList).foreach(_ ! AddFollower(this))
       // if the "autogen" property is set, then have each of the actors
       // randomly generate a message
       if (User.shouldAutogen_? || System.getProperty("autogen") != null) autoGen
@@ -114,7 +124,7 @@ class UserActor extends LiftActor {
       // find the user
       UserList.find(name).foreach{
         ua =>
-        ua ! AddFollower // tell him we're a follower
+        ua ! AddFollower(this) // tell him we're a follower
         (ua !? GetUserIdAndName) match { // get the user info
           case UserIdInfo(id, _,_, _) => Friend.create.owner(userId).friend(id).save // and persist a friend connection in the DB
           case _ =>
