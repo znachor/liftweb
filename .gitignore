@@ -34,8 +34,11 @@ test-output
 #  syntax: regexp
 #  ^\.pc/
 
-
 # IntelliJ
 *.iml
 *.ipr
 *.iws
+
+# Pax Runner (for easy OSGi launching)
+runner
+

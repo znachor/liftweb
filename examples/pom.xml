@@ -127,21 +127,21 @@
     ~ Build Settings
   -->
   <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration>
+            <systemPropertyVariables>
+              <!-- See: http://db.apache.org/derby/docs/10.2/tuning/rtunproper18151.html -->
+              <derby.stream.error.file>${project.build.directory}/derby.log</derby.stream.error.file>
+            </systemPropertyVariables>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
     <plugins>
-      <plugin>
-        <artifactId>maven-clean-plugin</artifactId>
-        <configuration>
-          <filesets>
-            <fileset>
-              <directory>${basedir}</directory>
-              <includes>
-                <include>derby.log</include>
-                <include>lift_example</include>
-              </includes>
-            </fileset>
-          </filesets>
-        </configuration>
-      </plugin>
       <plugin>
         <groupId>org.scala-tools</groupId>
         <artifactId>maven-scala-plugin</artifactId>
@@ -151,12 +151,12 @@
         <artifactId>maven-jetty-plugin</artifactId>
         <configuration>
 	  <!--
- <connectors>  
-   <connector implementation="org.mortbay.jetty.nio.SelectChannelConnector">  
-     <port>8888</port>  
-     <maxIdleTime>30000</maxIdleTime>  
-   </connector>  
-    </connectors>  
+ <connectors>
+   <connector implementation="org.mortbay.jetty.nio.SelectChannelConnector">
+     <port>8888</port>
+     <maxIdleTime>30000</maxIdleTime>
+   </connector>
+    </connectors>
  -->
           <contextPath>/</contextPath>
           <scanIntervalSeconds>0</scanIntervalSeconds>
