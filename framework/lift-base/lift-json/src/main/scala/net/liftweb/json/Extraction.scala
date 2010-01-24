@@ -88,7 +88,7 @@ object Extraction {
   private def extract0[A](json: JValue, formats: Formats, mf: Manifest[A]): A = {
     val mapping = mappingOf(mf.erasure)
 
-    def newInstance(targetType: Class[_], args: => List[Any], json: JValue) = {
+    def newInstance(targetType: Class[_], args: List[Arg], json: JValue) = {
       def instantiate(constructor: JConstructor[_], args: List[Any]) = 
         try {
           constructor.newInstance(args.map(_.asInstanceOf[AnyRef]).toArray: _*)
@@ -111,7 +111,7 @@ object Extraction {
       json match {
         case JObject(JField("jsonClass", JString(t)) :: xs) => mkWithTypeHint(t, xs)
         case JField(_, JObject(JField("jsonClass", JString(t)) :: xs)) => mkWithTypeHint(t, xs)
-        case _ => instantiate(primaryConstructorOf(targetType), args)
+        case _ => instantiate(primaryConstructorOf(targetType), args.map(a => build(json \ a.path, a)))
       }
     }
 
@@ -119,8 +119,7 @@ object Extraction {
 
     def build(root: JValue, mapping: Mapping): Any = mapping match {
       case Value(targetType) => convert(root, targetType, formats)
-      case Constructor(targetType, args) => 
-        newInstance(targetType, args.map(a => build(root \ a.path, a)), root)
+      case Constructor(targetType, args) => newInstance(targetType, args, root)
       case Arg(_, m) => build(fieldValue(root), m)
       case Lst(m) => root match {
         case JArray(arr) => arr.map(build(_, m))
