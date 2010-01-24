@@ -126,6 +126,10 @@ object Extraction {
         case JNothing | JNull => Nil
         case x => fail("Expected array but got " + x)
       }
+      case Dict(m) => root match {
+        case JObject(xs) => Map(xs.map(x => (x.name, build(x.value, m))): _*)
+        case x => fail("Expected object but got " + x)
+      }
       case Optional(m) =>
         // FIXME Remove this try-catch.
         try { 

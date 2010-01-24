@@ -45,6 +45,7 @@ private[json] object Meta {
   case class Arg(path: String, mapping: Mapping) extends Mapping
   case class Value(targetType: Class[_]) extends Mapping
   case class Constructor(targetType: Class[_], args: List[Arg]) extends Mapping
+  case class Dict(mapping: Mapping) extends Mapping
   case class Lst(mapping: Mapping) extends Mapping
   case class Optional(mapping: Mapping) extends Mapping
 
@@ -80,6 +81,7 @@ private[json] object Meta {
         if (primitive_?(fType)) Value(fType)
         else if (classOf[List[_]].isAssignableFrom(fType)) mkContainer(genType, Lst.apply _)
         else if (classOf[Option[_]].isAssignableFrom(fType)) mkContainer(genType, Optional.apply _)
+        else if (classOf[Map[_, _]].isAssignableFrom(fType)) Dict(Value(classOf[String]))
         else Constructor(fType, constructorArgs(fType))
      
       Arg(name, fieldMapping(fieldType, genericType))

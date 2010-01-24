@@ -42,13 +42,13 @@ object ExtractionExamples extends Specification {
     val json = parse(testJson)
     json.extract[SimplePerson] mustEqual SimplePerson("joe", Address("Bulevard", "Helsinki"))
   }
-/*
+
   "Map extraction example" in {
     val json = parse(testJson)
     json.extract[PersonWithMap] mustEqual 
       PersonWithMap("joe", Map("street" -> "Bulevard", "city" -> "Helsinki"))
   }
-*/
+
   "Simple value extraction example" in {
     val json = parse(testJson)
     json.extract[Name] mustEqual Name("joe")
