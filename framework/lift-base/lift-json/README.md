@@ -412,7 +412,7 @@ solutions for this (see src/test/scala/net/liftweb/json/LottoExample.scala for b
 
 Use back ticks.
 
-    scala> case class Person(\`first-name\`: String)
+    scala> case class Person(`first-name`: String)
 
 Use map function to postprocess AST.
 
@@ -427,6 +427,29 @@ DateFormat can be changed by overriding 'DefaultFormats' (or by implmenting trai
     scala> implicit val formats = new DefaultFormats {
              override def dateFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
            }
+
+JSON object can be extracted to Map[String, _] too. Each field becomes a key value pair
+in result Map.
+
+    scala> val json = parse("""
+             {
+               "name": "joe",
+               "addresses": {
+                 "address1": {
+                   "street": "Bulevard",
+                   "city": "Helsinki"
+                 },
+                 "address2": {
+                   "street": "Soho",
+                   "city": "London"
+                 }
+               }
+             }""")
+
+    scala> case class PersonWithAddresses(name: String, addresses: Map[String, Address])
+    scala> json.extract[PersonWithAddresses]
+    res0: PersonWithAddresses("joe", Map("address1" -> Address("Bulevard", "Helsinki"),
+                                         "address2" -> Address("Soho", "London")))
 
 Serialization
 =============
