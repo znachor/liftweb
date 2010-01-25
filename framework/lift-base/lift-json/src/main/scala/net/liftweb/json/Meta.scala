@@ -71,17 +71,20 @@ private[json] object Meta {
     }
 
     def toArg(name: String, fieldType: Class[_], genericType: Type): Arg = {
-      def mkContainer(genType: Type, factory: Mapping => Mapping) = 
-        if (container_?(genType)) {
-          val types = containerTypes(genType)
+      def mkContainer(t: Type, k: Kind, valueTypeIndex: Int, factory: Mapping => Mapping) = 
+        if (typeConstructor_?(t)) {
+          val types = containerTypes(t, k)(valueTypeIndex)
           factory(fieldMapping(types._1, types._2))
-        } else factory(fieldMapping(typeParameter(genType), null))
+        } else factory(fieldMapping(typeParameters(t, k)(valueTypeIndex), null))
         
       def fieldMapping(fType: Class[_], genType: Type): Mapping = 
         if (primitive_?(fType)) Value(fType)
-        else if (classOf[List[_]].isAssignableFrom(fType)) mkContainer(genType, Lst.apply _)
-        else if (classOf[Option[_]].isAssignableFrom(fType)) mkContainer(genType, Optional.apply _)
-        else if (classOf[Map[_, _]].isAssignableFrom(fType)) Dict(Value(classOf[String]))
+        else if (classOf[List[_]].isAssignableFrom(fType)) 
+          mkContainer(genType, `* -> *`, 0, Lst.apply _)
+        else if (classOf[Option[_]].isAssignableFrom(fType)) 
+          mkContainer(genType, `* -> *`, 0, Optional.apply _)
+        else if (classOf[Map[_, _]].isAssignableFrom(fType)) 
+          mkContainer(genType, `(*,*) -> *`, 1, Dict.apply _)
         else Constructor(fType, constructorArgs(fType))
      
       Arg(name, fieldMapping(fieldType, genericType))
@@ -116,6 +119,10 @@ private[json] object Meta {
   object Reflection {
     import java.lang.reflect._
 
+    sealed abstract class Kind
+    case object `* -> *` extends Kind
+    case object `(*,*) -> *` extends Kind
+
     val primitives = Map[Class[_], Unit]() ++ (List[Class[_]](
       classOf[String], classOf[Int], classOf[Long], classOf[Double], 
       classOf[Float], classOf[Byte], classOf[BigInt], classOf[Boolean], 
@@ -133,26 +140,43 @@ private[json] object Meta {
     def primaryConstructorOf[A](cl: Class[A]): JConstructor[A] = 
       safePrimaryConstructorOf(cl).getOrElse(fail("Can't find primary constructor for class " + cl))
 
-    def typeParameter(t: Type): Class[_] = {
-      val ptype = t.asInstanceOf[ParameterizedType]
-      ptype.getActualTypeArguments()(0) match {
-        case c: Class[_] => c
-        case p: ParameterizedType => p.getRawType.asInstanceOf[Class[_]]
-        case x => fail("do not know how to get type parameter from " + x)
+    def typeParameters(t: Type, k: Kind): List[Class[_]] = {
+      def params(i: Int) = {
+        val ptype = t.asInstanceOf[ParameterizedType]
+        ptype.getActualTypeArguments()(i) match {
+          case c: Class[_] => c
+          case p: ParameterizedType => p.getRawType.asInstanceOf[Class[_]]
+          case x => fail("do not know how to get type parameter from " + x)
+        }
+      }
+
+      k match {
+        case `* -> *`     => List(params(0))
+        case `(*,*) -> *` => List(params(0), params(1))
       }
     }
 
-    def containerTypes(t: Type): (Class[_], Type) = {
-      val ptype = t.asInstanceOf[ParameterizedType]
-      val c = ptype.getActualTypeArguments()(0).asInstanceOf[ParameterizedType]
-      val ctype = c.getRawType.asInstanceOf[Class[_]]
-      (ctype, c)
+    def containerTypes(t: Type, k: Kind): List[(Class[_], Type)] = {
+      def types(i: Int) = {
+        val ptype = t.asInstanceOf[ParameterizedType]
+        val c = ptype.getActualTypeArguments()(i).asInstanceOf[ParameterizedType]
+        val ctype = c.getRawType.asInstanceOf[Class[_]]
+        (ctype, c)
+      }
+
+      k match {
+        case `* -> *`     => List(types(0))
+        case `(*,*) -> *` => List(types(0), types(1))
+      }
     }
 
     def primitive_?(clazz: Class[_]) = primitives contains clazz
     def static_?(f: Field) = Modifier.isStatic(f.getModifiers)
-    def container_?(t: Type) = 
-      t.asInstanceOf[ParameterizedType].getActualTypeArguments()(0).isInstanceOf[ParameterizedType]
+    def typeConstructor_?(t: Type) = t match {
+      case p: ParameterizedType => 
+        p.getActualTypeArguments.exists(_.isInstanceOf[ParameterizedType])
+      case _ => false
+    }
 
     def primitive2jvalue(a: Any)(implicit formats: Formats) = a match {
       case x: String => JString(x)
