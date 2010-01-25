@@ -468,10 +468,11 @@ Serialization supports:
 
 * Arbitrarily deep case class graphs
 * All primitive types, including BigInt and Symbol
-* List and Map (note, keys of the Map must be Strings, Map[String, _])
+* List and Map (note, keys of the Map must be strings: Map[String, _])
 * scala.Option
 * java.util.Date
 * Polymorphic Lists (see below)
+* Recursive types
 * Custom serializer functions for types which are not supported (see below)
 
 It does not support:

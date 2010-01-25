@@ -74,7 +74,18 @@ object SerializationExamples extends Specification {
     read[PersonWithAddresses](ser) mustEqual p
   }
 
+  "Recursive type serialization example" in {
+    val r1 = Rec(1, Nil)
+    val r2 = Rec(2, Nil)
+    val r3 = Rec(3, r1 :: r2 :: Nil)
+
+    val ser = swrite(r3)
+    read[Rec](ser) mustEqual r3
+  }
+
   case class Ints(x: List[List[Int]])
+
+  case class Rec(n: Int, xs: List[Rec])
 }
 
 object ShortTypeHintExamples extends TypeHintExamples {

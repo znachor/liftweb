@@ -45,6 +45,7 @@ private[json] object Meta {
   case class Arg(path: String, mapping: Mapping) extends Mapping
   case class Value(targetType: Class[_]) extends Mapping
   case class Constructor(targetType: Class[_], args: List[Arg]) extends Mapping
+  case class Cycle(targetType: Class[_]) extends Mapping
   case class Dict(mapping: Mapping) extends Mapping
   case class Lst(mapping: Mapping) extends Mapping
   case class Optional(mapping: Mapping) extends Mapping
@@ -56,9 +57,10 @@ private[json] object Meta {
   private[json] def mappingOf(clazz: Class[_]) = {
     import Reflection._
 
-    def constructorArgs(clazz: Class[_]) = orderedConstructorArgs(clazz).map { f =>
-      toArg(unmangleName(f), f.getType, f.getGenericType)
-    }.toList
+    def constructorArgs(clazz: Class[_], visited: Set[Class[_]]) = 
+      orderedConstructorArgs(clazz).map { f =>
+        toArg(unmangleName(f), f.getType, f.getGenericType, visited)
+      }.toList
 
     def orderedConstructorArgs(clazz: Class[_]): Iterable[Field] = {
       safePrimaryConstructorOf(clazz) match {
@@ -70,7 +72,7 @@ private[json] object Meta {
       }
     }
 
-    def toArg(name: String, fieldType: Class[_], genericType: Type): Arg = {
+    def toArg(name: String, fieldType: Class[_], genericType: Type, visited: Set[Class[_]]): Arg = {
       def mkContainer(t: Type, k: Kind, valueTypeIndex: Int, factory: Mapping => Mapping) = 
         if (typeConstructor_?(t)) {
           val types = containerTypes(t, k)(valueTypeIndex)
@@ -85,12 +87,15 @@ private[json] object Meta {
           mkContainer(genType, `* -> *`, 0, Optional.apply _)
         else if (classOf[Map[_, _]].isAssignableFrom(fType)) 
           mkContainer(genType, `(*,*) -> *`, 1, Dict.apply _)
-        else Constructor(fType, constructorArgs(fType))
+        else {
+          if (visited.contains(fType)) Cycle(fType)
+          else Constructor(fType, constructorArgs(fType, visited + fType))
+        }
      
       Arg(name, fieldMapping(fieldType, genericType))
     }
 
-    mappings.memoize(clazz, c => Constructor(c, constructorArgs(c)))
+    mappings.memoize(clazz, c => Constructor(c, constructorArgs(c, Set())))
   }
 
   private[json] def unmangleName(f: Field) = 

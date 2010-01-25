@@ -123,6 +123,7 @@ object Extraction {
     def build(root: JValue, mapping: Mapping): Any = mapping match {
       case Value(targetType) => convert(root, targetType, formats)
       case Constructor(targetType, args) => newInstance(targetType, args, root)
+      case Cycle(targetType) => mappingOf(targetType)
       case Arg(_, m) => build(fieldValue(root), m)
       case Lst(m) => root match {
         case JArray(arr) => arr.map(build(_, m))
