@@ -73,6 +73,7 @@ object Extraction {
         case x if primitive_?(x.getClass) => primitive2jvalue(x)(formats)
         case x: List[_] => JArray(x map decompose)
         case x: Option[_] => decompose(x getOrElse JNothing)
+        case x: Map[_, _] => JObject((x map { case (k: String, v) => JField(k, decompose(v)) }).toList)
         case x => 
           x.getClass.getDeclaredFields.toList.remove(static_?).map { f => 
             f.setAccessible(true)
@@ -86,6 +87,8 @@ object Extraction {
   }
 
   private def extract0[A](json: JValue, formats: Formats, mf: Manifest[A]): A = {
+    if (mf.erasure == classOf[List[_]] || mf.erasure == classOf[Map[_, _]])
+      fail("Root object can't yet be List or Map (needs a feature from Scala 2.8)")
     val mapping = mappingOf(mf.erasure)
 
     def newInstance(targetType: Class[_], args: List[Arg], json: JValue) = {

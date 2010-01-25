@@ -67,6 +67,13 @@ object SerializationExamples extends Specification {
     read[Ints](ser) mustEqual ints
   }
 
+  "Map serialization example" in {
+    val p = PersonWithAddresses("joe", Map("address1" -> Address("Bulevard", "Helsinki"),
+                                           "address2" -> Address("Soho", "London")))
+    val ser = swrite(p)
+    read[PersonWithAddresses](ser) mustEqual p
+  }
+
   case class Ints(x: List[List[Int]])
 }
 

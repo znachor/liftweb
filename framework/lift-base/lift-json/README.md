@@ -445,7 +445,7 @@ Serialization supports:
 
 * Arbitrarily deep case class graphs
 * All primitive types, including BigInt and Symbol
-* Lists
+* List and Map (note, keys of the Map must be Strings, Map[String, _])
 * scala.Option
 * java.util.Date
 * Polymorphic Lists (see below)
@@ -454,7 +454,7 @@ Serialization supports:
 It does not support:
 
 * Java serialization (classes marked with @serializable annotation etc.)
-* Maps, Sets or other collection types, just Lists and Options for now
+* Sets or other collection types, just List, Map and Option for now
 
 Serializing polymorphic Lists
 -----------------------------
