@@ -96,9 +96,10 @@ object Extraction {
         try {
           constructor.newInstance(args.map(_.asInstanceOf[AnyRef]).toArray: _*)
         } catch {
-          case e @ (_:IllegalArgumentException | _:InstantiationException) => 
-            fail("Parsed JSON values do not match with class constructor\nargs=" + args.mkString(",") + 
-                 "\narg types=" + args.map(arg => if (arg != null) arg.asInstanceOf[AnyRef].getClass.getName else "null").mkString(",") + 
+          case e @ (_:IllegalArgumentException | _:InstantiationException) =>             
+            fail("Parsed JSON values do not match with class constructor\nargs=" + 
+                 args.mkString(",") + "\narg types=" + args.map(a => if (a != null) 
+                   a.asInstanceOf[AnyRef].getClass.getName else "null").mkString(",") + 
                  "\nconstructor=" + constructor)
         }
 
@@ -155,7 +156,7 @@ object Extraction {
     build(json, mapping).asInstanceOf[A]
   }
 
-  private def convert(value: JValue, targetType: Class[_], formats: Formats): Any = value match {
+  private def convert(json: JValue, targetType: Class[_], formats: Formats): Any = json match {
     case JInt(x) if (targetType == classOf[Int]) => x.intValue
     case JInt(x) if (targetType == classOf[Long]) => x.longValue
     case JInt(x) if (targetType == classOf[Double]) => x.doubleValue
@@ -169,7 +170,7 @@ object Extraction {
     case JString(s) if (targetType == classOf[Date]) => formats.dateFormat.parse(s).getOrElse(fail("Invalid date '" + s + "'"))
     case JNull => null
     case JNothing => fail("Did not find value which can be converted into " + targetType.getName)
-    case _ => value.values
+    case _ => json.values
   }
 }
 

@@ -75,7 +75,7 @@ private[json] object Meta {
     def toArg(name: String, fieldType: Class[_], genericType: Type, visited: Set[Class[_]]): Arg = {
       def mkContainer(t: Type, k: Kind, valueTypeIndex: Int, factory: Mapping => Mapping) = 
         if (typeConstructor_?(t)) {
-          val types = containerTypes(t, k)(valueTypeIndex)
+          val types = typeConstructors(t, k)(valueTypeIndex)
           factory(fieldMapping(types._1, types._2))
         } else factory(fieldMapping(typeParameters(t, k)(valueTypeIndex), null))
         
@@ -146,7 +146,7 @@ private[json] object Meta {
       safePrimaryConstructorOf(cl).getOrElse(fail("Can't find primary constructor for class " + cl))
 
     def typeParameters(t: Type, k: Kind): List[Class[_]] = {
-      def params(i: Int) = {
+      def term(i: Int) = {
         val ptype = t.asInstanceOf[ParameterizedType]
         ptype.getActualTypeArguments()(i) match {
           case c: Class[_] => c
@@ -156,12 +156,12 @@ private[json] object Meta {
       }
 
       k match {
-        case `* -> *`     => List(params(0))
-        case `(*,*) -> *` => List(params(0), params(1))
+        case `* -> *`     => List(term(0))
+        case `(*,*) -> *` => List(term(0), term(1))
       }
     }
 
-    def containerTypes(t: Type, k: Kind): List[(Class[_], Type)] = {
+    def typeConstructors(t: Type, k: Kind): List[(Class[_], Type)] = {
       def types(i: Int) = {
         val ptype = t.asInstanceOf[ParameterizedType]
         val c = ptype.getActualTypeArguments()(i).asInstanceOf[ParameterizedType]
