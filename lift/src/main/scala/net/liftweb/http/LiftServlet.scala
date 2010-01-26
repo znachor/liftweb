@@ -638,7 +638,7 @@ object ActorSchedulerFixer {
     if (performFix && !fixDone) {
       Scheduler.impl match {
         case fj: FJTaskScheduler2 =>
-          fj.snapshot()
+          // fj.snapshot()
         fj.shutdown()
         case _ =>
       }

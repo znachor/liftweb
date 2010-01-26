@@ -107,6 +107,23 @@ class Boot {
     // Dump browser information each time a new connection is made
     LiftSession.onBeginServicing = BrowserLogger.haveSeenYou _ :: LiftSession.onBeginServicing
 
+    LiftRules.cometHeartbeatPeriod = Full(5 seconds)
+    LiftSession.onSetupSession ::= addHeartbeatListener _ 
+  }
+
+  private def addHeartbeatListener(session: LiftSession) {
+    session.heartBeatFuncs ::= doHeartbeat _
+  }
+
+  private def doHeartbeat(session: LiftSession) {
+    object lastTime extends SessionVar(0L)
+
+    val last = lastTime.is
+    val now = Helpers.millis
+    if ((now - last) > 100L) {
+      lastTime.set(now)
+      Log.info("Session "+session.uniqueId+" is still alive at "+Helpers.now)
+    }
   }
 
   private def invokeWebService(methodName: String)():

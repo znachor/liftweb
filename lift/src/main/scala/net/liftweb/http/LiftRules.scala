@@ -31,6 +31,10 @@ import js._
 import JE._
 import auth._
 
+import _root_.scala.actors.Actor
+import Actor._
+
+
 object LiftRules {
   val noticesContainerId = "lift__noticesContainer__"
 
@@ -354,6 +358,60 @@ object LiftRules {
         throw e.getCause
     }
   }
+  
+  private case class HeartBeatInfo(io: java.io.InputStream, 
+				   session: LiftSession)
+
+  private lazy val HeartBeat = new Actor {
+    import _root_.scala.collection.mutable.HashSet
+    import java.io.InputStream
+    private val watched: HashSet[HeartBeatInfo] = new HashSet
+    
+    def act = loop {
+      react {
+	case it: HeartBeatInfo =>
+	  watched += it
+	
+	case "Check" =>
+
+	  schedulePing()
+	
+	val toRemove = watched.filter{
+	  info =>
+	    try {
+	      info.io.available
+	      false
+	    } catch {
+	      case e: java.io.IOException =>
+		true
+	      case e: Exception =>
+		true
+	    }
+	}
+
+	toRemove.foreach(watched.-=)
+
+	watched.foreach{ info => info.session.heartBeat()}
+	
+	case _ =>
+      }
+    }
+    
+    private def schedulePing() {
+      cometHeartbeatPeriod match {
+	case Full(period) =>
+	  ActorPing.schedule(this, "Check", period)
+
+	case _ =>
+      }
+    }
+
+    this.start
+    schedulePing()
+  }
+
+  @volatile var cometHeartbeatPeriod: Box[Long] = Empty // Full(5 seconds)
+
 
   /**
    * Check to see if continuations are supported
@@ -361,6 +419,22 @@ object LiftRules {
   def checkContinuations(req: HttpServletRequest): Option[Any] = {
     if (!hasContinuations_?) None
     else {
+      if (cometHeartbeatPeriod.isDefined) {
+	try {
+	  val r2 = req.asInstanceOf[{def getConnection(): AnyRef}]
+	  val con = r2.getConnection().
+	  asInstanceOf[{def getInputStream(): java.io.InputStream}]
+	  
+	  val instr = con.getInputStream()
+	  S.session match {
+	    case Full(session) =>
+	      HeartBeat ! HeartBeatInfo(instr, session)
+	    case _ =>
+	  }
+	} catch {
+	  case e: Exception => // ignore... no heartbeat for you
+	}
+      }
       val cont = getContinuation.invoke(contSupport, req, LiftRules)
       val ret = getObject.invoke(cont)
       setObject.invoke(cont, null)
