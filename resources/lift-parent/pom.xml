@@ -399,14 +399,9 @@
       -->
       <dependency>
         <groupId>org.scala-tools.testing</groupId>
-<<<<<<< HEAD
         <artifactId>specs_2.8.0.Beta1-RC8</artifactId>
         <!--<version>[1.4.4,1.6.0]</version>-->
         <version>1.6.2</version>
-=======
-        <artifactId>specs</artifactId>
-        <version>1.6.1</version>
->>>>>>> master
         <scope>test</scope>
       </dependency>
       <dependency>
