@@ -112,19 +112,22 @@ class Boot {
   }
 
   private def addHeartbeatListener(session: LiftSession) {
+    var lastTime: Long = 0L // this variable is bound to the function
+                            // so it's unique for each doHeartbeat function
+
+    def doHeartbeat(session: LiftSession) {
+      println("Last time for "+session.uniqueId+" is "+lastTime)
+      val now = Helpers.millis
+      if ((now - lastTime) > 100L) {
+	lastTime = now
+	Log.info("Session "+session.uniqueId+" is still alive at "+Helpers.now)
+      }
+    }
+
+
     session.heartBeatFuncs ::= doHeartbeat _
   }
 
-  private def doHeartbeat(session: LiftSession) {
-    object lastTime extends SessionVar(0L)
-
-    val last = lastTime.is
-    val now = Helpers.millis
-    if ((now - last) > 100L) {
-      lastTime.set(now)
-      Log.info("Session "+session.uniqueId+" is still alive at "+Helpers.now)
-    }
-  }
 
   private def invokeWebService(methodName: String)():
   Box[LiftResponse] =
