@@ -236,10 +236,7 @@
   <ciManagement>
     <system>hudson</system>
     <url>http://hudson.scala-tools.org/job/lift-parent/</url>
-    <notifiers>
-      <!-- TODO: Configure-->
-      <notifier />
-    </notifiers>
+    <!-- <notifiers/> -->
   </ciManagement>
   <distributionManagement>
     <repository>
@@ -317,7 +314,6 @@
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
         <version>${slf4j.version}</version>
-        <!--<optional>true</optional>-->
       </dependency>
       <!--
       Provided scope: provided by container, available only in compile and test classpath, non-transitive
@@ -337,15 +333,80 @@
       <!--
       Runtime scope: provided in runtime, available only in runtime and test classpath, not compile classpath
       -->
-      <!--<dependency />-->
+      <dependency>
+        <groupId>com.h2database</groupId>
+        <artifactId>h2</artifactId>
+        <version>1.2.127</version>
+        <scope>runtime</scope>
+        <optional>true</optional>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.derby</groupId>
+        <artifactId>derby</artifactId>
+        <version>10.5.3.0_1</version>
+        <scope>runtime</scope>
+        <optional>true</optional>
+      </dependency>
+      <dependency>
+        <groupId>postgresql</groupId>
+        <artifactId>postgresql</artifactId>
+        <version>8.4-701.jdbc3</version>
+        <scope>runtime</scope>
+        <optional>true</optional>
+      </dependency>
+      <dependency>
+        <groupId>mysql</groupId>
+        <artifactId>mysql-connector-java</artifactId>
+        <version>5.1.9</version>
+        <scope>runtime</scope>
+        <optional>true</optional>
+      </dependency>
+      <dependency>
+        <groupId>net.sourceforge.jtds</groupId>
+        <artifactId>jtds</artifactId>
+        <version>1.2.4</version>
+        <scope>runtime</scope>
+        <optional>true</optional>
+      </dependency>
+      <!--
+      <dependency>
+        <groupId>com.oracle</groupId>
+        <artifactId>ojdbc6</artifactId>
+        <version>11.1.0.7.0</version>
+        <scope>runtime</scope>
+        <optional>true</optional>
+      </dependency>
+      -->
+      <dependency>
+        <!--for jdk 1.5 and earlier-->
+        <groupId>com.oracle</groupId>
+        <artifactId>ojdbc14</artifactId>
+        <version>10.2.0.3.0</version>
+        <scope>runtime</scope>
+        <optional>true</optional>
+      </dependency>
+      <!--
+      <dependency>
+        <groupId>com.sap</groupId>
+        <artifactId>sapdbc</artifactId>
+        <scope>runtime</scope>
+        <version>7.6.0.5</version>
+        <optional>true</optional>
+      </dependency>
+      -->
       <!--
       Test scope: available only in test classpath
       -->
       <dependency>
         <groupId>org.scala-tools.testing</groupId>
+<<<<<<< HEAD
         <artifactId>specs_2.8.0.Beta1-RC8</artifactId>
         <!--<version>[1.4.4,1.6.0]</version>-->
         <version>1.6.2</version>
+=======
+        <artifactId>specs</artifactId>
+        <version>1.6.1</version>
+>>>>>>> master
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -358,8 +419,7 @@
       <dependency>
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
-        <!--TODO: push version to 4.7-->
-        <version>4.5</version>
+        <version>4.7</version>
         <scope>test</scope>
       </dependency>
       <dependency>
