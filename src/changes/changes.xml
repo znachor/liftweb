@@ -15,7 +15,11 @@
     </action>
     see http://maven.apache.org/plugins/maven-changes-plugin/usage.html for full guide
   -->
-    <release version="1.0.3-SNAPSHOT" ... />
+    <release version="1.0.4-SNAPSHOT" ... />
+    <release version="1.0.3" date="2010-01-29" description="Bugfix release with heartbeat support">
+      <action dev="David Pollak" type="add">Add heartbeat support for Novel Pulse</action>
+      <action dev="David Pollak" type="update">Upgrade to Scala 2.7.7</action>
+    </release>
     <release version="1.0.2" date="2009-09-10" description="Bugfix release for Actors issue">
       <action dev="David Pollak" type="fix">Removed unnecessary fix for Actors issue now that we're on Scala 2.7.5</action>
     </release>
