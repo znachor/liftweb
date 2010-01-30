@@ -107,7 +107,27 @@ class Boot {
     // Dump browser information each time a new connection is made
     LiftSession.onBeginServicing = BrowserLogger.haveSeenYou _ :: LiftSession.onBeginServicing
 
+    LiftRules.cometHeartbeatPeriod = Full(5 seconds)
+    LiftSession.onSetupSession ::= addHeartbeatListener _ 
   }
+
+  private def addHeartbeatListener(session: LiftSession) {
+    var lastTime: Long = 0L // this variable is bound to the function
+                            // so it's unique for each doHeartbeat function
+
+    def doHeartbeat(session: LiftSession) {
+      println("Last time for "+session.uniqueId+" is "+lastTime)
+      val now = Helpers.millis
+      if ((now - lastTime) > 100L) {
+	lastTime = now
+	Log.info("Session "+session.uniqueId+" is still alive at "+Helpers.now)
+      }
+    }
+
+
+    session.heartBeatFuncs ::= doHeartbeat _
+  }
+
 
   private def invokeWebService(methodName: String)():
   Box[LiftResponse] =

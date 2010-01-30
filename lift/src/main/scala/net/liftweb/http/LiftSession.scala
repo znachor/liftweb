@@ -258,6 +258,9 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   private [http] var highLevelSessionDispatcher = new HashMap[String, LiftRules.DispatchPF]()
   private [http] var sessionRewriter = new HashMap[String, LiftRules.RewritePF]()
 
+  @volatile var heartBeatFuncs: List[LiftSession => Unit] = Nil
+
+
   private[http] def startSession(): Unit = {
     running_? = true
     inactivityLength = httpSession.getMaxInactiveInterval.toLong * 1000L
@@ -280,6 +283,10 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   }
 
   private case class RunnerHolder(name: String, func: S.AFuncHolder, owner: Box[String])
+
+  private[http] def heartBeat() {
+    heartBeatFuncs.foreach(_.apply(this))
+  }
 
   /**
    * Executes the user's functions based on the query parameters

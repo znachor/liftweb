@@ -53,7 +53,7 @@ class LiftServlet extends HttpServlet {
     try {
       LiftRules.ending = true
       LiftRules.runUnloadHooks()
-      Scheduler.snapshot // pause the Actor scheduler so we don't have threading issues
+      // Scheduler.snapshot // pause the Actor scheduler so we don't have threading issues
       Scheduler.shutdown
       ActorPing.shutdown
       Log.debug("Destroyed servlet")
@@ -638,7 +638,7 @@ object ActorSchedulerFixer {
     if (performFix && !fixDone) {
       Scheduler.impl match {
         case fj: FJTaskScheduler2 =>
-          fj.snapshot()
+          // fj.snapshot()
         fj.shutdown()
         case _ =>
       }
