@@ -232,8 +232,6 @@
   <issueManagement>
     <system>assembla</system>
     <url>http://www.assembla.com/spaces/liftweb/tickets/</url>
-    <system>github</system>
-    <url>http://github.com/dpp/liftweb/issues/</url>
   </issueManagement>
   <ciManagement>
     <system>hudson</system>
@@ -504,7 +502,6 @@
             <filteringChanges>true</filteringChanges>
             <issueLinkTemplatePerSystem>
               <assembla>%URL%/%ISSUE%</assembla>
-              <github>%URL%/%ISSUE%/find</github>
             </issueLinkTemplatePerSystem>
           </configuration>
         </plugin>
