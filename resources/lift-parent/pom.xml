@@ -230,6 +230,8 @@
     <url>http://github.com/dpp/liftweb/tree/master</url>
   </scm>
   <issueManagement>
+    <system>assembla</system>
+    <url>http://www.assembla.com/spaces/liftweb/tickets/</url>
     <system>github</system>
     <url>http://github.com/dpp/liftweb/issues/</url>
   </issueManagement>
@@ -448,24 +450,24 @@
   -->
   <repositories>
     <repository>
-      <id>scala-tools.release</id>
+      <id>scala-tools.releases</id>
       <name>Scala-Tools Dependencies Repository for Releases</name>
       <url>http://scala-tools.org/repo-releases</url>
     </repository>
     <repository>
-      <id>scala-tools.snapshot</id>
+      <id>scala-tools.snapshots</id>
       <name>Scala-Tools Dependencies Repository for Snapshots</name>
       <url>http://scala-tools.org/repo-snapshots</url>
     </repository>
   </repositories>
   <pluginRepositories>
     <pluginRepository>
-      <id>scala-tools.release</id>
+      <id>scala-tools.releases</id>
       <name>Scala-Tools Plugins Repository for Releases</name>
       <url>http://scala-tools.org/repo-releases</url>
     </pluginRepository>
     <pluginRepository>
-      <id>scala-tools.snapshot</id>
+      <id>scala-tools.snapshots</id>
       <name>Scala-Tools Plugins Repository for Snapshots</name>
       <url>http://scala-tools.org/repo-snapshots</url>
     </pluginRepository>
@@ -501,6 +503,7 @@
           <configuration>
             <filteringChanges>true</filteringChanges>
             <issueLinkTemplatePerSystem>
+              <assembla>%URL%/%ISSUE%</assembla>
               <github>%URL%/%ISSUE%/find</github>
             </issueLinkTemplatePerSystem>
           </configuration>
@@ -569,6 +572,11 @@
           <configuration>
             <downloadSources>true</downloadSources>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-install-plugin</artifactId>
+          <version>2.3</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
