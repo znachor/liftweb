@@ -43,14 +43,37 @@ object ImageOutFormat extends Enumeration("png", "jpg"){
   val png,jpeg = Value
 }
 
-case class ImageWithMetaData(image:BufferedImage, orientation:Option[Int], format:ImageOutFormat.Value)
+//Degrees are positive going clockwise (270 is same as -90)
+object ImageOrientation extends Enumeration(1) {
+  val ok = Value(1, "OK")
+  val mirrored = Value(2, "Mirror")
+  
+  val rotate180 = Value(3, "Rotate 180")
+  val rotate180mirror = Value(4, "Rotate 180 Mirror")
+  
+  val rotate270mirror = Value(5, "Rotate 270 Mirror")
+  val rotate270 = Value(6, "Rotate 270")
+  
+  val rotate90mirror = Value(7, "Rotate 90 Mirror")
+  val rotate90 = Value(8, "Rotate 90")
+}
 
-object ImageResizer {
+case class ImageWithMetaData(image:BufferedImage, orientation:Option[ImageOrientation.Value], format:ImageOutFormat.Value)
 
-  def getOrientation(imageBytes:Array[Byte]):Option[Int] = Sanselan.getMetadata(imageBytes) match {
+object ImageResizer extends ImageResizer(Map(RenderingHints.KEY_INTERPOLATION -> RenderingHints.VALUE_INTERPOLATION_BILINEAR), true)
+
+class ImageResizer(renderingHintsMap:Map[java.awt.RenderingHints.Key,Any], multiStepDownScale:Boolean) {
+  
+  val renderingHints = {
+    val h = new RenderingHints(null) 
+    renderingHintsMap.foreach(p => h.put(p._1, p._2))
+    h
+  }
+
+  def getOrientation(imageBytes:Array[Byte]):Option[ImageOrientation.Value] = Sanselan.getMetadata(imageBytes) match {
     case metaJpg:JpegImageMetadata => 
       val exifValue = metaJpg.findEXIFValue(TiffTagConstants.TIFF_TAG_ORIENTATION)
-      if (exifValue != null) Some(exifValue.getIntValue) else None
+      if (exifValue != null) Some(ImageOrientation(exifValue.getIntValue)) else None
     case _ => None
   }
   
@@ -76,7 +99,7 @@ object ImageResizer {
    * A image of (200w,240h) squared to (100) will first resize to (100w,120h) and then take then crop
    * 10 pixels from the top and bottom of the image to produce (100w,100h)
    */
-  def square(orientation:Option[Int], originalImage:BufferedImage, max:Int):BufferedImage = {
+  def square(orientation:Option[ImageOrientation.Value], originalImage:BufferedImage, max:Int):BufferedImage = {
     val image = {
       val height = originalImage.getHeight
       val width = originalImage.getWidth
@@ -118,7 +141,7 @@ object ImageResizer {
    * Resize to maximum dimension preserving the aspect ratio.  This is basically equivalent to what you would expect by setting
    * "max-width" and "max-height" CSS attributes but will scale up an image if necessary
    */
-  def max(orientation:Option[Int],originalImage:BufferedImage, maxWidth:Int, maxHeight:Int):BufferedImage = {
+  def max(orientation:Option[ImageOrientation.Value],originalImage:BufferedImage, maxWidth:Int, maxHeight:Int):BufferedImage = {
     val (scaledWidth, scaledHeight) = scaledMaxDim(originalImage.getWidth, originalImage.getHeight, maxWidth, maxHeight)
     resize(orientation, originalImage, scaledWidth, scaledHeight)
   }
@@ -127,7 +150,7 @@ object ImageResizer {
    * Algorithm adapted from example in Filthy Rich Clients http://filthyrichclients.org/
    * Resize an image and account of its orientation.  This will not preserve aspect ratio.
    */
-  def resize(orientation:Option[Int], img:BufferedImage, targetWidth:Int, targetHeight:Int): BufferedImage = {
+  def resize(orientation:Option[ImageOrientation.Value], img:BufferedImage, targetWidth:Int, targetHeight:Int): BufferedImage = {
     val imgType = if (img.getTransparency() == Transparency.OPAQUE) BufferedImage.TYPE_INT_RGB else BufferedImage.TYPE_INT_ARGB
     var ret = img
     var scratchImage:BufferedImage = null
@@ -141,14 +164,14 @@ object ImageResizer {
 
     //If we're resizing down by more than a factor of two, resize in multiple steps to preserve image quality
     do {
-      if (w > targetWidth) {
+      if (w > targetWidth && multiStepDownScale) {
         w /= 2
         if (w < targetWidth) {
           w = targetWidth
         }
       } else w = targetWidth
 
-      if (h > targetHeight) {
+      if (h > targetHeight && multiStepDownScale) {
         h /= 2
         if (h < targetHeight) {
           h = targetHeight
@@ -159,7 +182,7 @@ object ImageResizer {
         scratchImage = new BufferedImage(w, h, imgType);
         g2 = scratchImage.createGraphics
       }
-      g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
+      g2.setRenderingHints(renderingHints)
       g2.drawImage(ret, 0, 0, w, h, 0, 0, prevW, prevH, null)
       prevW = w
       prevH = h
@@ -174,20 +197,20 @@ object ImageResizer {
     // If we used a scratch buffer that is larger than our target size,
     // create an image of the right size and copy the results into it
     // If there is an orientation value other than the default, rotate the image appropriately
-    if (targetWidth != ret.getWidth || targetHeight != ret.getHeight || orientation.map(_ != 1).getOrElse(false)) {
+    if (targetWidth != ret.getWidth || targetHeight != ret.getHeight || orientation.map(_ != ImageOrientation.ok).getOrElse(false)) {
 
       val (tW, tH, rotFunc) =  orientation match {
-        case Some(3) => // 3 => 180 (upside down)
+        case Some(ImageOrientation.rotate180) =>
           (targetWidth, targetHeight, (g2:Graphics2D) => {
             g2.rotate(Math.Pi)
             g2.translate(-targetWidth, -targetHeight)
           })
-        case Some(6) => // 6 => -90 (counter clockwise)
+        case Some(ImageOrientation.rotate270) =>
           (targetHeight, targetWidth, (g2:Graphics2D) => {
             g2.rotate(Math.Pi/2)
             g2.translate(0, -targetHeight)
           })
-        case Some(8) => // 8 => 90 (clockwise)
+        case Some(ImageOrientation.rotate90) =>
           (targetHeight, targetWidth, (g2:Graphics2D) => {
             g2.rotate(-Math.Pi/2)
             g2.translate(-targetWidth, 0)
