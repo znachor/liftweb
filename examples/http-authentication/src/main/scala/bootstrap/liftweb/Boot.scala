@@ -15,6 +15,9 @@ import _root_.net.liftweb.http.auth._
   */
 class Boot {
   def boot {
+    // Configure Log4J logging backend
+    LogBoot.loggerSetup = Log4JLogBoot.setup
+    
     LiftRules.addToPackages("net.liftweb.examples.authentication")
 
     /**

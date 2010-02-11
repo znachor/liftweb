@@ -10,4 +10,13 @@
   <artifactId>http-authentication</artifactId>
   <packaging>war</packaging>
   <name>HTTP Authentication example</name>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+  </dependencies>
+
 </project>

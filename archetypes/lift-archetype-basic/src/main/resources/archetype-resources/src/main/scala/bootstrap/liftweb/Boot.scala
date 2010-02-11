@@ -18,6 +18,9 @@ import _root_.${package}.model._
  */
 class Boot {
   def boot {
+    // Configure Log4J logging backend
+    LogBoot.loggerSetup = Log4JLogBoot.setup
+    
     if (!DB.jndiJdbcConnAvailable_?) {
       val vendor = 
 	new StandardDBVendor(Props.get("db.driver") openOr "org.h2.Driver",

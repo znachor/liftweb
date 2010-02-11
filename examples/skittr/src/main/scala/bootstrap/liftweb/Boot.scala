@@ -16,7 +16,7 @@ package bootstrap.liftweb
  * and limitations under the License.
  */
 
-import _root_.net.liftweb.util.{Helpers, Log, NamedPF}
+import _root_.net.liftweb.util.{Helpers, Log, NamedPF, LogBoot, Log4JLogBoot}
 import _root_.net.liftweb.common.{Box, Empty, Full, Failure}
 import _root_.net.liftweb.http._
 import _root_.net.liftweb.mapper._
@@ -34,6 +34,8 @@ import provider._
 class Boot {
   def modelList = List[BaseMetaMapper](User, Friend, MsgStore)
   def boot {
+    LogBoot.loggerSetup = Log4JLogBoot.setup
+    
     if (!DB.jndiJdbcConnAvailable_?) DB.defineConnectionManager(DefaultConnectionIdentifier, DBVendor)
     LiftRules.addToPackages("com.skittr")
 

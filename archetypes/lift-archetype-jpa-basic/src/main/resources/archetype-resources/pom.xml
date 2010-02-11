@@ -41,6 +41,16 @@
   </pluginRepositories>
 
   <!-- Master properties (inherited by modules) -->
+  <dependencyManagement>
+    <dependencies>
+     <dependency>
+       <groupId>org.slf4j</groupId>
+       <artifactId>slf4j-api</artifactId>
+       <!--  <version>${slf4j.version}</version> -->
+       <version>1.5.10</version>
+     </dependency>
+   </dependencies>
+ </dependencyManagement>
   <dependencies>
     <dependency>
       <groupId>org.scala-lang</groupId>

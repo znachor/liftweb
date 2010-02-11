@@ -41,6 +41,18 @@
     </pluginRepository>
   </pluginRepositories>
 
+  <dependencyManagement>
+      <dependencies>
+       <dependency>
+         <groupId>org.slf4j</groupId>
+         <artifactId>slf4j-api</artifactId>
+         <!--  <version>${slf4j.version}</version> -->
+         <version>1.5.10</version>
+       </dependency>
+     </dependencies>
+   </dependencyManagement>
+  
+
   <dependencies>
     <dependency>
       <groupId>net.liftweb</groupId>
@@ -83,8 +95,8 @@
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-simple</artifactId>
-      <version>1.4.2</version>
+      <artifactId>slf4j-log4j12</artifactId>
+      <version>${slf4j.version}</version>
       <scope>runtime</scope>
     </dependency>
     <!-- for LiftConsole -->

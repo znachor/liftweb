@@ -18,7 +18,7 @@ package bootstrap.liftweb
 import _root_.java.util.Locale
 
 import _root_.net.liftweb.common.{Box,Empty,Full}
-import _root_.net.liftweb.util.{LoanWrapper,LogBoot}
+import _root_.net.liftweb.util.{LoanWrapper,LogBoot,Log4JLogBoot}
 import _root_.net.liftweb.http._
 import _root_.net.liftweb.http.provider._
 import _root_.net.liftweb.sitemap._
@@ -32,6 +32,9 @@ import S.?
   */
 class Boot {
   def boot {
+    // Configure Log4J logging backend
+    LogBoot.loggerSetup = Log4JLogBoot.setup
+
     // where to search for snippets, views, etc
     LiftRules.addToPackages("${package}")
   }

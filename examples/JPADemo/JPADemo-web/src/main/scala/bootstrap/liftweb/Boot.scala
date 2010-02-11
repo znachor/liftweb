@@ -17,7 +17,7 @@ package bootstrap.liftweb
 
 import _root_.java.util.Locale
 
-import _root_.net.liftweb.util.{LoanWrapper,LogBoot}
+import _root_.net.liftweb.util.{LoanWrapper,LogBoot,Log4JLogBoot}
 import _root_.net.liftweb.common.{Box,Empty,Full}
 import _root_.net.liftweb.http._
 import _root_.net.liftweb.sitemap._
@@ -45,7 +45,9 @@ class Boot {
       </root>
       </log4j:configuration>
       """
-
+    // Configure Log4J logging backend
+    LogBoot.loggerSetup = Log4JLogBoot.setup
+    
     // where to search snippet
     LiftRules.addToPackages("net.liftweb.jpademo")
 

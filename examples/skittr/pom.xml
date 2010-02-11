@@ -10,5 +10,12 @@
   <artifactId>skittr-example</artifactId>
   <packaging>war</packaging>
   <name>Skittr Example</name>
-  
+
+  <dependencies>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+  </dependencies>
 </project>

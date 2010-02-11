@@ -17,7 +17,7 @@ package bootstrap.liftweb
 
 import _root_.net.liftweb._
 import common.{Box, Full, Empty, Failure}
-import util.{Helpers, Log, NamedPF, Props}
+import util.{Helpers, Log, NamedPF, Props, LogBoot, Log4JLogBoot}
 import http._
 import actor._
 import provider._
@@ -41,6 +41,8 @@ import snippet._
  */
 class Boot {
   def boot {
+    // Configure Log4J logging backend
+    LogBoot.loggerSetup = Log4JLogBoot.setup
 
     DB.defineConnectionManager(DefaultConnectionIdentifier, DBVendor)
     LiftRules.addToPackages("net.liftweb.example")
