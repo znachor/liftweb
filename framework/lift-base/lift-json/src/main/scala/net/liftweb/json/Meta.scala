@@ -136,7 +136,7 @@ private[json] object Meta {
       classOf[Float], classOf[Byte], classOf[BigInt], classOf[Boolean], 
       classOf[Short], classOf[java.lang.Integer], classOf[java.lang.Long], 
       classOf[java.lang.Double], classOf[java.lang.Float], 
-      classOf[java.lang.Byte], classOf[java.lang.Boolean], 
+      classOf[java.lang.Byte], classOf[java.lang.Boolean], classOf[Number],
       classOf[java.lang.Short], classOf[Date], classOf[Symbol]).map((_, ())))
 
     def safePrimaryConstructorOf[A](cl: Class[A]): Option[JConstructor[A]] = 

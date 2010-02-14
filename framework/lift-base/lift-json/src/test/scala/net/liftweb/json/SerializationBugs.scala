@@ -69,7 +69,7 @@ package plan2 {
                   rightOperand: Option[Action])
   case class Game(buy: Map[String, Plan])
   case class Action(functionName: String, symbol: String,
-                    inParams: Array[Int /*Number*/], subOperand: Option[Action]) 
+                    inParams: Array[Number], subOperand: Option[Action]) 
 }
 
 }
