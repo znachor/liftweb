@@ -281,7 +281,7 @@
       <dependency>
         <groupId>org.scala-libs</groupId>
         <artifactId>scalajpa</artifactId>
-        <version>1.1</version>
+        <version>1.2-scala280-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>javax.mail</groupId>
