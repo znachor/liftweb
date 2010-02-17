@@ -111,11 +111,8 @@ trait CouchMetaRecord[BaseRecord <: CouchRecord[BaseRecord]] extends JSONMetaRec
   /** Get an Http instance to use when accessing CouchDB */
   def http: Http = Http
 
-  /** Create a fresh instance of this record */
-  def create: BaseRecord = createRecord
-
   /** Create an instance of this type of record by parsing the given JValue */
-  def createFromJValue(jvalue: JValue): Box[BaseRecord] = create.fromJValue(jvalue)
+  protected def createNewRecordFromJValue(jvalue: JValue): Box[BaseRecord] = createNewRecord.fromJValue(jvalue)
 
   /** Save the record instance in the backing store */
   def save(inst: BaseRecord): Box[Unit] = {
@@ -156,7 +153,7 @@ trait CouchMetaRecord[BaseRecord <: CouchRecord[BaseRecord]] extends JSONMetaRec
   def fetch(id: String): Box[BaseRecord] = fetchFrom(defaultDatabase, id)
 
   /** Query a single document by _id from the given database */
-  def fetchFrom(database: Database, id: String): Box[BaseRecord] = tryo(http(database(id) fetch)).flatMap(createFromJValue)
+  def fetchFrom(database: Database, id: String): Box[BaseRecord] = tryo(http(database(id) fetch)).flatMap(createNewRecordFromJValue)
 
   /** Query a series of documents by _id from the default database */
   def fetchMany(ids: String*): Box[Seq[BaseRecord]] = fetchManyFrom(defaultDatabase, ids: _*)
@@ -164,7 +161,7 @@ trait CouchMetaRecord[BaseRecord <: CouchRecord[BaseRecord]] extends JSONMetaRec
   /** Query a series of documents by _id from the given database */
   def fetchManyFrom(database: Database, ids: String*): Box[Seq[BaseRecord]] =
     for (resultBox <- tryo(http(database(ids) query)); result <- resultBox)
-      yield result.rows.flatMap(_.doc.flatMap(createFromJValue))
+      yield result.rows.flatMap(_.doc.flatMap(createNewRecordFromJValue))
 
   /**
    * Query records from the default database by document id. includeDocs is always on for this type of query.
@@ -180,7 +177,7 @@ trait CouchMetaRecord[BaseRecord <: CouchRecord[BaseRecord]] extends JSONMetaRec
    */
   def allIn(database: Database, filter: AllDocs => AllDocs): Box[Seq[BaseRecord]] =
     for (resultBox <- tryo(http(filter(database.all.includeDocs) query)); result <- resultBox)
-      yield result.rows.flatMap { row => row.doc.flatMap(createFromJValue) }
+      yield result.rows.flatMap { row => row.doc.flatMap(createNewRecordFromJValue) }
 
   /** Query using a view in the default database. */
   def queryView(design: String, view: String): Box[Seq[BaseRecord]] = queryView(design, view, identity)
@@ -192,7 +189,7 @@ trait CouchMetaRecord[BaseRecord <: CouchRecord[BaseRecord]] extends JSONMetaRec
   /** Query using a view in the given database. Filter refines the query (e.g. by key), see Queryable. */
   def queryViewFrom(database: Database, design: String, view: String, filter: View => View): Box[Seq[BaseRecord]] =
     for (resultBox <- tryo(http(filter(database.design(design).view(view)) query)); result <- resultBox)
-      yield result.rows.flatMap(_.value.flatMap(createFromJValue))
+      yield result.rows.flatMap(_.value.flatMap(createNewRecordFromJValue))
 
   /** Perform the given action with loose parsing turned on */
   def looseParsing[A](f: => A): A = 

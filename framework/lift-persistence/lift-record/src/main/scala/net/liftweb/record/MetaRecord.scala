@@ -71,7 +71,7 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] {
    *
    * ...
    *
-   * val rec = MyRecordMeta.createRecord.firstName("McLoud")
+   * val rec = new MyRecord().firstName("McLoud")
    *
    * val template =
    * &lt;div&gt;
@@ -139,16 +139,28 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] {
   def mutable_? = true
 
   /**
-   * Creates a new record
+   * Creates a new record.
+   * <strong>Deprecated:</strong> just use new MyRecord() instead.
+   * @deprecated
    */
-  def createRecord: BaseRecord = rootClass.newInstance.asInstanceOf[BaseRecord]
+  def createRecord: BaseRecord = createNewRecord
 
   /**
    * Creates a new record from a JSON construct
-   *
+   * <strong>Deprecated:</strong> use new MyRecord().fromJSON(json) instead
+   * 
+   * @deprecated
    * @param json - the stringified JSON stucture
    */
-  def createRecord(json: String): Box[BaseRecord] = rootClass.newInstance.asInstanceOf[BaseRecord].fromJSON(json)
+  def createRecord(json: String): Box[BaseRecord] = createNewRecord.fromJSON(json)
+
+  /**
+   * Method used by default implementations of MetaRecord methods to create an instance of the BaseRecord.
+   * The default implementation is just to use a no-argument constructor via reflection, but this can be overridden
+   * if some different method of producing new fields is required.
+   * It is protected because non-MetaRecord code should use new MyRecord()
+   */
+  protected def createNewRecord: BaseRecord = rootClass.newInstance.asInstanceOf[BaseRecord]
 
   /**
    * Creates a new record setting the value of the fields from the original object but
@@ -161,7 +173,7 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] {
   def createWithMutableField[FieldType](original: BaseRecord,
                                         field: Field[FieldType, BaseRecord],
                                         newValue: Box[FieldType]): BaseRecord = {
-    val rec = createRecord
+    val rec = createNewRecord
 
     for (f <- fieldList) {
       if (f.name == field.name)
@@ -338,7 +350,7 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] {
     }
 
   def fromReq(r: Req): BaseRecord = {
-    val rec = createRecord
+    val rec = createNewRecord
     for(fieldHolder <- fieldList;
         field <- rec.fieldByName(fieldHolder.name)
     ) yield {

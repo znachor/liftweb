@@ -74,11 +74,11 @@ object CouchRecordTestSpecs extends Specification {
   }
     
   "A couch record" should {
-    def testRec1: Person = Person.createRecord.name("Alice").age(25)
+    def testRec1: Person = new Person().name("Alice").age(25)
     val testDoc1: JObject = ("age" -> 25) ~ ("name" -> "Alice") ~ ("type" -> "Person")
-    def testRec2: Person = Person.createRecord.name("Bob").age(30)
+    def testRec2: Person = new Person().name("Bob").age(30)
     val testDoc2: JObject = ("age" -> 30) ~ ("extra1" -> "value1") ~ ("extra2" -> "value2") ~ ("name" -> "Bob") ~ ("type" -> "Person")
-    def testRec3: Company = Company.createRecord.name("Acme")
+    def testRec3: Company = new Company().name("Acme")
 
     "give emtpy box on get when nonexistant" in {
       setup must_== ()

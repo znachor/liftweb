@@ -184,8 +184,8 @@ trait JSONField {
 
 
 /** Field that contains an entire record represented as an inline object value in the final JSON */
-class JSONSubRecordField[OwnerType <: JSONRecord[OwnerType], SubRecordType <: JSONRecord[SubRecordType]]
-                        (rec: OwnerType, valueMeta: JSONMetaRecord[SubRecordType])(implicit subRecordType: Manifest[SubRecordType])
+abstract class JSONSubRecordField[OwnerType <: JSONRecord[OwnerType], SubRecordType <: JSONRecord[SubRecordType]]
+                                 (rec: OwnerType, valueMeta: JSONMetaRecord[SubRecordType])(implicit subRecordType: Manifest[SubRecordType])
   extends Field[SubRecordType, OwnerType] with JSONField
 {
   def this(rec: OwnerType, value: SubRecordType)(implicit subRecordType: Manifest[SubRecordType]) = {
@@ -199,13 +199,15 @@ class JSONSubRecordField[OwnerType <: JSONRecord[OwnerType], SubRecordType <: JS
       setBox(value)
   }
 
+  protected def createValue: SubRecordType
+
   def owner = rec
   def asJs = asJValue
   def toForm = NodeSeq.Empty // FIXME
   def asXHtml = NodeSeq.Empty // FIXME
-  def defaultValue = valueMeta.createRecord
+  def defaultValue = createValue
 
-  def setFromString(s: String): Box[SubRecordType] = valueMeta.fromJSON(valueMeta.createRecord, s)
+  def setFromString(s: String): Box[SubRecordType] = valueMeta.fromJSON(createValue, s)
 
   def setFromAny(in: Any): Box[SubRecordType] = genericSetFromAny(in)
 
