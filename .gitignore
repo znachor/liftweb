@@ -38,6 +38,7 @@ test-output
 *.iml
 *.ipr
 *.iws
+.idea
 
 # Pax Runner (for easy OSGi launching)
 runner

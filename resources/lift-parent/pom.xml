@@ -16,9 +16,7 @@
   ~ limitations under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
 
@@ -171,7 +169,7 @@
     </developer>
     <developer>
       <id>jboner</id>
-      <name>Jonas Bon&#233;r</name>
+      <name>Jonas Bonér</name>
       <email>jonas [at] jonasboner [dot] com</email>
       <timezone>+1</timezone>
     </developer>
@@ -230,13 +228,13 @@
     <url>http://github.com/dpp/liftweb/tree/master</url>
   </scm>
   <issueManagement>
-    <system>github</system>
-    <url>http://github.com/dpp/liftweb/issues/</url>
+    <system>assembla</system>
+    <url>http://www.assembla.com/spaces/liftweb/tickets/</url>
   </issueManagement>
   <ciManagement>
     <system>hudson</system>
     <url>http://hudson.scala-tools.org/job/lift-parent/</url>
-    <!-- <notifiers/> -->
+    <!-- <notifiers /> -->
   </ciManagement>
   <distributionManagement>
     <repository>
@@ -448,24 +446,24 @@
   -->
   <repositories>
     <repository>
-      <id>scala-tools.release</id>
+      <id>scala-tools.releases</id>
       <name>Scala-Tools Dependencies Repository for Releases</name>
       <url>http://scala-tools.org/repo-releases</url>
     </repository>
     <repository>
-      <id>scala-tools.snapshot</id>
+      <id>scala-tools.snapshots</id>
       <name>Scala-Tools Dependencies Repository for Snapshots</name>
       <url>http://scala-tools.org/repo-snapshots</url>
     </repository>
   </repositories>
   <pluginRepositories>
     <pluginRepository>
-      <id>scala-tools.release</id>
+      <id>scala-tools.releases</id>
       <name>Scala-Tools Plugins Repository for Releases</name>
       <url>http://scala-tools.org/repo-releases</url>
     </pluginRepository>
     <pluginRepository>
-      <id>scala-tools.snapshot</id>
+      <id>scala-tools.snapshots</id>
       <name>Scala-Tools Plugins Repository for Snapshots</name>
       <url>http://scala-tools.org/repo-snapshots</url>
     </pluginRepository>
@@ -501,7 +499,7 @@
           <configuration>
             <filteringChanges>true</filteringChanges>
             <issueLinkTemplatePerSystem>
-              <github>%URL%/%ISSUE%/find</github>
+              <assembla>%URL%/%ISSUE%</assembla>
             </issueLinkTemplatePerSystem>
           </configuration>
         </plugin>
@@ -569,6 +567,11 @@
           <configuration>
             <downloadSources>true</downloadSources>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-install-plugin</artifactId>
+          <version>2.3</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
