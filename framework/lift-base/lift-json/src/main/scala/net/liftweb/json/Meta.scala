@@ -90,7 +90,8 @@ private[json] object Meta {
       Arg(name, fieldMapping(fieldType, genericType))
     }
 
-    mappings.memoize(clazz, c => Constructor(c, constructorArgs(c, Set())))
+    if (primitive_?(clazz)) Value(clazz)    
+    else mappings.memoize(clazz, c => Constructor(c, constructorArgs(c, Set())))
   }
 
   private[json] def unmangleName(f: Field) = 
