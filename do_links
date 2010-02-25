@@ -1,0 +1,10 @@
+#!/bin/sh
+
+# a script that creates some helpful sym links
+
+ln -s framework/lift-base/lift-util util
+ln -s framework/lift-base/lift-common common
+ln -s framework/lift-base/lift-webkit webkit
+ln -s framework/lift-base/lift-actor actor
+ln -s framework/lift-persistence/lift-mapper mapper
+
