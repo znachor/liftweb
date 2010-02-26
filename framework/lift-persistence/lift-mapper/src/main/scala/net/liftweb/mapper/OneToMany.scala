@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+import net.liftweb.common.{Box, Empty, Full}
+
+ 
 package net.liftweb {
 package mapper {
 
@@ -65,7 +68,7 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
       ()=>{
         val ret = meta.findAll(By(foreign, primaryKeyField) :: qp.toList : _*)
         for(child <- ret) {
-          foreign.actualField(child).asInstanceOf[MappedForeignKey[K,O,T]].primeObj(net.liftweb.common.Full(OneToMany.this : T))
+          foreign.actualField(child).asInstanceOf[MappedForeignKey[K,O,T]].primeObj(Full(OneToMany.this : T))
         }
         ret
       },
@@ -192,8 +195,16 @@ trait OneToMany[K,T<:KeyedMapper[K, T]] extends KeyedMapper[K,T] { this: T =>
     def save = {
       unlinked foreach {u =>
         val f = foreign(u)
-        if(f.obj.map(_ eq OneToMany.this) openOr true) // obj is Empty or this
-          f.set(OneToMany.this.primaryKeyField.is)
+        f.obj match {
+          case Full(o) if o ne this =>  // apparently its been set to another parent
+          case _ =>
+            f match {
+              case f: MappedLongForeignKey[O,T] with MappedForeignKey[K,_,T] =>
+                f.apply(OneToMany.this)
+              case _ =>
+                f.set(OneToMany.this.primaryKeyField.is)
+            }
+        }
       }
       unlinked = Nil
       delegate = delegate.filter {e =>
@@ -272,33 +283,14 @@ class LongMappedMapper[T<:Mapper[T], O<:KeyedMapper[Long,O]](theOwner: T, foreig
 trait LongMappedForeignMapper[T<:Mapper[T],O<:KeyedMapper[Long,O]]
                               extends MappedLongForeignKey[T,O]
                               with LifecycleCallbacks {
-  import net.liftweb.common.{Box, Empty, Full}
-  //private var inited = false
-  //private var _foreign: Box[O] = Empty
-  def foreign = obj //_foreign
+  @deprecated def foreign = obj
 
-  override def apply(f: O) = {
-    //inited = true
-    //_foreign = Full(f)
-    //primeObj(
-    //super.apply(f/*.primaryKeyField.is*/)
-    this(Full(f))
-  }
+  override def apply(f: O) = this(Full(f))
   override def apply(f: Box[O]) = {
     val ret = super.apply(f)
     primeObj(f)
     ret
   }
-  /* f match {
-    case Full(f) =>
-      //apply(f)
-      super.apply(f)
-      pr
-    case _ =>
-      inited = true
-      _foreign = Empty
-      super.apply(defaultValue);
-  }*/
 
   override def set(v: Long) = {
     val ret = super.set(v)
@@ -317,14 +309,6 @@ trait LongMappedForeignMapper[T<:Mapper[T],O<:KeyedMapper[Long,O]]
   val valHasObj = (value: Long) =>
     if (obj eq Empty) List(FieldError(this, scala.xml.Text("Required field: " + name)))
     else Nil
-  /*override def i_is_! = {
-    if(!inited) {
-      _foreign = obj
-      inited = true
-    }
-    super.i_is_!
-  }*/
-
 }
 
 }
