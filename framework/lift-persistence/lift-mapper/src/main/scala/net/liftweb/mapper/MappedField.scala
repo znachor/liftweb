@@ -246,8 +246,14 @@ trait MappedForeignKey[KeyType, MyOwner <: Mapper[MyOwner], Other <: KeyedMapper
   def cached_? : Boolean = synchronized{ _calcedObj}
 
   override protected def dirty_?(b: Boolean) = { // issue 165
-    _obj = Empty
-    _calcedObj = false
+    if(b) {
+      _obj match {
+        case Full(o) if o.primaryKeyField.is != is =>
+          _calcedObj = false
+          _obj = Empty
+        case _ =>
+      }
+    }
     super.dirty_?(b)
   }
 
