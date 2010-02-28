@@ -194,6 +194,13 @@
       <email>joni [dot] freeman [at] reaktor [dot] fi</email>
       <timezone>+2</timezone>
     </developer>
+    <developer>
+      <id>jeppenejsum</id>
+      <name>Jeppe Nejsum Madsen</name>
+      <email>jeppe [at] ingolfs [dot] dk</email>
+      <timezone>+1</timezone>
+    </developer>
+
   </developers>
   <mailingLists>
     <mailingList>
@@ -313,6 +320,17 @@
         <artifactId>slf4j-api</artifactId>
         <version>${slf4j.version}</version>
       </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-log4j12</artifactId>
+        <version>${slf4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>ch.qos.logback</groupId>
+        <artifactId>logback-classic</artifactId>
+        <version>[0.9.18,)</version>
+      </dependency>
+
       <!--
       Provided scope: provided by container, available only in compile and test classpath, non-transitive
       -->
