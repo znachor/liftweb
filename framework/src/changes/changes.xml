@@ -37,7 +37,7 @@
     </action>
    see http://maven.apache.org/plugins/maven-changes-plugin/usage.html for full guide
    -->
-    <release version="${project.version}" date="${publishDate}" description="Lift 2.0 Snapshot">
+    <release version="2.0-M3" date="2010-03-03" description="Lift 2.0 Milestone 3">
       <action dev="dpp" type="fix" issue="393" system="assembla">
         Fixed a stack overflow on non-tail recursive method
       </action>
