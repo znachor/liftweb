@@ -81,7 +81,7 @@ class LiftServlet {
       LiftRules.checkContinuations(req request) match {
         case None => doIt
         case r if r eq null => doIt
-        case Some((or: Req, r: LiftResponse)) if (req.path == or.path) => sendResponse(r.toResponse, resp, Empty); true
+        case Some((or: Req, r: LiftResponse)) if (req.path == or.path) => sendResponse(r, resp, Empty); true
         case _ => doIt
       }
     } catch {
@@ -112,7 +112,7 @@ class LiftServlet {
           case true => checkRoles(r, userRoles.get)
           case _ => false
         }
-      case _ => true
+      case _ => LiftRules.authentication.verified_?(req)
     }) openOr true
   }
 
@@ -181,12 +181,10 @@ class LiftServlet {
     tryo {LiftRules.onEndServicing.toList.foreach(_(req, resp))}
 
     resp match {
+      case Full(EmptyResponse) => 
+        true
       case Full(cresp) =>
-        val resp = cresp.toResponse
-
-        logIfDump(req, resp)
-
-        sendResponse(resp, response, Full(req))
+        sendResponse(cresp, response, Full(req))
         true
 
       case _ => false
@@ -362,7 +360,7 @@ class LiftServlet {
 
   private lazy val cometTimeout: Long = (LiftRules.cometRequestTimeout openOr 120) * 1000L
 
-  private def setupContinuation(request: Req, session: LiftSession, actors: List[(LiftCometActor, Long)]): Nothing = {
+  private def setupContinuation(request: Req, session: LiftSession, actors: List[(LiftCometActor, Long)]): Any = {
     val cont = new ContinuationActor(request, session, actors,
       answers => LiftRules.resumeRequest(
         (request, S.init(request, session)
@@ -391,7 +389,7 @@ class LiftServlet {
     else LiftRules.checkContinuations(requestState.request) match {
       case Some(null) =>
         setupContinuation(requestState, sessionActor, actors)
-
+        Full(EmptyResponse)
       case _ =>
         handleNonContinuationComet(requestState, sessionActor, actors)
     }
@@ -459,7 +457,7 @@ class LiftServlet {
    * Sends the  { @code HTTPResponse } to the browser using data from the
    * { @link Response } and  { @link Req }.
    */
-  def sendResponse(resp: BasicResponse, response: HTTPResponse, request: Box[Req]) {
+  def sendResponse(liftResp: LiftResponse, response: HTTPResponse, request: Box[Req]) {
     def fixHeaders(headers: List[(String, String)]) = headers map ((v) => v match {
       case ("Location", uri) => (v._1, (
               (for (u <- request;
@@ -477,12 +475,20 @@ class LiftServlet {
       (in, acceptHeader)
     }
 
+    val resp = liftResp.toResponse
+
+    request.map(r => logIfDump(r, resp))
+
 
     val len = resp.size
     // insure that certain header fields are set
-    val header = insureField(fixHeaders(resp.headers), List(("Content-Type",
-            LiftRules.determineContentType(pairFromRequest(request))),
-      ("Content-Length", len.toString)))
+    val header = if (resp.code == 304) {
+    fixHeaders(resp.headers)
+  } else {
+    insureField(fixHeaders(resp.headers), List(("Content-Type",
+                                                LiftRules.determineContentType(pairFromRequest(request))),
+                                               ("Content-Length", len.toString)))
+  }
 
     LiftRules.beforeSend.toList.foreach(f => tryo(f(resp, response, header, request)))
     // set the cookies
@@ -492,10 +498,14 @@ class LiftServlet {
     response.addHeaders(header.map {case (name, value) => HTTPParam(name, value)})
     LiftRules.supplimentalHeaders(response)
 
-    response setStatus resp.code
+    liftResp match {
+      case ResponseWithReason(_, reason) => response setStatusWithReason (resp.code, reason)
+      case _ => response setStatus resp.code
+    }
 
     try {
       resp match {
+        case EmptyResponse => 
         case InMemoryResponse(bytes, _, _, _) =>
           response.outputStream.write(bytes)
           response.outputStream.flush()

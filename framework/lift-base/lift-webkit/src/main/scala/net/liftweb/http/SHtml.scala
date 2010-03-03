@@ -412,17 +412,33 @@ object SHtml {
    * This function is called by the overloaded version of jsonText.
    *
    * @param value - the initial value of the text field
+   * @param ignoreBlur - ignore the onblur event and only do the event if the enter key is pressed
    * @param json - takes a JsExp which describes how to recover the
    * value of the text field and returns a JsExp containing the thing
    * to execute on blur/return
    *
    * @return a text field
    */
-  def jsonText(value: String, json: JsExp => JsCmd, attrs: (String, String)*): Elem = {
-    (attrs.foldLeft(<input type="text" value={value}/>)(_ % _)) %
-            ("onkeypress" -> """liftUtils.lift_blurIfReturn(event)""") %
-            ("onblur" -> (json(JE.JsRaw("this.value"))))
-  }
+  def jsonText(value: String, ignoreBlur: Boolean, json: JsExp => JsCmd, attrs: (String, String)*): Elem = 
+  (attrs.foldLeft(<input type="text" value={value}/>)(_ % _)) %
+  ("onkeypress" -> """liftUtils.lift_blurIfReturn(event)""") %
+  (if (ignoreBlur) Null else ("onblur" -> (json(JE.JsRaw("this.value")))))
+  
+
+
+  /**
+   * This function does not really submit a JSON request to server instead json is a function
+   * that allows you to build a more complex JsCmd based on the JsExp <i>JE.JsRaw("this.value")</i>.
+   * This function is called by the overloaded version of jsonText.
+   *
+   * @param value - the initial value of the text field
+   * @param json - takes a JsExp which describes how to recover the
+   * value of the text field and returns a JsExp containing the thing
+   * to execute on blur/return
+   *
+   * @return a text field
+   */
+  def jsonText(value: String, json: JsExp => JsCmd, attrs: (String, String)*): Elem = jsonText(value, false, json, attrs :_*)
 
   /**
    * Create a JSON text widget that makes a JSON call on blur or "return".
@@ -434,27 +450,95 @@ object SHtml {
    * @return a text field
    */
   def jsonText(value: String, cmd: String, json: JsonCall, attrs: (String, String)*): Elem =
-    jsonText(value, exp => json(cmd, exp), attrs: _*)
+  jsonText(value, exp => json(cmd, exp), attrs: _*)
 
-  def ajaxText(value: String, func: String => JsCmd, attrs: (String, String)*): Elem = ajaxText_*(value, Empty, SFuncHolder(func), attrs: _*)
+  def ajaxText(value: String, func: String => JsCmd, attrs: (String, String)*): Elem = 
+  ajaxText_*(value, false, Empty, SFuncHolder(func), attrs: _*)
 
-  def ajaxText(value: String, jsFunc: Call, func: String => JsCmd, attrs: (String, String)*): Elem = ajaxText_*(value, Full(jsFunc), SFuncHolder(func), attrs: _*)
+  def ajaxText(value: String, jsFunc: Call, func: String => JsCmd, attrs: (String, String)*): Elem = 
+  ajaxText_*(value, false, Full(jsFunc), SFuncHolder(func), attrs: _*)
 
-  private def ajaxText_*(value: String, jsFunc: Box[Call], func: AFuncHolder, attrs: (String, String)*): Elem = {
+  def ajaxText(value: String, ignoreBlur: Boolean, func: String => JsCmd, attrs: (String, String)*): Elem =
+  ajaxText_*(value, ignoreBlur, Empty, SFuncHolder(func), attrs: _*)
+
+  def ajaxText(value: String, ignoreBlur: Boolean, jsFunc: Call, func: String => JsCmd, attrs: (String, String)*): Elem =
+  ajaxText_*(value, ignoreBlur, Full(jsFunc), SFuncHolder(func), attrs: _*)
+
+  private def ajaxText_*(value: String, ignoreBlur: Boolean, jsFunc: Box[Call], func: AFuncHolder, attrs: (String, String)*): Elem = {
     val raw = (funcName: String, value: String) => JsRaw("'" + funcName + "=' + encodeURIComponent(" + value + ".value)")
     val key = formFuncName
 
     fmapFunc(contextFuncBuilder(func)) {
       funcName =>
-              (attrs.foldLeft(<input type="text" value={value}/>)(_ % _)) %
-                      ("onkeypress" -> """liftUtils.lift_blurIfReturn(event)""") %
-                      ("onblur" -> (jsFunc match {
-                        case Full(f) => JsCrVar(key, JsRaw("this")) & deferCall(raw(funcName, key), f)
-                        case _ => makeAjaxCall(raw(funcName, "this"))
-                      })
-                              )
+      (attrs.foldLeft(<input type="text" value={value}/>)(_ % _)) %
+      ("onkeypress" -> """liftUtils.lift_blurIfReturn(event)""") %
+      (if (ignoreBlur) Null else
+       ("onblur" -> (jsFunc match {
+              case Full(f) => JsCrVar(key, JsRaw("this")) & deferCall(raw(funcName, key), f)
+              case _ => makeAjaxCall(raw(funcName, "this"))
+            })
+        ))
     }
   }
+
+  trait AreaShape {
+    def shape: String
+    def coords: String
+  }
+  case class RectShape(left: Int, top: Int, right: Int, bottom: Int) extends AreaShape {
+    def shape: String = "rect"
+    def coords: String = ""+left+", "+top+", "+right+", "+bottom
+  }
+  case class CircleShape(centerX: Int, centerY: Int, radius: Int) extends AreaShape  {
+    def shape: String = "circle"
+    def coords: String = ""+centerX+", "+centerY+", "+radius
+  }
+  case class CirclePercentShape(centerX: Int, centerY: Int, radiusPercent: Int) extends AreaShape  {
+    def shape: String = "circle"
+    def coords: String = ""+centerX+", "+centerY+", "+radiusPercent+"%"
+  }
+  case class PolyShape(polyCoords: (Int, Int)*) extends AreaShape {
+    def shape: String = "poly"
+    def coords: String = polyCoords.map{ case (x, y) => ""+x+", "+y}.mkString(", ")
+  }
+
+  /**
+   * Generate an Area tag
+   *
+   * @param shape - the shape of the area (RectShape, CircleShape, CirclePercentShape, PolyShape)
+   * @param alt - the contents of the alt attribute
+   * @param attrs - the balance of the attributes for the tag
+   */
+  def area(shape: AreaShape, alt: String, attrs: (String, String)*): Elem =
+  attrs.foldLeft(<area alt={alt} shape={shape.shape} coords={shape.coords} />)(_ % _)
+
+  /**
+   * Generate an Area tag
+   *
+   * @param shape - the shape of the area (RectShape, CircleShape, CirclePercentShape, PolyShape)
+   * @param jsCmd - the JavaScript to execute on the client when the area is clicked
+   * @param alt - the contents of the alt attribute
+   * @param attrs - the balance of the attributes for the tag
+   */
+  def area(shape: AreaShape, jsCmd: JsCmd, alt: String, attrs: (String, String)*): Elem =
+  area(shape, alt, ("onclick" -> jsCmd.toJsCmd) :: attrs.toList :_*)
+
+  /**
+   * Generate an Area tag
+   *
+   * @param shape - the shape of the area (RectShape, CircleShape, CirclePercentShape, PolyShape)
+   * @param func - The server side function to execute when the area is clicked on.
+   * @param alt - the contents of the alt attribute
+   * @param attrs - the balance of the attributes for the tag
+   */
+  def area(shape: AreaShape, func: () => JsCmd, alt: String, attrs: (String, String)*): Elem = {
+    fmapFunc(contextFuncBuilder(func)) {
+      funcName =>
+      area(shape, alt, ("onclick" -> (makeAjaxCall(Str(funcName + "=true")).toJsCmd +
+                                      "; return false;")) :: attrs.toList :_*)
+    }
+  }
+
 
   def ajaxCheckbox(value: Boolean, func: Boolean => JsCmd, attrs: (String, String)*): Elem =
     ajaxCheckbox_*(value, Empty, LFuncHolder(in => func(in.exists(toBoolean(_)))), attrs: _*)
@@ -612,13 +696,18 @@ object SHtml {
 
   private def buildOnBlur(bf: Box[String => JsCmd]): MetaData = bf match {
     case Full(func) =>
-      new UnprefixedAttribute("onblur", Text(ajaxCall(JsRaw("this.value"), func)._2.toJsCmd), Null) // HERE
+      new UnprefixedAttribute("onblur", Text(ajaxCall(JsRaw("this.value"), func)._2.toJsCmd), Null)
 
     case _ => Null
   }
 
+
+  def text_*(value: String, ignoreBlur: Boolean, func: AFuncHolder, ajaxTest: Box[String => JsCmd], attrs: (String, String)*): Elem =
+    makeFormElement("text", func, attrs: _*) % new UnprefixedAttribute("value", Text(value), Null) % (
+      if (ignoreBlur) Null else buildOnBlur(ajaxTest))
+
   def text_*(value: String, func: AFuncHolder, ajaxTest: Box[String => JsCmd], attrs: (String, String)*): Elem =
-    makeFormElement("text", func, attrs: _*) % new UnprefixedAttribute("value", Text(value), Null) % buildOnBlur(ajaxTest)
+    text_*(value, false, func, ajaxTest, attrs :_*)
 
   def password_*(value: String, func: AFuncHolder, attrs: (String, String)*): Elem =
     makeFormElement("password", func, attrs: _*) % ("value" -> value)

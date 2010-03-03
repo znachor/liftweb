@@ -428,7 +428,7 @@ object JE {
     def toJsCmd = left.toJsCmd + " == " + right.toJsCmd
   }
 
-  case class JsNotEQ(left: JsExp, right: JsExp) extends JsExp {
+  case class JsNotEq(left: JsExp, right: JsExp) extends JsExp {
     def toJsCmd = left.toJsCmd + " != " + right.toJsCmd
   }
 
@@ -439,6 +439,19 @@ object JE {
   case class JsGtEq(left: JsExp, right: JsExp) extends JsExp {
     def toJsCmd = left.toJsCmd + " >= " + right.toJsCmd
   }
+
+  case class JsOr(left: JsExp, right: JsExp) extends JsExp {
+    def toJsCmd = left.toJsCmd + " || " + right.toJsCmd
+  }
+
+  case class JsAnd(left: JsExp, right: JsExp) extends JsExp {
+    def toJsCmd = left.toJsCmd + " && " + right.toJsCmd
+  }
+
+  case class JsNot(exp: JsExp) extends JsExp {
+    def toJsCmd = "!" + exp.toJsCmd
+  }
+
 
 }
 
@@ -533,7 +546,6 @@ object JsCmds {
 
   object OnLoad {
     def apply(what: JsCmd): JsCmd = LiftRules.jsArtifacts.onLoad(what)
-
   }
 
   case class SetValById(id: String, right: JsExp) extends JsCmd {
@@ -631,7 +643,7 @@ object JsCmds {
         "y=document.createElement('option'); " +
         "y.text = " + text.encJs + "; " +
         "y.value = " + value.encJs + "; " +
-        (if (value == dflt) "y.selected = true; " else "") +
+        (if (Full(value) == dflt) "y.selected = true; " else "") +
         " try {x.add(y, null);} catch(e) {if (typeof(e) == 'object' && typeof(e.number) == 'number' && (e.number & 0xFFFF) == 5){ x.add(y,x.options.length); } } "
     }.mkString("\n")
   }

@@ -247,6 +247,17 @@ object AltXML {
   def toXML(x: Node, pscope: NamespaceBinding, sb: StringBuilder,
             stripComment: Boolean, convertAmp: Boolean): Unit =
   x match {
+    case Text(str) => escape(str, sb)
+
+    case c: PCData => c.toString(sb)
+
+    case c: scala.xml.PCData => c.toString(sb)
+
+    case up: Unparsed => up.toString(sb)
+
+    case a: Atom[_] if a.getClass eq classOf[Atom[_]] =>
+      escape(a.data.toString, sb)
+
     case c: Comment if !stripComment =>
       c.toString(sb)
 
@@ -285,6 +296,25 @@ object AltXML {
     case _ => // dunno what it is, but ignore it
   }
 
+  private def escape(str: String, sb: StringBuilder) {
+    val len = str.length
+    var pos = 0
+    while (pos < len) {
+      str.charAt(pos) match {
+        case '<' => sb.append("&lt;")
+        case '>' => sb.append("&gt;")
+        case '&' => sb.append("&amp;")
+        case '"' => sb.append("&quot;")
+        case '\n' => sb.append('\n')
+        case '\r' => sb.append('\r')
+        case '\t' => sb.append('\t')
+        case c   => if (c >= ' ' && c != '\u0085' && !(c >= '\u007f' && c <= '\u0095')) sb.append(c)
+      }
+
+      pos += 1
+    }
+  }
+
   /**
    * Appends a tree to the given stringbuffer within given namespace scope.
    *
@@ -297,6 +327,17 @@ object AltXML {
             stripComment: Boolean, convertAmp: Boolean,
             ieMode: Boolean): Unit =
   x match {
+    case Text(str) => escape(str, sb)
+
+    case c: PCData => c.toString(sb)
+
+    case c: scala.xml.PCData => c.toString(sb)
+
+    case up: Unparsed => up.toString(sb)
+
+    case a: Atom[_] if a.getClass eq classOf[Atom[_]] =>
+      escape(a.data.toString, sb)
+      
     case c: Comment if !stripComment =>
       c.toString(sb)
 

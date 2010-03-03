@@ -329,6 +329,7 @@ object DBLog {
 
       m.invoke(underlying, args : _*)
     } catch {
+      case ite: java.lang.reflect.InvocationTargetException => throw ite.getCause
       case nsme : NoSuchMethodException => Log.fatal("Could not locate method %s for %s : %s".format(method.getName, underlyingClassname, nsme.getMessage))
       throw nsme
     }
@@ -349,12 +350,19 @@ object DBLog {
 
     // utility method to fill in params
     private def paramified : String = {
-        def substitute (in : String, index : Int) : String = in.indexOf('?') match {
-            case -1 => in
-            case j => in.substring(0,j) + paramMap(index) + substitute(in.substring(j + 1), index + 1)
-        }
+      val sb = new StringBuilder(500)
+      def substitute (in : String, index : Int): Unit = in.indexOf('?') match {
+        case -1 => 
+	  sb.append(in)
 
-        substitute(stmt, 1)
+        case j => 
+	  sb.append(in.substring(0,j))
+	  sb.append(paramMap(index))
+	  substitute(in.substring(j + 1), index + 1)
+      }
+      
+      substitute(stmt, 1)
+      sb.toString
     }
 
     override def invoke (proxy : Object, method : Method, args : Array[Object]) : Object = {

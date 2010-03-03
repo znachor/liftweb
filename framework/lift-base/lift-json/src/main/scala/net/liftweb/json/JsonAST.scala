@@ -244,8 +244,18 @@ object JsonAST {
      * JObject(JField("name", JString("joe")) :: Nil).extract[Foo] == Person("joe")
      * </pre>
      */
-    def extract[A](implicit formats: Formats, mf: scala.reflect.Manifest[A]) =
+    def extract[A](implicit formats: Formats, mf: scala.reflect.Manifest[A]): A = 
       Extraction.extract(this)(formats, mf)
+
+    /** Extract a case class from a JSON.
+     * <p>
+     * Example:<pre>
+     * case class Person(name: String)
+     * JObject(JField("name", JString("joe")) :: Nil).extractOpt[Foo] == Some(Person("joe"))
+     * </pre>
+     */
+    def extractOpt[A](implicit formats: Formats, mf: scala.reflect.Manifest[A]): Option[A] = 
+      Extraction.extractOpt(this)(formats, mf)
   }
 
   case object JNothing extends JValue {
@@ -280,11 +290,21 @@ object JsonAST {
   case class JObject(obj: List[JField]) extends JValue {
     type Values = Map[String, Any]
     def values = Map() ++ obj.map(_.values : (String, Any))
+    
+    override def equals(that: Any): Boolean = that match {
+      case o: JObject => Set(obj.toArray: _*) == Set(o.obj.toArray: _*)
+      case _ => false
+    }
   }
   case class JArray(arr: List[JValue]) extends JValue {
     type Values = List[Any]
     def values = arr.map(_.values)
     override def apply(i: Int): JValue = arr(i)
+    
+    override def equals(that: Any): Boolean = that match {
+      case a: JArray => Set(arr.toArray: _*) == Set(a.arr.toArray: _*)
+      case _ => false
+    }
   }
 
   /** Renders JSON.
@@ -301,7 +321,7 @@ object JsonAST {
     case JNothing      => error("can't render 'nothing'")
     case JString(null) => text("null")
     case JString(s)    => text("\"" + quote(s) + "\"")
-    case JArray(arr)   => text("[") :: series(trimArr(arr).map(render(_))) :: text("]")
+    case JArray(arr)   => text("[") :: series(trimArr(arr).map(render)) :: text("]")
     case JField(n, v)  => text("\"" + n + "\":") :: render(v)
     case JObject(obj)  =>
       val nested = break :: fields(trimObj(obj).map(f => text("\"" + f.name + "\":") :: render(f.value)))
@@ -319,17 +339,24 @@ object JsonAST {
     case d :: ds => (d :: p) :: punctuate(p, ds)
   }
 
-  private def quote(s: String) = (s.map {
-      case '"'  => "\\\""
-      case '\\' => "\\\\"
-      case '\b' => "\\b"
-      case '\f' => "\\f"
-      case '\n' => "\\n"
-      case '\r' => "\\r"
-      case '\t' => "\\t"
-      case c if ((c >= '\u0000' && c < '\u001f') || (c >= '\u0080' && c < '\u00a0') || (c >= '\u2000' && c < '\u2100')) => "\\u%04x".format(c: Int)
-      case c => c
-    }).mkString
+  private[json] def quote(s: String): String = {
+    val buf = new StringBuilder
+    for (i <- 0 until s.length) {
+      val c = s.charAt(i)
+      buf.append(c match {
+        case '"'  => "\\\""
+        case '\\' => "\\\\"
+        case '\b' => "\\b"
+        case '\f' => "\\f"
+        case '\n' => "\\n"
+        case '\r' => "\\r"
+        case '\t' => "\\t"
+        case c if ((c >= '\u0000' && c < '\u001f') || (c >= '\u0080' && c < '\u00a0') || (c >= '\u2000' && c < '\u2100')) => "\\u%04x".format(c: Int)
+        case c => c
+      })
+    }
+    buf.toString
+  }
 }
 
 /** Basic implicit conversions from primitive types into JSON.

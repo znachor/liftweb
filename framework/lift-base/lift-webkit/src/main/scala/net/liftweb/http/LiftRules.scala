@@ -36,6 +36,7 @@ import _root_.scala.reflect.Manifest
 
 object LiftRules extends Factory with FormVendor {
   val noticesContainerId = "lift__noticesContainer__"
+  private val pageResourceId = Helpers.nextFuncName
 
   type DispatchPF = PartialFunction[Req, () => Box[LiftResponse]];
   type RewritePF = PartialFunction[RewriteRequest, RewriteResponse]
@@ -70,8 +71,8 @@ object LiftRules extends Factory with FormVendor {
 
   /**
    * Defines the resources that are protected by authentication and authorization. If this function
-   * is notdefined for the input data, the resource is considered unprotected ergo no authentication
-   * is performed. If this function is defined and returns a Full can, it means that this resource
+   * is not defined for the input data, the resource is considered unprotected ergo no authentication
+   * is performed. If this function is defined and returns a Full box, it means that this resource
    * is protected by authentication,and authenticated subjed must be assigned to the role returned by
    * this function or to a role that is child-of this role. If this function returns Empty it means that
    * this resource is protected by authentication but no authorization is performed meaning that roles are
@@ -96,6 +97,22 @@ object LiftRules extends Factory with FormVendor {
   @volatile var enableContainerSessions = true
 
   @volatile var getLiftSession: (Req) => LiftSession = (req) => _getLiftSession(req)
+
+  /**
+   * Attached an ID entity for resource URI specified in 
+   * link or script tags. This allows controlling browser
+   * resource caching. By default this just adds a query string
+   * parameter unique per application lifetime. More complex
+   * implementation could user per resource MD5 sequences thus
+   * "forcing" browsers to refresh the resource only when the resource
+   * file changes. Users can define other rules as well. Inside user's 
+   * function it is safe to use S context as attachResourceId is called 
+   * from inside the &lt;lift:with-resource-id> snippet
+   * 
+   */
+  @volatile var attachResourceId: (String) => String = (name) => {
+    name + (if (name contains ("?")) "&" else "?") + pageResourceId + "=_"
+  }
 
   /**
    * Returns a LiftSession instance.
@@ -133,8 +150,8 @@ object LiftRules extends Factory with FormVendor {
   /**
    * Holds the JS library specific UI artifacts. By efault it uses JQuery's artifacts
    */
-  @volatile var jsArtifacts: JSArtifacts = JQueryArtifacts
-
+  @volatile var jsArtifacts: JSArtifacts = JQuery13Artifacts
+  
   /**
    * Use this PartialFunction to to automatically add static URL parameters
    * to any URL reference from the markup of Ajax request.
@@ -294,7 +311,11 @@ object LiftRules extends Factory with FormVendor {
       case list => <div>{title}<ul>{list}</ul> </div> % attr
     }
 
-    val f = S.noIdMessages _
+    val f = if (ShowAll.get)
+      S.messages _
+    else
+      S.noIdMessages _
+
     val xml = List((MsgsErrorMeta.get, f(S.errors), S.??("msg.error")),
       (MsgsWarningMeta.get, f(S.warnings), S.??("msg.warning")),
       (MsgsNoticeMeta.get, f(S.notices), S.??("msg.notice"))) flatMap {
@@ -381,7 +402,8 @@ object LiftRules extends Factory with FormVendor {
         "XmlGroup" -> XmlGroup,
         "lazy-load" -> LazyLoad,
         "html5" -> HTML5,
-        "HTML5" -> HTML5
+        "HTML5" -> HTML5,
+        "with-resource-id" -> WithResourceId
         ))
   }
   setupSnippetDispatch()
@@ -483,12 +505,12 @@ object LiftRules extends Factory with FormVendor {
    * Execute a continuation. For Jetty the Jetty specific exception will be thrown
    * and the container will manage it.
    */
-  def doContinuation(req: HTTPRequest, timeout: Long): Nothing = req suspend timeout
+  def doContinuation(req: HTTPRequest, timeout: Long) = req suspend timeout
 
   /**
    * Check to see if continuations are supported
    */
-  def checkContinuations(req: HTTPRequest): Option[Any] = req hasSuspendResumeSupport_?
+  def checkContinuations(req: HTTPRequest): Option[Any] = req resumeInfo
 
   private var _sitemap: Box[SiteMap] = Empty
 
@@ -757,6 +779,23 @@ object LiftRules extends Factory with FormVendor {
     ret
   })
 
+  private var _configureLogging: () => Unit = _
+    
+  /**
+   * Holds the function that configures logging. Must be set before any loggers are created
+   */
+  def configureLogging: () => Unit = _configureLogging
+
+  /**
+   * Holds the function that configures logging. Must be set before any loggers are created
+   */
+  def configureLogging_=(newConfigurer: () => Unit): Unit = {
+    _configureLogging = newConfigurer
+    Logger.setup = Full(newConfigurer)
+  }
+
+  configureLogging = net.liftweb.util.LoggingAutoConfigurer()
+  
   /**
    * Holds the CometLogger that will be used to log comet activity
    */
@@ -1175,6 +1214,15 @@ object LiftRules extends Factory with FormVendor {
 
   /** Controls whether or not the service handling timing messages (Service request (GET) ... took ... Milliseconds) are logged. Defaults to true. */
   @volatile var logServiceRequestTiming = true
+
+  import provider.servlet._
+  import containers._
+
+  /**
+   * Provides the async provider instance responsible for suspending/resuming requests
+   */
+  @volatile var servletAsyncProvider: (HTTPRequest) => ServletAsyncProvider = (req) => new Jetty6AsyncProvider(req)
+
 
   private def ctor() {
     appendGlobalFormBuilder(FormBuilderLocator[String]((value, setter) => SHtml.text(value, setter)))

@@ -266,6 +266,16 @@ object PostgreSqlDriver extends BasePostgreSQLDriver {
         setter(stmt)
         handler(Left(stmt.executeQuery))
     }
+
+  @volatile private[this] var _supportsForeignKeys_? = false
+
+  /**
+  * If you want to support foreign key constraints, call this method with 'true' in Boot before
+  * calling Schemifier
+  */
+  def setSupportsForeignKeys(in: Boolean) {_supportsForeignKeys_? = in}
+
+  override def supportsForeignKeys_? : Boolean = _supportsForeignKeys_?
 }
 
 /**

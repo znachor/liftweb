@@ -52,6 +52,7 @@
     <module>lift-mapper</module>
     <module>lift-jpa</module>
     <module>lift-record</module>
+    <module>lift-couchdb</module>
   </modules>
 
   <!--
@@ -67,6 +68,16 @@
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.derby</groupId>
+      <artifactId>derby</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.scala-tools.testing</groupId>

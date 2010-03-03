@@ -23,7 +23,7 @@ import JsonAST._
 
 private[json] object Meta {
   import com.thoughtworks.paranamer._
-  
+
   /** Intermediate metadata format for case classes.
    *  This ADT is constructed (and then memoized) from given case class using reflection.
    *
@@ -36,16 +36,18 @@ private[json] object Meta {
    *
    *  will produce following Mapping:
    *
-   *  Constructor(None, "xx.Person", List(
-   *    Value("name"),
-   *    Constructor(Some("address"), "xx.Address", List(Value("street"), Value("city"))),
-   *    ListConstructor("children", "xx.Child", List(Value("name"), Value("age")))))
+   *  Constructor("xx.Person", List(
+   *    Arg("name", Value(classOf[String])),
+   *    Arg("address", Constructor("xx.Address", List(Value("street"), Value("city")))),
+   *    Arg("children", Col(classOf[List[_]], Constructor("xx.Child", List(Value("name"), Value("age")))))))
    */
   sealed abstract class Mapping
-  case class Value(path: String, targetType: Class[_]) extends Mapping
-  case class Constructor(path: Option[String], targetType: Class[_], args: List[Mapping]) extends Mapping
-  case class ListConstructor(path: String, targetType: Class[_], args: List[Mapping]) extends Mapping
-  case class ListOfPrimitives(path: String, elementType: Class[_]) extends Mapping
+  case class Arg(path: String, mapping: Mapping) extends Mapping
+  case class Value(targetType: Class[_]) extends Mapping
+  case class Constructor(targetType: Class[_], args: List[Arg]) extends Mapping
+  case class Cycle(targetType: Class[_]) extends Mapping
+  case class Dict(mapping: Mapping) extends Mapping
+  case class Col(targetType: Class[_], mapping: Mapping) extends Mapping
   case class Optional(mapping: Mapping) extends Mapping
 
   private val mappings = new Memo[Class[_], Mapping]
@@ -55,37 +57,41 @@ private[json] object Meta {
   private[json] def mappingOf(clazz: Class[_]) = {
     import Reflection._
 
-    def makeMapping(path: Option[String], clazz: Class[_], isList: Boolean): Mapping = isList match {
-      case false => Constructor(path, clazz, constructorArgs(clazz))
-      case true if primitive_?(clazz) => ListOfPrimitives(path.get, clazz)
-      case true => ListConstructor(path.get, clazz, constructorArgs(clazz))
-    }
-
-    def constructorArgs(clazz: Class[_]) = orderedConstructorArgs(clazz).map { f =>
-      fieldMapping(unmangleName(f), f.getType, f.getGenericType)
-    }.toList
-
-    def orderedConstructorArgs(clazz: Class[_]): Iterable[Field] = {
-      safePrimaryConstructorOf(clazz) match {
-        case Some(x) => 
-          val names = paranamer.lookupParameterNames(x)
-          val fields = Map() ++ clazz.getDeclaredFields.filter(!static_?(_)).map(f => (f.getName, f))
-          for { n <- names } yield fields(n)
-        case None => Nil
+    def constructorArgs(clazz: Class[_], visited: Set[Class[_]]) = 
+      orderedConstructorArgs(clazz).map { f =>
+        toArg(unmangleName(f), f.getType, f.getGenericType, visited)
       }
+
+    def toArg(name: String, fieldType: Class[_], genericType: Type, visited: Set[Class[_]]): Arg = {
+      def mkContainer(t: Type, k: Kind, valueTypeIndex: Int, factory: Mapping => Mapping) = 
+        if (typeConstructor_?(t)) {
+          val types = typeConstructors(t, k)(valueTypeIndex)
+          factory(fieldMapping(types._1, types._2))
+        } else factory(fieldMapping(typeParameters(t, k)(valueTypeIndex), null))
+        
+      def fieldMapping(fType: Class[_], genType: Type): Mapping = {
+        if (primitive_?(fType)) Value(fType)
+        else if (classOf[List[_]].isAssignableFrom(fType)) 
+          mkContainer(genType, `* -> *`, 0, Col.apply(classOf[List[_]], _))
+        else if (classOf[Set[_]].isAssignableFrom(fType)) 
+          mkContainer(genType, `* -> *`, 0, Col.apply(classOf[Set[_]], _))
+        else if (fType.isArray)
+          mkContainer(genType, `* -> *`, 0, Col.apply(fType, _))
+        else if (classOf[Option[_]].isAssignableFrom(fType)) 
+          mkContainer(genType, `* -> *`, 0, Optional.apply _)
+        else if (classOf[Map[_, _]].isAssignableFrom(fType)) 
+          mkContainer(genType, `(*,*) -> *`, 1, Dict.apply _)
+        else {
+          if (visited.contains(fType)) Cycle(fType)
+          else Constructor(fType, constructorArgs(fType, visited + fType))
+        }
+      }
+     
+      Arg(name, fieldMapping(fieldType, genericType))
     }
 
-    def fieldMapping(name: String, fieldType: Class[_], genericType: Type): Mapping = 
-      if (primitive_?(fieldType)) Value(name, fieldType)
-      else if (fieldType == classOf[List[_]]) makeMapping(Some(name), typeParameter(genericType), true)
-      else if (classOf[Option[_]].isAssignableFrom(fieldType))
-        if (container_?(genericType)) {
-          val types = containerTypes(genericType)
-          Optional(fieldMapping(name, types._1, types._2))
-        } else Optional(fieldMapping(name, typeParameter(genericType), null))
-      else makeMapping(Some(name), fieldType, false)
-
-    mappings.memoize(clazz, makeMapping(None, _, false))
+    if (primitive_?(clazz)) Value(clazz)    
+    else mappings.memoize(clazz, c => Constructor(c, constructorArgs(c, Set())))
   }
 
   private[json] def unmangleName(f: Field) = 
@@ -93,10 +99,11 @@ private[json] object Meta {
 
   private[json] def fail(msg: String) = throw new MappingException(msg)
 
-  private val operators = Map("$eq" -> "=", "$greater" -> ">", "$less" -> "<", "$plus" -> "+", "$minus" -> "-",
-                      "$times" -> "*", "$div" -> "/", "$bang" -> "!", "$at" -> "@", "$hash" -> "#",
-                      "$percent" -> "%", "$up" -> "^", "$amp" -> "&", "$tilde" -> "~", "$qmark" -> "?",
-                      "$bar" -> "|", "$bslash" -> "\\")
+  private val operators = Map(
+    "$eq" -> "=", "$greater" -> ">", "$less" -> "<", "$plus" -> "+", "$minus" -> "-",
+    "$times" -> "*", "$div" -> "/", "$bang" -> "!", "$at" -> "@", "$hash" -> "#",
+    "$percent" -> "%", "$up" -> "^", "$amp" -> "&", "$tilde" -> "~", "$qmark" -> "?",
+    "$bar" -> "|", "$bslash" -> "\\")
 
   private class Memo[A, R] {
     private var cache = Map[A, R]()
@@ -113,12 +120,40 @@ private[json] object Meta {
   object Reflection {
     import java.lang.reflect._
 
-    val primitives = Set[Class[_]](classOf[String], classOf[Int], classOf[Long], classOf[Double], 
-                                   classOf[Float], classOf[Byte], classOf[BigInt], classOf[Boolean], 
-                                   classOf[Short], classOf[java.lang.Integer], classOf[java.lang.Long], 
-                                   classOf[java.lang.Double], classOf[java.lang.Float], 
-                                   classOf[java.lang.Byte], classOf[java.lang.Boolean], 
-                                   classOf[java.lang.Short], classOf[Date], classOf[Symbol])
+    private val primaryConstructorArgs = new Memo[Class[_], List[Field]]
+
+    sealed abstract class Kind
+    case object `* -> *` extends Kind
+    case object `(*,*) -> *` extends Kind
+
+    val primitives = Map[Class[_], Unit]() ++ (List[Class[_]](
+      classOf[String], classOf[Int], classOf[Long], classOf[Double], 
+      classOf[Float], classOf[Byte], classOf[BigInt], classOf[Boolean], 
+      classOf[Short], classOf[java.lang.Integer], classOf[java.lang.Long], 
+      classOf[java.lang.Double], classOf[java.lang.Float], 
+      classOf[java.lang.Byte], classOf[java.lang.Boolean], classOf[Number],
+      classOf[java.lang.Short], classOf[Date], classOf[Symbol]).map((_, ())))
+
+    def orderedConstructorArgs(clazz: Class[_]): List[Field] = {
+      def queryArgs(clazz: Class[_]): List[Field] = {
+        // Paranamer implementation:
+        def fieldsForParanamer(x: JConstructor[_]) = {
+          val Name = """^((?:[^$]|[$][^0-9]+)+)([$][0-9]+)?$"""r
+          def clean(name: String) = name match {
+            case Name(text, junk) => text
+          }
+          val names = paranamer.lookupParameterNames(x).map(clean)
+          val fields = Map() ++ clazz.getDeclaredFields.filter(!static_?(_)).map(f => (f.getName, f))
+          (for { n <- names } yield fields(n)).toList
+        }
+        
+        safePrimaryConstructorOf(clazz) match {
+          case Some(x) => fieldsForParanamer(x)
+          case None    => Nil
+        }
+      }
+      primaryConstructorArgs.memoize(clazz, queryArgs(_))
+    }
 
     def safePrimaryConstructorOf[A](cl: Class[A]): Option[JConstructor[A]] = 
       cl.getDeclaredConstructors.toList.asInstanceOf[List[JConstructor[A]]] match {
@@ -129,26 +164,62 @@ private[json] object Meta {
     def primaryConstructorOf[A](cl: Class[A]): JConstructor[A] = 
       safePrimaryConstructorOf(cl).getOrElse(fail("Can't find primary constructor for class " + cl))
 
-    def typeParameter(t: Type): Class[_] = {
-      val ptype = t.asInstanceOf[ParameterizedType]
-      ptype.getActualTypeArguments()(0) match {
-        case c: Class[_] => c
-        case p: ParameterizedType => p.getRawType.asInstanceOf[Class[_]]
-        case x => fail("do not know how to get type parameter from " + x)
+    def typeParameters(t: Type, k: Kind): List[Class[_]] = {
+      def term(i: Int) = {
+        t match {
+          case ptype: ParameterizedType => ptype.getActualTypeArguments()(i) match {
+              case c: Class[_] => c
+              case p: ParameterizedType => p.getRawType.asInstanceOf[Class[_]]
+              case x => fail("do not know how to get type parameter from " + x)
+          }
+          case clazz: Class[_] if (clazz.isArray) => i match {
+            case 0 => clazz.getComponentType.asInstanceOf[Class[_]]
+            case _ => fail("Arrays only have one type parameter")
+          }
+          case _ => fail("Unsupported Type: " + t)
+        }
+      }
+
+      k match {
+        case `* -> *`     => List(term(0))
+        case `(*,*) -> *` => List(term(0), term(1))
       }
     }
 
-    def containerTypes(t: Type): (Class[_], Type) = {
-      val ptype = t.asInstanceOf[ParameterizedType]
-      val c = ptype.getActualTypeArguments()(0).asInstanceOf[ParameterizedType]
-      val ctype = c.getRawType.asInstanceOf[Class[_]]
-      (ctype, c)
+    def typeConstructors(t: Type, k: Kind): List[(Class[_], Type)] = {
+      def types(i: Int) = {
+        val ptype = t.asInstanceOf[ParameterizedType]
+        val c = ptype.getActualTypeArguments()(i).asInstanceOf[ParameterizedType]
+        val ctype = c.getRawType.asInstanceOf[Class[_]]
+        (ctype, c)
+      }
+
+      k match {
+        case `* -> *`     => List(types(0))
+        case `(*,*) -> *` => List(types(0), types(1))
+      }
     }
 
     def primitive_?(clazz: Class[_]) = primitives contains clazz
     def static_?(f: Field) = Modifier.isStatic(f.getModifiers)
-    def container_?(t: Type) = 
-      t.asInstanceOf[ParameterizedType].getActualTypeArguments()(0).isInstanceOf[ParameterizedType]
+    def typeConstructor_?(t: Type) = t match {
+      case p: ParameterizedType => 
+        p.getActualTypeArguments.exists(_.isInstanceOf[ParameterizedType])
+      case _ => false
+    }
+
+    def array_?(x: Any) = x != null && classOf[scala.Array[_]].isAssignableFrom(x.asInstanceOf[AnyRef].getClass)
+
+    def mkJavaArray(x: Any, componentType: Class[_]) = {
+      val arr = x.asInstanceOf[scala.Array[_]]
+      val a = java.lang.reflect.Array.newInstance(componentType, arr.size)
+      var i = 0
+      while (i < arr.size) {
+        java.lang.reflect.Array.set(a, i, arr(i))
+        i += 1
+      }
+      a
+    }
 
     def primitive2jvalue(a: Any)(implicit formats: Formats) = a match {
       case x: String => JString(x)

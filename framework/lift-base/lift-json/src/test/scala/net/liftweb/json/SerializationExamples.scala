@@ -60,6 +60,70 @@ object SerializationExamples extends Specification {
     val ser = swrite(primitives)
     read[Primitives](ser) mustEqual primitives
   }
+
+  "Multidimensional list example" in {
+    val ints = Ints(List(List(1, 2), List(3), List(4, 5)))
+    val ser = swrite(ints)
+    read[Ints](ser) mustEqual ints
+  }
+
+  "Map serialization example" in {
+    val p = PersonWithAddresses("joe", Map("address1" -> Address("Bulevard", "Helsinki"),
+                                           "address2" -> Address("Soho", "London")))
+    val ser = swrite(p)
+    read[PersonWithAddresses](ser) mustEqual p
+  }
+
+  "Recursive type serialization example" in {
+    val r1 = Rec(1, Nil)
+    val r2 = Rec(2, Nil)
+    val r3 = Rec(3, r1 :: r2 :: Nil)
+
+    val ser = swrite(r3)
+    read[Rec](ser) mustEqual r3
+  }
+  
+  "Set serialization example" in {
+    val s = SetContainer(Set("foo", "bar"))
+    
+    val ser = swrite(s)
+    read[SetContainer](ser) mustEqual s
+  }
+  
+  "Array serialization example" in {
+    val s = ArrayContainer(Array("foo", "bar"))
+    
+    val ser = swrite(s);
+    
+    val unser = read[ArrayContainer](ser)
+    
+    s.array.toList mustEqual unser.array.toList
+  }
+  
+  "None Option of tuple serialization example" in {
+    // This is a regression test case, failed in lift json
+    val s = OptionOfTupleOfDouble(None)
+    
+    val ser = swrite(s)
+    
+    read[OptionOfTupleOfDouble](ser) mustEqual s
+  }
+
+  "Case class with internal state example" in {
+    val m = Members("s", 1)
+    val ser = swrite(m)
+    ser mustEqual """{"x":"s","y":1}"""
+    read[Members](ser) mustEqual m
+  }
+
+  case class Ints(x: List[List[Int]])
+
+  case class Rec(n: Int, xs: List[Rec])
+
+  case class Members(x: String, y: Int) {
+    val foo1 = "foo"
+    lazy val foo2 = "foo"
+  }
 }
 
 object ShortTypeHintExamples extends TypeHintExamples {
@@ -67,7 +131,37 @@ object ShortTypeHintExamples extends TypeHintExamples {
 }
 
 object FullTypeHintExamples extends TypeHintExamples {
-  implicit val formats = Serialization.formats(FullTypeHints(classOf[Animal] :: Nil))
+  import Serialization.{read, write => swrite}
+  
+  implicit val formats = Serialization.formats(FullTypeHints(List[Class[_]](classOf[Animal], classOf[True], classOf[False], classOf[Falcon], classOf[Chicken])))
+  
+  "Ambiguous field decomposition example" in {
+    val a = Ambiguous(False())
+    
+    val ser = swrite(a)    
+    read[Ambiguous](ser) mustEqual a
+  }
+  
+  "Ambiguous parameterized field decomposition example" in {
+    val o = AmbiguousP(Chicken(23))
+    
+    val ser = swrite(o)    
+    read[AmbiguousP](ser) mustEqual o
+  }
+  
+  "Option of ambiguous field decomposition example" in {
+    val o = OptionOfAmbiguous(Some(True()))
+    
+    val ser = swrite(o)    
+    read[OptionOfAmbiguous](ser) mustEqual o
+  }
+  
+  "Option of ambiguous parameterized field decomposition example" in {
+    val o = OptionOfAmbiguousP(Some(Falcon(200.0)))
+    
+    val ser = swrite(o)    
+    read[OptionOfAmbiguousP](ser) mustEqual o
+  }
 }
 
 trait TypeHintExamples extends Specification {
@@ -139,6 +233,28 @@ case class Meeting(place: String, time: DateTime)
 class DateTime(val time: Long)
 
 case class Times(times: List[DateTime])
+
+
+sealed abstract class Bool
+case class True() extends Bool
+case class False() extends Bool
+case class Ambiguous(child: Bool)
+
+trait Bird
+case class Falcon(weight: Double) extends Bird
+case class Chicken(eggs: Int) extends Bird
+
+case class AmbiguousP(bird: Bird)
+
+case class OptionOfAmbiguous(opt: Option[Bool])
+
+case class OptionOfAmbiguousP(opt: Option[Bird])
+
+case class SetContainer(set: Set[String])
+
+case class ArrayContainer(array: Array[String])
+
+case class OptionOfTupleOfDouble(position: Option[Tuple2[Double, Double]])
 
 }
 }

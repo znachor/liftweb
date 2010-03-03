@@ -149,6 +149,14 @@ trait Mapper[A<:Mapper[A]] extends BaseMapper {
   (func: (NodeSeq, Box[NodeSeq], NodeSeq) => Seq[T]): List[T] =
   getSingleton.flatMapFieldTitleForm(this, func)
 
+    /**
+   * flat map the fields titles and forms to generate a list
+   * @param func called with displayHtml, fieldId, form
+   */
+  def flatMapFieldTitleForm2[T]
+  (func: (NodeSeq, MappedField[_, A], NodeSeq) => Seq[T]): List[T] =
+  getSingleton.flatMapFieldTitleForm2(this, func)
+
   /**
    * Present the model as a form and execute the function on submission of the form
    *
@@ -163,24 +171,12 @@ trait Mapper[A<:Mapper[A]] extends BaseMapper {
         case xs => S.error(xs)
       }})
 
-  /*
   /**
-   * Append the JSON representation of this model object to the string builder
-   * @param the string builder to append the JSON representation of this model to
+   * Present the model as a HTML using the same formatting as toForm
    *
-   * @return the StringBuilder
+   * @return the html view of the model
    */
-  def asJSON(sb: StringBuilder): StringBuilder = {
-    getSingleton.asJSON(this, sb)
-    sb
-  }
-
-
-  /**
-   * Create a JSON representation of this model object
-   */
-  def asJSON: String = asJSON(new StringBuilder).toString
-  */
+  def toHtml: NodeSeq = getSingleton.toHtml(this)
 
   /**
    * Present the model as a form and execute the function on submission of the form
