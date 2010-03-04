@@ -201,7 +201,22 @@
       <email>jeppe [at] ingolfs [dot] dk</email>
       <timezone>+1</timezone>
     </developer>
-
+    <developer>
+      <id>dridus</id>
+      <name>Ross Mellgren</name>
+    </developer>
+    <developer>
+      <id>hoffrocket</id>
+      <name>Jon Hoffman</name>
+    </developer>
+    <developer>
+      <id>nafg</id>
+      <name>Naftoli Gugenheim</name>
+    </developer>
+    <developer>
+      <id>nuttycombe</id>
+      <name>Kris Nuttycombe</name>
+    </developer>
   </developers>
   <mailingLists>
     <mailingList>
