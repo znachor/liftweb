@@ -69,8 +69,23 @@ extends MappedLong[T](theOwner) with MappedForeignKey[Long,T,O] with BaseForeign
 
   override def toString = if (defined_?) super.toString else "NULL"
 
-  def apply(v: Box[O]): T = this(v.map(_.primaryKeyField.is) openOr 0L)
-  def apply(v: O): T = this(v.primaryKeyField.is)
+  /** 
+   * Set from an optional instance of the Mapper this foreign key references.
+   * If it's empty, clears this field
+  */
+  def apply(v: Box[O]): T = {
+    apply(v.dmap(0L)(_.primaryKeyField.is))
+    primeObj(v)
+    fieldOwner
+  }
+  /**
+   * Set from an instance of the Mapper this foreign key references.
+  */
+  def apply(v: O): T = {
+    apply(v.primaryKeyField.is)
+    primeObj(Full(v))
+    fieldOwner
+  }
 
   def findFor(key: KeyType): List[OwnerType] = theOwner.getSingleton.findAll(By(this, key))
 
