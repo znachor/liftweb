@@ -29,24 +29,24 @@ import _root_.java.sql.{Connection, DriverManager}
 import view._
 
 
-class ItemsListSpecsAsTest extends JUnit3(ItemsListSpecs)
-object ItemsListSpecsRunner extends ConsoleRunner(ItemsListSpecs)
+class InMemMapperSpecsAsTest extends JUnit3(InMemMapperSpecs)
+object InMemMapperSpecsRunner extends ConsoleRunner(InMemMapperSpecs)
 
-object ItemsListSpecs extends Specification {
+object InMemMapperSpecs extends Specification {
   
   val provider = DBProviders.H2MemoryProvider
   
   def init = {
     provider.setupDB
     Schemifier.schemify(true, Log.neverF _, SampleItem)
-    new ItemsList[SampleItem] {
-      val metaMapper = SampleItem
-    }
   }
 
   "ItemsList" should {
     "buffer items to save" in {
-      val il = init
+      init
+      val il = new ItemsList[SampleItem] {
+        val metaMapper = SampleItem
+      }
       il.add
       il.add
       il.add
@@ -59,7 +59,10 @@ object ItemsListSpecs extends Specification {
     }
     
     "correctly handle removing an unsaved item" in {
-      val il = init
+      init
+      val il = new ItemsList[SampleItem] {
+        val metaMapper = SampleItem
+      }
       il.add
       il.add
       il.add
@@ -74,6 +77,22 @@ object ItemsListSpecs extends Specification {
       SampleItem.count must_== 4
       il.added.length must_== 0
       il.removed.length must_== 0    
+    }
+  }
+  
+  "Cached obj of foreign key" should {
+    "be cleared when necessary" in {
+      init
+      
+      val item = SampleItem.create
+      item.save
+      val hasItem = HasSampleItem.create item item
+      hasItem.item.obj.dmap(false)(_ eq item) must_== true
+      hasItem.item(item.id.is)
+      hasItem.item.obj.dmap(false)(_ eq item) must_== true
+      hasItem.item(0)
+      hasItem.item(item.id.is)
+      hasItem.item.obj.dmap(false)(_ eq item) must_== false
     }
   }
   
@@ -93,6 +112,12 @@ object SampleItem extends SampleItem with LongKeyedMetaMapper[SampleItem] {
     x
   }
 }
+
+class HasSampleItem extends LongKeyedMapper[HasSampleItem] with IdPK {
+  def getSingleton = HasSampleItem
+  object item extends MappedLongForeignKey(this, SampleItem)
+}
+object HasSampleItem extends HasSampleItem with LongKeyedMetaMapper[HasSampleItem]
 
 
 
