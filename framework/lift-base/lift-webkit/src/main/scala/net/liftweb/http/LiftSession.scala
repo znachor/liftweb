@@ -1372,7 +1372,7 @@ object TemplateFinder {
     first(toTry) {
       clsName =>
               try {
-                tryo(List(classOf[ClassNotFoundException]), Empty)(Class.forName(clsName).asInstanceOf[Class[AnyRef]]).flatMap {
+                tryo(List(classOf[ClassNotFoundException]), Empty)(Helpers.classForName(clsName).asInstanceOf[Class[AnyRef]]).flatMap {
                   c =>
                           (c.newInstance match {
                             case inst: InsecureLiftView => c.getMethod(action).invoke(inst)

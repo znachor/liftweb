@@ -59,9 +59,11 @@ trait ServletFilterProvider extends Filter with HTTPProvider {
           val httpRequest = new HTTPRequestServlet(httpReq)
           val httpResponse = new HTTPResponseServlet(httpRes)
 
+            Helpers.currentClassLoader.doWith(new DevClassLoader(this.getClass.getClassLoader)) {
           service(httpRequest, httpResponse) {
             chain.doFilter(req, res)
           }
+            }
         case _ => chain.doFilter(req, res)
       }))
   }

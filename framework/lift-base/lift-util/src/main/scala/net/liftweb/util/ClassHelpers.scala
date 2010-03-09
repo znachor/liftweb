@@ -55,8 +55,15 @@ trait ClassHelpers { self: ControlHelpers =>
       mod <- modifiers.projection;
       val fullName = place + "." + mod(name);
       val ignore = List(classOf[ClassNotFoundException], classOf[ClassCastException]);
-      klass <- tryo(ignore)(Class.forName(fullName).asSubclass(targetType).asInstanceOf[Class[C]])
+      klass <- tryo(ignore)(classForName(fullName).asSubclass(targetType).asInstanceOf[Class[C]])
     ) yield klass).firstOption
+
+  def classForName(name: String): Class[_] = currentClassLoader.value match {
+    case null => Class.forName(name)
+    case x => Class.forName(name, true, x)
+  }
+
+  object currentClassLoader extends ThreadGlobal[ClassLoader]
 
   /**
    * General method to in find a class according to its type, its name, a list of possible
