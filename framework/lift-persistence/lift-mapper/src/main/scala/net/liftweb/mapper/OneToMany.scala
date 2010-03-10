@@ -285,13 +285,6 @@ trait LongMappedForeignMapper[T<:Mapper[T],O<:KeyedMapper[Long,O]]
                               with LifecycleCallbacks {
   @deprecated def foreign = obj
 
-  override def apply(f: O) = this(Full(f))
-  override def apply(f: Box[O]) = {
-    val ret = super.apply(f)
-    primeObj(f)
-    ret
-  }
-
   override def set(v: Long) = {
     val ret = super.set(v)
     primeObj(if(defined_?) dbKeyToTable.find(i_is_!) else Empty)
