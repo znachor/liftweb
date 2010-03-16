@@ -414,12 +414,13 @@ object LiftRules extends Factory with FormVendor {
    * The names are searched in order.
    * See also searchSnippetsWithRequestPath for an implementation.
    */
-  @volatile var snippetNamesToSearch: String => List[String] = name => name :: Nil
+  @volatile var snippetNamesToSearch: FactoryMaker[String => List[String]] =
+      new FactoryMaker(() => (name: String) => name :: Nil) {}
 
   /**
    * Implementation for snippetNamesToSearch that looks first in a package named by taking the current template path.
    * For example, suppose the following is configured in Boot:
-   *   LiftRules.snippetNamesToSearch = searchSnippetsWithRequestPath
+   *   LiftRules.snippetNamesToSearch.default.set(() => LiftRules.searchSnippetsWithRequestPath)
    *   LiftRules.addToPackages("com.mycompany.myapp")
    *   LiftRules.addToPackages("com.mycompany.mylib")
    * The tag <lift:MySnippet> in template foo/bar/baz.html would search for the snippet in the following locations:
@@ -429,9 +430,9 @@ object LiftRules extends Factory with FormVendor {
    *   - com.mycompany.mylib.snippet.MySnippet
    *   - and then the Lift builtin snippet packages
    */
-  val searchSnippetsWithRequestPath: String => List[String] = name =>
-    S.request.map(_.uri.split("/").drop(1)) match {
-      case Full(xs) if xs.length > 1 => (xs.take(xs.length-1).mkString(".") + "." + name) :: name :: Nil
+  def searchSnippetsWithRequestPath(name: String): List[String] =
+    S.request.map(_.path.partPath.dropRight(1)) match {
+      case Full(xs) if !xs.isEmpty => (xs.mkString(".") + "." + name) :: name :: Nil
       case _ => name :: Nil
     }
 

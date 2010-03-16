@@ -698,7 +698,7 @@ class LiftSession(private[http] val _contextPath: String, val uniqueId: String,
       val (cls, method) = splitColonPair(attrValue, null, "render")
 
       
-      first(LiftRules.snippetNamesToSearch(cls)) { nameToTry =>
+      first(LiftRules.snippetNamesToSearch.vend(cls)) { nameToTry =>
         findSnippetClass(nameToTry) flatMap { clz =>
           instantiateOrRedirect(clz) flatMap { inst =>
             invokeMethod(clz, inst, method) match {
@@ -832,7 +832,7 @@ class LiftSession(private[http] val _contextPath: String, val uniqueId: String,
 
     def locateAndCacheSnippet(tagName: String): Box[AnyRef] = 
       snippetMap.is.get(tagName) or {
-        first(LiftRules.snippetNamesToSearch(tagName)) { nameToTry => 
+        first(LiftRules.snippetNamesToSearch.vend(tagName)) { nameToTry => 
           val ret = LiftRules.snippet(nameToTry) or findSnippetInstance(nameToTry)
           ret.foreach(s => snippetMap.set(snippetMap.is.update(tagName, s)))
           ret
