@@ -621,8 +621,7 @@ class LiftSession(private[http] val _contextPath: String, val uniqueId: String,
                 })
                 funcName
               }
-              val sep = uri contains ("?") match {case true => "&" case _ => "?"}
-              uri + sep + func + "=_"
+              SHtml.appendFuncToURL(uri, func + "=_")
     } openOr uri
 
   }
@@ -676,7 +675,15 @@ class LiftSession(private[http] val _contextPath: String, val uniqueId: String,
 
   private def findSnippetClass(name: String): Box[Class[AnyRef]] = {
     if (name == null) Empty
-    else findClass(name, LiftRules.buildPackage("snippet") ::: ("lift.app.snippet" :: "net.liftweb.builtin.snippet" :: Nil))
+    else {
+      // Name might contain some relative packages, so split them out and put them in the proper argument of findClass
+      val (packageSuffix, terminal) = name.lastIndexOf('.') match {
+        case -1 => ("", name)
+        case i  => ("." + name.substring(0, i), name.substring(i+1))
+      }
+      findClass(terminal, LiftRules.buildPackage("snippet").map(_ + packageSuffix) :::
+                (("lift.app.snippet" + packageSuffix) :: ("net.liftweb.builtin.snippet" + packageSuffix) :: Nil))
+    }
   }
 
   private def instantiateOrRedirect[T](c: Class[T]): Box[T] = tryo({
@@ -685,15 +692,21 @@ class LiftSession(private[http] val _contextPath: String, val uniqueId: String,
       if (ite.getCause.isInstanceOf[ResponseShortcutException]) => throw ite.getCause.asInstanceOf[ResponseShortcutException]
   }, c.newInstance)
 
-  private def findAttributeSnippet(name: String, rest: MetaData): MetaData = {
-    S.doSnippet(name) {
-      val (cls, method) = splitColonPair(name, null, "render")
+  private def findAttributeSnippet(attrValue: String, rest: MetaData): MetaData = {
+    S.doSnippet(attrValue) {
+      val (cls, method) = splitColonPair(attrValue, null, "render")
 
-      findSnippetClass(cls).flatMap(clz => instantiateOrRedirect(clz).flatMap(inst =>
-              (invokeMethod(clz, inst, method) match {
-                case Full(md: MetaData) => Full(md.copy(rest))
-                case _ => Empty
-              }))).openOr(rest)
+      
+      first(LiftRules.snippetNamesToSearch.vend(cls)) { nameToTry =>
+        findSnippetClass(nameToTry) flatMap { clz =>
+          instantiateOrRedirect(clz) flatMap { inst =>
+            invokeMethod(clz, inst, method) match {
+              case Full(md: MetaData) => Full(md.copy(rest))
+              case _ => Empty
+            }
+          }
+        }
+      } openOr rest
     }
   }
 
@@ -816,13 +829,14 @@ class LiftSession(private[http] val _contextPath: String, val uniqueId: String,
       for (loc <- S.location;
            func <- loc.snippet(snippet)) yield func(kids)
 
-    def locateAndCacheSnippet(cls: String): Box[AnyRef] = {
-      snippetMap.is.get(cls) or {
-        val ret = LiftRules.snippet(cls) or findSnippetInstance(cls)
-        ret.foreach(s => snippetMap.set(snippetMap.is.update(cls, s)))
-        ret
+    def locateAndCacheSnippet(tagName: String): Box[AnyRef] = 
+      snippetMap.is.get(tagName) or {
+        first(LiftRules.snippetNamesToSearch.vend(tagName)) { nameToTry => 
+          val ret = LiftRules.snippet(nameToTry) or findSnippetInstance(nameToTry)
+          ret.foreach(s => snippetMap.set(snippetMap.is.update(tagName, s)))
+          ret
+        }
       }
-    }
 
     val ret: NodeSeq = snippetName.map(snippet =>
             S.doSnippet(snippet)(
@@ -1071,7 +1085,17 @@ class LiftSession(private[http] val _contextPath: String, val uniqueId: String,
    * Finds all Comet actors by type
    */
   def findComet(theType: String): List[LiftCometActor] = synchronized {
-    asyncComponents.elements.filter {case ((Full(name), _), _) => name == theType case _ => false}.toList.map {case (_, value) => value}
+    asyncComponents.flatMap {
+      case ((Full(name), _), value) if name == theType => Full(value)
+      case _ => Empty
+    }.toList
+  }
+
+/**
+* Find the comet actor by type and name
+*/
+  def findComet(theType: String, name: Box[String]): Box[LiftCometActor] = synchronized {
+    asyncComponents.get(Full(theType) -> name)
   }
 
   /**
@@ -1159,7 +1183,13 @@ class LiftSession(private[http] val _contextPath: String, val uniqueId: String,
                               name: Box[String],
                               defaultXml: NodeSeq,
                               attributes: Map[String, String]): Box[LiftCometActor] = {
-    findType[LiftCometActor](contType, LiftRules.buildPackage("comet") ::: ("lift.app.comet" :: Nil)).flatMap {
+    val createInfo = CometCreationInfo(contType, name, defaultXml, attributes, this)
+
+    LiftRules.cometCreationFactory.vend.apply(createInfo).map{
+    a => a ! PerformSetupComet; a} or
+    LiftRules.cometCreation.toList.find(_.isDefinedAt(createInfo)).map(_.apply(createInfo)).map{
+    a => a ! PerformSetupComet; a} or
+    (findType[LiftCometActor](contType, LiftRules.buildPackage("comet") ::: ("lift.app.comet" :: Nil)).flatMap {
       cls =>
               tryo((e: Throwable) => e match {
                 case e: _root_.java.lang.NoSuchMethodException => ()
@@ -1178,7 +1208,7 @@ class LiftSession(private[http] val _contextPath: String, val uniqueId: String,
                 ret ! PerformSetupComet
                 ret.asInstanceOf[LiftCometActor]
               }
-    }
+    })
   }
 
   private def failedFind(in: Failure): NodeSeq =
@@ -1402,6 +1432,15 @@ object TemplateFinder {
     }
   }
 }
+
+/**
+* A case class that contains the information necessary to set up a CometActor
+*/
+final case class CometCreationInfo(contType: String,
+                                   name: Box[String],
+                                   defaultXml: NodeSeq,
+                                   attributes: Map[String, String],
+                                   session: LiftSession)
 
 }
 }

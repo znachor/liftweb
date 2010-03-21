@@ -50,7 +50,7 @@ object LiftRules extends Factory with FormVendor {
   type ExceptionHandlerPF = PartialFunction[(Props.RunModes.Value, Req, Throwable), LiftResponse]
   type ResourceBundleFactoryPF = PartialFunction[(String, Locale), ResourceBundle]
   type SplitSuffixPF = PartialFunction[List[String], (List[String], String)]
-
+  type CometCreationPF = PartialFunction[CometCreationInfo, LiftCometActor]
   /**
    * A partial function that allows the application to define requests that should be
    * handled by lift rather than the default handler
@@ -157,6 +157,19 @@ object LiftRules extends Factory with FormVendor {
    * to any URL reference from the markup of Ajax request.
    */
   val urlDecorate = RulesSeq[URLDecoratorPF]
+
+  /**
+  * Partial function to allow you to build a CometActor from code rather than via reflection
+  */
+  val cometCreation = RulesSeq[CometCreationPF]
+
+  private def noComet(ignore: CometCreationInfo): Box[LiftCometActor] = Empty
+
+  /**
+  * A factory that will vend comet creators
+  */
+  val cometCreationFactory: FactoryMaker[CometCreationInfo => Box[LiftCometActor]] =
+  new FactoryMaker(() => noComet _) {}
 
   /**
    * Holds user functions that are executed after the response was sent to client. The functions' result
@@ -408,6 +421,33 @@ object LiftRules extends Factory with FormVendor {
   }
   setupSnippetDispatch()
 
+  /**
+   * Function that generates variants on snippet names to search for, given the name from the template.
+   * The default implementation just returns name :: Nil (e.g. no change).
+   * The names are searched in order.
+   * See also searchSnippetsWithRequestPath for an implementation.
+   */
+  @volatile var snippetNamesToSearch: FactoryMaker[String => List[String]] =
+      new FactoryMaker(() => (name: String) => name :: Nil) {}
+
+  /**
+   * Implementation for snippetNamesToSearch that looks first in a package named by taking the current template path.
+   * For example, suppose the following is configured in Boot:
+   *   LiftRules.snippetNamesToSearch.default.set(() => LiftRules.searchSnippetsWithRequestPath)
+   *   LiftRules.addToPackages("com.mycompany.myapp")
+   *   LiftRules.addToPackages("com.mycompany.mylib")
+   * The tag <lift:MySnippet> in template foo/bar/baz.html would search for the snippet in the following locations:
+   *   - com.mycompany.myapp.snippet.foo.bar.MySnippet
+   *   - com.mycompany.myapp.snippet.MySnippet
+   *   - com.mycompany.mylib.snippet.foo.bar.MySnippet
+   *   - com.mycompany.mylib.snippet.MySnippet
+   *   - and then the Lift builtin snippet packages
+   */
+  def searchSnippetsWithRequestPath(name: String): List[String] =
+    S.request.map(_.path.partPath.dropRight(1)) match {
+      case Full(xs) if !xs.isEmpty => (xs.mkString(".") + "." + name) :: name :: Nil
+      case _ => name :: Nil
+    }
 
   /**
    * Change this variable to set view dispatching

@@ -25,9 +25,10 @@ import _root_.scala.xml._
 import _root_.net.liftweb.util.Helpers._
 import _root_.net.liftweb.common.{Box, Empty, Full, Failure}
 import _root_.net.liftweb.json._
-import _root_.net.liftweb.util.{NamedPF, FieldError}
-import _root_.net.liftweb.http.{LiftRules, S, SHtml}
-import _root_.java.util.Date
+import _root_.net.liftweb.util.{NamedPF, FieldError, Helpers}
+import _root_.net.liftweb.http.{LiftRules, S, SHtml, RequestMemoize,
+			      Factory}
+import _root_.java.util.{Date, Locale}
 import _root_.net.liftweb.http.js._
 
 trait BaseMetaMapper {
@@ -47,7 +48,7 @@ trait BaseMetaMapper {
 /**
  * Rules and functions shared by all Mappers
  */
-object MapperRules {
+object MapperRules extends Factory {
   /**
    * This function converts a header name into the appropriate
    * XHTML format for displaying across the headers of a
@@ -89,6 +90,23 @@ object MapperRules {
 
   val quoteColumnName: String => String =
   s => if (s.indexOf(' ') >= 0) '"'+s+'"' else s
+
+ /**
+  * Function that determines if foreign key constraints are
+  * created by Schemifier for the specified connection.
+  * 
+  * Note: The driver choosen must also support foreign keys for
+  * creation to happen
+  */
+  var createForeignKeys_? : ConnectionIdentifier => Boolean = c => false
+
+  
+  /**
+   * This function is used to calculate the displayName of a field. Can be
+   * used to easily localize fields based on the locale in the 
+   * current request
+   */
+  val displayNameCalculator: FactoryMaker[(BaseMapper, Locale, String) => String] = new FactoryMaker[(BaseMapper, Locale, String) => String](() => ((m,l,name) => name)) {} 
 
   /**
    * Calculate the name of a column based on the name
@@ -586,6 +604,29 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
   }
 
   /**
+   * This method will update the instance from JSON.  It allows for
+   * attacks from untrusted JSON as it bypasses normal security.  By
+   * default, the method is protected.  You can write a proxy method
+   * to expose the functionality.
+   */
+  protected def updateFromJSON_!(toUpdate: A, json: JsonAST.JObject): A = {
+    import JsonAST._
+
+    toUpdate.runSafe {
+
+      for {
+        field <- json.obj
+        meth <- _mappedFields.get(field.name)
+      } {
+        val f = ??(meth, toUpdate)
+        f.setFromAny(field.value)
+      }
+    }
+
+    toUpdate
+  }
+
+  /**
    * This method will encode the instance as JSON.  It may reveal
    * data in fields that might otherwise be proprietary.  It should
    * be used with caution and only exposed as a public method
@@ -805,7 +846,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
 
     while (pos < max && rs.next()) {
       if (pos >= 0L) {
-        f(createInstance(dbId, rs, bm._1, bm._2)).foreach(v => ret += v)
+        f(createInstance(dbId, rs, bm)).foreach(v => ret += v)
       }
       pos = pos + 1L
     }
@@ -817,33 +858,34 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
 
   private val columnNameToMappee = new HashMap[String, Box[(ResultSet, Int, A) => Unit]]
 
-  def buildMapper(rs: ResultSet): (Int, Array[(ResultSet,Int,A) => Unit]) = synchronized {
+  def buildMapper(rs: ResultSet): List[Box[(ResultSet,Int,A) => Unit]] = columnNameToMappee.synchronized {
     val meta = rs.getMetaData
     val colCnt = meta.getColumnCount
-    val ar = new Array[(ResultSet, Int, A) => Unit](colCnt + 1)
-    for (pos <- 1 to colCnt) {
-      val colName = meta.getColumnName(pos).toLowerCase
-      val optFunc = columnNameToMappee.get(colName) match {
-        case None => {
-            val colType = meta.getColumnType(pos)
-            val fieldInfo = mappedColumns.get(colName)
+    for {
+      pos <- (1 to colCnt).toList
+      colName = meta.getColumnName(pos).toLowerCase
+    } yield 
+      columnNameToMappee.get(colName) match {
+        case None =>
+          val colType = meta.getColumnType(pos)
 
-            val setTo =
-            if (fieldInfo != None) {
-              val tField = fieldInfo.get.invoke(this).asInstanceOf[MappedField[AnyRef, A]]
+          Box(mappedColumns.get(colName)).flatMap{
+            fieldInfo =>
+            val setTo = {
+              val tField = fieldInfo.invoke(this).asInstanceOf[MappedField[AnyRef, A]]
 
               Some(colType match {
                   case Types.INTEGER | Types.BIGINT => {
-                      val bsl = tField.buildSetLongValue(fieldInfo.get, colName)
+                      val bsl = tField.buildSetLongValue(fieldInfo, colName)
                       (rs: ResultSet, pos: Int, objInst: A) => bsl(objInst, rs.getLong(pos), rs.wasNull)}
                   case Types.VARCHAR => {
-                      val bsl = tField.buildSetStringValue(fieldInfo.get, colName)
+                      val bsl = tField.buildSetStringValue(fieldInfo, colName)
                       (rs: ResultSet, pos: Int, objInst: A) => bsl(objInst, rs.getString(pos))}
                   case Types.DATE | Types.TIME | Types.TIMESTAMP =>
-                    val bsl = tField.buildSetDateValue(fieldInfo.get, colName)
+                    val bsl = tField.buildSetDateValue(fieldInfo, colName)
                     (rs: ResultSet, pos: Int, objInst: A) => bsl(objInst, rs.getTimestamp(pos))
                   case Types.BOOLEAN | Types.BIT =>{
-                      val bsl = tField.buildSetBooleanValue(fieldInfo.get, colName)
+                      val bsl = tField.buildSetBooleanValue(fieldInfo, colName)
                       (rs: ResultSet, pos: Int, objInst: A) => bsl(objInst, rs.getBoolean(pos), rs.wasNull)}
                   case _ => {
                       (rs: ResultSet, pos: Int, objInst: A) => {
@@ -852,33 +894,26 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
                       }
                     }
                 })
-            } else {
-              None
             }
 
             columnNameToMappee(colName) = Box(setTo)
-            Box(setTo)
+            setTo
           }
+
         case Some(of) => of
       }
-      ar(pos) = optFunc openOr null
-    }
-    (colCnt, ar)
   }
 
-  def createInstance(dbId: ConnectionIdentifier, rs : ResultSet, colCnt: Int, mapFuncs: Array[(ResultSet,Int,A) => Unit]) : A = {
+  def createInstance(dbId: ConnectionIdentifier, rs : ResultSet, mapFuncs: List[Box[(ResultSet,Int,A) => Unit]]) : A = {
     val ret: A = createInstance.connectionIdentifier(dbId)
 
     ret.persisted_? = true
 
-    var pos = 1
-    while (pos <= colCnt) {
-      mapFuncs(pos) match {
-        case null =>
-        case f => f(rs, pos, ret)
-      }
-      pos = pos + 1
-    }
+    for {
+      (fb, pos) <- mapFuncs.zipWithIndex
+      f <- fb
+    } f(rs, pos + 1, ret)
+
     ret
   }
 
@@ -1251,6 +1286,11 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
   def dbTableName = internal_dbTableName
 
   /**
+   * The name of the mapped object
+   */
+  override def dbName: String = internalTableName_$_$
+  
+  /**
    * The table name, to lower case... ensures that it works on all DBs
    */
   final def _dbTableNameLC = {
@@ -1265,7 +1305,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
   }  // dbTableName.toLowerCase
 
   private[mapper] lazy val internal_dbTableName = fixTableName(internalTableName_$_$)
-
+  
   private def setupInstanceForPostCommit(inst: A) {
     if (!inst.addedPostCommit) {
       DB.appendPostFunc(inst.connectionIdentifier, () => afterCommit.foreach(_(inst)))
@@ -1652,6 +1692,15 @@ trait KeyedMetaMapper[Type, A<:KeyedMapper[Type, A]] extends MetaMapper[A] with 
     case v => Full(v.toString)
   }
 
+  private object unapplyMemo extends RequestMemoize[Any, Box[A]] {
+    override protected def __nameSalt = Helpers.randomString(20)
+  }
+
+  def unapply(key: Any): Option[A] = {
+    if (S.inStatefulScope_?) unapplyMemo(key, this.find(key))
+    else this.find(key)
+  }
+
   def find(key: Any): Box[A] =
   key match {
     case qp: QueryParam[A] => find(List(qp.asInstanceOf[QueryParam[A]]) :_*)
@@ -1697,7 +1746,7 @@ trait KeyedMetaMapper[Type, A<:KeyedMapper[Type, A]] extends MetaMapper[A] with 
       DB.exec(st) {
         rs =>
         val mi = buildMapper(rs)
-        if (rs.next) Full(createInstance(dbId, rs, mi._1, mi._2))
+        if (rs.next) Full(createInstance(dbId, rs, mi))
         else Empty
       }
     }
@@ -1726,7 +1775,7 @@ trait KeyedMetaMapper[Type, A<:KeyedMapper[Type, A]] extends MetaMapper[A] with 
         DB.exec(st) {
           rs =>
           val mi = buildMapper(rs)
-          if (rs.next) Full(createInstance(dbId, rs, mi._1, mi._2))
+          if (rs.next) Full(createInstance(dbId, rs, mi))
           else Empty
         }
 

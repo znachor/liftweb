@@ -54,6 +54,8 @@ class Boot {
 
     WebServices.init()
 
+    StatelessJson.init()
+
     XmlServer.init()
 
     LiftRules.statelessDispatchTable.append {
@@ -91,6 +93,17 @@ class Boot {
             Full(() => LiftRules.jsArtifacts.hide("ajax-loader").cmd)
 
     LiftRules.early.append(makeUtf8)
+
+    LiftRules.cometCreation.append {
+      case CometCreationInfo("Clock",
+                             name,
+                             defaultXml,
+                             attributes,
+			     session) =>
+			       new ExampleClock(session, Full("Clock"),
+						name, defaultXml, attributes)
+				
+    }
 
     LiftSession.onBeginServicing = RequestLogger.beginServicing _ ::
             LiftSession.onBeginServicing
@@ -143,6 +156,7 @@ object MenuInfo {
             Menu(Loc("ajax form", List("ajax-form"), "AJAX Form")),
             Menu(Loc("js confirm", List("rhodeisland"), "Modal Dialog")),
             Menu(Loc("json", List("json"), "JSON Messaging")),
+             Menu(Loc("stateless_json", List("stateless_json"), "Stateless JSON Messaging")),
             Menu(Loc("json_more", List("json_more"), "More JSON")),
             Menu(Loc("form_ajax", List("form_ajax"), "Ajax and Forms"))
             ) ::

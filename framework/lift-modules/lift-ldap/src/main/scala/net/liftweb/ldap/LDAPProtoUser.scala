@@ -7,6 +7,7 @@
  */
 package net.liftweb.ldap
 
+import javax.naming.directory.{Attributes}
 import scala.util.matching.{Regex}
 import scala.xml.{Elem, NodeSeq}
 import net.liftweb.http.{LiftResponse, RedirectResponse, S, SessionVar}
@@ -102,20 +103,37 @@ trait MetaLDAPProtoUser[ModelType <: LDAPProtoUser[ModelType]] extends MetaMegaP
     }
 
     def ldapLogin(username: String, password: String): Boolean = {
+        def _getUserAttributes(dn: String) = ldapVendor.attributesFromDn(dn)
+
         val users = ldapVendor.search(ldapUserSearch.format(username))
 
         if (users.size >= 1) {
             val userDn = users(0)
             if (ldapVendor.bindUser(userDn, password)) {
+                val completeDn = userDn + "," + ldapVendor.parameters().get("ldap.base").getOrElse("")
                 logUserIn(this)
+
+                bindAttributes(_getUserAttributes(completeDn))
+
+                setRoles(completeDn, ldapVendor)
                 S.redirectTo(homePage)
-                setRoles(userDn + "," + ldapVendor.parameters().get("ldap.base").getOrElse(""), ldapVendor)
             }
             else return false
         }
         else return false
 
         return true
+    }
+
+    def bindAttributes(attrs: Attributes) = {
+        for {
+            theCn <- Box !! attrs.get("cn").get
+            theUid <- Box !! attrs.get("uid").get
+        }
+        {
+            cn(attrs.get("cn").get.toString)
+            uid(attrs.get("uid").get.toString)
+        }
     }
 }
 
