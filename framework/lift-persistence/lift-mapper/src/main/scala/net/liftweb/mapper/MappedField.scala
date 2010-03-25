@@ -687,7 +687,6 @@ trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends Typed
     case x => x.hashCode
   }
 
-
   /**
    * Does the "right thing" comparing mapped fields
    */
