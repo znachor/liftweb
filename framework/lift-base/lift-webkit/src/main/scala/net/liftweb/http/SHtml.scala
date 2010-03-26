@@ -695,13 +695,59 @@ object SHtml {
 
   private def makeFormElement(name: String, func: AFuncHolder,
                               attrs: (String, String)*): Elem =
-    fmapFunc(func)(funcName =>
-            attrs.foldLeft(<input type={name} name={funcName}/>)(_ % _))
+    fmapFunc(func){funcName =>
+            attrs.foldLeft(<input type={name} name={funcName}/>)(_ % _)
+    }
 
-  def text_*(value: String, func: AFuncHolder, attrs: (String, String)*): Elem =
+/**
+* Create an element that also knows how to
+*/
+  private def makeStringFormElement(name: String, afunc: String => Any,
+                              attrs: MetaData): Elem with BoxHolder[String] =
+makeElemWithHolder("input", Nil, afunc, new UnprefixedAttribute("type", name, attrs))
+
+  /**
+* Create an element that also knows how to
+*/
+  private def makeElemWithHolder(label: String,
+                                 child: Seq[Node],
+                                 afunc: String => Any,
+                              attrs: MetaData): Elem with BoxHolder[String] =
+{
+    val sync = new Object
+    var set = false
+    var value: Box[String] = Empty
+
+    val func = SFuncHolder(s => {
+        sync.synchronized {
+          set = true
+          value = Full(s)
+        }
+        afunc(s)})
+
+    fmapFunc(func){funcName =>
+      val at = new UnprefixedAttribute("name", funcName, attrs)
+      new Elem(null, label, at , TopScope, child :_*) with BoxHolder[String] {
+        def box: Box[String] = sync.synchronized {
+          if (!set) {
+            value = for {
+              r <- S.request
+              param <- S.param(funcName)
+            } yield {
+              set = true
+              param
+            }
+          }
+          value
+        }
+      }
+    }
+  }
+
+  def text_*(value: String, func: String => Any, attrs: (String, String)*): Elem with BoxHolder[String] =
     text_*(value, func, Empty, attrs: _*)
 
-  def text_*(value: String, func: AFuncHolder, ajaxTest: String => JsCmd, attrs: (String, String)*): Elem =
+  def text_*(value: String, func:  String => Any, ajaxTest: String => JsCmd, attrs: (String, String)*): Elem with BoxHolder[String] =
     text_*(value, func, Full(ajaxTest), attrs: _*)
 
   private def buildOnBlur(bf: Box[String => JsCmd]): MetaData = bf match {
@@ -712,11 +758,17 @@ object SHtml {
   }
 
 
-  def text_*(value: String, ignoreBlur: Boolean, func: AFuncHolder, ajaxTest: Box[String => JsCmd], attrs: (String, String)*): Elem =
-    makeFormElement("text", func, attrs: _*) % new UnprefixedAttribute("value", Text(value), Null) % (
-      if (ignoreBlur) Null else buildOnBlur(ajaxTest))
 
-  def text_*(value: String, func: AFuncHolder, ajaxTest: Box[String => JsCmd], attrs: (String, String)*): Elem =
+  def text_*(value: String, ignoreBlur: Boolean, func: String => Any,
+             ajaxTest: Box[String => JsCmd],
+             attrs: (String, String)*): Elem with BoxHolder[String] = {
+    makeStringFormElement("text", func, new UnprefixedAttribute("value", value, attrs.
+                                                                foldLeft[MetaData](if (ignoreBlur) Null else
+                                                                                   buildOnBlur(ajaxTest))((other, pair) =>
+          new UnprefixedAttribute(pair._1, pair._2, other))))
+  }
+
+  def text_*(value: String, func:  String => Any, ajaxTest: Box[String => JsCmd], attrs: (String, String)*): Elem with BoxHolder[String] =
     text_*(value, false, func, ajaxTest, attrs :_*)
 
   def password_*(value: String, func: AFuncHolder, attrs: (String, String)*): Elem =
@@ -735,24 +787,26 @@ object SHtml {
       }
     }
 
-  def text(value: String, func: String => Any, attrs: (String, String)*): Elem =
-    text_*(value, SFuncHolder(func), attrs: _*)
+  def text(value: String, func: String => Any, attrs: (String, String)*): Elem with BoxHolder[String] =
+    text_*(value, func, attrs: _*)
 
-  def textAjaxTest(value: String, func: String => Any, ajaxTest: String => JsCmd, attrs: (String, String)*): Elem =
-    text_*(value, SFuncHolder(func), ajaxTest, attrs: _*)
+  def textAjaxTest(value: String, func: String => Any, ajaxTest: String => JsCmd, attrs: (String, String)*): Elem with BoxHolder[String] =
+    text_*(value, func, ajaxTest, attrs: _*)
 
-  def textAjaxTest(value: String, func: String => Any, ajaxTest: Box[String => JsCmd], attrs: (String, String)*): Elem =
-    text_*(value, SFuncHolder(func), ajaxTest, attrs: _*)
+  def textAjaxTest(value: String, func: String => Any, ajaxTest: Box[String => JsCmd], attrs: (String, String)*): Elem with BoxHolder[String] =
+    text_*(value, func, ajaxTest, attrs: _*)
 
+    private def foldAttrs(attrs: Seq[(String, String)]): MetaData =
+    attrs.foldLeft[MetaData](Null)((other, pair) => new UnprefixedAttribute(pair._1, pair._2, other))
 
-  def password(value: String, func: String => Any, attrs: (String, String)*): Elem =
-    makeFormElement("password", SFuncHolder(func), attrs: _*) % new UnprefixedAttribute("value", Text(value), Null)
+  def password(value: String, func: String => Any, attrs: (String, String)*): Elem with BoxHolder[String] =
+    makeStringFormElement("password", func, foldAttrs(attrs))
 
   def hidden(func: () => Any, attrs: (String, String)*): Elem =
     makeFormElement("hidden", NFuncHolder(func), attrs: _*) % ("value" -> "true")
 
-  def hidden(func: (String) => Any, defaultlValue: String, attrs: (String, String)*): Elem =
-    makeFormElement("hidden", SFuncHolder(func), attrs: _*) % ("value" -> defaultlValue)
+  def hidden(func: (String) => Any, defaultlValue: String, attrs: (String, String)*): Elem with BoxHolder[String] =
+    makeStringFormElement("hidden", func,  foldAttrs(("value" -> defaultlValue) :: attrs.toList))
 
   /**
    * Generates a form submission button.
@@ -917,8 +971,8 @@ object SHtml {
    * @param deflt -- the default value (or Empty if no default value)
    * @param func -- the function to execute on form submission
    */
-  def select(opts: Seq[(String, String)], deflt: Box[String], func: String => Any, attrs: (String, String)*): Elem =
-    select_*(opts, deflt, SFuncHolder(func), attrs: _*)
+  def select(opts: Seq[(String, String)], deflt: Box[String], func: String => Any, attrs: (String, String)*): Elem with BoxHolder[String] =
+    select_*(opts, deflt, func, attrs: _*)
 
   /**
    * Create a select box based on the list with a default value and the function
@@ -945,7 +999,7 @@ object SHtml {
    * @param func -- the function to execute on form submission
    */
   def select_*(opts: Seq[(String, String)], deflt: Box[String],
-               func: AFuncHolder, attrs: (String, String)*): Elem = {
+               func: String => Any, attrs: (String, String)*): Elem with BoxHolder[String] = {
     val vals = opts.map(_._1)
     val testFunc = LFuncHolder(in => in.filter(v => vals.contains(v)) match {case Nil => false case xs => func(xs)}, func.owner)
 
@@ -962,8 +1016,8 @@ object SHtml {
    * @param func -- the function to execute on form submission
    */
   def untrustedSelect(opts: Seq[(String, String)], deflt: Box[String],
-                      func: String => Any, attrs: (String, String)*): Elem =
-    untrustedSelect_*(opts, deflt, SFuncHolder(func), attrs: _*)
+                      func: String => Any, attrs: (String, String)*): Elem with BoxHolder[String] =
+    untrustedSelect_*(opts, deflt, func, attrs: _*)
 
   /**
    * Create a select box based on the list with a default value and the function to be executed on
@@ -975,7 +1029,7 @@ object SHtml {
    * @param func -- the function to execute on form submission
    */
   def untrustedSelect_*(opts: Seq[(String, String)], deflt: Box[String],
-                        func: AFuncHolder, attrs: (String, String)*): Elem =
+                        func: String => Any, attrs: (String, String)*): Elem with BoxHolder[String] =
     fmapFunc(func)(funcName =>
             attrs.foldLeft(<select name={funcName}>{opts.flatMap {case (value, text) => (<option value={value}>{text}</option>) % selected(deflt.exists(_ == value))}}</select>)(_ % _))
 
@@ -1024,10 +1078,10 @@ object SHtml {
             attrs.foldLeft(<select multiple="true" name={funcName}>{opts.flatMap(o => (<option value={o._1}>{o._2}</option>) % selected(deflt.contains(o._1)))}</select>)(_ % _))
 
 
-  def textarea(value: String, func: String => Any, attrs: (String, String)*): Elem =
-    textarea_*(value, SFuncHolder(func), attrs: _*)
+  def textarea(value: String, func: String => Any, attrs: (String, String)*): Elem with BoxHolder[String] =
+    textarea_*(value, func, attrs: _*)
 
-  def textarea_*(value: String, func: AFuncHolder, attrs: (String, String)*): Elem =
+  def textarea_*(value: String, func: String => Any, attrs: (String, String)*): Elem with BoxHolder[String] =
     fmapFunc(func)(funcName =>
             attrs.foldLeft(<textarea name={funcName}>{value}</textarea>)(_ % _))
 

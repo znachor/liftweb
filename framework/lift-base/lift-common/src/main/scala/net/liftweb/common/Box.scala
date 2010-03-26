@@ -451,6 +451,16 @@ object ParamFailure {
   }
 }
 
+/**
+* A trait that holds a Box
+*/
+trait BoxHolder[T] {
+  /**
+  * Retrieve the Box from the BoxHolder
+  */
+  def box: Box[T]
+}
+
 }
 }
 // vim: set ts=2 sw=2 et:
