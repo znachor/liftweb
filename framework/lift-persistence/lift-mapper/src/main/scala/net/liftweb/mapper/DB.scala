@@ -30,7 +30,6 @@ import java.sql.{Statement, ResultSet, Types, PreparedStatement, Connection, Dri
 object DB {
   private val threadStore = new ThreadLocal[HashMap[ConnectionIdentifier, ConnectionHolder]]
   private val _postCommitFuncs = new ThreadLocal[List[() => Unit]]
-  // private val envContext = FatLazy((new InitialContext).lookup("java:/comp/env").asInstanceOf[Context])
 
   var globalDefaultSchemaName: Box[String] = Empty
 
@@ -46,6 +45,16 @@ object DB {
 
   def loggingEnabled_? = !logFuncs.isEmpty
 
+  /**
+   * queryCollector can be used to collect all statements executed in a single request when passed to addLogFunc
+   * 
+   * Use S.queryLog to get the list of (statement, duration) entries or set an analyzer function using
+   * S.addAnalyzer
+   */
+  val queryCollector: LogFunc = {case (query:DBLog, time) => 
+    query.statementEntries.foreach({case DBLogEntry(stmt, duration) => S.logQuery(stmt, duration)}
+  )}
+ 
   /**
    * can we get a JDBC connection from JNDI?
    */
@@ -231,7 +240,7 @@ object DB {
     Log.trace("Request to release connection: " + name + " on thread " + Thread.currentThread)
     (info.get(name): @unchecked) match {
       case Some(ConnectionHolder(c, 1, post)) =>
-        if (rollback) c.rollback
+        if (rollback) tryo{c.rollback}
         else c.commit
         tryo(c.releaseFunc())
         info -= name
@@ -609,6 +618,7 @@ object DB {
        "begin",
        "between",
        "binary_integer",
+       "blob",
        "block",
        "body",
        "boolean",

@@ -167,7 +167,7 @@ object S extends HasParams {
   private object p_notice extends TransientRequestVar(new ListBuffer[(NoticeType.Value, NodeSeq, Box[String])])
 
   /**
-   * This function returns true if the S object has been initialized for our current scope. If
+   * This method returns true if the S object has been initialized for our current scope. If
    * the S object has not been initialized then functionality on S will not work.
    */
   def inStatefulScope_? : Boolean = inS.value
@@ -597,9 +597,19 @@ object S extends HasParams {
   def resourceBundles: List[ResourceBundle] = {
     _resBundle.box match {
       case Full(Nil) => {
-        _resBundle.set(LiftRules.resourceNames.flatMap(name => tryo(
+        _resBundle.set(LiftRules.resourceNames.flatMap(name => tryo{
+              if (Props.devMode) {
+                tryo{
+                  val clz = this.getClass.getClassLoader.loadClass("java.util.ResourceBundle")
+                  val meth = clz.getDeclaredMethods.
+                  filter{m => m.getName == "clearCache" && m.getParameterTypes.length == 0}.
+                  toList.head
+                
+                  meth.invoke(null)
+                }
+              }
           List(ResourceBundle.getBundle(name, locale))
-          ).openOr(
+        }.openOr(
           NamedPF.applyBox((name, locale), LiftRules.resourceBundleFactories.toList).map(List(_)) openOr Nil
           )))
         _resBundle.value
@@ -830,9 +840,9 @@ for {
   /**
    * Log a query for the given request.  The query log can be tested to see
    * if queries for the particular page rendering took too long. The query log
-   * starts empty for each new request. This method can be used as a log function
-   * for the net.liftweb.mapper.DB.addLogFunc method to enable logging of
-   * Mapper queries. You would set it up in your bootstrap like:
+   * starts empty for each new request. net.liftweb.mapper.DB.queryCollector is a 
+   * method that can be used as a log function for the net.liftweb.mapper.DB.addLogFunc 
+   * method to enable logging of Mapper queries. You would set it up in your bootstrap like:
    *
    * <pre name="code" class="scala" >
    * import net.liftweb.mapper.DB
@@ -840,7 +850,7 @@ for {
    * class Boot  {
    *   def boot  {
    *     ...
-   *     DB.addLogFunc(S.logQuery _)
+   *     DB.addLogFunc(DB.queryCollector)
    *     ...
    * }
    * }
@@ -848,11 +858,11 @@ for {
    *
    * Note that the query log is simply stored as a List and is not sent to any output
    * byt default. To retrieve the List of query log items, use S.queryLog. You can also
-   * provide your own analysis function that will process the query log vi S.addAnalyzer.
+   * provide your own analysis function that will process the query log via S.addAnalyzer.
    *
    * @see # queryLog
    * @see # addAnalyzer
-   * @see net.liftweb.mapper.DB.addLogFun ( ( String, Long ) => Any)
+   * @see net.liftweb.mapper.DB.addLogFunc
    */
   def logQuery(query: String, time: Long) = p_queryLog.is += ((query, time))
 
@@ -1155,8 +1165,9 @@ for {
 
 
   private[liftweb] def lightInit[B](request: Req,
-                                 session: LiftSession,
-                                 attrs: List[(Either[String, (String, String)], String)])(f: => B): B =
+    session: LiftSession,
+    attrs: List[(Either[String, (String, String)], String)])(f: => B): B =
+    
     this._request.doWith(request) {
       _sessionInfo.doWith(session) {
         _lifeTime.doWith(false) {

@@ -34,6 +34,8 @@ import auth._
 import _root_.java.util.concurrent.{ConcurrentHashMap => CHash}
 import _root_.scala.reflect.Manifest
 
+import _root_.java.util.concurrent.atomic.AtomicInteger
+
 object LiftRules extends Factory with FormVendor {
   val noticesContainerId = "lift__noticesContainer__"
   private val pageResourceId = Helpers.nextFuncName
@@ -50,7 +52,7 @@ object LiftRules extends Factory with FormVendor {
   type ExceptionHandlerPF = PartialFunction[(Props.RunModes.Value, Req, Throwable), LiftResponse]
   type ResourceBundleFactoryPF = PartialFunction[(String, Locale), ResourceBundle]
   type SplitSuffixPF = PartialFunction[List[String], (List[String], String)]
-
+  type CometCreationPF = PartialFunction[CometCreationInfo, LiftCometActor]
   /**
    * A partial function that allows the application to define requests that should be
    * handled by lift rather than the default handler
@@ -159,6 +161,19 @@ object LiftRules extends Factory with FormVendor {
   val urlDecorate = RulesSeq[URLDecoratorPF]
 
   /**
+  * Partial function to allow you to build a CometActor from code rather than via reflection
+  */
+  val cometCreation = RulesSeq[CometCreationPF]
+
+  private def noComet(ignore: CometCreationInfo): Box[LiftCometActor] = Empty
+
+  /**
+  * A factory that will vend comet creators
+  */
+  val cometCreationFactory: FactoryMaker[CometCreationInfo => Box[LiftCometActor]] =
+  new FactoryMaker(() => noComet _) {}
+
+  /**
    * Holds user functions that are executed after the response was sent to client. The functions' result
    * will be ignored.
    */
@@ -224,7 +239,9 @@ object LiftRules extends Factory with FormVendor {
    * For each unload hook registered, run them during destroy()
    */
   private[http] def runUnloadHooks() {
-    unloadHooks.toList.foreach(_())
+    unloadHooks.toList.foreach{f =>
+      tryo{f()}
+    }
   }
 
   /**
@@ -408,6 +425,33 @@ object LiftRules extends Factory with FormVendor {
   }
   setupSnippetDispatch()
 
+  /**
+   * Function that generates variants on snippet names to search for, given the name from the template.
+   * The default implementation just returns name :: Nil (e.g. no change).
+   * The names are searched in order.
+   * See also searchSnippetsWithRequestPath for an implementation.
+   */
+  @volatile var snippetNamesToSearch: FactoryMaker[String => List[String]] =
+      new FactoryMaker(() => (name: String) => name :: Nil) {}
+
+  /**
+   * Implementation for snippetNamesToSearch that looks first in a package named by taking the current template path.
+   * For example, suppose the following is configured in Boot:
+   *   LiftRules.snippetNamesToSearch.default.set(() => LiftRules.searchSnippetsWithRequestPath)
+   *   LiftRules.addToPackages("com.mycompany.myapp")
+   *   LiftRules.addToPackages("com.mycompany.mylib")
+   * The tag <lift:MySnippet> in template foo/bar/baz.html would search for the snippet in the following locations:
+   *   - com.mycompany.myapp.snippet.foo.bar.MySnippet
+   *   - com.mycompany.myapp.snippet.MySnippet
+   *   - com.mycompany.mylib.snippet.foo.bar.MySnippet
+   *   - com.mycompany.mylib.snippet.MySnippet
+   *   - and then the Lift builtin snippet packages
+   */
+  def searchSnippetsWithRequestPath(name: String): List[String] =
+    S.request.map(_.path.partPath.dropRight(1)) match {
+      case Full(xs) if !xs.isEmpty => (xs.mkString(".") + "." + name) :: name :: Nil
+      case _ => name :: Nil
+    }
 
   /**
    * Change this variable to set view dispatching
@@ -494,7 +538,7 @@ object LiftRules extends Factory with FormVendor {
   def defaultLocaleCalculator(request: Box[HTTPRequest]) =
     request.flatMap(_.locale).openOr(Locale.getDefault())
 
-  @volatile var resourceBundleFactories = RulesSeq[ResourceBundleFactoryPF]
+  val resourceBundleFactories = RulesSeq[ResourceBundleFactoryPF]
 
   /**
    * Used for Comet handling to resume a continuation
@@ -514,14 +558,73 @@ object LiftRules extends Factory with FormVendor {
 
   private var _sitemap: Box[SiteMap] = Empty
 
-  def setSiteMap(sm: SiteMap) {
-    _sitemap = Full(sm)
-    for (menu <- sm.menus;
-         val loc = menu.loc;
-         rewrite <- loc.rewritePF) LiftRules.statefulRewrite.append(rewrite)
+  private var sitemapFunc: Box[() => SiteMap] = Empty
+
+  private object sitemapRequestVar extends RequestVar(resolveSitemap())
+
+  /**
+  * Set the sitemap to a function that will be run to generate the sitemap.
+  *
+  * This allows for changing the SiteMap when in development mode and having
+  * the function re-run for each request.
+  */
+  def setSiteMapFunc(smf: () => SiteMap) {
+    sitemapFunc = Full(smf)
+    if (!Props.devMode) {
+      resolveSitemap()
+    }
   }
 
-  def siteMap: Box[SiteMap] = _sitemap
+  /**
+  * Define the sitemap.
+  */
+  def setSiteMap(sm: => SiteMap) {
+    this.setSiteMapFunc(() => sm)
+  }
+
+  private def runAsSafe[T](f: => T): T = synchronized {
+     val old = LiftRules.doneBoot
+     try {
+        LiftRules.doneBoot = false
+        f
+     } finally {
+        LiftRules.doneBoot = old
+     }
+  }
+
+  private case class PerRequestPF[A, B](f: PartialFunction[A, B]) extends PartialFunction[A, B] {
+    def isDefinedAt(a: A) = f.isDefinedAt(a)
+    def apply(a: A) = f(a)
+  }
+
+  private def resolveSitemap(): Box[SiteMap] = {
+    this.synchronized {
+      runAsSafe {
+        sitemapFunc.flatMap {
+          smf =>
+
+          LiftRules.statefulRewrite.remove {
+            case PerRequestPF(_) => true
+            case _ => false
+          }
+
+          val sm = smf()
+          _sitemap = Full(sm)
+          for (menu <- sm.menus;
+               val loc = menu.loc;
+               rewrite <- loc.rewritePF) LiftRules.statefulRewrite.append(PerRequestPF(rewrite))
+
+          _sitemap
+        }
+      }
+    }
+  }
+
+  def siteMap: Box[SiteMap] = if (Props.devMode) {
+    this.synchronized {
+      sitemapRequestVar.is
+    }
+  } else _sitemap
 
   /**
    * How long should we wait for all the lazy snippets to render
@@ -593,6 +696,9 @@ object LiftRules extends Factory with FormVendor {
         else true
       }) {}
 
+
+
+  private[http] val reqCnt = new AtomicInteger(0)
 
   @volatile private[http] var ending = false
 
@@ -1192,16 +1298,20 @@ object LiftRules extends Factory with FormVendor {
 
   /**
    * A function to format a Date... can be replaced by a function that is user-specific
+   Replaced by dateTimeConverter
    */
-  @volatile var formatDate: Date => String = date => date match {case null => LiftRules.formatDate(new Date(0L)) case s => toInternetDate(s)}
+  @deprecated @volatile var formatDate: Date => String = date => date match {case null => LiftRules.formatDate(new Date(0L)) case s => toInternetDate(s)}
 
   /**
    * A function that parses a String into a Date... can be replaced by something that's user-specific
+   Replaced by dateTimeConverter
    */
-  @volatile var parseDate: String => Box[Date] = str => str match {
+  @deprecated @volatile var parseDate: String => Box[Date] = str => str match {
     case null => Empty
     case s => Helpers.toDate(s)
   }
+  
+  val dateTimeConverter: FactoryMaker[DateTimeConverter] = new FactoryMaker[DateTimeConverter]( () => DefaultDateTimeConverter ) {}
 
   /**
    * This variable controls whether RequestVars that have been set but not subsequently
@@ -1277,6 +1387,12 @@ trait RulesSeq[T] {
       rules = r :: rules
     }
     this
+  }
+
+  private[http] def remove(f: T => Boolean) {
+    safe_? {
+      rules = rules.remove(f)
+    }
   }
 
   def append(r: T): RulesSeq[T] = {

@@ -20,7 +20,7 @@ import _root_.scala.collection.immutable.TreeSet
 import _root_.scala.reflect.Manifest
 import _root_.scala.xml.NodeSeq
 import _root_.net.liftweb.common.{Box, Empty, Failure, Full}
-import Box.box2Iterable
+import Box.{box2Iterable, option2Box}
 import _root_.net.liftweb.http.js.{JsExp, JsObj}
 import _root_.net.liftweb.json.JsonParser
 import _root_.net.liftweb.json.JsonAST.{JArray, JBool, JInt, JDouble, JField, JNothing, JNull, JObject, JString, JValue}
@@ -90,8 +90,8 @@ trait JSONRecord[MyType <: JSONRecord[MyType]] extends Record[MyType] {
   /** Encode this record instance as a JObject */
   def asJValue: JObject = meta.asJValue(this)
 
-  /** Decode a JValue, setting fields on this record instance */
-  def fromJValue(jvalue: JValue): Box[MyType] = meta.fromJValue(this, jvalue)
+  /** Set the fields of this record from the given JValue */
+  def setFieldsFromJValue(jvalue: JValue): Box[Unit] = meta.setFieldsFromJValue(this, jvalue)
 }
 
 object JSONMetaRecord {
@@ -125,7 +125,9 @@ trait JSONMetaRecord[BaseRecord <: JSONRecord[BaseRecord]] extends MetaRecord[Ba
   def needAllJSONFields: Boolean = true
 
   override def asJSON(inst: BaseRecord): JsObj = jvalueToJsExp(asJValue).asInstanceOf[JsObj]
-  override def fromJSON(inst: BaseRecord, json: String): Box[BaseRecord] = fromJValue(inst, JsonParser.parse(json))
+
+  override def setFieldsFromJSON(inst: BaseRecord, json: String): Box[Unit] =
+    setFieldsFromJValue(inst, JsonParser.parse(json))
 
   /** Encode a record instance into a JValue */
   def asJValue(rec: BaseRecord): JObject = {
@@ -133,9 +135,15 @@ trait JSONMetaRecord[BaseRecord <: JSONRecord[BaseRecord]] extends MetaRecord[Ba
     JObject(dedupe(recordJFields ++ rec.fixedAdditionalJFields ++ rec.additionalJFields).sort(_.name < _.name))
   }
 
+  /** Create a record by decoding a JValue which must be a JObject */
+  def fromJValue(jvalue: JValue): Box[BaseRecord] = {
+    val inst = createRecord
+    setFieldsFromJValue(inst, jvalue) map (_ => inst)
+  }
+
   /** Attempt to decode a JValue, which must be a JObject, into a record instance */
-  def fromJValue(rec: BaseRecord, jvalue: JValue): Box[BaseRecord] = {
-    def fromJFields(jfields: List[JField]): Box[BaseRecord] = {
+  def setFieldsFromJValue(rec: BaseRecord, jvalue: JValue): Box[Unit] = {
+    def fromJFields(jfields: List[JField]): Box[Unit] = {
       import JSONMetaRecord._
 
       val flds = fields(rec)
@@ -156,7 +164,7 @@ trait JSONMetaRecord[BaseRecord <: JSONRecord[BaseRecord]] extends MetaRecord[Ba
           field  <- flds if jsonName(field) == jfield.name
           setOk  <- field.asInstanceOf[JSONField].fromJValue(jfield.value)
         } yield ()
-      } map { _ => rec.additionalJFields = jsonFieldsNotInRecord.toList.map(name => jfields.find(_.name == name).get); rec }
+      } map { _ => rec.additionalJFields = jsonFieldsNotInRecord.toList.map(name => jfields.find(_.name == name).get); () }
     }
 
     jvalue match {
@@ -206,14 +214,14 @@ class JSONSubRecordField[OwnerType <: JSONRecord[OwnerType], SubRecordType <: JS
   def asXHtml = NodeSeq.Empty // FIXME
   def defaultValue = valueMeta.createRecord
 
-  def setFromString(s: String): Box[SubRecordType] = valueMeta.fromJSON(valueMeta.createRecord, s)
+  def setFromString(s: String): Box[SubRecordType] = valueMeta.fromJSON(s)
 
   def setFromAny(in: Any): Box[SubRecordType] = genericSetFromAny(in)
 
   def asJValue: JValue = valueBox.map(_.asJValue) openOr (JNothing: JValue)
   def fromJValue(jvalue: JValue): Box[SubRecordType] = jvalue match {
     case JNothing|JNull if optional_? => setBox(Empty)
-    case _                            => setBox(value.fromJValue(jvalue))
+    case _                            => setBox(fromJValue(jvalue))
   }
 }
 
@@ -289,7 +297,7 @@ class JSONSubRecordArrayField[OwnerType <: JSONRecord[OwnerType], SubRecordType 
     jvalues
       .foldLeft[Box[List[SubRecordType]]](Full(Nil)) {
         (prev, cur) => prev.flatMap {
-          rest => valueMeta.createRecord.fromJValue(cur).map(_::rest)
+          rest => valueMeta.fromJValue(cur).map(_::rest)
         }
       }
       .map(_.reverse)
@@ -307,9 +315,7 @@ class JSONSubRecordArrayField[OwnerType <: JSONRecord[OwnerType], SubRecordType 
 
 
 /** Specialization of JSONField for field types that use some kind of encoded string as the JSON type (e.g. binary data, datetimes) */
-private[couchdb] trait JSONEncodedStringFieldMixin extends JSONField {
-  self: Field[_, _] =>
-
+private[couchdb] trait JSONEncodedStringFieldMixin[StorageType, OwnerType <: Record[OwnerType]] extends JSONField with Field[StorageType, OwnerType] {
   /** Encode the current value of the field as a JValue */
   def encode(value: MyType): String
 
@@ -340,7 +346,7 @@ private[couchdb] trait JSONStringFieldMixin extends JSONField {
 
 /** Binary data field for JSON records. Encodes as JString containing base64 conversion of binary data. */
 class JSONBinaryField[OwnerType <: JSONRecord[OwnerType]](rec: OwnerType)
-  extends BinaryField[OwnerType](rec) with JSONEncodedStringFieldMixin
+  extends BinaryField[OwnerType](rec) with JSONEncodedStringFieldMixin[Array[Byte], OwnerType]
 {
   def this(rec: OwnerType, value: Array[Byte])      = { this(rec); set(value) }
   def this(rec: OwnerType, value: Box[Array[Byte]]) = { this(rec); setBox(value) }
@@ -381,7 +387,7 @@ class JSONCountryField[OwnerType <: JSONRecord[OwnerType]](rec: OwnerType)
 
 /** Date/time data field for JSON records. Encodes as JString containing the internet formatted datetime */
 class JSONDateTimeField[OwnerType <: JSONRecord[OwnerType]](rec: OwnerType)
-  extends DateTimeField[OwnerType](rec) with JSONEncodedStringFieldMixin
+  extends DateTimeField[OwnerType](rec) with JSONEncodedStringFieldMixin[Calendar, OwnerType]
 {
   def this(rec: OwnerType, value: Calendar)      = { this(rec); set(value) }
   def this(rec: OwnerType, value: Box[Calendar]) = { this(rec); setBox(value) }
@@ -396,7 +402,7 @@ class JSONDateTimeField[OwnerType <: JSONRecord[OwnerType]](rec: OwnerType)
 
 /** Decimal data field for JSON records. Encodes as a JString, to preserve decimal points (JDouble being lossy) */
 class JSONDecimalField[OwnerType <: JSONRecord[OwnerType]](rec: OwnerType, context: MathContext, scale: Int)
-  extends DecimalField[OwnerType](rec, context, scale) with JSONEncodedStringFieldMixin
+  extends DecimalField[OwnerType](rec, context, scale) with JSONEncodedStringFieldMixin[BigDecimal, OwnerType]
 {
   def this(rec: OwnerType, value:     BigDecimal)              = { this(rec, MathContext.UNLIMITED, value.scale); set(value) }
   def this(rec: OwnerType, value: Box[BigDecimal], scale: Int) = { this(rec, MathContext.UNLIMITED, scale); setBox(value) }
@@ -452,6 +458,30 @@ class JSONEnumField[OwnerType <: JSONRecord[OwnerType], EnumType <: Enumeration]
     case JNothing|JNull if optional_? => setBox(Empty)
     case JInt(i)                      => setBox(fromInt(i.intValue))
     case other                        => setBox(expectedA("JInt", other))
+  }
+}
+
+
+/** Enum data field for JSON records. Encodes as JString */
+class JSONEnumNameField[OwnerType <: JSONRecord[OwnerType], EnumType <: Enumeration]
+                       (rec: OwnerType, enum: EnumType)(implicit enumValueType: Manifest[EnumType#Value])
+  extends EnumField[OwnerType, EnumType](rec, enum) with JSONField
+{
+  def this(rec: OwnerType, enum: EnumType, value: EnumType#Value)(implicit enumValueType: Manifest[EnumType#Value]) = {
+      this(rec, enum)
+      set(value)
+  }
+
+  def this(rec: OwnerType, enum: EnumType, value: Box[EnumType#Value])(implicit enumValueType: Manifest[EnumType#Value]) = {
+      this(rec, enum)
+      setBox(value)
+  }
+
+  def asJValue: JValue = valueBox.map(v => JString(v.toString)) openOr (JNothing: JValue)
+  def fromJValue(jvalue: JValue): Box[EnumType#Value] = jvalue match {
+    case JNothing|JNull if optional_? => setBox(Empty)
+    case JString(s)                   => setBox(enum.valueOf(s) ?~ ("Unknown value \"" + s + "\""))
+    case other                        => setBox(expectedA("JString", other))
   }
 }
 
