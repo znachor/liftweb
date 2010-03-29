@@ -266,6 +266,19 @@ object Extraction {
 
     build(json, mapping).asInstanceOf[A]
   }
+  
+  private def isInteger(c: Class[_]) = {
+    val classes = List(classOf[Int],    classOf[JavaInteger], classOf[Long],   classOf[JavaLong], 
+                       classOf[Short],  classOf[JavaShort],   classOf[Byte],   classOf[JavaByte])
+
+    classes.contains(c)
+  }
+
+  private def isReal(c: Class[_]) = {
+    val classes = List(classOf[Float], classOf[Double], classOf[JavaFloat], classOf[JavaDouble])
+
+    classes.contains(c)
+  }
 
   private def convert(json: JValue, targetType: Class[_], formats: Formats): Any = json match {
     case JInt(x) if (targetType == classOf[Int]) => x.intValue
@@ -292,6 +305,8 @@ object Extraction {
     case JString(s) if (targetType == classOf[String]) => s
     case JString(s) if (targetType == classOf[Symbol]) => Symbol(s)
     case JString(s) if (targetType == classOf[Date]) => formats.dateFormat.parse(s).getOrElse(fail("Invalid date '" + s + "'"))
+    case JString(s) if (isInteger(targetType)) => convert(JInt(BigInt(s)), targetType, formats)
+    case JString(s) if (isReal(targetType)) => convert(JDouble(JavaDouble.valueOf(s).doubleValue), targetType, formats)
     case JBool(x) if (targetType == classOf[Boolean]) => x
     case JBool(x) if (targetType == classOf[JavaBoolean]) => new JavaBoolean(x)
     case JNull => null
