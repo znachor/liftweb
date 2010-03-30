@@ -52,7 +52,7 @@ object XSchemaSerialization {
       def extractArrayOf[T <: XSchema](s: String, c: Class[T]): List[T] = extractArray(s).filter {
         x => c.isAssignableFrom(x.getClass) match {
           case true  => true
-          case false => throw ValidationError("Expected elements in " + (json ^ s) + " array to extract to " + c.toString() + ", but found: " + x.getClass)
+          case false => throw ValidationError("Expected elements in ${path} array to extract to " + c.toString() + ", but found: " + x.getClass, json ^ s)
         }
       }.map {
         x => x.asInstanceOf[T]
@@ -66,7 +66,7 @@ object XSchemaSerialization {
       
       def typep1: XSchemaReference = extract0(json \ TYPEP1) match {
         case x: XSchemaReference => x
-        case x @ _ => throw ValidationError("Expected XSchemaReference but found: " + x)
+        case x @ _ => throw ValidationError("Expected XSchemaReference but found: " + x, json ^ TYPEP1)
       }
 
       def order = stringField(ORDER, json) match { 
@@ -79,7 +79,7 @@ object XSchemaSerialization {
         Map(
           (props #= classOf[JObject]).values.map {
             case (k, JString(v)) => (k, v)
-            case (k, v) => throw ValidationError("Expected string value but found: " + v)
+            case (k, v) => throw ValidationError("Expected string value but found: " + v, json ^ PROPERTIES)
           }.toList: _*
         )
       }.getOrElse(Map())
@@ -119,7 +119,7 @@ object XSchemaSerialization {
       }
     }
     
-    extract0(strict(json))
+    extract0(validate(json))
   }
 }
 
