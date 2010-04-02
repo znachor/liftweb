@@ -53,6 +53,18 @@ object JsonAST {
         case x => JArray(x)
       }
     }
+    
+    /**
+     * Returns the element as a JValue of the specified class.
+     */
+    def #= [A <: JValue](clazz: Class[A]): A = {
+      def extractTyped(value: JValue) = if (value.getClass == clazz) value.asInstanceOf[A] else error("Expected class " + clazz + ", but found: " + value.getClass)
+      
+      this match {
+        case JField(name, value) => extractTyped(value)
+        case _ => extractTyped(this)
+      }
+    }
 
     private def findDirect(xs: List[JValue], p: JValue => Boolean): List[JValue] = xs.flatMap {
       case JObject(l) => l.filter {

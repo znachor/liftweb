@@ -13,7 +13,7 @@ object XSchemaSerialization {
   private val VERSION     = "version"
   private val DEFINITIONS = "definitions"
   private val DEFAULT     = "default"
-  private val TYPEP1      = "typep1"
+  private val TYPEP1      = "contains"
   private val COLLECTION  = "collection"
   private val SET         = "set"
   private val ARRAY       = "array"
@@ -101,13 +101,8 @@ object XSchemaSerialization {
       def version = integerField(VERSION, json).intValue
     
       typename match {
-        case XString.typename     => XString
-        case XInt.typename        => XInt
-        case XLong.typename       => XLong
-        case XFloat.typename      => XFloat
-        case XDouble.typename     => XDouble
-        case XBoolean.typename    => XBoolean
         case XCollection.typename => XCollection(typep1, collection)
+        case XConstant.typename   => XConstant(typep1, defValue)
         case XMap.typename        => XMap(typep1)
         case XOptional.typename   => XOptional(typep1)
         case XTuple.typename      => XTuple(types)
@@ -115,11 +110,12 @@ object XSchemaSerialization {
         case XProduct.typename    => XProduct(namespace, name, properties, fields)
         case XCoproduct.typename  => XCoproduct(namespace, name, properties, types)
         case XSchemaRoot.typename => XSchemaRoot(version, definitions, properties)
+        
         case _ => XSchemaReference(typename)
       }
     }
     
-    extract0(validate(json))
+    extract0(!json)
   }
 }
 

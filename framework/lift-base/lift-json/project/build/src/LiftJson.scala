@@ -1,6 +1,8 @@
 import sbt._
 
 class LiftJson(info: ProjectInfo) extends DefaultProject(info) {
+  override def compileOptions = super.compileOptions ++ Seq(Unchecked)
+  
   val paranamer  = "com.thoughtworks.paranamer" % "paranamer" % "2.0" % "compile->default"
   val junit      = "junit" % "junit" % "4.5"
   val specs      = "org.scala-tools.testing" % "specs" % "1.6.1"

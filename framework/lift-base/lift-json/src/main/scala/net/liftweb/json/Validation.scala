@@ -3,10 +3,11 @@ package net.liftweb.json {
 /**
  * This object provides an easy way to validate the extraction of data from JSON.
  * <p>
- * val street = (validate(json) \ "address" \ "street" #= classOf[JString]).values
+ * val street = (!json \ "address" \ "street" #= classOf[JString]).values
  * <p>
- * If any field is missing or does not have the appropriate type, a very descriptive
- * ValidationError will be thrown that contains the exact reason for the failure.
+ * If any field is missing or does not have the appropriate type, a very 
+ * descriptive ValidationError will be thrown that contains the exact reason 
+ * for the failure.
  */
 object Validation {
   import _root_.net.liftweb.json.JsonAST._
@@ -56,7 +57,9 @@ object Validation {
     /**
      * Returns the i-th element of this json value as an array element. If 
      * this json value is not an array, an appropriate ValidationError will be 
-     * thrown.
+     * thrown. This operator should always be used to access elements of arrays
+     * because it generates the appropriate path structure necessary for 
+     * informative errors.
      */
     def !! (i: Int) = JPathValue(path + "[" + i + "]", (this #= classOf[JArray]).arr(i))
     
@@ -64,6 +67,10 @@ object Validation {
     private def failType[T](path: String, etype: Class[_], atype: Class[_]): T = throw ValidationError("Expected ${path} to have type " + etype.toString + " but was: " + atype.toString, path)
   }
   
+  /**
+   * Utility function to extract the specified field name as a JArray, then 
+   * map each of its values to a list using the specified function.
+   */
   def arrayFieldMap[A](name: String, json: JPathValue, f: JPathValue => A): List[A] = {
     val field = json \ name 
     val array = field #= classOf[JArray]
@@ -73,16 +80,40 @@ object Validation {
     }._2.reverse
   }
   
+  /**
+   * Utility function to extract the specified field as a JString, then return 
+   * the string.
+   */
   def stringField(name: String, json: JPathValue) = (json \ name #= classOf[JString]).values
+  
+  /**
+   * Utility function to extract the specified field as a JInt or JDouble, then
+   * return the number as a double.
+   */
   def numberField(name: String, json: JPathValue) = (json \ name).value match {
     case JInt(i)    => i.doubleValue
     case JDouble(d) => d
     case x @ _ => throw ValidationError("Expected ${path} to be number, but was: " + x, json ^ name)
   }
+  
+  /**
+   * Utility function to extract the specified field as a JInt, then return the
+   * integer as a BigInt.
+   */
   def integerField(name: String, json: JPathValue) = (json \ name #= classOf[JInt]).values
+  
+  /**
+   * Utility function to extract the specified field as a JDouble, then return 
+   * the double as a Double.
+   */
   def doubleField(name: String, json: JPathValue) = (json \ name #= classOf[JDouble]).values
   
-  def validate(j: JValue) = new JPathValue("", j)
+  /**
+   * Utility operator to convert a JValue into a validated JPathValue.
+   */
+  implicit def jvalueToValidator(j: JValue) = new {
+    def unary_! = JPathValue("", j)
+  }
 }
 
 }
