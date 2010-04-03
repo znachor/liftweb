@@ -326,12 +326,6 @@
         <version>3.1</version>
       </dependency>
       <dependency>
-        <groupId>log4j</groupId>
-        <artifactId>log4j</artifactId>
-        <!--<version>[1.2.14,1.2.15]</version>-->
-        <version>1.2.14</version>
-      </dependency>
-      <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
         <version>${slf4j.version}</version>
@@ -340,11 +334,6 @@
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-log4j12</artifactId>
         <version>${slf4j.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>ch.qos.logback</groupId>
-        <artifactId>logback-classic</artifactId>
-        <version>[0.9.18,)</version>
       </dependency>
       <dependency>
         <groupId>org.scalamodules</groupId>
@@ -356,10 +345,41 @@
         <artifactId>pax-swissbox-extender</artifactId>
         <version>1.2.0</version>
       </dependency>
+      <dependency>
+        <groupId>com.thoughtworks.paranamer</groupId>
+        <artifactId>paranamer</artifactId>
+        <version>2.0</version>
+      </dependency>
+      <dependency>
+        <groupId>net.databinder</groupId>
+        <artifactId>dispatch-http_${scala.version}</artifactId>
+        <version>0.7.1</version>
+      </dependency>
+      <dependency>
+        <groupId>net.jcip</groupId>
+        <artifactId>jcip-annotations</artifactId>
+        <version>1.0</version>
+      </dependency>
+      <dependency>
+        <groupId>com.rabbitmq</groupId>
+        <artifactId>amqp-client</artifactId>
+        <version>1.7.2</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.sanselan</groupId>
+        <artifactId>sanselan</artifactId>
+        <version>0.97-incubator</version>
+      </dependency>
 
       <!--
       Provided scope: provided by container, available only in compile and test classpath, non-transitive
       -->
+      <dependency>
+        <groupId>ch.qos.logback</groupId>
+        <artifactId>logback-classic</artifactId>
+        <version>[0.9.18,)</version>
+        <scope>provided</scope>
+      </dependency>
       <dependency>
         <groupId>javax.servlet</groupId>
         <artifactId>servlet-api</artifactId>
@@ -370,6 +390,12 @@
         <groupId>javax.persistence</groupId>
         <artifactId>persistence-api</artifactId>
         <version>1.0</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>log4j</groupId>
+        <artifactId>log4j</artifactId>
+        <version>1.2.14</version>
         <scope>provided</scope>
       </dependency>
       <dependency>
@@ -386,7 +412,7 @@
       </dependency>
 
       <!--
-      Runtime scope: provided in runtime, available only in runtime and test classpath, not compile classpath
+      Runtime scope: provided in runtime, available only in runtime and test classpath, not compile classpath, non-transitive
       -->
       <dependency>
         <groupId>com.h2database</groupId>
@@ -450,7 +476,7 @@
       </dependency>
       -->
       <!--
-      Test scope: available only in test classpath
+      Test scope: available only in test classpath, non-transitive
       -->
       <dependency>
         <groupId>org.scala-tools.testing</groupId>
@@ -464,7 +490,6 @@
         <version>1.6</version>
         <scope>test</scope>
       </dependency>
-
       <dependency>
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
