@@ -34,7 +34,9 @@ import auth._
 import _root_.java.util.concurrent.{ConcurrentHashMap => CHash}
 import _root_.scala.reflect.Manifest
 
-object LiftRules extends Factory with FormVendor {
+import _root_.java.util.concurrent.atomic.AtomicInteger
+
+object LiftRules extends Factory with FormVendor with LazyLoggable {
   val noticesContainerId = "lift__noticesContainer__"
   private val pageResourceId = Helpers.nextFuncName
 
@@ -56,7 +58,7 @@ object LiftRules extends Factory with FormVendor {
    * handled by lift rather than the default handler
    */
   type LiftRequestPF = PartialFunction[Req, Boolean]
-
+ 
   /**
    * Holds user functions that willbe executed very early in the request processing. The functions'
    * result will be ignored.
@@ -237,7 +239,9 @@ object LiftRules extends Factory with FormVendor {
    * For each unload hook registered, run them during destroy()
    */
   private[http] def runUnloadHooks() {
-    unloadHooks.toList.foreach(_())
+    unloadHooks.toList.foreach{f =>
+      tryo{f()}
+    }
   }
 
   /**
@@ -534,34 +538,77 @@ object LiftRules extends Factory with FormVendor {
   def defaultLocaleCalculator(request: Box[HTTPRequest]) =
     request.flatMap(_.locale).openOr(Locale.getDefault())
 
-  @volatile var resourceBundleFactories = RulesSeq[ResourceBundleFactoryPF]
-
-  /**
-   * Used for Comet handling to resume a continuation
-   */
-  def resumeRequest(what: AnyRef, req: HTTPRequest) = req resume what
-
-  /**
-   * Execute a continuation. For Jetty the Jetty specific exception will be thrown
-   * and the container will manage it.
-   */
-  def doContinuation(req: HTTPRequest, timeout: Long) = req suspend timeout
-
-  /**
-   * Check to see if continuations are supported
-   */
-  def checkContinuations(req: HTTPRequest): Option[Any] = req resumeInfo
+  val resourceBundleFactories = RulesSeq[ResourceBundleFactoryPF]
 
   private var _sitemap: Box[SiteMap] = Empty
 
-  def setSiteMap(sm: SiteMap) {
-    _sitemap = Full(sm)
-    for (menu <- sm.menus;
-         val loc = menu.loc;
-         rewrite <- loc.rewritePF) LiftRules.statefulRewrite.append(rewrite)
+  private var sitemapFunc: Box[() => SiteMap] = Empty
+
+  private object sitemapRequestVar extends RequestVar(resolveSitemap())
+
+  /**
+  * Set the sitemap to a function that will be run to generate the sitemap.
+  *
+  * This allows for changing the SiteMap when in development mode and having
+  * the function re-run for each request.
+  */
+  def setSiteMapFunc(smf: () => SiteMap) {
+    sitemapFunc = Full(smf)
+    if (!Props.devMode) {
+      resolveSitemap()
+    }
   }
 
-  def siteMap: Box[SiteMap] = _sitemap
+  /**
+  * Define the sitemap.
+  */
+  def setSiteMap(sm: => SiteMap) {
+    this.setSiteMapFunc(() => sm)
+  }
+
+  private def runAsSafe[T](f: => T): T = synchronized {
+     val old = LiftRules.doneBoot
+     try {
+        LiftRules.doneBoot = false
+        f
+     } finally {
+        LiftRules.doneBoot = old
+     }
+  }
+
+  private case class PerRequestPF[A, B](f: PartialFunction[A, B]) extends PartialFunction[A, B] {
+    def isDefinedAt(a: A) = f.isDefinedAt(a)
+    def apply(a: A) = f(a)
+  }
+
+  private def resolveSitemap(): Box[SiteMap] = {
+    this.synchronized {
+      runAsSafe {
+        sitemapFunc.flatMap {
+          smf =>
+
+          LiftRules.statefulRewrite.remove {
+            case PerRequestPF(_) => true
+            case _ => false
+          }
+
+          val sm = smf()
+          _sitemap = Full(sm)
+          for (menu <- sm.menus;
+               val loc = menu.loc;
+               rewrite <- loc.rewritePF) LiftRules.statefulRewrite.append(PerRequestPF(rewrite))
+
+          _sitemap
+        }
+      }
+    }
+  }
+
+  def siteMap: Box[SiteMap] = if (Props.devMode) {
+    this.synchronized {
+      sitemapRequestVar.is
+    }
+  } else _sitemap
 
   /**
    * How long should we wait for all the lazy snippets to render
@@ -633,6 +680,9 @@ object LiftRules extends Factory with FormVendor {
         else true
       }) {}
 
+
+
+  private[http] val reqCnt = new AtomicInteger(0)
 
   @volatile private[http] var ending = false
 
@@ -813,12 +863,6 @@ object LiftRules extends Factory with FormVendor {
    */
   val snippets = RulesSeq[SnippetPF]
 
-  private val _cometLogger: FatLazy[LiftLogger] = FatLazy({
-    val ret = LogBoot.loggerByName("comet_trace")
-    ret.level = LiftLogLevels.Off
-    ret
-  })
-
   private var _configureLogging: () => Unit = _
     
   /**
@@ -836,15 +880,20 @@ object LiftRules extends Factory with FormVendor {
 
   configureLogging = net.liftweb.util.LoggingAutoConfigurer()
   
+  private val _cometLogger: FatLazy[Logger] = FatLazy({
+    val ret = Logger("comet_trace")
+    ret
+  })
+  
   /**
    * Holds the CometLogger that will be used to log comet activity
    */
-  def cometLogger: LiftLogger = _cometLogger.get
+  def cometLogger: Logger = _cometLogger.get
 
   /**
    * Holds the CometLogger that will be used to log comet activity
    */
-  def cometLogger_=(newLogger: LiftLogger): Unit = _cometLogger.set(newLogger)
+  def cometLogger_=(newLogger: Logger): Unit = _cometLogger.set(newLogger)
 
   /**
    * Takes a Node, headers, cookies, and a session and turns it into an XhtmlResponse.
@@ -905,7 +954,7 @@ object LiftRules extends Factory with FormVendor {
    */
   val snippetFailedFunc = RulesSeq[SnippetFailure => Unit].prepend(logSnippetFailure _)
 
-  private def logSnippetFailure(sf: SnippetFailure) = Log.warn("Snippet Failure: " + sf)
+  private def logSnippetFailure(sf: SnippetFailure) = logger.info("Snippet Failure: " + sf)
 
   /**
    * Set to false if you do not want Ajax/Comet requests that are not associated with a session
@@ -939,10 +988,11 @@ object LiftRules extends Factory with FormVendor {
    */
   @volatile var exceptionHandler = RulesSeq[ExceptionHandlerPF].append {
     case (Props.RunModes.Development, r, e) =>
+      logger.error("Exception being returned to browser when processing " + r.uri.toString + ": " + showException(e))
       XhtmlResponse((<html> <body>Exception occured while processing{r.uri}<pre>{showException(e)}</pre> </body> </html>), ResponseInfo.docType(r), List("Content-Type" -> "text/html; charset=utf-8"), Nil, 500, S.ieMode)
 
     case (_, r, e) =>
-      Log.error("Exception being returned to browser when processing " + r, e)
+      logger.error("Exception being returned to browser when processing " + r, e)
       XhtmlResponse((<html> <body>Something unexpected happened while serving the page at{r.uri}</body> </html>), ResponseInfo.docType(r), List("Content-Type" -> "text/html; charset=utf-8"), Nil, 500, S.ieMode)
   }
 
@@ -1024,7 +1074,7 @@ object LiftRules extends Factory with FormVendor {
             new StringReader(str)), prefix openOr (S.contextPath)) match {
             case (Full(c), _) => CSSResponse(c)
             case (_, input) => {
-              Log.warn("Fixing " + cssPath + " failed");
+              logger.info("Fixing " + cssPath + " failed");
               CSSResponse(input)
             }
           })
@@ -1323,6 +1373,12 @@ trait RulesSeq[T] {
     this
   }
 
+  private[http] def remove(f: T => Boolean) {
+    safe_? {
+      rules = rules.remove(f)
+    }
+  }
+
   def append(r: T): RulesSeq[T] = {
     safe_? {
       rules = rules ::: List(r)
@@ -1373,7 +1429,7 @@ object StrictXHTML1_0Validator extends GenericValidtor {
   val ngurl = "http://www.w3.org/2002/08/xhtml/xhtml1-strict.xsd"
 }
 
-abstract class GenericValidtor extends XHtmlValidator {
+abstract class GenericValidtor extends XHtmlValidator with Loggable {
   import javax.xml.validation._
   import javax.xml._
   import XMLConstants._
@@ -1402,7 +1458,7 @@ abstract class GenericValidtor extends XHtmlValidator {
       }) match {
       case Full(x) => x
       case Failure(msg, _, _) =>
-        Log.info("XHTML Validation Failure: " + msg)
+        logger.info("XHTML Validation Failure: " + msg)
         Nil
       case _ => Nil
     }

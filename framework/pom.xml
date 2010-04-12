@@ -60,9 +60,6 @@
     <module>lift-base</module>
     <module>lift-persistence</module>
     <module>lift-modules</module>
-
-    <!-- the 'meta' module -->
-    <module>lift-core</module>
   </modules>
 
   <!--
@@ -169,17 +166,6 @@
               <derby.stream.error.file>${project.build.directory}/derby.log</derby.stream.error.file>
             </systemPropertyVariables>
           </configuration>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.felix</groupId>
-          <artifactId>maven-bundle-plugin</artifactId>
-          <executions>
-            <execution>
-              <goals>
-                <goal>bundle</goal>
-              </goals>
-            </execution>
-          </executions>
         </plugin>
         <plugin>
           <groupId>org.apache.rat</groupId>
