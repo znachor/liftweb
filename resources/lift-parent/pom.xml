@@ -891,6 +891,7 @@
               <args>
                 <arg>-unchecked</arg>
                 <arg>-deprecation</arg>
+                <arg>-Xcheckinit</arg>
               </args>
             </configuration>
           </plugin>
