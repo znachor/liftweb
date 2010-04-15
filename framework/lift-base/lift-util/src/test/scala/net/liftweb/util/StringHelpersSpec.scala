@@ -284,7 +284,7 @@ object StringHelpersSpec extends Specification with StringHelpers with StringGen
 class StringHelpersSpecTest extends JUnit4(StringHelpersSpec)
 trait StringGenerators {
   val underscoredStrings = for {length <- choose(0, 4)
-                                s <- listOfN(length, frequency((3, alphaChar), (1, Gen.oneOf('_'))))
+                                s <- listOfN(length, frequency((3, alphaChar), (1, Gen.oneOf(List('_')))))
                                 } yield List.toString(s)
 
   val camelCasedStrings = for {length <- choose(0, 4)

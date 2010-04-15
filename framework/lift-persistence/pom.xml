@@ -52,7 +52,7 @@
     <module>lift-mapper</module>
     <module>lift-jpa</module>
     <module>lift-record</module>
-    <module>lift-couchdb</module>
+    <!-- FIXME 280 Uncomment after Dispatch <module>lift-couchdb</module> -->
   </modules>
 
   <!--
@@ -81,7 +81,7 @@
       <groupId>org.scala-tools.testing</groupId>
       <!--FIXME: 280-->
       <!--<artifactId>specs_${scala.version}</artifactId>-->
-      <artifactId>specs_2.8.0.Beta1</artifactId>
+      <artifactId>specs_2.8.0.RC1</artifactId>
     </dependency>
     <dependency>
       <groupId>org.scala-tools.testing</groupId>

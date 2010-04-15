@@ -43,6 +43,7 @@ object FormatsExamples extends Specification with TypeHintExamples {
     formats.typeHints.classFor(hintsForFish)   mustEqual (ShortTypeHintExamples.formats.typeHints.classFor(hintsForFish))
     formats.typeHints.classFor(hintsForDog)    mustEqual (ShortTypeHintExamples.formats.typeHints.classFor(hintsForDog))
     formats.typeHints.classFor(hintsForAnimal) mustEqual (FullTypeHintExamples.formats.typeHints.classFor(hintsForAnimal))
+    "FIXME 280 -- this string must be at the end of the method"
   }
 }
 

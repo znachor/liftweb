@@ -32,7 +32,7 @@ class Author {
   @Column(unique = true, nullable = false)
   var name : String = ""
 
-  @OneToMany(mappedBy = "author", targetEntity = classOf[Book])
+  @OneToMany(mappedBy = "author", targetEntity = classOf[Book].asInstanceOf[Class[_]])
   var books : _root_.java.util.Set[Book] = new _root_.java.util.HashSet[Book]()
 }
 }
