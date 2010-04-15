@@ -282,7 +282,7 @@
     <project.reporting.outputEncoding>${project.build.sourceEncoding}</project.reporting.outputEncoding>
 
     <!--<scala.version>[2.7.5,2.7.6),(2.7.6,2.7.7]</scala.version>-->
-    <scala.version>2.8.0.Beta1</scala.version>
+    <scala.version>2.8.0.RC1</scala.version>
     <slf4j.version>[1.5.6,)</slf4j.version>
     <atomikos.version>3.2.3</atomikos.version>
   </properties>
@@ -353,7 +353,9 @@
       </dependency>
       <dependency>
         <groupId>net.databinder</groupId>
-        <artifactId>dispatch-http_${scala.version}</artifactId>
+        <!--FIXME: 280-->
+        <!--<artifactId>dispatch-http_${scala.version}</artifactId>-->
+        <artifactId>dispatch-http_2.8.0.Beta1</artifactId>
         <version>0.7.1</version>
       </dependency>
       <dependency>
@@ -545,13 +547,15 @@
       -->
       <dependency>
         <groupId>org.scala-tools.testing</groupId>
+        <!--FIXME: 280-->
+        <!--<artifactId>specs_${scala.version}</artifactId>-->
         <artifactId>specs_2.8.0.Beta1</artifactId>
-        <version>1.6.3</version>
+        <version>1.6.5-SNAPSHOT</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.scala-tools.testing</groupId>
-        <artifactId>scalacheck_2.8.0.Beta1</artifactId>
+        <artifactId>scalacheck_${scala.version}</artifactId>
         <version>1.7-SNAPSHOT</version>
         <scope>test</scope>
       </dependency>
@@ -851,9 +855,6 @@
             <jvmArgs>
               <jvmArg>-Xmx1024m</jvmArg>
             </jvmArgs>
-            <args>
-              <arg>-Xno-varargs-conversion</arg>
-            </args>
           </configuration>
           <executions>
             <execution>
