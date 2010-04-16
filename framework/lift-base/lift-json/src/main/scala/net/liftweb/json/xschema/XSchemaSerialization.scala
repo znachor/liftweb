@@ -7,7 +7,6 @@ object XSchemaSerialization {
   
   private val TYPE        = "type"
   private val NAME        = "name"
-  private val DOC         = "doc"
   private val NAMESPACE   = "namespace"
   private val PROPERTIES  = "properties"
   private val VERSION     = "version"
@@ -21,9 +20,6 @@ object XSchemaSerialization {
   private val FIELDS      = "fields"
   private val TYPES       = "types"
   private val ORDER       = "order"
-  private val ASCENDING   = "ascending"
-  private val DESCENDING  = "descending"
-  private val IGNORE      = "ignore"
 
   def decompose(schema: XSchema): JValue = {
     val decomposers = List[PartialFunction[XSchema, JField]](
@@ -92,7 +88,7 @@ object XSchemaSerialization {
         case XList.name  => XList
       }
       
-      def fields = extractArrayOf(FIELDS, classOf[XField])
+      def fields = extractArrayOf(FIELDS, classOf[XFieldDefinition])
       
       def types = extractArrayOf(TYPES, classOf[XSchemaReference])
       
@@ -101,15 +97,15 @@ object XSchemaSerialization {
       def version = integerField(VERSION, json).intValue
     
       typename match {
-        case XCollection.typename => XCollection(typep1, collection)
-        case XConstant.typename   => XConstant(typep1, defValue)
-        case XMap.typename        => XMap(typep1)
-        case XOptional.typename   => XOptional(typep1)
-        case XTuple.typename      => XTuple(types)
-        case XField.typename      => XField(typep1, name, properties, defValue, order)
-        case XProduct.typename    => XProduct(namespace, name, properties, fields)
-        case XCoproduct.typename  => XCoproduct(namespace, name, properties, types)
-        case XSchemaRoot.typename => XSchemaRoot(version, definitions, properties)
+        case XCollection.typename       => XCollection(typep1, collection)
+        case XConstant.typename         => XConstant(typep1, defValue)
+        case XMap.typename              => XMap(typep1)
+        case XOptional.typename         => XOptional(typep1)
+        case XTuple.typename            => XTuple(types)
+        case XFieldDefinition.typename  => XFieldDefinition(typep1, name, properties, defValue, order)
+        case XProduct.typename          => XProduct(namespace, name, properties, fields)
+        case XCoproduct.typename        => XCoproduct(namespace, name, properties, types)
+        case XSchemaRoot.typename       => XSchemaRoot(version, definitions, properties)
         
         case _ => XSchemaReference(typename)
       }

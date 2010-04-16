@@ -39,7 +39,9 @@ object XSchemaAST {
   /** All schemas are one of: root, reference to a defined type, type definition introducing a new type, field definition, or constant */
   sealed trait XSchema extends Typed
 
-  sealed case class XSchemaRoot(version: Int, definitions: List[XSchemaDefinition], properties: Map[String, String]) extends TypeNamed(XSchemaRoot.typename) with XSchema with Properties with Versioned
+  sealed case class XSchemaRoot(version: Int, definitions: List[XSchemaDefinition], properties: Map[String, String]) extends TypeNamed(XSchemaRoot.typename) with XSchema with Properties with Versioned with Container {
+    def elements = definitions
+  }
   
   sealed class XSchemaReference protected (val typename: String) extends XSchema {
     override def hashCode = typename.hashCode
@@ -52,22 +54,22 @@ object XSchemaAST {
     override def toString = "XSchemaReference(" + typename + ")"
   }
   
+  sealed class XSchemaPrimitive protected (typename: String) extends XSchemaReference(typename)
+  
   sealed abstract class XSchemaDefinition(val typename: String) extends XSchema with Properties with Named with Namespaced with Container {
     def qualifiedName = namespace.value + "." + name
   }
   
-  sealed abstract class XFieldDefinition(val typename: String) extends XSchema with Properties with Named with Default with Parameterized1 with Ordered
-  
   sealed case class XConstant(typep1: XSchemaReference, defValue: JValue) extends XSchemaReference(XConstant.typename) with Default with Parameterized1 
   
-  case object XString  extends XSchemaReference("String")
-  case object XInt     extends XSchemaReference("Int")
-  case object XLong    extends XSchemaReference("Long")
-  case object XFloat   extends XSchemaReference("Float")
-  case object XDouble  extends XSchemaReference("Double")
-  case object XBoolean extends XSchemaReference("Boolean")
+  case object XString  extends XSchemaPrimitive("String")
+  case object XInt     extends XSchemaPrimitive("Int")
+  case object XLong    extends XSchemaPrimitive("Long")
+  case object XFloat   extends XSchemaPrimitive("Float")
+  case object XDouble  extends XSchemaPrimitive("Double")
+  case object XBoolean extends XSchemaPrimitive("Boolean")
 
-  case class XOptional(typep1: XSchemaReference) extends XSchemaReference(XOptional.typename) with Parameterized1 with Container
+  case class XOptional(typep1: XSchemaReference) extends XSchemaReference(XOptional.typename) with Parameterized1
   
   case class XCollection(typep1: XSchemaReference, collection: XCollectionType) extends XSchemaReference(XCollection.typename) with Parameterized1
 
@@ -79,9 +81,11 @@ object XSchemaAST {
     def elements = types
   }
 
-  case class XField(typep1: XSchemaReference, name: String, properties: Map[String, String], defValue: JValue, order: Order) extends XFieldDefinition(XField.typename) 
+  case class XFieldDefinition(typep1: XSchemaReference, name: String, properties: Map[String, String], defValue: JValue, order: Order) extends XSchema with Properties with Named with Default with Parameterized1 with Ordered {
+    val typename = XFieldDefinition.typename
+  }
   
-  case class XProduct(namespace: Namespace, name: String, properties: Map[String, String], fields: List[XField]) extends XSchemaDefinition(XProduct.typename) {
+  case class XProduct(namespace: Namespace, name: String, properties: Map[String, String], fields: List[XFieldDefinition]) extends XSchemaDefinition(XProduct.typename) {
     def elements = fields
   }
   
@@ -102,15 +106,58 @@ object XSchemaAST {
     }
   }
   
-  object XSchemaRoot extends TypeNamed("root")
-  object XOptional   extends TypeNamed("optional")
-  object XCollection extends TypeNamed("collection")
-  object XConstant   extends TypeNamed("constant")
-  object XMap        extends TypeNamed("map")
-  object XTuple      extends TypeNamed("tuple")
-  object XField      extends TypeNamed("field")
-  object XProduct    extends TypeNamed("product")
-  object XCoproduct  extends TypeNamed("coproduct")
+  object XSchemaRoot      extends TypeNamed("root")
+  object XOptional        extends TypeNamed("optional")
+  object XCollection      extends TypeNamed("collection")
+  object XConstant        extends TypeNamed("constant")
+  object XMap             extends TypeNamed("map")
+  object XTuple           extends TypeNamed("tuple")
+  object XFieldDefinition extends TypeNamed("field")
+  object XProduct         extends TypeNamed("product")
+  object XCoproduct       extends TypeNamed("coproduct")
+  
+  trait XSchemaDefinitionWalker[T] {
+    def begin(data: T, defn:  XSchemaDefinition): T
+    def begin(data: T, field: XFieldDefinition): T
+    def begin(data: T, opt:   XOptional): T
+    def begin(data: T, col:   XCollection): T
+    def begin(data: T, map:   XMap): T
+    def begin(data: T, tuple: XTuple): T
+    
+    def walk(data: T, const:  XConstant): T
+    def walk(data: T, prim:   XSchemaPrimitive): T
+    def walk(data: T, ref:    XSchemaReference): T
+    
+    def end(data: T, defn:    XSchemaDefinition): T
+    def end(data: T, field:   XFieldDefinition): T
+    def end(data: T, opt:     XOptional): T
+    def end(data: T, col:     XCollection): T
+    def end(data: T, map:     XMap): T
+    def end(data: T, tuple:   XTuple): T
+  }
+  
+  def walk[T](s: XSchemaDefinition, initial: T, walker: XSchemaDefinitionWalker[T]): T = {
+    def walk0(s: XSchema, initial: T, walker: XSchemaDefinitionWalker[T]): T = {
+      def walkContainer(initial: T, xs: Container): T = xs.elements.foldLeft[T](initial) { (cur, x) => walk0(x, cur, walker) }
+    
+      s match {
+        case x: XSchemaDefinition   => walker.end(walkContainer(walker.begin(initial, x), x), x)
+        case x: XFieldDefinition    => walker.end(walkContainer(walker.begin(initial, x), x), x)
+        case x: XOptional           => walker.end(walkContainer(walker.begin(initial, x), x), x)
+        case x: XCollection         => walker.end(walkContainer(walker.begin(initial, x), x), x)
+        case x: XMap                => walker.end(walkContainer(walker.begin(initial, x), x), x)
+        case x: XTuple              => walker.end(walkContainer(walker.begin(initial, x), x), x)
+        
+        case x: XConstant           => walker.walk(initial, x)
+        case x: XSchemaPrimitive    => walker.walk(initial, x)
+        case x: XSchemaReference    => walker.walk(initial, x)
+        
+        case x: XSchemaRoot => error("Cannot walk over root")
+      }
+    }
+    
+    walk0(s, initial, walker)
+  }
 }
 
 }
