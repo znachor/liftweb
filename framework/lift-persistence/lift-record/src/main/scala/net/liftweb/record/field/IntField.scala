@@ -26,20 +26,7 @@ import net.liftweb.util._
 import Helpers._
 import S._
 
-class IntField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends NumericField[Int, OwnerType] {
-
-  def owner = rec
-
-  def this(rec: OwnerType, value: Int) = {
-    this(rec)
-    set(value)
-  }
-
-  def this(rec: OwnerType, value: Box[Int]) = {
-    this(rec)
-    setBox(value)
-  }
-
+trait IntTypedField extends NumericTypedField[Int] {
   def setFromAny(in: Any): Box[Int] = setNumericFromAny(in, _.intValue)
 
   def setFromString(s: String): Box[Int] = s match {
@@ -55,7 +42,22 @@ class IntField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends NumericFi
     case JInt(i)                      => setBox(Full(i.intValue))
     case other                        => setBox(FieldHelpers.expectedA("JInt", other))
   }
+}
 
+class IntField[OwnerType <: Record[OwnerType]](rec: OwnerType)
+  extends Field[Int, OwnerType] with IntTypedField {
+
+  def owner = rec
+
+  def this(rec: OwnerType, value: Int) = {
+    this(rec)
+    set(value)
+  }
+
+  def this(rec: OwnerType, value: Box[Int]) = {
+    this(rec)
+    setBox(value)
+  }
 }
 
 import _root_.java.sql.{ResultSet, Types}

@@ -24,7 +24,7 @@ import Box.{box2Iterable, option2Box}
 import _root_.net.liftweb.http.js.{JsExp, JsObj}
 import _root_.net.liftweb.json.JsonParser
 import _root_.net.liftweb.json.JsonAST.{JArray, JBool, JInt, JDouble, JField, JNothing, JNull, JObject, JString, JValue}
-import _root_.net.liftweb.record.{Field, MetaRecord, OwnedField, Record}
+import _root_.net.liftweb.record.{Field, MetaRecord, Record}
 import _root_.net.liftweb.record.FieldHelpers.expectedA
 import _root_.net.liftweb.record.field._
 import _root_.net.liftweb.util.ThreadGlobal
@@ -110,7 +110,7 @@ trait JSONMetaRecord[BaseRecord <: JSONRecord[BaseRecord]] extends MetaRecord[Ba
    * Return the name of the field in the encoded JSON object. If the field implements JSONField and has overridden jsonName then
    * that will be used, otherwise the record field name
    */
-  def jsonName(field: OwnedField[BaseRecord]): String = field match {
+  def jsonName(field: Field[_, BaseRecord]): String = field match {
     case (jsonField: JSONField) => jsonField.jsonName openOr field.name
     case _                      =>                           field.name
   }
@@ -155,13 +155,18 @@ trait JSONMetaRecord[BaseRecord <: JSONRecord[BaseRecord]] extends MetaRecord[Ba
         Failure("The " + recordFieldsNotInJson.mkString(", ") + " field(s) were not found, but are required.")
       } else if (!(overrideIgnoreExtraJSONFields.box openOr ignoreExtraJSONFields) && !jsonFieldsNotInRecord.isEmpty) {
         Failure("Field(s) " + jsonFieldsNotInRecord.mkString(", ") + " are not recognized.")
-      } else Box {
+      } else {
         for {
           jfield <- jfields
           field  <- flds if jsonName(field) == jfield.name
-          setOk  <- field.setFromJValue(jfield.value)
-        } yield ()
-      } map { _ => rec.additionalJFields = jsonFieldsNotInRecord.toList.map(name => jfields.find(_.name == name).get); () }
+        } field.setFromJValue(jfield.value)
+
+        rec.additionalJFields = jsonFieldsNotInRecord.toList map {
+          name => jfields.find(_.name == name).get
+        }
+
+        Full(())
+      }
     }
 
     jvalue match {
@@ -173,8 +178,6 @@ trait JSONMetaRecord[BaseRecord <: JSONRecord[BaseRecord]] extends MetaRecord[Ba
  
 /** Trait for fields with JSON-specific behavior */
 trait JSONField {
-  self: OwnedField[_] =>
-
   /** Return Full(name) to use that name in the encoded JSON object, or Empty to use the same name as in Scala. Defaults to Empty */
   def jsonName: Box[String] = Empty
 }

@@ -26,20 +26,7 @@ import _root_.net.liftweb.util._
 import Helpers._
 import S._
 
-class DoubleField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends NumericField[Double, OwnerType] {
-
-  def this(rec: OwnerType, value: Double) = {
-    this(rec)
-    set(value)
-  }
-
-  def this(rec: OwnerType, value: Box[Double]) = {
-    this(rec)
-    setBox(value)
-  }
-
-  def owner = rec
-
+trait DoubleTypedField extends NumericTypedField[Double] {
   def setFromAny(in: Any): Box[Double] = setNumericFromAny(in, _.doubleValue)
 
   def setFromString(s: String): Box[Double] = setBox(tryo(java.lang.Double.parseDouble(s)))
@@ -52,6 +39,22 @@ class DoubleField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Numeri
     case JDouble(d)                   => setBox(Full(d))
     case other                        => setBox(FieldHelpers.expectedA("JDouble", other))
   }
+}
+
+class DoubleField[OwnerType <: Record[OwnerType]](rec: OwnerType)
+  extends Field[Double, OwnerType] with DoubleTypedField {
+
+  def this(rec: OwnerType, value: Double) = {
+    this(rec)
+    set(value)
+  }
+
+  def this(rec: OwnerType, value: Box[Double]) = {
+    this(rec)
+    setBox(value)
+  }
+
+  def owner = rec
 }
 
 import _root_.java.sql.{ResultSet, Types}

@@ -29,19 +29,7 @@ import Helpers._
 import S._
 import JE._
 
-class DateTimeField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[Calendar, OwnerType] {
-  def owner = rec
-
-  def this(rec: OwnerType, value: Calendar) = {
-    this(rec)
-    setBox(Full(value))
-  }
-
-  def this(rec: OwnerType, value: Box[Calendar]) = {
-    this(rec)
-    setBox(value)
-  }
-
+trait DateTimeTypedField extends TypedField[Calendar] {
   private final def dateToCal(d: Date): Calendar = {
     val cal = Calendar.getInstance()
     cal.setTime(d)
@@ -91,6 +79,20 @@ class DateTimeField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Fiel
       cal.setTime(d)
       cal
     })
+  }
+}
+
+class DateTimeField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[Calendar, OwnerType] with DateTimeTypedField {
+  def owner = rec
+
+  def this(rec: OwnerType, value: Calendar) = {
+    this(rec)
+    setBox(Full(value))
+  }
+
+  def this(rec: OwnerType, value: Box[Calendar]) = {
+    this(rec)
+    setBox(value)
   }
 }
 

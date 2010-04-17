@@ -29,32 +29,8 @@ import S._
 import Helpers._
 import JE._
 
-/**
- * A Field containing String content.
- */
-class StringField[OwnerType <: Record[OwnerType]](rec: OwnerType, maxLength: Int) extends Field[String, OwnerType] {
-
-  def this(rec: OwnerType, maxLength: Int, value: String) = {
-    this(rec, maxLength)
-    set(value)
-  }
-
-  def this(rec: OwnerType, maxLength: Int, value: Box[String]) = {
-    this(rec, maxLength)
-    setBox(value)
-  }
-
-  def this(rec: OwnerType, value: String) = {
-    this(rec, 100)
-    set(value)
-  }
-
-  def this(rec: OwnerType, value: Box[String]) = {
-    this(rec, 100)
-    setBox(value)
-  }
-
-  def owner = rec
+trait StringTypedField extends TypedField[String] {
+  protected val maxLength: Int
 
   def setFromAny(in: Any): Box[String] = in match {
     case seq: Seq[_] if !seq.isEmpty => setFromAny(seq.first)
@@ -120,7 +96,32 @@ class StringField[OwnerType <: Record[OwnerType]](rec: OwnerType, maxLength: Int
     case JString(s)                   => setFromString(s)
     case other                        => setBox(FieldHelpers.expectedA("JString", other))
   }
+}
 
+class StringField[OwnerType <: Record[OwnerType]](rec: OwnerType, protected val maxLength: Int)
+  extends Field[String, OwnerType] with StringTypedField {
+
+  def this(rec: OwnerType, maxLength: Int, value: String) = {
+    this(rec, maxLength)
+    set(value)
+  }
+
+  def this(rec: OwnerType, maxLength: Int, value: Box[String]) = {
+    this(rec, maxLength)
+    setBox(value)
+  }
+
+  def this(rec: OwnerType, value: String) = {
+    this(rec, 100)
+    set(value)
+  }
+
+  def this(rec: OwnerType, value: Box[String]) = {
+    this(rec, 100)
+    setBox(value)
+  }
+
+  def owner = rec
 }
 
 

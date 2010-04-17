@@ -31,20 +31,9 @@ import Helpers._
 import JE._
 
 
-class EnumField[OwnerType <: Record[OwnerType], EnumType <: Enumeration](rec: OwnerType, enum: EnumType)(implicit m: Manifest[EnumType#Value])
-  extends Field[EnumType#Value, OwnerType]
-{
-  def this(rec: OwnerType, enum: EnumType, value: EnumType#Value)(implicit m: Manifest[EnumType#Value]) = {
-    this(rec, enum)
-    set(value)
-  }
-
-  def this(rec: OwnerType, enum: EnumType, value: Box[EnumType#Value])(implicit m: Manifest[EnumType#Value]) = {
-    this(rec, enum)
-    setBox(value)
-  }
-
-  def owner = rec
+trait EnumTypedField[EnumType <: Enumeration] extends TypedField[EnumType#Value] {
+  protected val enum: EnumType
+  protected val valueManifest: Manifest[EnumType#Value]
 
   def toInt: Box[Int] = valueBox.map(_.id)
 
@@ -59,7 +48,7 @@ class EnumField[OwnerType <: Record[OwnerType], EnumType <: Enumeration](rec: Ow
     case Some(value: Number) => setBox(fromInt(value.intValue))
     case Full(value: Number) => setBox(fromInt(value.intValue))
     case (value: Number)::_  => setBox(fromInt(value.intValue))
-    case _                   => genericSetFromAny(in)
+    case _                   => genericSetFromAny(in)(valueManifest)
   }
 
   def setFromString(s: String): Box[EnumType#Value] = setBox(asInt(s).flatMap(fromInt))
@@ -119,6 +108,23 @@ class EnumField[OwnerType <: Record[OwnerType], EnumType <: Enumeration](rec: Ow
 
   def asJValue: JValue = asJIntOrdinal
   def setFromJValue(jvalue: JValue): Box[EnumType#Value] = setFromJIntOrdinal(jvalue)
+}
+
+class EnumField[OwnerType <: Record[OwnerType], EnumType <: Enumeration](rec: OwnerType, protected val enum: EnumType)(implicit m: Manifest[EnumType#Value])
+  extends Field[EnumType#Value, OwnerType] with EnumTypedField[EnumType]
+{
+  def this(rec: OwnerType, enum: EnumType, value: EnumType#Value)(implicit m: Manifest[EnumType#Value]) = {
+    this(rec, enum)
+    set(value)
+  }
+
+  def this(rec: OwnerType, enum: EnumType, value: Box[EnumType#Value])(implicit m: Manifest[EnumType#Value]) = {
+    this(rec, enum)
+    setBox(value)
+  }
+
+  def owner = rec
+  protected val valueManifest = m
 }
 
 import _root_.java.sql.{ResultSet, Types}

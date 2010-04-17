@@ -28,19 +28,7 @@ import Helpers._
 import S._
 import JE._
 
-class BooleanField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[Boolean, OwnerType] {
-  def owner = rec
-
-  def this(rec: OwnerType, value: Boolean) = {
-    this(rec)
-    set(value)
-  }
-
-  def this(rec: OwnerType, value: Box[Boolean]) = {
-    this(rec)
-    setBox(value)
-  }
-
+trait BooleanTypedField extends TypedField[Boolean] {
   def setFromAny(in: Any): Box[Boolean] = genericSetFromAny(in)
   def setFromString(s: String): Box[Boolean] = setBox(tryo(toBoolean(s)))
 
@@ -79,7 +67,20 @@ class BooleanField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field
     case JBool(b)                     => setBox(Full(b))
     case other                        => setBox(FieldHelpers.expectedA("JBool", other))
   }
+}
 
+class BooleanField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[Boolean, OwnerType] with BooleanTypedField {
+  def owner = rec
+
+  def this(rec: OwnerType, value: Boolean) = {
+    this(rec)
+    set(value)
+  }
+
+  def this(rec: OwnerType, value: Box[Boolean]) = {
+    this(rec)
+    setBox(value)
+  }
 
 }
 

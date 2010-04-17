@@ -26,20 +26,7 @@ import net.liftweb.util._
 import Helpers._
 import S._
 
-class LongField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends NumericField[Long, OwnerType] {
-
-  def this(rec: OwnerType, value: Long) = {
-    this(rec)
-    set(value)
-  }
-
-  def this(rec: OwnerType, value: Box[Long]) = {
-    this(rec)
-    setBox(value)
-  }
-
-  def owner = rec
-
+trait LongTypedField extends NumericTypedField[Long] {
   def setFromAny(in: Any): Box[Long] = setNumericFromAny(in, _.longValue)
 
   def setFromString(s: String): Box[Long] = setBox(asLong(s))
@@ -52,7 +39,22 @@ class LongField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends NumericF
     case JInt(i)                      => setBox(Full(i.longValue))
     case other                        => setBox(FieldHelpers.expectedA("JLong", other))
   }
+}
 
+class LongField[OwnerType <: Record[OwnerType]](rec: OwnerType)
+  extends Field[Long, OwnerType] with LongTypedField {
+
+  def this(rec: OwnerType, value: Long) = {
+    this(rec)
+    set(value)
+  }
+
+  def this(rec: OwnerType, value: Box[Long]) = {
+    this(rec)
+    setBox(value)
+  }
+
+  def owner = rec
 }
 
 import _root_.java.sql.{ResultSet, Types}

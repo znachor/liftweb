@@ -27,6 +27,24 @@ import _root_.net.liftweb.util._
 import Helpers._
 import S._
 
+
+trait DecimalTypedField extends NumericTypedField[BigDecimal] {
+  protected val scale: Int
+  protected val context: MathContext
+  private val zero = BigDecimal("0")
+
+  def defaultValue = zero.setScale(scale)
+
+  def setFromAny(in : Any): Box[BigDecimal] = setNumericFromAny(in, n => BigDecimal(n.toString))
+
+  def setFromString (s : String) : Box[BigDecimal] = setBox(tryo(BigDecimal(s)))
+
+  def set_!(in: BigDecimal): BigDecimal = new BigDecimal(in.bigDecimal.setScale(scale, context.getRoundingMode))
+
+  def asJValue = asJString(_.toString)
+  def setFromJValue(jvalue: JValue) = setFromJString(jvalue)(s => tryo(BigDecimal(s)))
+}
+
 /**
  * <p>
  * A field that maps to a decimal value. Decimal precision and rounding
@@ -47,7 +65,8 @@ import S._
  * @param context The MathContext that controls precision and rounding
  * @param scale Controls the scale of the underlying BigDecimal
  */
-class DecimalField[OwnerType <: Record[OwnerType]](rec: OwnerType, val context : MathContext, val scale : Int) extends NumericField[BigDecimal, OwnerType] {
+class DecimalField[OwnerType <: Record[OwnerType]](rec: OwnerType, val context : MathContext, val scale : Int)
+  extends Field[BigDecimal, OwnerType] with DecimalTypedField {
 
   /**
    * Constructs a DecimalField with the specified initial value. The context
@@ -103,20 +122,7 @@ class DecimalField[OwnerType <: Record[OwnerType]](rec: OwnerType, val context :
     setBox(value)
   }
 
-  private val zero = BigDecimal("0")
-
-  def defaultValue = zero.setScale(scale)
-
   def owner = rec
-
-  def setFromAny(in : Any): Box[BigDecimal] = setNumericFromAny(in, n => BigDecimal(n.toString))
-
-  def setFromString (s : String) : Box[BigDecimal] = setBox(tryo(BigDecimal(s)))
-
-  def set_!(in: BigDecimal): BigDecimal = new BigDecimal(in.bigDecimal.setScale(scale, context.getRoundingMode))
-
-  def asJValue = asJString(_.toString)
-  def setFromJValue(jvalue: JValue) = setFromJString(jvalue)(s => tryo(BigDecimal(s)))
 }
 
 import _root_.java.sql.{ResultSet, Types}
