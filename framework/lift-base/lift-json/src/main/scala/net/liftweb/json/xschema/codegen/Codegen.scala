@@ -152,6 +152,38 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     }
   }
   
+  private def decomposingWalker(database: XSchemaDatabase) = new XSchemaDefinitionWalker[CodeGeneration] {
+    override def begin(data: CodeGeneration, defn: XSchemaDefinition) = {
+      def coproductPrefix(x: XCoproduct): String = if (database.productChildrenOf(x).map(_.namespace).removeDuplicates.length <= 1) "sealed " else ""
+      def productFields(x: XProduct): String = x.fields.map(typeSignatureOf(_)).mkString(", ")
+      def coproductFields(cg: CodeGeneration, x: XCoproduct): CodeGeneration = {
+        val commonFields = database.commonFieldsOf(x)
+        
+        commonFields.foldLeft(cg) { (cg, field) => (cg + "def " + field._1 + ": " + field._2.typename).newline }
+      }
+      
+      val packagePrefix = (data.newline + "package " + defn.namespace.value + " {").indent.newline
+      
+      (defn match {
+        case x: XProduct   => packagePrefix + "case class " + defn.name + "(" + productFields(x) + ")"
+        case x: XCoproduct => coproductFields((packagePrefix + coproductPrefix(x) + "trait " + x.name + " {").indent.newline, x).unindent.newline + "}"
+      })
+    }
+    
+    override def end(data: CodeGeneration, defn: XSchemaDefinition) = {
+      (data + (defn match {
+        case x: XProduct => {
+          val withClauses = database.coproductContainersOf(x).map(_.qualifiedName).mkString(" with ")
+          
+          val extensions = if (withClauses.length > 0) " extends " + withClauses else ""
+          
+          extensions
+        }
+        case x: XCoproduct => ""
+      })).unindent.newline + "}"
+    }
+  }
+  
   private lazy val typeSignatureWalker = new XSchemaDefinitionWalker[CodeGeneration] {
     override def begin(data: CodeGeneration, field: XFieldDefinition) = {
       data + field.name + ": "
