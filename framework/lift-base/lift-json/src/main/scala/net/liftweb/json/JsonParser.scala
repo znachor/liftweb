@@ -415,7 +415,6 @@ object JsonParser {
 
         var curCount = segmentCount.get
 
-        // "if" can be changed to "while" to be more cautious about allocating disposable segments
         if (segments.size == 0 && curCount < maxNumOfSegments) {
           createNew = segmentCount.compareAndSet(curCount, curCount + 1)
         }

@@ -28,6 +28,8 @@ object ResourceServer {
     case "jquery.js" :: Nil => true
     case "yui" :: _ => true
     case "liftYUI.js" :: Nil => true
+    case "extcore" :: _ => true
+    case "liftExtCore.js" :: Nil => true
     case "json2.js" :: Nil => true
     case "json.js" :: Nil => true
     case "jlift.js" :: Nil => true
@@ -58,7 +60,7 @@ object ResourceServer {
 
   def calcLastModified(in: URL): Long = {
     val str = in.toString
-    if (lastModCache.containsKey(str)) lastModCache.get(str)
+    if (!Props.devMode && lastModCache.containsKey(str)) lastModCache.get(str)
     else {
       val ret: Long =
       (for{

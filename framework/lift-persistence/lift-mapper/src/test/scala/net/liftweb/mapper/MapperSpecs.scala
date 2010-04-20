@@ -71,7 +71,7 @@ object MapperSpecs extends Specification {
     } 
     displayName
   } 
-  MapperRules.displayNameCalculator.default.set(() => displayNameCalculator)
+  MapperRules.displayNameCalculator.default.set(displayNameCalculator _)
 
   // Snake connection doesn't create FK constraints
   MapperRules.createForeignKeys_? = c => c.jndiName != "snake"
@@ -161,6 +161,22 @@ object MapperSpecs extends Specification {
           rebuilt.firstName("yak").save
           val recalled = SampleModel.find(2).open_!
           recalled.firstName.is must_== "yak"
+        }
+
+        "You can put stuff in a Set" in {
+          cleanup()
+          val m1 = SampleModel.find(1).open_!
+          val m2 = SampleModel.find(1).open_!
+
+          (m1 == m2) must_== true
+
+          val s1 = Set(SampleModel.findAll :_*)
+
+          s1.contains(m1) must_== true
+
+          val s2 = s1 ++ SampleModel.findAll
+
+          s1.size must_== s2.size
         }
 
 
@@ -384,6 +400,32 @@ object MapperSpecs extends Specification {
 
           for (t <- oo)
           t.model.cached_? must beTrue
+        }
+
+
+        "Createdat and updated at work" in {
+          val now = Helpers.now
+
+          cleanup()
+
+          val dog = Dog2.find().open_!
+
+          val oldUpdate = dog.updatedAt.is
+
+          val d1 = (now.getTime - dog.createdAt.getTime) / 100000L
+          d1 must_== 0L
+
+          val d2 = (now.getTime - dog.updatedAt.getTime) / 100000L
+          d2 must_== 0L
+
+          dog.name("ralph").save
+
+          val dog2 = Dog2.find(dog.dog2id.is).open_!
+
+          dog.createdAt.is.getTime must_== dog2.createdAt.is.getTime
+
+          oldUpdate.getTime must_!= dog2.updatedAt.is.getTime
+
         }
 
         "Non-deterministic Precache works with OrderBy with Mixed Case" in {
@@ -623,7 +665,7 @@ object Mixer extends Mixer with LongKeyedMetaMapper[Mixer] {
   }
 }
 
-class Dog2 extends LongKeyedMapper[Dog2] {
+class Dog2 extends LongKeyedMapper[Dog2]  with CreatedUpdated {
   def getSingleton = Dog2
 
   override def primaryKeyField = dog2id

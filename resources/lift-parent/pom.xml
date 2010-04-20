@@ -284,6 +284,7 @@
     <!--<scala.version>[2.7.5,2.7.6),(2.7.6,2.7.7]</scala.version>-->
     <scala.version>2.7.7</scala.version>
     <slf4j.version>[1.5.6,)</slf4j.version>
+    <atomikos.version>3.2.3</atomikos.version>
   </properties>
 
   <!--
@@ -326,12 +327,6 @@
         <version>3.1</version>
       </dependency>
       <dependency>
-        <groupId>log4j</groupId>
-        <artifactId>log4j</artifactId>
-        <!--<version>[1.2.14,1.2.15]</version>-->
-        <version>1.2.14</version>
-      </dependency>
-      <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
         <version>${slf4j.version}</version>
@@ -342,14 +337,120 @@
         <version>${slf4j.version}</version>
       </dependency>
       <dependency>
-        <groupId>ch.qos.logback</groupId>
-        <artifactId>logback-classic</artifactId>
-        <version>[0.9.18,)</version>
+        <groupId>org.scalamodules</groupId>
+        <artifactId>scalamodules-core</artifactId>
+        <version>1.5</version>
+      </dependency>
+      <dependency>
+        <groupId>org.ops4j.pax.swissbox</groupId>
+        <artifactId>pax-swissbox-extender</artifactId>
+        <version>1.2.0</version>
+      </dependency>
+      <dependency>
+        <groupId>com.thoughtworks.paranamer</groupId>
+        <artifactId>paranamer</artifactId>
+        <version>2.0</version>
+      </dependency>
+      <dependency>
+        <groupId>net.databinder</groupId>
+        <artifactId>dispatch-http_${scala.version}</artifactId>
+        <version>0.7.1</version>
+      </dependency>
+      <dependency>
+        <groupId>net.jcip</groupId>
+        <artifactId>jcip-annotations</artifactId>
+        <version>1.0</version>
+      </dependency>
+      <dependency>
+        <groupId>com.rabbitmq</groupId>
+        <artifactId>amqp-client</artifactId>
+        <version>1.7.2</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.sanselan</groupId>
+        <artifactId>sanselan</artifactId>
+        <version>0.97-incubator</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openid4java</groupId>
+        <artifactId>openid4java-consumer</artifactId>
+        <version>[0.9.3,0.9.5]</version>
+        <exclusions>
+          <exclusion>
+            <artifactId>commons-logging</artifactId>
+            <groupId>commons-logging</groupId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>jivesoftware</groupId>
+        <artifactId>smack</artifactId>
+        <version>3.1.0</version>
+        <exclusions>
+          <exclusion>
+            <groupId>javax.servlet</groupId>
+            <artifactId>servlet-api</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>com.atomikos</groupId>
+        <artifactId>transactions</artifactId>
+        <version>${atomikos.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.atomikos</groupId>
+        <artifactId>transactions-jta</artifactId>
+        <version>${atomikos.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.atomikos</groupId>
+        <artifactId>transactions-api</artifactId>
+        <version>${atomikos.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.atomikos</groupId>
+        <artifactId>atomikos-util</artifactId>
+        <version>${atomikos.version}</version>
+      </dependency>
+      <dependency>
+       <groupId>org.apache.geronimo.specs</groupId>
+        <artifactId>geronimo-jta_1.1_spec</artifactId>
+        <version>1.1.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.hibernate</groupId>
+        <artifactId>hibernate-entitymanager</artifactId>
+        <version>3.2.1.ga</version>
+        <exclusions>
+          <exclusion>
+            <groupId>javax.transaction</groupId>
+            <artifactId>jta</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
 
       <!--
       Provided scope: provided by container, available only in compile and test classpath, non-transitive
       -->
+      <dependency>
+        <groupId>ch.qos.logback</groupId>
+        <artifactId>logback-classic</artifactId>
+        <version>[0.9.18,)</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>log4j</groupId>
+        <artifactId>log4j</artifactId>
+        <version>1.2.14</version>
+        <!--<scope>provided</scope>-->
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>jcl-over-slf4j</artifactId>
+        <version>${slf4j.version}</version>
+        <scope>provided</scope>
+      </dependency>
       <dependency>
         <groupId>javax.servlet</groupId>
         <artifactId>servlet-api</artifactId>
@@ -362,8 +463,21 @@
         <version>1.0</version>
         <scope>provided</scope>
       </dependency>
+      <dependency>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>org.osgi.compendium</artifactId>
+        <version>1.4.0</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.ops4j.pax.web</groupId>
+        <artifactId>pax-web-api</artifactId>
+        <version>0.7.2</version>
+        <scope>provided</scope>
+      </dependency>
+
       <!--
-      Runtime scope: provided in runtime, available only in runtime and test classpath, not compile classpath
+      Runtime scope: provided in runtime, available only in runtime and test classpath, not compile classpath, non-transitive
       -->
       <dependency>
         <groupId>com.h2database</groupId>
@@ -427,7 +541,7 @@
       </dependency>
       -->
       <!--
-      Test scope: available only in test classpath
+      Test scope: available only in test classpath, non-transitive
       -->
       <dependency>
         <groupId>org.scala-tools.testing</groupId>
@@ -441,7 +555,6 @@
         <version>1.6</version>
         <scope>test</scope>
       </dependency>
-
       <dependency>
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
@@ -701,10 +814,17 @@
           <artifactId>maven-bundle-plugin</artifactId>
           <version>2.0.1</version>
           <extensions>true</extensions>
+          <executions>
+            <execution>
+              <goals>
+                <goal>bundle</goal>
+              </goals>
+            </execution>
+          </executions>
           <configuration>
             <instructions>
               <Bundle-RequiredExecutionEnvironment>J2SE-1.5,JavaSE-1.6</Bundle-RequiredExecutionEnvironment>
-              <_versionpolicy>[$(@),$(version;=+;$(@)))</_versionpolicy>
+              <_versionpolicy>[$(version;==;$(@)),$(version;=+;$(@)))</_versionpolicy>
               <DynamicImport-Package>*</DynamicImport-Package>
             </instructions>
           </configuration>

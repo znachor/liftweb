@@ -117,46 +117,45 @@ object XSchemaAST {
   object XCoproduct       extends TypeNamed("coproduct")
   
   trait XSchemaDefinitionWalker[T] {
-    def begin(data: T, defn:  XSchemaDefinition): T
-    def begin(data: T, field: XFieldDefinition): T
-    def begin(data: T, opt:   XOptional): T
-    def begin(data: T, col:   XCollection): T
-    def begin(data: T, map:   XMap): T
-    def begin(data: T, tuple: XTuple): T
+    def begin(data: T, defn:  XSchemaRoot): T = data
     
-    def walk(data: T, const:  XConstant): T
-    def walk(data: T, prim:   XSchemaPrimitive): T
-    def walk(data: T, ref:    XSchemaReference): T
+    def begin(data: T, defn:  XSchemaDefinition): T = data
+    def begin(data: T, field: XFieldDefinition): T = data
+    def begin(data: T, opt:   XOptional): T = data
+    def begin(data: T, col:   XCollection): T = data
+    def begin(data: T, map:   XMap): T = data
+    def begin(data: T, tuple: XTuple): T = data
     
-    def end(data: T, defn:    XSchemaDefinition): T
-    def end(data: T, field:   XFieldDefinition): T
-    def end(data: T, opt:     XOptional): T
-    def end(data: T, col:     XCollection): T
-    def end(data: T, map:     XMap): T
-    def end(data: T, tuple:   XTuple): T
+    def walk(data: T, const:  XConstant): T = data
+    def walk(data: T, prim:   XSchemaPrimitive): T = data
+    def walk(data: T, ref:    XSchemaReference): T = data
+    
+    def end(data: T, defn:  XSchemaRoot): T = data    
+    def end(data: T, defn:    XSchemaDefinition): T = data
+    def end(data: T, field:   XFieldDefinition): T = data
+    def end(data: T, opt:     XOptional): T = data
+    def end(data: T, col:     XCollection): T = data
+    def end(data: T, map:     XMap): T = data
+    def end(data: T, tuple:   XTuple): T = data
   }
   
-  def walk[T](s: XSchemaDefinition, initial: T, walker: XSchemaDefinitionWalker[T]): T = {
-    def walk0(s: XSchema, initial: T, walker: XSchemaDefinitionWalker[T]): T = {
-      def walkContainer(initial: T, xs: Container): T = xs.elements.foldLeft[T](initial) { (cur, x) => walk0(x, cur, walker) }
-    
-      s match {
-        case x: XSchemaDefinition   => walker.end(walkContainer(walker.begin(initial, x), x), x)
-        case x: XFieldDefinition    => walker.end(walkContainer(walker.begin(initial, x), x), x)
-        case x: XOptional           => walker.end(walkContainer(walker.begin(initial, x), x), x)
-        case x: XCollection         => walker.end(walkContainer(walker.begin(initial, x), x), x)
-        case x: XMap                => walker.end(walkContainer(walker.begin(initial, x), x), x)
-        case x: XTuple              => walker.end(walkContainer(walker.begin(initial, x), x), x)
-        
-        case x: XConstant           => walker.walk(initial, x)
-        case x: XSchemaPrimitive    => walker.walk(initial, x)
-        case x: XSchemaReference    => walker.walk(initial, x)
-        
-        case x: XSchemaRoot => error("Cannot walk over root")
-      }
+  def walk[T](s: XSchema, initial: T, walker: XSchemaDefinitionWalker[T]): T = {
+    def walkContainer(initial: T, xs: Container): T = xs.elements.foldLeft[T](initial) { (cur, x) => walk(x, cur, walker) }
+  
+    s match {
+      case x: XSchemaDefinition   => walker.end(walkContainer(walker.begin(initial, x), x), x)
+      case x: XFieldDefinition    => walker.end(walkContainer(walker.begin(initial, x), x), x)
+      case x: XOptional           => walker.end(walkContainer(walker.begin(initial, x), x), x)
+      case x: XCollection         => walker.end(walkContainer(walker.begin(initial, x), x), x)
+      case x: XMap                => walker.end(walkContainer(walker.begin(initial, x), x), x)
+      case x: XTuple              => walker.end(walkContainer(walker.begin(initial, x), x), x)
+      
+      case x: XConstant           => walker.walk(initial, x)
+      case x: XSchemaPrimitive    => walker.walk(initial, x)
+      case x: XSchemaReference    => walker.walk(initial, x)
+      
+      case x: XSchemaRoot         => walker.end(walkContainer(walker.begin(initial, x), x), x)
     }
-    
-    walk0(s, initial, walker)
   }
 }
 

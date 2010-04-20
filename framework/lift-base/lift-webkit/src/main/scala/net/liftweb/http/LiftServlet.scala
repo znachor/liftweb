@@ -35,7 +35,7 @@ import provider._
 import _root_.net.liftweb.actor._
 
 
-class LiftServlet {
+class LiftServlet extends Loggable {
   private var servletContext: HTTPContext = null
 
   def this(ctx: HTTPContext) = {
@@ -48,13 +48,24 @@ class LiftServlet {
   def destroy = {
     try {
       LiftRules.ending = true
+
+      tryo{SessionMaster.shutDownAllSessions()}
+
+      val cur = millis
+
+      // wait 10 seconds or until the request count is zero
+      while (LiftRules.reqCnt.get > 0 && (millis - cur) < 10000L) {
+        Thread.sleep(20)
+      }
+
+      tryo{ActorPing.shutdown}
+      tryo{LAScheduler.shutdown()}
+
       LiftRules.runUnloadHooks()
-      ActorPing.shutdown
-      LAScheduler.shutdown
-      Log.debug("Destroyed Lift handler.")
+      logger.debug("Destroyed Lift handler.")
       // super.destroy
     } catch {
-      case e => Log.error("Destruction failure", e)
+      case e => logger.error("Destruction failure", e)
     }
   }
 
@@ -78,7 +89,7 @@ class LiftServlet {
           doService(req, resp)
         }
       }
-      LiftRules.checkContinuations(req request) match {
+      req.request.resumeInfo match {
         case None => doIt
         case r if r eq null => doIt
         case Some((or: Req, r: LiftResponse)) if (req.path == or.path) => sendResponse(r, resp, Empty); true
@@ -86,7 +97,7 @@ class LiftServlet {
       }
     } catch {
       case e if e.getClass.getName.endsWith("RetryRequest") => throw e
-      case e => Log.warn("Request for " + req.request.uri + " failed " + e.getMessage, e); throw e
+      case e => logger.info("Request for " + req.request.uri + " failed " + e.getMessage, e); throw e
     }
   }
 
@@ -173,9 +184,11 @@ class LiftServlet {
       } else {
       // otherwise do a stateful response
       val liftSession = getLiftSession(req)
-      S.init(req, liftSession) {
-        dispatchStatefulRequest(S.request.open_!, liftSession)
+      val lzy = S.init(req, liftSession) {
+        dispatchStatefulRequest(S.request.open_!, liftSession, req)
       }
+
+      lzy()
     }
 
     tryo {LiftRules.onEndServicing.toList.foreach(_(req, resp))}
@@ -192,9 +205,8 @@ class LiftServlet {
   }
 
   private def dispatchStatefulRequest(req: Req,
-                                      liftSession: LiftSession):
-  Box[LiftResponse] =
-    {
+                                      liftSession: LiftSession,
+  originalRequest: Req): () => Box[LiftResponse] = {
       val toMatch = req
 
       val dispatch: (Boolean, Box[LiftResponse]) =
@@ -224,6 +236,7 @@ class LiftServlet {
 
               case rd: _root_.net.liftweb.http.ResponseShortcutException => (true, Full(liftSession.handleRedirect(rd, req)))
 
+              case e if (e.getClass.getName.endsWith("RetryRequest")) =>  throw e
               case e => (true, NamedPF.applyBox((Props.mode, req, e), LiftRules.exceptionHandler.toList))
 
             }
@@ -247,25 +260,32 @@ class LiftServlet {
 
       if (LiftRules.enableContainerSessions) req.request.session
 
-      val toTransform: Box[LiftResponse] =
-      if (dispatch._1)
-        {
-          dispatch._2
-        } else if (wp.length == 3 && wp.head == LiftRules.cometPath &&
-              wp(2) == LiftRules.cometScriptName()) {
-        LiftRules.serveCometScript(liftSession, req)
-      } else if ((wp.length >= 1) && wp.head == LiftRules.cometPath) {
-        handleComet(req, liftSession)
-      } else if (wp.length == 2 && wp.head == LiftRules.ajaxPath &&
-              wp(1) == LiftRules.ajaxScriptName()) {
-        LiftRules.serveAjaxScript(liftSession, req)
-      } else if (wp.length >= 1 && wp.head == LiftRules.ajaxPath) {
-        handleAjax(liftSession, req)
-      } else {
-        liftSession.processRequest(req)
-      }
+    def respToFunc(in: Box[LiftResponse]): () => Box[LiftResponse] = {
+      val ret = in.map(LiftRules.performTransform)
+      () => ret
+    }
 
-      toTransform.map(LiftRules.performTransform)
+      val toReturn: () => Box[LiftResponse] =
+      if (dispatch._1) {
+      respToFunc(dispatch._2)
+    } else if (wp.length == 3 && wp.head == LiftRules.cometPath &&
+               wp(2) == LiftRules.cometScriptName()) {
+      respToFunc(LiftRules.serveCometScript(liftSession, req))
+    } else if ((wp.length >= 1) && wp.head == LiftRules.cometPath) {
+      handleComet(req, liftSession, originalRequest) match {
+        case Left(x) => respToFunc(x)
+        case Right(x) => x
+      }
+    } else if (wp.length == 2 && wp.head == LiftRules.ajaxPath &&
+               wp(1) == LiftRules.ajaxScriptName()) {
+      respToFunc(LiftRules.serveAjaxScript(liftSession, req))
+    } else if (wp.length >= 1 && wp.head == LiftRules.ajaxPath) {
+      respToFunc(handleAjax(liftSession, req))
+    } else {
+      respToFunc(liftSession.processRequest(req))
+    }
+
+      toReturn
     }
 
   private def extractVersion(path: List[String]) {
@@ -362,36 +382,38 @@ class LiftServlet {
 
   private def setupContinuation(request: Req, session: LiftSession, actors: List[(LiftCometActor, Long)]): Any = {
     val cont = new ContinuationActor(request, session, actors,
-      answers => LiftRules.resumeRequest(
+      answers => request.request.resume(
         (request, S.init(request, session)
                   (LiftRules.performTransform(
           convertAnswersToCometResponse(session,
-            answers.toList, actors)))),
-        request.request))
+            answers.toList, actors))))))
 
-    cont ! BeginContinuation
 
-    session.enterComet(cont)
+    try {
+      session.enterComet(cont)
 
-    LAPinger.schedule(cont, BreakOut, TimeSpan(cometTimeout))
+      LAPinger.schedule(cont, BreakOut, TimeSpan(cometTimeout))
 
-    LiftRules.doContinuation(request.request, cometTimeout + 2000L)
+      request.request.suspend(cometTimeout + 2000L)
+    } finally {
+      cont ! BeginContinuation
+    }
   }
 
-  private def handleComet(requestState: Req, sessionActor: LiftSession): Box[LiftResponse] = {
+  private def handleComet(requestState: Req, sessionActor: LiftSession, originalRequest: Req): Either[Box[LiftResponse], () => Box[LiftResponse]] = {
     val actors: List[(LiftCometActor, Long)] =
     requestState.params.toList.flatMap {
       case (name, when) =>
         sessionActor.getAsyncComponent(name).toList.map(c => (c, toLong(when)))
     }
 
-    if (actors.isEmpty) Full(new JsCommands(JsCmds.RedirectTo(LiftRules.noCometSessionPage) :: Nil).toResponse)
-    else LiftRules.checkContinuations(requestState.request) match {
-      case Some(null) =>
+    if (actors.isEmpty) Left(Full(new JsCommands(JsCmds.RedirectTo(LiftRules.noCometSessionPage) :: Nil).toResponse))
+    else requestState.request.suspendResumeSupport_? match {
+      case true =>
         setupContinuation(requestState, sessionActor, actors)
-        Full(EmptyResponse)
+        Left(Full(EmptyResponse))
       case _ =>
-        handleNonContinuationComet(requestState, sessionActor, actors)
+        Right(handleNonContinuationComet(requestState, sessionActor, actors, originalRequest))
     }
   }
 
@@ -416,7 +438,8 @@ class LiftServlet {
     (new JsCommands(JsCmds.Run(jsUpdateTime) :: jsUpdateStuff)).toResponse
   }
 
-  private def handleNonContinuationComet(request: Req, session: LiftSession, actors: List[(LiftCometActor, Long)]): Box[LiftResponse] = {
+  private def handleNonContinuationComet(request: Req, session: LiftSession, actors: List[(LiftCometActor, Long)],
+  originalRequest: Req): () => Box[LiftResponse] = () => {
     val f = new LAFuture[List[AnswerRender]]
     val cont = new ContinuationActor(request, session, actors,
       answers => f.satisfy(answers))
@@ -429,7 +452,8 @@ class LiftServlet {
       LAPinger.schedule(cont, BreakOut, TimeSpan(cometTimeout))
 
       val ret2 = f.get(cometTimeout) openOr Nil
-      Full(convertAnswersToCometResponse(session, ret2, actors))
+
+      Full(S.init(originalRequest, session) {convertAnswersToCometResponse(session, ret2, actors)})
     } finally {
       session.exitComet(cont)
     }
@@ -449,7 +473,7 @@ class LiftServlet {
                       }
                       )
 
-      Log.info(toDump)
+      logger.trace(toDump)
     }
   }
 
@@ -483,12 +507,12 @@ class LiftServlet {
     val len = resp.size
     // insure that certain header fields are set
     val header = if (resp.code == 304) {
-    fixHeaders(resp.headers)
-  } else {
-    insureField(fixHeaders(resp.headers), List(("Content-Type",
-                                                LiftRules.determineContentType(pairFromRequest(request))),
-                                               ("Content-Length", len.toString)))
-  }
+      fixHeaders(resp.headers)
+    } else {
+      insureField(fixHeaders(resp.headers), List(("Content-Type",
+        LiftRules.determineContentType(pairFromRequest(request)))) ++
+          (if (len >= 0) List(("Content-Length", len.toString)) else Nil))
+    }
 
     LiftRules.beforeSend.toList.foreach(f => tryo(f(resp, response, header, request)))
     // set the cookies
@@ -530,6 +554,10 @@ class LiftServlet {
           } finally {
             endFunc()
           }
+
+        case OutputStreamResponse(out, _, _, _, _) => 
+          out(response.outputStream)
+          response.outputStream.flush()
       }
     } catch {
       case e: _root_.java.io.IOException => // ignore IO exceptions... they happen

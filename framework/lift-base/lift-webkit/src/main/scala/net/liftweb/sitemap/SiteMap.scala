@@ -31,6 +31,8 @@ case class SiteMap(globalParamFuncs: List[PartialFunction[Box[Req], Loc.AnyLocPa
 
   private var locs: Map[String, Loc[_]] = Map.empty
 
+  private var locPath: Set[List[String]] = Set()
+
   kids.foreach(_._parent = Full(this))
   kids.foreach(_.init(this))
   kids.foreach(_.validate)
@@ -41,6 +43,14 @@ case class SiteMap(globalParamFuncs: List[PartialFunction[Box[Req], Loc.AnyLocPa
     throw new SiteMapException("Location "+name+" defined twice "+
                                locs(name)+" and "+in)
     else locs = locs + (name -> in.asInstanceOf[Loc[_]])
+
+    if (SiteMap.enforceUniqueLinks &&
+	locPath.contains(in.link.uriList)) 
+      throw new SiteMapException("Location "+name+
+				 " defines a duplicate link "+
+                                 in.link.uriList)
+    
+    locPath += in.link.uriList
   }
 
   def globalParams: List[Loc.AnyLocParam] = {
@@ -53,16 +63,29 @@ case class SiteMap(globalParamFuncs: List[PartialFunction[Box[Req], Loc.AnyLocPa
 
   def findLoc(req: Req): Box[Loc[_]] = first(kids)(_.findLoc(req))
 
-  def locForGroup(group: String): Seq[Loc[_]] = {
+  /**
+  * Find all the menu items for a given group.
+  * This method returns a linear sequence of menu items
+  */
+  def locForGroup(group: String): Seq[Loc[_]] = 
     kids.flatMap(_.locForGroup(group)).filter(
       _.testAccess match {
         case Left(true) => true case _ => false
-      }
-    )
+      })
+    
+  /**
+   * Find all the menu items for a given group.
+   * This method returns menu tree
+   */
+  def menuForGroup(group: String): CompleteMenu = {
+    CompleteMenu(kids.flatMap(_.makeMenuItem(Nil, group)))
   }
 
   lazy val menus: List[Menu] = locs.values.map(_.menu).toList
 
+  /**
+   * Build a menu based on the current location
+   */
   def buildMenu(current: Box[Loc[_]]): CompleteMenu = {
     val path: List[Loc[_]] = current match {
       case Full(loc) => loc.breadCrumbs
@@ -73,6 +96,12 @@ case class SiteMap(globalParamFuncs: List[PartialFunction[Box[Req], Loc.AnyLocPa
 }
 
 object SiteMap {
+  /**
+   * By default, Lift enforced unique links in a SiteMap.  However, you
+   * can disable this feature by setting enforceUniqueLinks to false
+   */
+  @volatile var enforceUniqueLinks = true
+
   def findLoc(name: String): Box[Loc[_]] = for (sm <- LiftRules.siteMap; loc <- sm.findLoc(name)) yield loc
 
   def findAndTestLoc(name: String): Box[Loc[_]] =
