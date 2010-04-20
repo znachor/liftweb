@@ -393,35 +393,32 @@ object JsonParser {
   }
 
   /* A pool of preallocated char arrays.
-     */
-    private[json] object Segments {
-      import java.util.concurrent.ArrayBlockingQueue
-      import java.util.concurrent.atomic.AtomicInteger
+   */
+  private[json] object Segments {
+    import java.util.concurrent.ArrayBlockingQueue
+    import java.util.concurrent.atomic.AtomicInteger
 
-      private[json] var segmentSize = 1000
-      private[this] val maxNumOfSegments = 10000
-      private[this] var segmentCount = new AtomicInteger(0)
-      private[this] val segments = new ArrayBlockingQueue[Segment](maxNumOfSegments)
-      private[json] def clear = segments.clear
+    private[json] var segmentSize = 1000
+    private[this] val maxNumOfSegments = 10000
+    private[this] var segmentCount = new AtomicInteger(0)
+    private[this] val segments = new ArrayBlockingQueue[Segment](maxNumOfSegments)
+    private[json] def clear = segments.clear
 
-      def apply(): Segment = {
-        val s = acquire
-        // Give back a disposable segment if pool is exhausted.
-        if (s != null) s else DisposableSegment(new Array(segmentSize))
-      }
+    def apply(): Segment = {
+      val s = acquire
+      // Give back a disposable segment if pool is exhausted.
+      if (s != null) s else DisposableSegment(new Array(segmentSize))
+    }
 
-      private[this] def acquire: Segment = {
-        var createNew = false
+    private[this] def acquire: Segment = {
+      val curCount = segmentCount.get
+      val createNew = 
+        if (segments.size == 0 && curCount < maxNumOfSegments)
+          segmentCount.compareAndSet(curCount, curCount + 1)
+        else false
 
-        var curCount = segmentCount.get
-
-        if (segments.size == 0 && curCount < maxNumOfSegments) {
-          createNew = segmentCount.compareAndSet(curCount, curCount + 1)
-        }
-
-        if (createNew) RecycledSegment(new Array(segmentSize)) else segments.poll
-      }
-
+      if (createNew) RecycledSegment(new Array(segmentSize)) else segments.poll
+    }
       def release(s: Segment) = s match {
         case _: RecycledSegment => segments.offer(s)
         case _ =>
