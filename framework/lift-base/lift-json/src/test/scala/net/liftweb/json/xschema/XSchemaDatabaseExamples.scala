@@ -21,7 +21,7 @@ object XSchemaDatabaseExamples extends Specification {
     override def close() = { }
   }
   
-  implicit val writerF: String => Writer = (s => new UnclosablePrintWriter)
+  implicit val writerF: String => Writer  = (s => new UnclosablePrintWriter)
   
   ScalaCodeGenerator.generate(DataSocialGenderSchema, ".")
   
