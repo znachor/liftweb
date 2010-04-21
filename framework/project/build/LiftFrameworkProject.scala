@@ -2,13 +2,22 @@ import sbt._
 
 class LiftFrameworkProject(info: ProjectInfo) extends ParentProject(info) with LiftBasicProjectPlugin {
 
+//  // Remove children from dependencies
+//  override def dependencies = super.dependencies -- subProjects.values.toList
+
 //  override def parallelExecution = true
 
   lazy val base = project("lift-base", "lift-base", new LiftBaseProject(_))
-   lazy val persistence = project("lift-persistence", "lift-persistence", new LiftPersistenceProject(_), base)
+  // lazy val persistence = project("lift-persistence", "lift-persistence", new LiftPersistenceProject(_), base)
   // lazy val modules = project("lift-modules", "lift-modules", new LiftModulesProject(_), base, persistence)
 
   class LiftBaseProject(info: ProjectInfo) extends ParentProject(info) with LiftBasicProjectPlugin {
+
+//    // Remove children from dependencies
+//    override def dependencies: Iterable[Project] = super.dependencies -- subProjects.values.toList
+
+//    subProjects.
+
     lazy val common = project("lift-common", "lift-common", new LiftCommonProject(_))
     lazy val actor = project("lift-actor", "lift-actor", new LiftActorProject(_), common)
     lazy val json = project("lift-json", "lift-json", new LiftJsonProject(_), common)
@@ -23,6 +32,10 @@ class LiftFrameworkProject(info: ProjectInfo) extends ParentProject(info) with L
   }
 
   class LiftPersistenceProject(info: ProjectInfo) extends ParentProject(info) with LiftBasicProjectPlugin {
+
+//    // Remove children from dependencies
+//    override def dependencies = super.dependencies -- subProjects.values.toList
+
     lazy val mapper = project("lift-mapper", "lift-mapper", new LiftMapperProject(_))
     lazy val record = project("lift-record", "lift-record", new LiftRecordProject(_), mapper)
     lazy val jpa = project("lift-jpa", "lift-jpa", new LiftJpaProject(_), mapper)
