@@ -20,64 +20,89 @@ trait Decomposer[T] extends Function[T, JValue] {
   def apply(tvalue: T): JValue = decompose(tvalue)
 }
 
-/**
- * A serializer is capable of serializing/deserializing a wide variety of types
- * using the implicit typeclass pattern.
- */
-trait Serializer {
-  def serialize[T](tvalue: T)(implicit decomposer: Decomposer[T]): JValue = decomposer.decompose(tvalue)
+trait SerializationImplicits {
+  case class DeserializableJValue(jvalue: JValue) {
+    def deserialize[T](implicit e: Extractor[T]): T = e(jvalue)
+  }
+  case class SerializableTValue[T](tvalue: T) {
+    def serialize(implicit d: Decomposer[T]): JValue = d(tvalue)
+  }
   
-  def deserialize[T](jvalue: JValue)(implicit extractor: Extractor[T]): T = extractor.extract(jvalue)
+  implicit def jvalueToTValue[T](jvalue: JValue): DeserializableJValue = DeserializableJValue(jvalue)
+  
+  implicit def tvalueToJValue[T](tvalue: T): SerializableTValue[T] = SerializableTValue[T](tvalue)
 }
 
+/**
+ * Extractors for all basic types.
+ */
 trait DefaultExtractors {
-  implicit val stringExtractor = new Extractor[String] {
+  implicit val stringExtractor: Extractor[String] = new Extractor[String] {
     def extract(jvalue: JValue): String = jvalue match {
       case JString(str) => str
       case _ => error("Expected string but found: " + jvalue)
     }
   }
   
-  implicit val booleanExtractor = new Extractor[Boolean] {
+  implicit val booleanExtractor: Extractor[Boolean] = new Extractor[Boolean] {
     def extract(jvalue: JValue): Boolean = jvalue match {
       case JBool(b) => b
+      
+      case JString(s) if (s.toLowerCase == "true")  => true
+      case JString(s) if (s.toLowerCase == "false") => false
+      
+      case JInt(i) if (i.intValue == 1) => true
+      case JInt(i) if (i.intValue == 0) => false
+      
       case _ => error("Expected boolean but found: " + jvalue)
     }
   }
   
-  implicit val intExtractor = new Extractor[Int] {
+  implicit val intExtractor: Extractor[Int] = new Extractor[Int] {
     def extract(jvalue: JValue): Int = jvalue match {
-      case JInt(i) => i.intValue
+      case JInt(i)    => i.intValue
+      case JDouble(d) => d.toInt
+      
+      case JString(s) => s.toInt
       
       case _ => error("Expected integer but found: " + jvalue)
     }
   }
   
-  implicit val longExtractor = new Extractor[Long] {
+  implicit val longExtractor: Extractor[Long] = new Extractor[Long] {
     def extract(jvalue: JValue): Long = jvalue match {
-      case JInt(i) => i.longValue
+      case JInt(i)    => i.longValue
+      case JDouble(d) => d.toLong
+      
+      case JString(s) => s.toLong
       
       case _ => error("Expected long but found: " + jvalue)
     }
   }
   
-  implicit val floatExtractor = new Extractor[Float] {
+  implicit val floatExtractor: Extractor[Float] = new Extractor[Float] {
     def extract(jvalue: JValue): Float = jvalue match {
+      case JInt(i)    => i.floatValue
       case JDouble(d) => d.toFloat
+      
+      case JString(s) => s.toFloat
       
       case _ => error("Expected float but found: " + jvalue)
     }
   }
 
-  implicit val doubleExtractor = new Extractor[Double] {
+  implicit val doubleExtractor: Extractor[Double] = new Extractor[Double] {
     def extract(jvalue: JValue): Double = jvalue match {
+      case JInt(i)    => i.doubleValue
       case JDouble(d) => d
+      
+      case JString(s) => s.toDouble
 
       case _ => error("Expected double but found: " + jvalue)
     }
   }
   
-  def arrayExtractor[T](elementExtractor: Extractor[T]) = new Extractor[Array[T]] {
+  implicit def arrayExtractor[T](elementExtractor: Extractor[T]): Extractor[Array[T]] = new Extractor[Array[T]] {
     def extract(jvalue: JValue): Array[T] = jvalue match {
       case JArray(values) => values.map(elementExtractor.extract _).toArray
 
@@ -85,7 +110,7 @@ trait DefaultExtractors {
     }
   }
   
-  def setExtractor[T](elementExtractor: Extractor[T]) = new Extractor[Set[T]] {
+  implicit def setExtractor[T](implicit elementExtractor: Extractor[T]): Extractor[Set[T]] = new Extractor[Set[T]] {
     def extract(jvalue: JValue): Set[T] = jvalue match {
       case JArray(values) => Set(values.map(elementExtractor.extract _): _*)
 
@@ -93,7 +118,7 @@ trait DefaultExtractors {
     }
   }
   
-  def listExtractor[T](elementExtractor: Extractor[T]) = new Extractor[List[T]] {
+  implicit def listExtractor[T](implicit elementExtractor: Extractor[T]): Extractor[List[T]] = new Extractor[List[T]] {
     def extract(jvalue: JValue): List[T] = jvalue match {
       case JArray(values) => values.map(elementExtractor.extract _)
 
@@ -102,44 +127,47 @@ trait DefaultExtractors {
   }
 }
 
+/**
+ * Decomposers for all basic types.
+ */
 trait DefaultDecomposers {
-  implicit val stringDecomposer = new Decomposer[String] {
+  implicit val stringDecomposer: Decomposer[String] = new Decomposer[String] {
     def decompose(tvalue: String): JValue = JString(tvalue)
   }
   
-  implicit val booleanDecomposer = new Decomposer[Boolean] {
+  implicit val booleanDecomposer: Decomposer[Boolean] = new Decomposer[Boolean] {
     def decompose(tvalue: Boolean): JValue = JBool(tvalue)
   }
   
-  implicit val intDecomposer = new Decomposer[Int] {
+  implicit val intDecomposer: Decomposer[Int] = new Decomposer[Int] {
     def decompose(tvalue: Int): JValue = JInt(BigInt(tvalue))
   }
   
-  implicit val longDecomposer = new Decomposer[Long] {
+  implicit val longDecomposer: Decomposer[Long] = new Decomposer[Long] {
     def decompose(tvalue: Long): JValue = JInt(BigInt(tvalue))
   }
   
-  implicit val floatDecomposer = new Decomposer[Float] {
+  implicit val floatDecomposer: Decomposer[Float] = new Decomposer[Float] {
     def decompose(tvalue: Float): JValue = JDouble(tvalue.toDouble)
   }
 
-  implicit val doubleDecomposer = new Decomposer[Double] {
+  implicit val doubleDecomposer: Decomposer[Double] = new Decomposer[Double] {
     def decompose(tvalue: Double): JValue = JDouble(tvalue)
   }
   
-  def arrayDecomposer[T](elementDecomposer: Decomposer[T]) = new Decomposer[Array[T]] {
+  implicit def arrayDecomposer[T](implicit elementDecomposer: Decomposer[T]): Decomposer[Array[T]] = new Decomposer[Array[T]] {
     def decompose(tvalue: Array[T]): JValue = JArray(tvalue.toList.map(elementDecomposer.decompose _))
   }
   
-  def setDecomposer[T](elementDecomposer: Decomposer[T]) = new Decomposer[Set[T]] {
+  implicit def setDecomposer[T](implicit elementDecomposer: Decomposer[T]): Decomposer[Set[T]] = new Decomposer[Set[T]] {
     def decompose(tvalue: Set[T]): JValue = JArray(tvalue.toList.map(elementDecomposer.decompose _))
   }
   
-  def listDecomposer[T](elementDecomposer: Decomposer[T]) = new Decomposer[List[T]] {
+  implicit def listDecomposer[T](implicit elementDecomposer: Decomposer[T]): Decomposer[List[T]] = new Decomposer[List[T]] {
     def decompose(tvalue: List[T]): JValue = JArray(tvalue.toList.map(elementDecomposer.decompose _))
   }
 }
 
-object XSchema extends Serializer with DefaultExtractors with DefaultDecomposers {
+object XSchema extends SerializationImplicits with DefaultExtractors with DefaultDecomposers {
 }
 
