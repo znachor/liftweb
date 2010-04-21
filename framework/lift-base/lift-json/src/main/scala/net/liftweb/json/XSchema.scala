@@ -51,6 +51,9 @@ trait DefaultExtractors {
       case JString(s) if (s.toLowerCase == "true")  => true
       case JString(s) if (s.toLowerCase == "false") => false
       
+      case JString(s) if (s.toLowerCase == "1") => true
+      case JString(s) if (s.toLowerCase == "0") => false
+      
       case JInt(i) if (i.intValue == 1) => true
       case JInt(i) if (i.intValue == 0) => false
       
@@ -102,7 +105,7 @@ trait DefaultExtractors {
     }
   }
   
-  implicit def arrayExtractor[T](elementExtractor: Extractor[T]): Extractor[Array[T]] = new Extractor[Array[T]] {
+  implicit def arrayExtractor[T](implicit elementExtractor: Extractor[T]): Extractor[Array[T]] = new Extractor[Array[T]] {
     def extract(jvalue: JValue): Array[T] = jvalue match {
       case JArray(values) => values.map(elementExtractor.extract _).toArray
 
