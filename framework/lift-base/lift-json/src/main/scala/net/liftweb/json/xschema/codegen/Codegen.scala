@@ -98,14 +98,14 @@ trait CodeGeneratorHelpers {
 }
 
 trait CodeGenerator {
-  def generate(root: XSchemaRoot, destPath: String)(implicit writerF: String => Writer)
+  def generate(root: XRoot, destPath: String)(implicit writerF: String => Writer)
 }
 
 
 object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
   def toFile(ns: Namespace, name: String): String = toFile(ns, "Data", "scala")
   
-  def generate(root: XSchemaRoot, destPath: String)(implicit writerF: String => Writer) = {
+  def generate(root: XRoot, destPath: String)(implicit writerF: String => Writer) = {
     val bundle   = CodeBundle.empty
     val database = XSchemaDatabase(root.definitions)
     
@@ -121,7 +121,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
   private def typeSignatureOf(x: XSchema): String = walk(x, CodeGeneration.empty, typeSignatureWalker).code
   
   private def definitionWalker(database: XSchemaDatabase) = new XSchemaDefinitionWalker[CodeGeneration] {
-    override def begin(data: CodeGeneration, defn: XSchemaDefinition) = {
+    override def begin(data: CodeGeneration, defn: XDefinition) = {
       def coproductPrefix(x: XCoproduct): String = if (database.productChildrenOf(x).map(_.namespace).removeDuplicates.length <= 1) "sealed " else ""
       def productFields(x: XProduct): String = x.fields.map(typeSignatureOf(_)).mkString(", ")
       def coproductFields(cg: CodeGeneration, x: XCoproduct): CodeGeneration = {
@@ -138,7 +138,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       })
     }
     
-    override def end(data: CodeGeneration, defn: XSchemaDefinition) = {
+    override def end(data: CodeGeneration, defn: XDefinition) = {
       (data + (defn match {
         case x: XProduct => {
           val withClauses = database.coproductContainersOf(x).map(_.qualifiedName).mkString(" with ")
@@ -153,7 +153,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
   }
   
   private def decomposingWalker(database: XSchemaDatabase) = new XSchemaDefinitionWalker[CodeGeneration] {
-    override def begin(data: CodeGeneration, defn: XSchemaDefinition) = {
+    override def begin(data: CodeGeneration, defn: XDefinition) = {
       def coproductPrefix(x: XCoproduct): String = if (database.productChildrenOf(x).map(_.namespace).removeDuplicates.length <= 1) "sealed " else ""
       def productFields(x: XProduct): String = x.fields.map(typeSignatureOf(_)).mkString(", ")
       def coproductFields(cg: CodeGeneration, x: XCoproduct): CodeGeneration = {
@@ -170,7 +170,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       })
     }
     
-    override def end(data: CodeGeneration, defn: XSchemaDefinition) = {
+    override def end(data: CodeGeneration, defn: XDefinition) = {
       (data + (defn match {
         case x: XProduct => {
           val withClauses = database.coproductContainersOf(x).map(_.qualifiedName).mkString(" with ")
@@ -209,7 +209,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       data + "(" + tuple.types.map(typeSignatureOf(_)).mkString(", ") + ")"
     }
     
-    override def walk(data: CodeGeneration, prim: XSchemaPrimitive) = {
+    override def walk(data: CodeGeneration, prim: XPrimitive) = {
       data + (prim match {
         case XString  => "String"
         case XInt     => "Int"
@@ -220,7 +220,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       })
     }
     
-    override def walk(data: CodeGeneration, ref: XSchemaReference) = {
+    override def walk(data: CodeGeneration, ref: XReference) = {
       data + ref.typename
     }
     

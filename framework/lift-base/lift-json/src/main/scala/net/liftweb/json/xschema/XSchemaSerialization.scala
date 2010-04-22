@@ -12,7 +12,7 @@ object XSchemaSerialization {
   private val VERSION     = "version"
   private val DEFINITIONS = "definitions"
   private val DEFAULT     = "default"
-  private val TYPEP1      = "contains"
+  private val TYPEPARAMS  = "typeParameters"
   private val COLLECTION  = "collection"
   private val SET         = "set"
   private val ARRAY       = "array"
@@ -26,13 +26,13 @@ object XSchemaSerialization {
       { case x: Typed          => JField(TYPE,        JString(x.typename)) },
       { case x: Named          => JField(NAME,        JString(x.name)) },
       { case x: Default        => JField(DEFAULT,     x.defValue) },
-      { case x: Parameterized1 => JField(TYPEP1,      decompose(x.typep1)) },
+      { case x: Parameterized  => JField(TYPEPARAMS,  JArray(x.typeParameters.map(decompose(_)))) },
       { case x: Ordered        => JField(ORDER,       JString(x.order.name)) },
       { case x: Properties     => JField(PROPERTIES,  JObject(x.properties.map { t => JField(t._1, JString(t._2)) }.toList)) },
       { case x: Namespaced     => JField(NAMESPACE,   JString(x.namespace.value)) },
       { case x: Versioned      => JField(VERSION,     JInt(x.version)) },
       { case x: XTuple         => JField(TYPES,       JArray(x.types.map(decompose(_)))) },
-      { case x: XSchemaRoot    => JField(DEFINITIONS, JArray(x.definitions.map(decompose(_)))) },
+      { case x: XRoot          => JField(DEFINITIONS, JArray(x.definitions.map(decompose(_)))) },
       { case x: XCollection    => JField(COLLECTION,  JString(x.collection.name)) },
       { case x: XProduct       => JField(FIELDS,      JArray(x.fields.map(decompose(_)))) },
       { case x: XCoproduct     => JField(TYPES,       JArray(x.types.map(decompose(_)))) }
@@ -60,9 +60,10 @@ object XSchemaSerialization {
       
       def defValue = json \ DEFAULT =#= classOf[JObject]
       
-      def typep1: XSchemaReference = extract0(json \ TYPEP1) match {
-        case x: XSchemaReference => x
-        case x @ _ => throw ValidationError("Expected XSchemaReference but found: " + x, json ^ TYPEP1)
+      def typeParameters(n: Int): List[XReference] = {
+        val array = extractArrayOf(TYPEPARAMS, classOf[XReference])
+       
+        if (array.length == n) array else throw ValidationError("Expected " + n + " type parameters, but found " + array.length, json ^ TYPEPARAMS) 
       }
 
       def order = stringField(ORDER, json) match { 
@@ -90,24 +91,24 @@ object XSchemaSerialization {
       
       def fields = extractArrayOf(FIELDS, classOf[XFieldDefinition])
       
-      def types = extractArrayOf(TYPES, classOf[XSchemaReference])
+      def types = extractArrayOf(TYPES, classOf[XReference])
       
-      def definitions = extractArrayOf(DEFINITIONS, classOf[XSchemaDefinition])
+      def definitions = extractArrayOf(DEFINITIONS, classOf[XDefinition])
       
       def version = integerField(VERSION, json).intValue
     
       typename match {
-        case XCollection.typename       => XCollection(typep1, collection)
-        case XConstant.typename         => XConstant(typep1, defValue)
-        case XMap.typename              => XMap(typep1)
-        case XOptional.typename         => XOptional(typep1)
+        case XCollection.typename       => XCollection(typeParameters(1)(0), collection)
+        case XConstant.typename         => XConstant(typeParameters(1)(0), defValue)
+        case XMap.typename              => XMap(typeParameters(1)(0))
+        case XOptional.typename         => XOptional(typeParameters(1)(0))
         case XTuple.typename            => XTuple(types)
-        case XFieldDefinition.typename  => XFieldDefinition(typep1, name, properties, defValue, order)
+        case XFieldDefinition.typename  => XFieldDefinition(typeParameters(1)(0), name, properties, defValue, order)
         case XProduct.typename          => XProduct(namespace, name, properties, fields)
         case XCoproduct.typename        => XCoproduct(namespace, name, properties, types)
-        case XSchemaRoot.typename       => XSchemaRoot(version, definitions, properties)
+        case XRoot.typename             => XRoot(version, definitions, properties)
         
-        case _ => XSchemaReference(typename)
+        case _ => XReference(typename)
       }
     }
     

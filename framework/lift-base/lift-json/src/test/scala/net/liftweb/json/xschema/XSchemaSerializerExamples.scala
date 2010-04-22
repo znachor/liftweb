@@ -28,7 +28,7 @@ object TestSchemas {
   val numberExpr = parse("""{ "Number": { "value": 0.0 } }""")
   val number     = parse("""{ "value": 0.0 }""")
 
-  val AstNumericExprSchema = XSchemaRoot(
+  val AstNumericExprSchema = XRoot(
     1,
     List(
       XCoproduct(
@@ -36,10 +36,10 @@ object TestSchemas {
         "Expr",
         Map(),
         List(
-          XSchemaReference("ast.numeric.NumericSum"),
-          XSchemaReference("ast.numeric.Sum"),
-          XSchemaReference("ast.numeric.Product"),
-          XSchemaReference("ast.numeric.Number")
+          XReference("ast.numeric.NumericSum"),
+          XReference("ast.numeric.Sum"),
+          XReference("ast.numeric.Product"),
+          XReference("ast.numeric.Number")
         )
       ),
       XCoproduct(
@@ -47,8 +47,8 @@ object TestSchemas {
         "MixedSum",
         Map(),
         List(
-          XSchemaReference("ast.numeric.NumericSum"),
-          XSchemaReference("ast.numeric.Sum")
+          XReference("ast.numeric.NumericSum"),
+          XReference("ast.numeric.Sum")
         )
       ),
       XProduct(
@@ -56,8 +56,8 @@ object TestSchemas {
         "NumericSum",
         Map(),
         List(
-          XFieldDefinition(XSchemaReference("ast.numeric.Number"), "term1", Map(), numberExpr, Descending),
-          XFieldDefinition(XSchemaReference("ast.numeric.Number"), "term2", Map(), numberExpr, Descending)
+          XFieldDefinition(XReference("ast.numeric.Number"), "term1", Map(), numberExpr, Descending),
+          XFieldDefinition(XReference("ast.numeric.Number"), "term2", Map(), numberExpr, Descending)
         )
       ),
       XProduct(
@@ -65,8 +65,8 @@ object TestSchemas {
         "Sum",
         Map(),
         List(
-          XFieldDefinition(XSchemaReference("ast.numeric.Expr"), "term1", Map(), numberExpr, Descending),
-          XFieldDefinition(XSchemaReference("ast.numeric.Expr"), "term2", Map(), numberExpr, Descending)
+          XFieldDefinition(XReference("ast.numeric.Expr"), "term1", Map(), numberExpr, Descending),
+          XFieldDefinition(XReference("ast.numeric.Expr"), "term2", Map(), numberExpr, Descending)
         )
       ),
       XProduct(
@@ -74,8 +74,8 @@ object TestSchemas {
         "Product",
         Map(),
         List(
-          XFieldDefinition(XSchemaReference("ast.numeric.Expr"), "term1", Map(), numberExpr, Descending),
-          XFieldDefinition(XSchemaReference("ast.numeric.Expr"), "term2", Map(), numberExpr, Descending)
+          XFieldDefinition(XReference("ast.numeric.Expr"), "term1", Map(), numberExpr, Descending),
+          XFieldDefinition(XReference("ast.numeric.Expr"), "term2", Map(), numberExpr, Descending)
         )
       ),
       XProduct(
@@ -90,7 +90,7 @@ object TestSchemas {
     Map()
   )
 
-  val DataSocialGenderSchema = XSchemaRoot(
+  val DataSocialGenderSchema = XRoot(
     1,
     List(
       XCoproduct(
@@ -98,8 +98,8 @@ object TestSchemas {
         "Gender",
         Map(),
         List(
-          XSchemaReference("data.social.Male"),
-          XSchemaReference("data.social.Female")
+          XReference("data.social.Male"),
+          XReference("data.social.Female")
         )
       ),
       XProduct(
