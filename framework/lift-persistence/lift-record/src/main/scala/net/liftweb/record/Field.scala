@@ -143,7 +143,7 @@ trait OwnedField[OwnerType <: Record[OwnerType]] extends BaseField {
 }
 
 /** Refined trait for fields holding a particular value type */
-trait TypedField[ThisType] extends BaseField with Product1[Any] {
+trait TypedField[ThisType] extends BaseField with Product1[ThisType] {
   type MyType = ThisType // For backwards compatability
 
   type ValidationFunction = Box[MyType] => Box[Node]
@@ -151,7 +151,7 @@ trait TypedField[ThisType] extends BaseField with Product1[Any] {
   private[record] var data: Box[MyType] = Empty
   private[record] var needsDefault = true
 
-  //TODO: fullfil the contract of Product1[Any]
+  //TODO: fullfil the contract of Product1[ThisType]
   def canEqual(a:Any) = false
   
   def _1 = value
