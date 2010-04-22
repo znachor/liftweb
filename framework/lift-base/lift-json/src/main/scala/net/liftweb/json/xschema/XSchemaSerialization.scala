@@ -89,7 +89,7 @@ object XSchemaSerialization {
         case XList.name  => XList
       }
       
-      def fields = extractArrayOf(FIELDS, classOf[XFieldDefinition])
+      def fields = extractArrayOf(FIELDS, classOf[XField])
       
       def types = extractArrayOf(TYPES, classOf[XReference])
       
@@ -103,7 +103,7 @@ object XSchemaSerialization {
         case XMap.typename              => XMap(typeParameters(1)(0))
         case XOptional.typename         => XOptional(typeParameters(1)(0))
         case XTuple.typename            => XTuple(types)
-        case XFieldDefinition.typename  => XFieldDefinition(typeParameters(1)(0), name, properties, defValue, order)
+        case XField.typename  => XField(typeParameters(1)(0), name, properties, defValue, order)
         case XProduct.typename          => XProduct(namespace, name, properties, fields)
         case XCoproduct.typename        => XCoproduct(namespace, name, properties, types)
         case XRoot.typename             => XRoot(version, definitions, properties)

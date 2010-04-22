@@ -56,8 +56,8 @@ object TestSchemas {
         "NumericSum",
         Map(),
         List(
-          XFieldDefinition(XReference("ast.numeric.Number"), "term1", Map(), numberExpr, Descending),
-          XFieldDefinition(XReference("ast.numeric.Number"), "term2", Map(), numberExpr, Descending)
+          XField(XReference("ast.numeric.Number"), "term1", Map(), numberExpr, Descending),
+          XField(XReference("ast.numeric.Number"), "term2", Map(), numberExpr, Descending)
         )
       ),
       XProduct(
@@ -65,8 +65,8 @@ object TestSchemas {
         "Sum",
         Map(),
         List(
-          XFieldDefinition(XReference("ast.numeric.Expr"), "term1", Map(), numberExpr, Descending),
-          XFieldDefinition(XReference("ast.numeric.Expr"), "term2", Map(), numberExpr, Descending)
+          XField(XReference("ast.numeric.Expr"), "term1", Map(), numberExpr, Descending),
+          XField(XReference("ast.numeric.Expr"), "term2", Map(), numberExpr, Descending)
         )
       ),
       XProduct(
@@ -74,8 +74,8 @@ object TestSchemas {
         "Product",
         Map(),
         List(
-          XFieldDefinition(XReference("ast.numeric.Expr"), "term1", Map(), numberExpr, Descending),
-          XFieldDefinition(XReference("ast.numeric.Expr"), "term2", Map(), numberExpr, Descending)
+          XField(XReference("ast.numeric.Expr"), "term1", Map(), numberExpr, Descending),
+          XField(XReference("ast.numeric.Expr"), "term2", Map(), numberExpr, Descending)
         )
       ),
       XProduct(
@@ -83,7 +83,7 @@ object TestSchemas {
         "Number",
         Map(),
         List(
-          XFieldDefinition(XDouble, "value", Map(), number, Descending)
+          XField(XDouble, "value", Map(), number, Descending)
         )
       )
     ),
@@ -107,7 +107,7 @@ object TestSchemas {
         "Male",
         Map(),
         List(
-          XFieldDefinition(XString, "text", Map(), JString("male"), Descending)
+          XField(XString, "text", Map(), JString("male"), Descending)
         )
       ),
       XProduct(
@@ -115,7 +115,7 @@ object TestSchemas {
         "Female",
         Map(),
         List(
-          XFieldDefinition(XString, "text", Map(), JString("female"), Ascending)
+          XField(XString, "text", Map(), JString("female"), Ascending)
         )
       )
     ),

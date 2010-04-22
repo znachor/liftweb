@@ -48,7 +48,7 @@ trait XSchemaDatabase extends Iterable[XSchema] {
    * for the type.
    */
   def resolve(ref: XReference): XSchema = ref match {
-    case x: XFieldDefinition  => x
+    case x: XField  => x
     case x: XOptional         => x
     case x: XCollection       => x
     case x: XMap              => x

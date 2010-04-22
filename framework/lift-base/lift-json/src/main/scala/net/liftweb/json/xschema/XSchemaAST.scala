@@ -91,13 +91,13 @@ object XSchemaAST {
     val typeParameters = types
   }
 
-  case class XFieldDefinition(fieldType: XReference, name: String, properties: Map[String, String], defValue: JValue, order: Order) extends XSchema with Properties with Named with Default with Parameterized with Ordered {
-    val typename = XFieldDefinition.typename
+  case class XField(fieldType: XReference, name: String, properties: Map[String, String], defValue: JValue, order: Order) extends XSchema with Properties with Named with Default with Parameterized with Ordered {
+    val typename = XField.typename
     
     val typeParameters = fieldType :: Nil
   }
   
-  case class XProduct(namespace: Namespace, name: String, properties: Map[String, String], fields: List[XFieldDefinition]) extends XDefinition(XProduct.typename) {
+  case class XProduct(namespace: Namespace, name: String, properties: Map[String, String], fields: List[XField]) extends XDefinition(XProduct.typename) {
     def elements = fields
   }
   
@@ -124,7 +124,7 @@ object XSchemaAST {
   object XConstant        extends TypeNamed("Constant")
   object XMap             extends TypeNamed("Map")
   object XTuple           extends TypeNamed("Tuple")
-  object XFieldDefinition extends TypeNamed("Field")
+  object XField extends TypeNamed("Field")
   object XProduct         extends TypeNamed("Product")
   object XCoproduct       extends TypeNamed("Coproduct")
   
@@ -132,7 +132,7 @@ object XSchemaAST {
     def begin(data: T, defn:  XRoot): T = data
     
     def begin(data: T, defn:  XDefinition): T = data
-    def begin(data: T, field: XFieldDefinition): T = data
+    def begin(data: T, field: XField): T = data
     def begin(data: T, opt:   XOptional): T = data
     def begin(data: T, col:   XCollection): T = data
     def begin(data: T, map:   XMap): T = data
@@ -144,7 +144,7 @@ object XSchemaAST {
     
     def end(data: T, defn:    XRoot): T = data    
     def end(data: T, defn:    XDefinition): T = data
-    def end(data: T, field:   XFieldDefinition): T = data
+    def end(data: T, field:   XField): T = data
     def end(data: T, opt:     XOptional): T = data
     def end(data: T, col:     XCollection): T = data
     def end(data: T, map:     XMap): T = data
@@ -156,7 +156,7 @@ object XSchemaAST {
   
     s match {
       case x: XDefinition       => walker.end(walkContainer(walker.begin(initial, x), x), x)
-      case x: XFieldDefinition  => walker.end(walkContainer(walker.begin(initial, x), x), x)
+      case x: XField  => walker.end(walkContainer(walker.begin(initial, x), x), x)
       case x: XOptional         => walker.end(walkContainer(walker.begin(initial, x), x), x)
       case x: XCollection       => walker.end(walkContainer(walker.begin(initial, x), x), x)
       case x: XMap              => walker.end(walkContainer(walker.begin(initial, x), x), x)

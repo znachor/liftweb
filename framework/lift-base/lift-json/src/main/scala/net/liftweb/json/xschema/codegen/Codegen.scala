@@ -175,7 +175,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     
     override def end(code: CodeBuilder, defn: XDefinition) = {
       def buildOrderedDefinition(x: XProduct): CodeBuilder = {
-        def buildComparisonFor(field: XFieldDefinition, schema: XSchema): CodeBuilder = {
+        def buildComparisonFor(field: XField, schema: XSchema): CodeBuilder = {
           def comparisonSign = field.order match {
             case Ascending  => 1
             case Descending => -1
@@ -227,7 +227,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
   }
   
   private lazy val typeSignatureWalker = new XSchemaDefinitionWalker[CodeBuilder] {
-    override def begin(data: CodeBuilder, field: XFieldDefinition) = {
+    override def begin(data: CodeBuilder, field: XField) = {
       data += field.name + ": "
     }
     
