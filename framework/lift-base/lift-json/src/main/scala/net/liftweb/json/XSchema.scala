@@ -105,6 +105,45 @@ trait DefaultExtractors {
     }
   }
   
+  implicit def optionExtractor[T](implicit extractor: Extractor[T]): Extractor[Option[T]] = new Extractor[Option[T]] {
+    def extract(jvalue: JValue): Option[T] = jvalue match {
+      case JNothing | JNull => None
+      case x: JValue => Some(extractor.extract(x))
+    }
+  }
+  
+  implicit def tuple2Extractor[T1, T2](implicit extractor1: Extractor[T1], extractor2: Extractor[T2]): Extractor[(T1, T2)] = new Extractor[(T1, T2)] {
+    def extract(jvalue: JValue): (T1, T2) = jvalue match {
+      case JArray(values) if (values.length == 2) => (extractor1(values(0)), extractor2(values(1)))
+
+      case _ => error("Expected array of length 2 but found: " + jvalue)
+    }
+  }
+  
+  implicit def tuple3Extractor[T1, T2, T3](implicit extractor1: Extractor[T1], extractor2: Extractor[T2], extractor3: Extractor[T3]): Extractor[(T1, T2, T3)] = new Extractor[(T1, T2, T3)] {
+    def extract(jvalue: JValue): (T1, T2, T3) = jvalue match {
+      case JArray(values) if (values.length == 3) => (extractor1(values(0)), extractor2(values(1)), extractor3(values(2)))
+
+      case _ => error("Expected array of length 3 but found: " + jvalue)
+    }
+  }
+  
+  implicit def tuple4Extractor[T1, T2, T3, T4](implicit extractor1: Extractor[T1], extractor2: Extractor[T2], extractor3: Extractor[T3], extractor4: Extractor[T4]): Extractor[(T1, T2, T3, T4)] = new Extractor[(T1, T2, T3, T4)] {
+    def extract(jvalue: JValue): (T1, T2, T3, T4) = jvalue match {
+      case JArray(values) if (values.length == 4) => (extractor1(values(0)), extractor2(values(1)), extractor3(values(2)), extractor4(values(3)))
+
+      case _ => error("Expected array of length 4 but found: " + jvalue)
+    }
+  }
+  
+  implicit def tuple5Extractor[T1, T2, T3, T4, T5](implicit extractor1: Extractor[T1], extractor2: Extractor[T2], extractor3: Extractor[T3], extractor4: Extractor[T4], extractor5: Extractor[T5]): Extractor[(T1, T2, T3, T4, T5)] = new Extractor[(T1, T2, T3, T4, T5)] {
+    def extract(jvalue: JValue): (T1, T2, T3, T4, T5) = jvalue match {
+      case JArray(values) if (values.length == 5) => (extractor1(values(0)), extractor2(values(1)), extractor3(values(2)), extractor4(values(3)), extractor5(values(4)))
+
+      case _ => error("Expected array of length 5 but found: " + jvalue)
+    }
+  }
+  
   implicit def arrayExtractor[T](implicit elementExtractor: Extractor[T]): Extractor[Array[T]] = new Extractor[Array[T]] {
     def extract(jvalue: JValue): Array[T] = jvalue match {
       case JArray(values) => values.map(elementExtractor.extract _).toArray
@@ -158,6 +197,29 @@ trait DefaultDecomposers {
     def decompose(tvalue: Double): JValue = JDouble(tvalue)
   }
   
+  implicit def optionDecomposer[T](implicit decomposer: Decomposer[T]): Decomposer[Option[T]] = new Decomposer[Option[T]] {
+    def decompose(tvalue: Option[T]): JValue = tvalue match {
+      case None    => JNull
+      case Some(v) => decomposer.decompose(v)
+    }
+  }
+  
+  implicit def tuple2Decomposer[T1, T2](implicit decomposer1: Decomposer[T1], decomposer2: Decomposer[T2]): Decomposer[(T1, T2)] = new Decomposer[(T1, T2)] {
+    def decompose(tvalue: (T1, T2)) = JArray(decomposer1(tvalue._1) :: decomposer2(tvalue._2) :: Nil)
+  }
+  
+  implicit def tuple3Decomposer[T1, T2, T3](implicit decomposer1: Decomposer[T1], decomposer2: Decomposer[T2], decomposer3: Decomposer[T3]): Decomposer[(T1, T2, T3)] = new Decomposer[(T1, T2, T3)] {
+    def decompose(tvalue: (T1, T2, T3)) = JArray(decomposer1(tvalue._1) :: decomposer2(tvalue._2) :: decomposer3(tvalue._3) :: Nil)
+  }
+  
+  implicit def tuple4Decomposer[T1, T2, T3, T4](implicit decomposer1: Decomposer[T1], decomposer2: Decomposer[T2], decomposer3: Decomposer[T3], decomposer4: Decomposer[T4]): Decomposer[(T1, T2, T3, T4)] = new Decomposer[(T1, T2, T3, T4)] {
+    def decompose(tvalue: (T1, T2, T3, T4)) = JArray(decomposer1(tvalue._1) :: decomposer2(tvalue._2) :: decomposer3(tvalue._3) :: decomposer4(tvalue._4) :: Nil)
+  }
+  
+  implicit def tuple5Decomposer[T1, T2, T3, T4, T5](implicit decomposer1: Decomposer[T1], decomposer2: Decomposer[T2], decomposer3: Decomposer[T3], decomposer4: Decomposer[T4], decomposer5: Decomposer[T5]): Decomposer[(T1, T2, T3, T4, T5)] = new Decomposer[(T1, T2, T3, T4, T5)] {
+    def decompose(tvalue: (T1, T2, T3, T4, T5)) = JArray(decomposer1(tvalue._1) :: decomposer2(tvalue._2) :: decomposer3(tvalue._3) :: decomposer4(tvalue._4) :: decomposer5(tvalue._5) :: Nil)
+  }
+  
   implicit def arrayDecomposer[T](implicit elementDecomposer: Decomposer[T]): Decomposer[Array[T]] = new Decomposer[Array[T]] {
     def decompose(tvalue: Array[T]): JValue = JArray(tvalue.toList.map(elementDecomposer.decompose _))
   }
@@ -171,6 +233,20 @@ trait DefaultDecomposers {
   }
 }
 
-object XSchema extends SerializationImplicits with DefaultExtractors with DefaultDecomposers {
+trait DefaultOrderings {
+  case class OrderedOption[T <% Ordered[T]](opt: Option[T]) extends Ordered[Option[T]] {
+    def compare(that: Option[T]): Int = {
+      if (opt.isEmpty && that.isEmpty) return 0
+      if (opt.isEmpty && !that.isEmpty) return -1
+      if (!opt.isEmpty && that.isEmpty) return 1
+      
+      return opt.get.compareTo(that.get)
+    }
+  }
+  
+  implicit def optionToOrderedOption[T <% Ordered[T]](opt: Option[T]): OrderedOption[T] = OrderedOption[T](opt)
+}
+
+object XSchema extends SerializationImplicits with DefaultExtractors with DefaultDecomposers with DefaultOrderings {
 }
 

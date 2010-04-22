@@ -58,7 +58,7 @@ object XSchemaSerialization {
       
       def name = stringField(NAME, json)
       
-      def defValue = json \ DEFAULT =#= classOf[JObject]
+      def defValue = json \ DEFAULT --> classOf[JObject]
       
       def typeParameters(n: Int): List[XReference] = {
         val array = extractArrayOf(TYPEPARAMS, classOf[XReference])
@@ -74,7 +74,7 @@ object XSchemaSerialization {
       
       def properties = (json \? PROPERTIES).map { props => 
         Map(
-          (props =#= classOf[JObject]).values.map {
+          (props --> classOf[JObject]).values.map {
             case (k, JString(v)) => (k, v)
             case (k, v) => throw ValidationError("Expected string value but found: " + v, json ^ PROPERTIES)
           }.toList: _*

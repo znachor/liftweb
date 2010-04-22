@@ -31,6 +31,16 @@ trait XSchemaDatabase extends Iterable[XSchema] {
    * Attempts to find the definition for the specified reference.
    */
   def definitionFor(ref: XReference): Option[XDefinition] = definitions.find(_.qualifiedName == ref.typename)
+  
+  /**
+   * Retrieves all the definitions in the specified namespace.
+   */
+  def definitionsIn(namespace: Namespace): List[XDefinition] = definitions.filter(_.namespace == namespace)
+  
+  /**
+   * Retrieves all the namespaces.
+   */
+  def namespaces = definitions.map(_.namespace).removeDuplicates
 
   /**
    * Resolves the type. Will return the passed in type except when it is a 

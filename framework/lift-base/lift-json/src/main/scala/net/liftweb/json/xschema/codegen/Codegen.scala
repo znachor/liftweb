@@ -9,9 +9,11 @@ import java.io.{FileOutputStream, Writer}
 
 import scala.collection.mutable.{Map => MutableMap}
 
-case class State(indentLevel: Int) {
-  def indent   = State(indentLevel + 1)
-  def unindent = State(indentLevel - 1)
+class State(var indentLevel: Int) {
+  def indent   = { indentLevel = indentLevel + 1; this }
+  def unindent = { indentLevel = indentLevel - 1; this }
+  
+  def copy(that: State) = { this.indentLevel = that.indentLevel; this }
   
   def tab = "  "
   
@@ -20,38 +22,44 @@ case class State(indentLevel: Int) {
   def column = tab.length * indentLevel
 }
 
-case class CodeGeneration(code: String, state: State) {
-  def + (str: String) = CodeGeneration(code + str, state)
-  def + (that: CodeGeneration) = CodeGeneration(code + that.code, that.state)
-  
-  def indent   = CodeGeneration(code + state.tab, state.indent)
-  def unindent = CodeGeneration(code, state.unindent)
-  def newline  = CodeGeneration(code + "\n" + state.startIndentation, state)
-  
-  def indented(f: () => String) = (indent + f()).unindent
-  
-  def blocked(f: () => String) = wrap(" {", "}")(f)
-  
-  def curlied(f: () => String) = wrap("(", ")")(f)
-  
-  def bracketed(f: () => String) = wrap("[", "]")(f)
-  
-  def joined[A](list: Iterable[A], delim: String)(f: A => String) = this + list.map(f).mkString(delim)
-  
-  private def wrap(start: String, end: String)(f: () => String) = (((this + start).newline.indent + f()).unindent.newline + end).newline
+object State {
+  def apply(indentLevel: Int) = new State(indentLevel)
 }
 
-object CodeGeneration {
-  def empty = new CodeGeneration("", State(0))
+case class CodeBuilder(codeBuilder: StringBuilder, var state: State) {
+  def += (str: String) = { 
+    codeBuilder.append(str);
+    this
+  }
+  
+  def += (that: CodeBuilder) = { 
+    codeBuilder.append(that.code); 
+    this.state.copy(that.state); 
+    this
+  }
+  
+  def add(str: String) = { this += str }
+  
+  def addln(str: String) = { this += str; newline }
+  
+  def indent   = { state.indent; newline }
+  def unindent = { state.unindent; newline }
+  def newline  = { codeBuilder.append("\n").append(state.startIndentation); this }
+  
+  def code = codeBuilder.toString
 }
 
-case class CodeBundle(fileToCG: MutableMap[String, CodeGeneration]) {
-  def += (tuple: (String, CodeGeneration)) = {
+object CodeBuilder {
+  def empty = new CodeBuilder(new StringBuilder(), State(0))
+}
+
+case class CodeBundle(fileToCG: MutableMap[String, CodeBuilder]) {
+  def += (tuple: (String, CodeBuilder)) = {
     val file  = tuple._1
     val oldCG = forFile(file)
     val newCG = tuple._2
     
-    fileToCG += file -> (oldCG + newCG)
+    fileToCG += file -> (oldCG += newCG)
   }
   
   def create(root: String)(implicit writerF: String => Writer) = {
@@ -70,18 +78,8 @@ case class CodeBundle(fileToCG: MutableMap[String, CodeGeneration]) {
     }
   }
   
-  def map(f: (String, String) => (String, String)): Unit = {
-    def fp(tuple: (String, CodeGeneration)): (String, CodeGeneration) = {
-      val mapped = f(tuple._1, tuple._2.code)
-      
-      mapped._1 -> CodeGeneration(mapped._2, State(0))
-    }
-    
-    fileToCG.map(fp);
-  }
-  
   private def forFile(file: String) = if (fileToCG.contains(file)) fileToCG(file) else {
-    fileToCG += file -> CodeGeneration.empty
+    fileToCG += file -> CodeBuilder.empty
     
     fileToCG(file)
   }
@@ -103,114 +101,158 @@ trait CodeGenerator {
 
 
 object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
-  def toFile(ns: Namespace, name: String): String = toFile(ns, "Data", "scala")
-  
   def generate(root: XRoot, destPath: String)(implicit writerF: String => Writer) = {
     val bundle   = CodeBundle.empty
     val database = XSchemaDatabase(root.definitions)
     
     for (definition <- root.definitions) {
-      val file = toFile(definition.namespace, definition.name)
+      val dataFile = toFile(definition.namespace, "Data", "scala")
       
-      bundle += file -> walk(definition, CodeGeneration.empty, definitionWalker(database)).newline
+      bundle += dataFile -> dataFor(definition, database)
     }
     
     bundle.create(destPath)
   }
   
-  private def typeSignatureOf(x: XSchema): String = walk(x, CodeGeneration.empty, typeSignatureWalker).code
+  private def dataFor(definition: XDefinition, database: XSchemaDatabase): CodeBuilder = {
+    walk(definition, CodeBuilder.empty, definitionWalker(database)).newline
+  }
   
-  private def definitionWalker(database: XSchemaDatabase) = new XSchemaDefinitionWalker[CodeGeneration] {
-    override def begin(data: CodeGeneration, defn: XDefinition) = {
+  private def extractorsFor(database: XSchemaDatabase): CodeBuilder = {
+    val builder = CodeBuilder.empty
+    
+    builder
+  }
+  
+  private def extractorFor(definition: XDefinition, builder: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
+    builder
+  }
+  
+  private def definitionsFor(database: XSchemaDatabase): CodeBuilder = {
+    val builder = CodeBuilder.empty
+    
+    builder
+  }
+  
+  private def decomposerFor(definition: XDefinition, builder: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
+    builder
+  }
+  
+  private def typeSignatureOf(x: XSchema): String = walk(x, CodeBuilder.empty, typeSignatureWalker).code
+  
+  private def definitionWalker(database: XSchemaDatabase) = new XSchemaDefinitionWalker[CodeBuilder] {
+    override def begin(code: CodeBuilder, defn: XDefinition) = {
       def coproductPrefix(x: XCoproduct): String = if (database.productChildrenOf(x).map(_.namespace).removeDuplicates.length <= 1) "sealed " else ""
-      def productFields(x: XProduct): String = x.fields.map(typeSignatureOf(_)).mkString(", ")
-      def coproductFields(cg: CodeGeneration, x: XCoproduct): CodeGeneration = {
+      def buildProductFields(x: XProduct): CodeBuilder = code.add(x.fields.map(typeSignatureOf(_)).mkString(", "))
+      def buildCoproductFields(x: XCoproduct): CodeBuilder = {
         val commonFields = database.commonFieldsOf(x)
         
-        commonFields.foldLeft(cg) { (cg, field) => (cg + "def " + field._1 + ": " + field._2.typename).newline }
+        commonFields.foreach { field => 
+          code += ("def " + field._1 + ": " + field._2.typename)
+          code.newline
+        }
+        
+        code
       }
       
-      val packagePrefix = (data.newline + "package " + defn.namespace.value + " {").indent.newline
+      code.newline.add("package " + defn.namespace.value + " {").indent
       
-      (defn match {
-        case x: XProduct   => packagePrefix + "case class " + defn.name + "(" + productFields(x) + ")"
-        case x: XCoproduct => coproductFields((packagePrefix + coproductPrefix(x) + "trait " + x.name + " {").indent.newline, x).unindent.newline + "}"
-      })
+      defn match {
+        case x: XProduct =>
+          code.add("case class " + defn.name + "(")
+          buildProductFields(x)
+          code.add(")")
+          
+          val withClauses = ("Ordered[" + defn.name + "]" :: database.coproductContainersOf(x).map(_.qualifiedName)).mkString(" with ")
+          
+          code.add(" extends " + withClauses + " {").indent
+          
+        case x: XCoproduct => 
+          code.add(coproductPrefix(x) + "trait " + x.name + "{").indent
+          buildCoproductFields(x)
+      }
     }
     
-    override def end(data: CodeGeneration, defn: XDefinition) = {
-      (data + (defn match {
-        case x: XProduct => {
-          val withClauses = database.coproductContainersOf(x).map(_.qualifiedName).mkString(" with ")
+    override def end(code: CodeBuilder, defn: XDefinition) = {
+      def buildOrderedDefinition(x: XProduct): CodeBuilder = {
+        def buildComparisonFor(field: XFieldDefinition, schema: XSchema): CodeBuilder = {
+          def comparisonSign = field.order match {
+            case Ascending  => 1
+            case Descending => -1
+            case Ignore     => 0
+          }
           
-          val extensions = if (withClauses.length > 0) " extends " + withClauses else ""
-          
-          extensions
+          def buildStandardComparison(): CodeBuilder = {
+            code.addln("c = this." + field.name + ".compare(that." + field.name + ")")
+            code.addln("if (c != 0) return c * " + comparisonSign.toString)
+          }
+                                   
+          schema match {
+            case x: XOptional   => buildComparisonFor(field, x.optionalType)
+            case x: XCollection => code
+            case x: XConstant   => buildComparisonFor(field, x.constantType)
+            case x: XMap        => code
+            case x: XTuple      => buildStandardComparison()
+            
+            case x: XPrimitive  => buildStandardComparison()
+            case x: XReference  => buildStandardComparison()
+            
+            case x: XProduct    => error("Found definition in field")
+            case x: XCoproduct  => error("Found definition in field")
+            case x: XRoot       => error("Found root in field")
+          }
         }
-        case x: XCoproduct => ""
-      })).unindent.newline + "}"
+        
+        code.add("def compare(that: " + x.name + "): Int = {").indent.addln("if (this == that) return 0").newline.addln("var c: Int = 0").newline
+        
+        x.fields.foreach { field =>
+          buildComparisonFor(field, field.fieldType)
+          
+          code.newline
+        }
+        
+        code.add("return 0").unindent.add("}")
+      }
+      
+      defn match {
+        case x: XProduct => {
+          buildOrderedDefinition(x)
+        }
+        case x: XCoproduct => 
+      }
+      
+      code.unindent.add("}") // Close definition
+      code.unindent.add("}") // Close package
     }
   }
   
-  private def decomposingWalker(database: XSchemaDatabase) = new XSchemaDefinitionWalker[CodeGeneration] {
-    override def begin(data: CodeGeneration, defn: XDefinition) = {
-      def coproductPrefix(x: XCoproduct): String = if (database.productChildrenOf(x).map(_.namespace).removeDuplicates.length <= 1) "sealed " else ""
-      def productFields(x: XProduct): String = x.fields.map(typeSignatureOf(_)).mkString(", ")
-      def coproductFields(cg: CodeGeneration, x: XCoproduct): CodeGeneration = {
-        val commonFields = database.commonFieldsOf(x)
-        
-        commonFields.foldLeft(cg) { (cg, field) => (cg + "def " + field._1 + ": " + field._2.typename).newline }
-      }
-      
-      val packagePrefix = (data.newline + "package " + defn.namespace.value + " {").indent.newline
-      
-      (defn match {
-        case x: XProduct   => packagePrefix + "case class " + defn.name + "(" + productFields(x) + ")"
-        case x: XCoproduct => coproductFields((packagePrefix + coproductPrefix(x) + "trait " + x.name + " {").indent.newline, x).unindent.newline + "}"
-      })
+  private lazy val typeSignatureWalker = new XSchemaDefinitionWalker[CodeBuilder] {
+    override def begin(data: CodeBuilder, field: XFieldDefinition) = {
+      data += field.name + ": "
     }
     
-    override def end(data: CodeGeneration, defn: XDefinition) = {
-      (data + (defn match {
-        case x: XProduct => {
-          val withClauses = database.coproductContainersOf(x).map(_.qualifiedName).mkString(" with ")
-          
-          val extensions = if (withClauses.length > 0) " extends " + withClauses else ""
-          
-          extensions
-        }
-        case x: XCoproduct => ""
-      })).unindent.newline + "}"
-    }
-  }
-  
-  private lazy val typeSignatureWalker = new XSchemaDefinitionWalker[CodeGeneration] {
-    override def begin(data: CodeGeneration, field: XFieldDefinition) = {
-      data + field.name + ": "
+    override def begin(data: CodeBuilder, opt: XOptional) = {
+      data += "Option["
     }
     
-    override def begin(data: CodeGeneration, opt: XOptional) = {
-      data + "Option["
-    }
-    
-    override def begin(data: CodeGeneration, col: XCollection) = {
-      data + (col.collection match {
+    override def begin(data: CodeBuilder, col: XCollection) = {
+      data += ((col.collection match {
         case XSet   => "Set"
         case XArray => "Array"
         case XList  => "List"
-      }) + "["
+      }) + "[")
     }
     
-    override def begin(data: CodeGeneration, map: XMap) = {
-      data + "Map[String, "
+    override def begin(data: CodeBuilder, map: XMap) = {
+      data += "Map[String, "
     }
     
-    override def begin(data: CodeGeneration, tuple: XTuple) = {
-      data + "(" + tuple.types.map(typeSignatureOf(_)).mkString(", ") + ")"
+    override def begin(data: CodeBuilder, tuple: XTuple) = {
+      data += "(" + tuple.types.map(typeSignatureOf(_)).mkString(", ") + ")"
     }
     
-    override def walk(data: CodeGeneration, prim: XPrimitive) = {
-      data + (prim match {
+    override def walk(data: CodeBuilder, prim: XPrimitive) = {
+      data += (prim match {
         case XString  => "String"
         case XInt     => "Int"
         case XLong    => "Long"
@@ -220,20 +262,20 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       })
     }
     
-    override def walk(data: CodeGeneration, ref: XReference) = {
-      data + ref.typename
+    override def walk(data: CodeBuilder, ref: XReference) = {
+      data += ref.typename
     }
     
-    override def end(data: CodeGeneration, opt: XOptional) = {
-      data + "]"
+    override def end(data: CodeBuilder, opt: XOptional) = {
+      data += "]"
     }
     
-    override def end(data: CodeGeneration, col: XCollection) = {
-      data + "]"
+    override def end(data: CodeBuilder, col: XCollection) = {
+      data += "]"
     }
     
-    override def end(data: CodeGeneration, map: XMap) = {
-      data + "]"
+    override def end(data: CodeBuilder, map: XMap) = {
+      data += "]"
     }
   }
 }

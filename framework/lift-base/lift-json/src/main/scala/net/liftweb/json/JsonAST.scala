@@ -57,7 +57,7 @@ object JsonAST {
     /**
      * Returns the element as a JValue of the specified class.
      */
-    def =#= [A <: JValue](clazz: Class[A]): A = {
+    def --> [A <: JValue](clazz: Class[A]): A = {
       def extractTyped(value: JValue) = if (value.getClass == clazz) value.asInstanceOf[A] else error("Expected class " + clazz + ", but found: " + value.getClass)
       
       this match {

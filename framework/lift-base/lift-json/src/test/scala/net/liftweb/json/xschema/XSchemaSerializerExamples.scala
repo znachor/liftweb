@@ -13,7 +13,7 @@ object XSchemaSerializerExamples extends Specification {
   import TestSchemas._
   
   "Extraction and decomposition are symmetric" in {
-    println(Printer.pretty(render(decompose(AstNumericExprSchema))))
+    //println(Printer.pretty(render(decompose(AstNumericExprSchema))))
     
     extract(decompose(AstNumericExprSchema)) mustEqual AstNumericExprSchema
   }
@@ -115,7 +115,7 @@ object TestSchemas {
         "Female",
         Map(),
         List(
-          XFieldDefinition(XString, "text", Map(), JString("female"), Descending)
+          XFieldDefinition(XString, "text", Map(), JString("female"), Ascending)
         )
       )
     ),
