@@ -167,6 +167,10 @@ trait DefaultExtractors {
       case _ => error("Expected list but found: " + jvalue)
     }
   }
+  
+  implicit def mapExtractor[K, V](implicit keyExtractor: Extractor[K], valueExtractor: Extractor[V]): Extractor[Map[K, V]] = new Extractor[Map[K, V]] {
+    def extract(jvalue: JValue): Map[K, V] = Map(listExtractor(tuple2Extractor(keyExtractor, valueExtractor)).extract(jvalue): _*)
+  }
 }
 
 /**
@@ -230,6 +234,10 @@ trait DefaultDecomposers {
   
   implicit def listDecomposer[T](implicit elementDecomposer: Decomposer[T]): Decomposer[List[T]] = new Decomposer[List[T]] {
     def decompose(tvalue: List[T]): JValue = JArray(tvalue.toList.map(elementDecomposer.decompose _))
+  }
+  
+  implicit def mapDecomposer[K, V](implicit keyDecomposer: Decomposer[K], valueDecomposer: Decomposer[V]): Decomposer[Map[K, V]] = new Decomposer[Map[K, V]] {
+    def decompose(tvalue: Map[K, V]): JValue = listDecomposer(tuple2Decomposer(keyDecomposer, valueDecomposer)).decompose(tvalue.toList)
   }
 }
 

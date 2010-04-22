@@ -70,6 +70,7 @@ object XSchemaExamples extends Specification {
     testSymmetry(("foo", 12, 3.2F))
     testSymmetry(("foo", 12, 3.2F, "blah"))
     testSymmetry(("foo", 12, 3.2F, "blah", "last-one"))
+    testSymmetry(Map("foo" -> 123, "bar" -> 329))
     
     var array = Array("foo")
     array.serialize.deserialize[Array[String]].toList mustEqual array.toList
