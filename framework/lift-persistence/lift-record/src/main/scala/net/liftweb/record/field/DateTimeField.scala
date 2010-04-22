@@ -94,6 +94,8 @@ class DateTimeField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Fiel
     this(rec)
     setBox(value)
   }
+
+  protected[record] def this(value: Calendar) = this(new DummyRecord().asInstanceOf[OwnerType], value)
 }
 
 import _root_.java.sql.{ResultSet, Types}

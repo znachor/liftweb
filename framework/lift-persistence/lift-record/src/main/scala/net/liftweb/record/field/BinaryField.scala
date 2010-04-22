@@ -62,6 +62,8 @@ class BinaryField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[
     setBox(value)
   }
 
+  protected[record] def this(value: Array[Byte]) = this(new DummyRecord().asInstanceOf[OwnerType], value)
+
 }
 
 import _root_.java.sql.{ResultSet, Types}

@@ -122,6 +122,8 @@ class DecimalField[OwnerType <: Record[OwnerType]](rec: OwnerType, val context :
     setBox(value)
   }
 
+  protected[record] def this(value: BigDecimal) = this(new DummyRecord().asInstanceOf[OwnerType], value)
+
   def owner = rec
 }
 

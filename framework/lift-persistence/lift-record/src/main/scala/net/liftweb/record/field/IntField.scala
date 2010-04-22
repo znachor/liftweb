@@ -58,6 +58,8 @@ class IntField[OwnerType <: Record[OwnerType]](rec: OwnerType)
     this(rec)
     setBox(value)
   }
+
+  protected[record] def this(value: Int) = this(new DummyRecord().asInstanceOf[OwnerType], value)
 }
 
 import _root_.java.sql.{ResultSet, Types}

@@ -47,6 +47,8 @@ class PasswordField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Fiel
     setBox(value)
   }
 
+  protected[record] def this(value: String) = this(new DummyRecord().asInstanceOf[OwnerType], value)
+
   private val salt_i = FatLazy(Safe.randomString(16))
   private var invalidMsg : String = ""
 

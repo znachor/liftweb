@@ -55,6 +55,8 @@ class LongField[OwnerType <: Record[OwnerType]](rec: OwnerType)
   }
 
   def owner = rec
+
+  protected[record] def this(value: Long) = this(new DummyRecord().asInstanceOf[OwnerType], value)
 }
 
 import _root_.java.sql.{ResultSet, Types}

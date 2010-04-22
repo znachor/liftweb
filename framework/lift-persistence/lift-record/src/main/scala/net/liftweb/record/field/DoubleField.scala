@@ -54,6 +54,8 @@ class DoubleField[OwnerType <: Record[OwnerType]](rec: OwnerType)
     setBox(value)
   }
 
+  protected[record] def this(value: Double) = this(new DummyRecord().asInstanceOf[OwnerType], value)
+
   def owner = rec
 }
 

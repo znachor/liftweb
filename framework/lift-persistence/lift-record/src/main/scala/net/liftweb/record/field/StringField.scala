@@ -121,6 +121,8 @@ class StringField[OwnerType <: Record[OwnerType]](rec: OwnerType, protected val 
     setBox(value)
   }
 
+  protected[record] def this(value: String) = this(new DummyRecord().asInstanceOf[OwnerType], value)
+
   def owner = rec
 }
 
