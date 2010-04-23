@@ -283,7 +283,8 @@
 
     <!--<scala.version>[2.7.5,2.7.6),(2.7.6,2.7.7]</scala.version>-->
     <scala.version>2.7.7</scala.version>
-    <slf4j.version>[1.5.6,)</slf4j.version>
+    <!-- Cannot specify 1.6) as range since this pulls in the 1.6.0-RC0 version -->
+    <slf4j.version>[1.5.6,1.5.99)</slf4j.version>
     <atomikos.version>3.2.3</atomikos.version>
   </properties>
 
