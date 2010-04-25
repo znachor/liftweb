@@ -4,7 +4,7 @@ import net.liftweb.json.JsonAST._
 
 object XSchemaAST {
   case class Namespace(value: String) {
-    def path = value.split(".").filter(_.length > 0)
+    def path = value.split("[.]").filter(_.length > 0)
   }
   
   sealed trait Named      { val name: String }  
@@ -81,8 +81,8 @@ object XSchemaAST {
     val typeParameters = elementType :: Nil
   }
 
-  case class XMap(valueType: XReference) extends XReference(XMap.typename) with Parameterized {
-    val typeParameters = valueType :: Nil
+  case class XMap(keyType: XReference, valueType: XReference) extends XReference(XMap.typename) with Parameterized {
+    val typeParameters = keyType :: valueType :: Nil
   }
 
   case class XTuple(types: List[XReference]) extends XReference(XTuple.typename) with Parameterized {
@@ -118,15 +118,15 @@ object XSchemaAST {
     }
   }
   
-  object XRoot            extends TypeNamed("Root")
-  object XOptional        extends TypeNamed("Optional")
-  object XCollection      extends TypeNamed("Collection")
-  object XConstant        extends TypeNamed("Constant")
-  object XMap             extends TypeNamed("Map")
-  object XTuple           extends TypeNamed("Tuple")
-  object XField extends TypeNamed("Field")
-  object XProduct         extends TypeNamed("Product")
-  object XCoproduct       extends TypeNamed("Coproduct")
+  object XRoot        extends TypeNamed("Root")
+  object XOptional    extends TypeNamed("Optional")
+  object XCollection  extends TypeNamed("Collection")
+  object XConstant    extends TypeNamed("Constant")
+  object XMap         extends TypeNamed("Map")
+  object XTuple       extends TypeNamed("Tuple")
+  object XField       extends TypeNamed("Field")
+  object XProduct     extends TypeNamed("Product")
+  object XCoproduct   extends TypeNamed("Coproduct")
   
   trait XSchemaDefinitionWalker[T] {
     def begin(data: T, defn:  XRoot): T = data
@@ -155,18 +155,18 @@ object XSchemaAST {
     def walkContainer(initial: T, xs: Container): T = xs.elements.foldLeft[T](initial) { (cur, x) => walk(x, cur, walker) }
   
     s match {
-      case x: XDefinition       => walker.end(walkContainer(walker.begin(initial, x), x), x)
-      case x: XField  => walker.end(walkContainer(walker.begin(initial, x), x), x)
-      case x: XOptional         => walker.end(walkContainer(walker.begin(initial, x), x), x)
-      case x: XCollection       => walker.end(walkContainer(walker.begin(initial, x), x), x)
-      case x: XMap              => walker.end(walkContainer(walker.begin(initial, x), x), x)
-      case x: XTuple            => walker.end(walkContainer(walker.begin(initial, x), x), x)
+      case x: XDefinition => walker.end(walkContainer(walker.begin(initial, x), x), x)
+      case x: XField      => walker.end(walkContainer(walker.begin(initial, x), x), x)
+      case x: XOptional   => walker.end(walkContainer(walker.begin(initial, x), x), x)
+      case x: XCollection => walker.end(walkContainer(walker.begin(initial, x), x), x)
+      case x: XMap        => walker.end(walkContainer(walker.begin(initial, x), x), x)
+      case x: XTuple      => walker.end(walkContainer(walker.begin(initial, x), x), x)
       
-      case x: XConstant     => walker.walk(initial, x)
-      case x: XPrimitive    => walker.walk(initial, x)
-      case x: XReference    => walker.walk(initial, x)
+      case x: XConstant   => walker.walk(initial, x)
+      case x: XPrimitive  => walker.walk(initial, x)
+      case x: XReference  => walker.walk(initial, x)
       
-      case x: XRoot         => walker.end(walkContainer(walker.begin(initial, x), x), x)
+      case x: XRoot       => walker.end(walkContainer(walker.begin(initial, x), x), x)
     }
   }
 }

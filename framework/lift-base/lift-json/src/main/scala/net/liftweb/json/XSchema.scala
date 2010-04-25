@@ -173,6 +173,14 @@ trait DefaultExtractors {
   }
 }
 
+trait ExtractionHelpers extends SerializationImplicits {
+  import JsonParser._
+  
+  protected def extractField[T](jvalue: JValue, name: String, default: String)(implicit e: Extractor[T]): T = {
+    (jvalue \ name -->? classOf[JField]).map(_.value).getOrElse(parse(default)).deserialize[T]
+  }
+}
+
 /**
  * Decomposers for all basic types.
  */
@@ -239,6 +247,9 @@ trait DefaultDecomposers {
   implicit def mapDecomposer[K, V](implicit keyDecomposer: Decomposer[K], valueDecomposer: Decomposer[V]): Decomposer[Map[K, V]] = new Decomposer[Map[K, V]] {
     def decompose(tvalue: Map[K, V]): JValue = listDecomposer(tuple2Decomposer(keyDecomposer, valueDecomposer)).decompose(tvalue.toList)
   }
+}
+
+trait DecomposerHelpers extends SerializationImplicits {
 }
 
 trait DefaultOrderings {

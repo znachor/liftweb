@@ -86,6 +86,7 @@ object XSchemaExamples extends Specification {
 
 private[json] object DemoData {
   import JsonAST._
+  import JsonParser._
   import XSchema._
   
   case class DemoProduct(foo: String, bar: Int) extends Ordered[DemoProduct] {
@@ -104,12 +105,12 @@ private[json] object DemoData {
     }
   }
 
-  trait Extractors extends DefaultExtractors {
+  trait Extractors extends DefaultExtractors with ExtractionHelpers {
     implicit val DemoProductExtractor: Extractor[DemoProduct] = new Extractor[DemoProduct] {
       def extract(jvalue: JValue): DemoProduct = {
         DemoProduct(
-          (jvalue \ "foo" --> classOf[JField]).value.deserialize[String],
-          (jvalue \ "bar" --> classOf[JField]).value.deserialize[Int]
+          extractField[String](jvalue, "foo", ""),
+          extractField[Int](jvalue, "bar", "")
         )
       }
     }

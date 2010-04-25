@@ -2,6 +2,7 @@ package net.liftweb.json.xschema.codegen
 
 import _root_.net.liftweb.json.JsonAST._
 import _root_.net.liftweb.json.Validation._
+import _root_.net.liftweb.json.Printer._
 import _root_.net.liftweb.json.xschema.XSchemaAST._
 import _root_.net.liftweb.json.xschema.XSchemaDatabase
 
@@ -45,6 +46,19 @@ case class CodeBuilder(codeBuilder: StringBuilder, var state: State) {
   def indent   = { state.indent; newline }
   def unindent = { state.unindent; newline }
   def newline  = { codeBuilder.append("\n").append(state.startIndentation); this }
+  
+  def newline(n: Int): CodeBuilder = { (0 until n) foreach { x => newline }; this }
+  
+  def join[T](iterable: Iterable[T], joiner: => Unit)(f: T => Unit): Unit = {
+    var isFirst = true
+    
+    for (element <- iterable) {
+      if (isFirst) isFirst = false
+      else joiner
+      
+      f(element)
+    }
+  }
   
   def code = codeBuilder.toString
 }
@@ -105,37 +119,108 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     val bundle   = CodeBundle.empty
     val database = XSchemaDatabase(root.definitions)
     
-    for (definition <- root.definitions) {
-      val dataFile = toFile(definition.namespace, "Data", "scala")
+    for (namespace <- database.namespaces) {
+      val dataFile = toFile(namespace, "Data", "scala")
       
-      bundle += dataFile -> dataFor(definition, database)
+      val code = CodeBuilder.empty
+      
+      code.newline.add("package " + namespace.value + " {").indent
+      
+      code.addln("import net.liftweb.json.{SerializationImplicits, DefaultExtractors, ExtractionHelpers, DefaultDecomposers, DecomposerHelpers, DefaultOrderings}")
+      code.addln("import net.liftweb.json.JsonParser._")
+      code.addln("import net.liftweb.json.JsonAST._")
+      code.addln("import net.liftweb.json.XSchema._")
+      
+      for (definition <- database.definitionsIn(namespace)) {    
+        code.newline
+        
+        buildDataFor(definition, code, database)
+      }
+      
+      buildExtractorsFor(namespace, code, database)
+      buildDecomposersFor(namespace, code, database)
+      
+      buildPackageObjectFor(namespace, code, database)
+      
+      code.unindent.add("}")
+      
+      bundle += dataFile -> code
     }
     
     bundle.create(destPath)
   }
   
-  private def dataFor(definition: XDefinition, database: XSchemaDatabase): CodeBuilder = {
-    walk(definition, CodeBuilder.empty, definitionWalker(database)).newline
+  private def buildDataFor(definition: XDefinition, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
+    walk(definition, code, definitionWalker(database)).newline
   }
   
-  private def extractorsFor(database: XSchemaDatabase): CodeBuilder = {
-    val builder = CodeBuilder.empty
+  private def buildExtractorsFor(namespace: Namespace, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
+    code.newline(2).add("trait Extractors extends DefaultExtractors with ExtractionHelpers {").indent
     
-    builder
-  }
-  
-  private def extractorFor(definition: XDefinition, builder: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
-    builder
-  }
-  
-  private def definitionsFor(database: XSchemaDatabase): CodeBuilder = {
-    val builder = CodeBuilder.empty
+    for (definition <- database.definitionsIn(namespace)) {
+      definition match {
+        case x: XProduct => 
+          code.add("implicit val " + x.name + "Extractor: Extractor[" + x.name + "] = new Extractor[" + x.name + "] {").indent
+          
+          code.add("def extract(jvalue: JValue): " + x.name + " = {").indent
+          code.add(x.name).add("(").indent
+          
+          var isFirst = true
+          
+          code.join(x.fields, code.add(",").newline) { field =>
+            code.add("extractField[" + field.fieldType.typename + "](jvalue, \"" + field.name + "\", \"\"\" " + compact(render(field.defValue)) + " \"\"\")")
+          }
+          
+          code.unindent.add(")").unindent.add("}").unindent.add("}").newline
+          
+        case x: XCoproduct =>
+      }
+    }
     
-    builder
+    code.unindent.add("}").newline
   }
   
-  private def decomposerFor(definition: XDefinition, builder: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
-    builder
+  private def buildDecomposersFor(namespace: Namespace, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
+    code.newline(2).add("trait Decomposers extends DefaultDecomposers with DecomposerHelpers {").indent
+    
+    /*
+    implicit val DemoProductDecomposer: Decomposer[DemoProduct] = new Decomposer[DemoProduct] {
+      def decompose(tvalue: DemoProduct): JValue = {
+        JObject(
+          JField("foo", tvalue.foo.serialize) ::
+          JField("bar", tvalue.bar.serialize) ::
+          Nil
+        )
+      }
+    }
+    */
+    for (definition <- database.definitionsIn(namespace)) {
+      definition match {
+        case x: XProduct => 
+          code.add("implicit val " + x.name + "Decomposer: Decomposer[" + x.name + "] = new Decomposer[" + x.name + "] {").indent
+          
+          code.add("def decompose(tvalue: " + x.name + "): JValue = {").indent
+          code.add("JObject(").indent
+          
+          var isFirst = true
+          
+          x.fields foreach { field =>
+            code.add("JField(\"" + field.name + "\", tvalue." + field.name + ".serialize) ::").newline
+          }
+          
+          code.add("Nil")
+          
+          code.unindent.add(")").unindent.add("}").unindent.add("}").newline
+          
+        case x: XCoproduct =>
+      }
+    }
+    
+    code.unindent.add("}")
+  }
+  
+  private def buildPackageObjectFor(namespace: Namespace, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
+    code.newline(2).add("object Serialization extends SerializationImplicits with Decomposers with Extractors { }")
   }
   
   private def typeSignatureOf(x: XSchema): String = walk(x, CodeBuilder.empty, typeSignatureWalker).code
@@ -147,15 +232,12 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       def buildCoproductFields(x: XCoproduct): CodeBuilder = {
         val commonFields = database.commonFieldsOf(x)
         
-        commonFields.foreach { field => 
+        code.join(commonFields, code.newline) { field =>
           code += ("def " + field._1 + ": " + field._2.typename)
-          code.newline
         }
         
         code
       }
-      
-      code.newline.add("package " + defn.namespace.value + " {").indent
       
       defn match {
         case x: XProduct =>
@@ -168,7 +250,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
           code.add(" extends " + withClauses + " {").indent
           
         case x: XCoproduct => 
-          code.add(coproductPrefix(x) + "trait " + x.name + "{").indent
+          code.add(coproductPrefix(x) + "trait " + x.name + " {").indent
           buildCoproductFields(x)
       }
     }
@@ -200,6 +282,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
             case x: XProduct    => error("Found definition in field")
             case x: XCoproduct  => error("Found definition in field")
             case x: XRoot       => error("Found root in field")
+            case x: XField      => error("Found field in field")
           }
         }
         
@@ -222,7 +305,6 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       }
       
       code.unindent.add("}") // Close definition
-      code.unindent.add("}") // Close package
     }
   }
   

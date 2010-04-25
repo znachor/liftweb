@@ -56,9 +56,22 @@ object JsonAST {
     
     /**
      * Returns the element as a JValue of the specified class.
+     * <p>
+     * Example:<pre>
+     * (json \ "foo" --> classOf[JField]).value
+     * </pre>
      */
-    def --> [A <: JValue](clazz: Class[A]): A = {
-      def extractTyped(value: JValue) = if (value.getClass == clazz) value.asInstanceOf[A] else error("Expected class " + clazz + ", but found: " + value.getClass)
+    def --> [A <: JValue](clazz: Class[A]): A = (this -->? clazz).getOrElse(error("Expected class " + clazz + ", but found: " + this.getClass))
+    
+    /**
+     * Returns the element as an option of a JValue of the specified class.
+      * <p>
+      * Example:<pre>
+      * (json \ "foo" -->? classOf[JField]).map(_.value).getOrElse(defaultFieldValue)
+      * </pre>
+     */
+    def -->? [A <: JValue](clazz: Class[A]): Option[A] = {
+      def extractTyped(value: JValue) = if (value.getClass == clazz) Some(value.asInstanceOf[A]) else None
       
       this match {
         case JField(name, value) if (clazz != classOf[JField]) => extractTyped(value)
