@@ -36,7 +36,7 @@ object XSchemaAST {
   case object XArray extends XCollectionType("Array")
   case object XList  extends XCollectionType("List")
 
-  /** All schemas are one of: root, reference, type definition, field definition, or constant */
+  /** All schemas are one of: root, reference, type definition, or field definition */
   sealed trait XSchema extends Typed
 
   sealed case class XRoot(version: Int, definitions: List[XDefinition], properties: Map[String, String]) extends TypeNamed(XRoot.typename) with XSchema with Properties with Versioned with Container {
@@ -62,10 +62,6 @@ object XSchemaAST {
   
   sealed abstract class XDefinition(val typename: String) extends XSchema with Properties with Named with Namespaced with Container {
     def qualifiedName = namespace.value + "." + name
-  }
-  
-  sealed case class XConstant(constantType: XReference, defValue: JValue) extends XReference(XConstant.typename) with Default with Parameterized {
-    val typeParameters = constantType :: Nil
   }
   
   case object XString  extends XPrimitive("String")
@@ -105,6 +101,10 @@ object XSchemaAST {
   
   case class XCoproduct(namespace: Namespace, name: String, properties: Map[String, String], types: List[XReference]) extends XDefinition(XCoproduct.typename) {
     def elements = types
+  }
+  
+  case class XConstant(namespace: Namespace, name: String, properties: Map[String, String], constantType: XReference, defValue: JValue) extends XDefinition(XConstant.typename) with Default with Parameterized {
+    val typeParameters = constantType :: Nil
   }
 
   object XReference {
@@ -163,8 +163,6 @@ object XSchemaAST {
       case x: XCollection => walker.end(walkContainer(walker.begin(initial, x), x), x)
       case x: XMap        => walker.end(walkContainer(walker.begin(initial, x), x), x)
       case x: XTuple      => walker.end(walkContainer(walker.begin(initial, x), x), x)
-      
-      case x: XConstant   => walker.walk(initial, x)
       case x: XPrimitive  => walker.walk(initial, x)
       case x: XReference  => walker.walk(initial, x)
       

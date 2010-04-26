@@ -18,7 +18,7 @@ class State(var indentLevel: Int) {
   
   def tab = "  "
   
-  def startIndentation = (0 to indentLevel).foldLeft("") { (cur, l) => cur + tab }
+  def startIndentation = (0 until indentLevel).foldLeft("") { (cur, l) => cur + tab }
   
   def column = tab.length * indentLevel
 }
@@ -167,6 +167,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       buildDecomposersFor(namespace, code, database)
       
       buildPackageObjectFor(namespace, code, database)
+      buildConstantsFor(namespace, code, database)
       
       code.unindent.add("}")
       
@@ -226,6 +227,9 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
             
             
           }
+          
+        case x: XConstant =>
+          
       }
     }
     
@@ -271,6 +275,8 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
             
             code.unindent.add("}").unindent.add("}").unindent.add("}").newline
           }
+          
+        case x: XConstant =>
       }
     }
     
@@ -279,6 +285,23 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
   
   private def buildPackageObjectFor(namespace: Namespace, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
     code.newline(2).add("object Serialization extends SerializationImplicits with Decomposers with Extractors { }")
+  }
+  
+  private def buildConstantsFor(namespace: Namespace, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
+    code.newline(2).add("object Constants {").indent
+    
+    code.addln("import Serialization._")
+    
+    for (definition <- database.definitionsIn(namespace) if (definition.isInstanceOf[XConstant])) {
+      var constant = definition.asInstanceOf[XConstant]
+      
+      code.newline.add("lazy val " + constant.name + " = parse(\"\"\"${json} \"\"\").deserialize[${type}]",
+        "json" -> compact(render(constant.defValue)),
+        "type" -> constant.constantType.typename
+      )
+    }
+    
+    code.unindent.add("}")
   }
   
   private def typeSignatureOf(x: XSchema): String = walk(x, CodeBuilder.empty, typeSignatureWalker).code
@@ -310,6 +333,8 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         case x: XCoproduct => 
           code.add(coproductPrefix(x) + "trait " + x.name + " {").indent
           buildCoproductFields(x)
+          
+        case x: XConstant => code
       }
     }
     
@@ -330,7 +355,6 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
           schema match {
             case x: XOptional   => buildComparisonFor(field, x.optionalType)
             case x: XCollection => code
-            case x: XConstant   => buildComparisonFor(field, x.constantType)
             case x: XMap        => code
             case x: XTuple      => buildStandardComparison()
             
@@ -339,6 +363,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
             
             case x: XProduct    => error("Found definition in field")
             case x: XCoproduct  => error("Found definition in field")
+            case x: XConstant   => error("Found definition in field")
             case x: XRoot       => error("Found root in field")
             case x: XField      => error("Found field in field")
           }
@@ -356,13 +381,16 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       }
       
       defn match {
-        case x: XProduct => {
+        case x: XProduct =>
           buildOrderedDefinition(x)
-        }
+          
+          code.unindent.add("}") // Close definition
+
         case x: XCoproduct => 
+          code.unindent.add("}") // Close definition
+        
+        case x: XConstant => code
       }
-      
-      code.unindent.add("}") // Close definition
     }
   }
   

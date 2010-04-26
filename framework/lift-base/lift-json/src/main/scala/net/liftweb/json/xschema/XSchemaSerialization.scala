@@ -99,13 +99,13 @@ object XSchemaSerialization {
     
       typename match {
         case XCollection.typename => XCollection(typeParameters(1)(0), collection)
-        case XConstant.typename   => XConstant(typeParameters(1)(0), defValue)
         case XMap.typename        => XMap(typeParameters(2)(0), typeParameters(2)(1))
         case XOptional.typename   => XOptional(typeParameters(1)(0))
         case XTuple.typename      => XTuple(types)
         case XField.typename      => XField(typeParameters(1)(0), name, properties, defValue, order)
         case XProduct.typename    => XProduct(namespace, name, properties, fields)
         case XCoproduct.typename  => XCoproduct(namespace, name, properties, types)
+        case XConstant.typename   => XConstant(namespace, name, properties, typeParameters(1)(0), defValue)
         case XRoot.typename       => XRoot(version, definitions, properties)
         
         case _ => XReference(typename)

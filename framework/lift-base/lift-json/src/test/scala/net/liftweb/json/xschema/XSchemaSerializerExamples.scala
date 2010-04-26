@@ -117,6 +117,32 @@ object TestSchemas {
         List(
           XField(XString, "text", Map(), JString("female"), Ascending)
         )
+      ),
+      XConstant(
+        Namespace("data.social"),
+        "DefaultFemale",
+        Map(),
+        XReference("data.social.Gender"),
+        JObject(
+          JField("Female",
+            JObject(
+              JField("text", JString("female")) :: Nil
+            )
+          ) :: Nil
+        )
+      ),
+      XConstant(
+        Namespace("data.social"),
+        "DefaultMale",
+        Map(),
+        XReference("data.social.Gender"),
+        JObject(
+          JField("Male",
+            JObject(
+              JField("text", JString("male")) :: Nil
+            )
+          ) :: Nil
+        )
       )
     ),
     Map()
