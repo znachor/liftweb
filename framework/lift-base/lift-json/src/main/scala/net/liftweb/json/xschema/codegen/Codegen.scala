@@ -355,12 +355,9 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
           }
       
         case x: XCoproduct => 
-          val mixinsString = mixins match {
-            case Nil => ""
-            case _ => "extends " + mixins.mkString(" with ") + " "
-          }
+          val withClauses = ("Product" :: mixins).mkString(" with ")
           
-          code.add(coproductPrefix(x) + "trait ${type} " + mixinsString).block {
+          code.add(coproductPrefix(x) + "trait ${type} extends " + withClauses + " ").block {
             buildCoproductFields(x)
           }
           
