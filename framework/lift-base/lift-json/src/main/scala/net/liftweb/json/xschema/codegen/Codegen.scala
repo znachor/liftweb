@@ -369,107 +369,106 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     }
   }
   
-  private def buildDocumentationFor(definition: XDefinition, code: CodeBuilder): CodeBuilder = definition.properties.get("xschema.doc") match {
+  private def buildDocumentationFor(definition: XDefinition, code: CodeBuilder): CodeBuilder = definition.properties.get(PredefinedProperties.XSchemaDoc) match {
     case None => code
     case Some(doc) => code.add("/** ").wrap(doc.replaceAll("\\s+", " "), " * ", 80).newline.add(" */").newline
   }
   
   private def buildExtractorsFor(namespace: Namespace, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
-    code.newline(2).add("trait Extractors extends DefaultExtractors with ExtractionHelpers {").indent
-    
-    code.join(database.coproductsIn(namespace) ++ database.productsIn(namespace), code.newline.newline) { definition =>
-      definition match {
-        case x: XProduct => 
-          code.using("type" -> x.name) {
-            code.add("implicit val ${type}Extractor: Extractor[${type}] = new Extractor[${type}] ").block {
-              code.add("def extract(jvalue: JValue): ${type} = ").block {
-                code.add("${type}").paren {          
-                  var isFirst = true
+    code.newline(2).add("trait Extractors extends DefaultExtractors with ExtractionHelpers ").block {    
+      code.join(database.coproductsIn(namespace) ++ database.productsIn(namespace), code.newline.newline) { definition =>
+        definition match {
+          case x: XProduct => 
+            code.using("type" -> x.name) {
+              code.add("implicit val ${type}Extractor: Extractor[${type}] = new Extractor[${type}] ").block {
+                code.add("def extract(jvalue: JValue): ${type} = ").block {
+                  code.add("${type}").paren {          
+                    var isFirst = true
           
-                  code.join(x.fields, code.add(",").newline) { field =>
-                    code.add("extractField[${fieldType}](jvalue, \"${fieldName}\", \"\"\"" + compact(render(field.defValue)) + " \"\"\")", 
-                      "fieldType" -> field.fieldType.typename,
-                      "fieldName" -> field.name
-                    )
+                    code.join(x.fields, code.add(",").newline) { field =>
+                      code.add("extractField[${fieldType}](jvalue, \"${fieldName}\", \"\"\"" + compact(render(field.defValue)) + " \"\"\")", 
+                        "fieldType" -> field.fieldType.typename,
+                        "fieldName" -> field.name
+                      )
+                    }
                   }
                 }
               }
             }
-          }
           
-        case x: XCoproduct =>
-          code.using("type" -> x.name) {
-            code.add("private lazy val ${type}ExtractorFunction: PartialFunction[JField, ${type}] = List[PartialFunction[JField, ${type}]](").indent
-            
-            code.join(x.types, code.add(",").newline) { typ =>
-              code.add("{ case JField(\"${productName}\", value) => ${productName}Extractor.extract(value) }",
-                "productName" -> typ.name
-              )
-            }
-            
-            code.unindent.add(").reduceLeft { (a, b) => a.orElse(b) }").newline
-            
-            code.add("""
-              implicit val ${type}Extractor: Extractor[${type}] = new Extractor[${type}] {
-                def extract(jvalue: JValue): ${type} = {
-                  (jvalue --> classOf[JObject]).obj.filter(${type}ExtractorFunction.isDefinedAt _) match {
-                    case field :: fields => ${type}ExtractorFunction(field)
-                    case Nil => error("Expected to find ${type} but found " + jvalue)
-                  }
+          case x: XCoproduct =>
+            code.using("type" -> x.name) {
+              code.add("private lazy val ${type}ExtractorFunction: PartialFunction[JField, ${type}] = List[PartialFunction[JField, ${type}]]").paren {            
+                code.join(x.types, code.add(",").newline) { typ =>
+                  code.add("""{ case JField("${productName}", value) => ${productNamespace}.Serialization.${productName}Extractor.extract(value) }""",
+                    "productName"      -> typ.name,
+                    "productNamespace" -> typ.namespace.value
+                  )
                 }
-              }""")
-          }
+              }
+            
+              code.add(".reduceLeft { (a, b) => a.orElse(b) }").newline
+            
+              code.add("""
+                implicit val ${type}Extractor: Extractor[${type}] = new Extractor[${type}] {
+                  def extract(jvalue: JValue): ${type} = {
+                    (jvalue --> classOf[JObject]).obj.filter(${type}ExtractorFunction.isDefinedAt _) match {
+                      case field :: fields => ${type}ExtractorFunction(field)
+                      case Nil => error("Expected to find ${type} but found " + jvalue)
+                    }
+                  }
+                }""")
+            }
           
-        case x: XConstant =>
+          case x: XConstant =>
           
+        }
       }
     }
-    
-    code.unindent.add("}").newline
   }
   
   private def buildDecomposersFor(namespace: Namespace, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
-    code.newline(2).add("trait Decomposers extends DefaultDecomposers with DecomposerHelpers {").indent
-    
-    code.join(database.coproductsIn(namespace) ++ database.productsIn(namespace), code.newline.newline) { definition =>
-      definition match {
-        case x: XProduct => 
-          code.using("type" -> x.name) {
-            code.add("implicit val ${type}Decomposer: Decomposer[${type}] = new Decomposer[${type}] ").block {
-              code.add("def decompose(tvalue: ${type}): JValue = ").block {
-                code.add("JObject").paren {      
-                  var isFirst = true
+    code.newline(2).add("trait Decomposers extends DefaultDecomposers with DecomposerHelpers ").block {    
+      code.join(database.coproductsIn(namespace) ++ database.productsIn(namespace), code.newline.newline) { definition =>
+        definition match {
+          case x: XProduct => 
+            code.using("type" -> x.name) {
+              code.add("implicit val ${type}Decomposer: Decomposer[${type}] = new Decomposer[${type}] ").block {
+                code.add("def decompose(tvalue: ${type}): JValue = ").block {
+                  code.add("JObject").paren {      
+                    var isFirst = true
       
-                  x.fields foreach { field =>
-                    code.add("JField(\"${fieldType}\", tvalue.${fieldType}.serialize) ::", "fieldType" -> field.name).newline
+                    x.fields foreach { field =>
+                      code.add("JField(\"${fieldType}\", tvalue.${fieldType}.serialize) ::", "fieldType" -> field.name).newline
+                    }
+      
+                    code.add("Nil")
                   }
-      
-                  code.add("Nil")
                 }
               }
             }
-          }
         
-        case x: XCoproduct =>
-          code.using("type" -> x.name) {
-            code.add("implicit val ${type}Decomposer: Decomposer[${type}] = new Decomposer[${type}] ").block {
-              code.add("def decompose(tvalue: ${type}): JValue = ").block {
-                code.add("tvalue match ").block {
-                  x.types foreach { typ =>
-                    code.addln("case x: ${productName} => JObject(JField(\"${productName}\", decompose(x)) :: Nil)",
-                      "productName" -> typ.name
-                    )
+          case x: XCoproduct =>
+            code.using("type" -> x.name) {
+              code.add("implicit val ${type}Decomposer: Decomposer[${type}] = new Decomposer[${type}] ").block {
+                code.add("def decompose(tvalue: ${type}): JValue = ").block {
+                  code.add("tvalue match ").block {
+                    x.types foreach { typ =>
+                      code.addln("case x: ${productType} => JObject(JField(\"${productName}\", ${productNamespace}.Serialization.${productName}Decomposer.decompose(x)) :: Nil)",
+                        "productName"      -> typ.name,
+                        "productType"      -> typ.typename,
+                        "productNamespace" -> typ.namespace.value
+                      )
+                    }
                   }
                 }
               }
             }
-          }
           
-        case x: XConstant =>
+          case x: XConstant =>
+        }
       }
     }
-    
-    code.unindent.add("}")
   }
   
   private def buildPackageObjectFor(namespace: Namespace, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
@@ -477,20 +476,18 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
   }
   
   private def buildConstantsFor(namespace: Namespace, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
-    code.newline(2).add("object Constants {").indent
+    code.newline(2).add("object Constants ").block {    
+      code.addln("import Serialization._").newline
     
-    code.addln("import Serialization._").newline
-    
-    code.join(database.constantsIn(namespace), code.newline) { constant =>
-      buildDocumentationFor(constant, code)
+      code.join(database.constantsIn(namespace), code.newline) { constant =>
+        buildDocumentationFor(constant, code)
       
-      code.add("lazy val " + constant.name + " = parse(\"\"\"${json} \"\"\").deserialize[${type}]",
-        "json" -> compact(render(constant.defValue)),
-        "type" -> constant.constantType.typename
-      )
+        code.add("lazy val " + constant.name + " = parse(\"\"\"${json} \"\"\").deserialize[${type}]",
+          "json" -> compact(render(constant.defValue)),
+          "type" -> constant.constantType.typename
+        )
+      }
     }
-    
-    code.unindent.add("}")
   }
   
   private def typeSignatureOf(x: XSchema): String = walk(x, CodeBuilder.empty, typeSignatureWalker).code

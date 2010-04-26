@@ -3,6 +3,10 @@ package net.liftweb.json.xschema {
 import net.liftweb.json.JsonAST._
 
 object XSchemaAST {
+  object PredefinedProperties {
+    val XSchemaDoc = "xschema.doc"
+  }
+  
   case class Namespace(value: String) {
     def path = value.split("[.]").filter(_.length > 0)
   }

@@ -134,8 +134,8 @@ package data.social {
   
   trait Extractors extends DefaultExtractors with ExtractionHelpers {
     private lazy val GenderExtractorFunction: PartialFunction[JField, Gender] = List[PartialFunction[JField, Gender]](
-      { case JField("Male", value) => MaleExtractor.extract(value) },
-      { case JField("Female", value) => FemaleExtractor.extract(value) }
+      { case JField("Male", value) => data.social.Serialization.MaleExtractor.extract(value) },
+      { case JField("Female", value) => data.social.Serialization.FemaleExtractor.extract(value) }
     ).reduceLeft { (a, b) => a.orElse(b) }
     
     implicit val GenderExtractor: Extractor[Gender] = new Extractor[Gender] {
@@ -164,13 +164,12 @@ package data.social {
     }
   }
   
-  
   trait Decomposers extends DefaultDecomposers with DecomposerHelpers {
     implicit val GenderDecomposer: Decomposer[Gender] = new Decomposer[Gender] {
       def decompose(tvalue: Gender): JValue = {
         tvalue match {
-          case x: Male => JObject(JField("Male", decompose(x)) :: Nil)
-          case x: Female => JObject(JField("Female", decompose(x)) :: Nil)
+          case x: data.social.Male => JObject(JField("Male", data.social.Serialization.MaleDecomposer.decompose(x)) :: Nil)
+          case x: data.social.Female => JObject(JField("Female", data.social.Serialization.FemaleDecomposer.decompose(x)) :: Nil)
           
         }
       }
