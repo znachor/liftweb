@@ -10,6 +10,12 @@ case class XSchemaValidation(warnings: List[String], errors: List[String])
 trait XSchemaDatabase extends Iterable[XSchema] {
   def definitions: List[XDefinition]
   
+  def constantsP = (x: XSchema) => x.isInstanceOf[XConstant]
+  
+  def productsP = (x: XSchema) => x.isInstanceOf[XProduct]
+  
+  def coproductsP = (x: XSchema) => x.isInstanceOf[XCoproduct]
+  
   /**
    * Validates the definitions in the database, returning errors and warnings.
    */
@@ -36,6 +42,18 @@ trait XSchemaDatabase extends Iterable[XSchema] {
    * Retrieves all the definitions in the specified namespace.
    */
   def definitionsIn(namespace: Namespace): List[XDefinition] = definitions.filter(_.namespace == namespace)
+  
+  def constants = definitions.filter(constantsP)
+  
+  def products = definitions.filter(productsP)
+  
+  def coproducts = definitions.filter(coproductsP)
+  
+  def constantsIn(namespace: Namespace) = definitionsIn(namespace).filter(constantsP).map(_.asInstanceOf[XConstant])
+  
+  def productsIn(namespace: Namespace) = definitionsIn(namespace).filter(productsP).map(_.asInstanceOf[XProduct])
+  
+  def coproductsIn(namespace: Namespace) = definitionsIn(namespace).filter(coproductsP).map(_.asInstanceOf[XCoproduct])
   
   /**
    * Retrieves all the namespaces.

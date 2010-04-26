@@ -43,8 +43,10 @@ object XSchemaAST {
     def elements = definitions
   }
   
-  sealed class XReference protected (val typename: String) extends XSchema {
-    def name = if (typename.indexOf('.') == -1) typename else typename.split("[.]").last
+  sealed class XReference protected (val typename: String) extends XSchema with Named with Namespaced {
+    val namespace = Namespace(if (typename.indexOf('.') == -1) "" else typename.split("[.]").toList.dropRight(1).mkString("."))
+    
+    val name = if (typename.indexOf('.') == -1) typename else typename.split("[.]").last
     
     override def hashCode = typename.hashCode
     

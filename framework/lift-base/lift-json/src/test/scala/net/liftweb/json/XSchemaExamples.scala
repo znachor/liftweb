@@ -93,6 +93,7 @@ object XSchemaExamples extends Specification {
 }
 
 package data.social {
+  
   import net.liftweb.json.{SerializationImplicits, DefaultExtractors, ExtractionHelpers, DefaultDecomposers, DecomposerHelpers, DefaultOrderings}
   import net.liftweb.json.JsonParser._
   import net.liftweb.json.JsonAST._
@@ -102,7 +103,7 @@ package data.social {
     def text: String
   }
   
-  case class Male(text: String) extends Ordered[Male] with data.social.Gender {
+  case class Male(text: String)extends Ordered[Male] with data.social.Gender {
     def compare(that: Male): Int = {
       if (this == that) return 0
       
@@ -115,7 +116,7 @@ package data.social {
     }
   }
   
-  case class Female(text: String) extends Ordered[Female] with data.social.Gender {
+  case class Female(text: String)extends Ordered[Female] with data.social.Gender {
     def compare(that: Female): Int = {
       if (this == that) return 0
       
@@ -128,11 +129,6 @@ package data.social {
     }
   }
   
-  
-  
-  
-  
-  
   trait Extractors extends DefaultExtractors with ExtractionHelpers {
     private lazy val GenderExtractorFunction: PartialFunction[JField, Gender] = List[PartialFunction[JField, Gender]](
       { case JField("Male", value) => MaleExtractor.extract(value) },
@@ -143,11 +139,11 @@ package data.social {
       def extract(jvalue: JValue): Gender = {
         (jvalue --> classOf[JObject]).obj.filter(GenderExtractorFunction.isDefinedAt _) match {
           case field :: fields => GenderExtractorFunction(field)
-          
           case Nil => error("Expected to find Gender but found " + jvalue)
         }
       }
     }
+    
     implicit val MaleExtractor: Extractor[Male] = new Extractor[Male] {
       def extract(jvalue: JValue): Male = {
         Male(
@@ -155,6 +151,7 @@ package data.social {
         )
       }
     }
+    
     implicit val FemaleExtractor: Extractor[Female] = new Extractor[Female] {
       def extract(jvalue: JValue): Female = {
         Female(
@@ -162,7 +159,6 @@ package data.social {
         )
       }
     }
-    
   }
   
   
@@ -176,6 +172,7 @@ package data.social {
         }
       }
     }
+    
     implicit val MaleDecomposer: Decomposer[Male] = new Decomposer[Male] {
       def decompose(tvalue: Male): JValue = {
         JObject(
@@ -184,6 +181,7 @@ package data.social {
         )
       }
     }
+    
     implicit val FemaleDecomposer: Decomposer[Female] = new Decomposer[Female] {
       def decompose(tvalue: Female): JValue = {
         JObject(
@@ -192,14 +190,13 @@ package data.social {
         )
       }
     }
-    
   }
   
   object Serialization extends SerializationImplicits with Decomposers with Extractors { }
-
+  
   object Constants {
     import Serialization._
-
+    
     lazy val DefaultFemale = parse("""{"Female":{"text":"female"}} """).deserialize[data.social.Gender]
     lazy val DefaultMale = parse("""{"Male":{"text":"male"}} """).deserialize[data.social.Gender]
   }

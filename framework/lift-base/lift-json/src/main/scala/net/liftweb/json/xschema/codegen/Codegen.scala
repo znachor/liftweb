@@ -29,6 +29,9 @@ object State {
 
 case class CodeBuilder(codeBuilder: StringBuilder, state: State) {
   import scala.collection.mutable.ArrayStack
+  import scala.util.matching.Regex
+  
+  private val Indented = """^( +)(.*)$""".r
   
   private val replacements = new ArrayStack[List[(String, String)]]
   
@@ -37,19 +40,56 @@ case class CodeBuilder(codeBuilder: StringBuilder, state: State) {
     
     var isFirst = true
     
-    newStr.split("\n").foreach { s =>
+    var indents = new ArrayStack[Int]
+    
+    var startIndentLevel = state.indentLevel
+    
+    newStr.split("\n").foreach { line =>
+      var strippedLine = line match {
+        case Indented(spaces, rest) =>
+          val count = spaces.length
+          
+          if (indents.size == 0) {
+            indents.push(count)
+          }
+          else {
+            val lastCount = indents.peek
+            
+            if (count != lastCount) {
+              if (count > lastCount) {
+                state.indent
+                
+                indents.push(count)
+              }
+              else if (count < lastCount) {
+                while (indents.size > 0 && indents.peek != count) {
+                  indents.pop
+                  
+                  state.unindent
+                }
+              }
+            }
+          }
+
+          rest
+          
+        case _ => line
+      }
+    
       if (isFirst) isFirst = false else newline
       
-      codeBuilder.append(s)
+      codeBuilder.append(strippedLine)
     }
+    
+    state.indentLevel = startIndentLevel
     
     this
   }
   
   def += (that: CodeBuilder): CodeBuilder = { 
-    this += that.code
-    
+    this.codeBuilder.append(that.code)
     this.state.replaceWith(that.state)
+    
     this
   }
   
@@ -67,21 +107,44 @@ case class CodeBuilder(codeBuilder: StringBuilder, state: State) {
     returnValue
   }
   
+  def indent(f: => Unit): CodeBuilder = {
+    indent
+    
+    f
+    
+    unindent
+  }
+  
+  def block(f: => Unit): CodeBuilder = block(f, "{", "}")
+  
+  def paren(f: => Unit): CodeBuilder = block(f, "(", ")")
+  
+  def block(f: => Unit, begin: String, end: String): CodeBuilder = {
+    add(begin).indent
+    
+    f
+    
+    unindent.add(end)
+  }
+  
+  def apply(f: => String): CodeBuilder = add(f)
+  
   def indent   = { state.indent; newline }
   def unindent = { state.unindent; newline }
   def newline  = { codeBuilder.append("\n").append(state.startIndentation); this }
   
   def newline(n: Int): CodeBuilder = { (0 until n) foreach { x => newline }; this }
   
-  def join[T](iterable: Iterable[T], joiner: => Unit)(f: T => Unit): Unit = {
+  def join[T](iterable: Iterable[T], joiner: => Unit)(f: T => Unit): CodeBuilder = {
     var isFirst = true
     
     for (element <- iterable) {
-      if (isFirst) isFirst = false
-      else joiner
+      if (isFirst) isFirst = false else joiner
       
       f(element)
     }
+    
+    this
   }
   
   def code = codeBuilder.toString
@@ -150,26 +213,23 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       
       val code = CodeBuilder.empty
       
-      code.newline.add("package " + namespace.value + " {").indent
+      code.newline.add("package " + namespace.value + " ").block {
+        code.addln("""
+          import net.liftweb.json.{SerializationImplicits, DefaultExtractors, ExtractionHelpers, DefaultDecomposers, DecomposerHelpers, DefaultOrderings}
+          import net.liftweb.json.JsonParser._
+          import net.liftweb.json.JsonAST._
+          import net.liftweb.json.XSchema._""").newline
       
-      code.addln("import net.liftweb.json.{SerializationImplicits, DefaultExtractors, ExtractionHelpers, DefaultDecomposers, DecomposerHelpers, DefaultOrderings}")
-      code.addln("import net.liftweb.json.JsonParser._")
-      code.addln("import net.liftweb.json.JsonAST._")
-      code.addln("import net.liftweb.json.XSchema._")
+        code.join(database.coproductsIn(namespace) ++ database.productsIn(namespace), code.newline.newline) { definition =>
+          buildDataFor(definition, code, database)
+        }
       
-      for (definition <- database.definitionsIn(namespace)) {    
-        code.newline
-        
-        buildDataFor(definition, code, database)
+        buildExtractorsFor(namespace, code, database)
+        buildDecomposersFor(namespace, code, database)
+      
+        buildPackageObjectFor(namespace, code, database)
+        buildConstantsFor(namespace, code, database)
       }
-      
-      buildExtractorsFor(namespace, code, database)
-      buildDecomposersFor(namespace, code, database)
-      
-      buildPackageObjectFor(namespace, code, database)
-      buildConstantsFor(namespace, code, database)
-      
-      code.unindent.add("}")
       
       bundle += dataFile -> code
     }
@@ -178,31 +238,30 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
   }
   
   private def buildDataFor(definition: XDefinition, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
-    walk(definition, code, definitionWalker(database)).newline
+    walk(definition, code, definitionWalker(database))
   }
   
   private def buildExtractorsFor(namespace: Namespace, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
     code.newline(2).add("trait Extractors extends DefaultExtractors with ExtractionHelpers {").indent
     
-    for (definition <- database.definitionsIn(namespace)) {
+    code.join(database.coproductsIn(namespace) ++ database.productsIn(namespace), code.newline.newline) { definition =>
       definition match {
         case x: XProduct => 
           code.using("type" -> x.name) {
-            code.add("implicit val ${type}Extractor: Extractor[${type}] = new Extractor[${type}] {").indent
+            code.add("implicit val ${type}Extractor: Extractor[${type}] = new Extractor[${type}] ").block {
+              code.add("def extract(jvalue: JValue): ${type} = ").block {
+                code.add("${type}").paren {          
+                  var isFirst = true
           
-            code.add("def extract(jvalue: JValue): ${type} = {").indent
-            code.add(x.name).add("(").indent
-          
-            var isFirst = true
-          
-            code.join(x.fields, code.add(",").newline) { field =>
-              code.add("extractField[${fieldType}](jvalue, \"${fieldName}\", \"\"\"" + compact(render(field.defValue)) + " \"\"\")", 
-                "fieldType" -> field.fieldType.typename,
-                "fieldName" -> field.name
-              )
+                  code.join(x.fields, code.add(",").newline) { field =>
+                    code.add("extractField[${fieldType}](jvalue, \"${fieldName}\", \"\"\"" + compact(render(field.defValue)) + " \"\"\")", 
+                      "fieldType" -> field.fieldType.typename,
+                      "fieldName" -> field.name
+                    )
+                  }
+                }
+              }
             }
-          
-            code.unindent.add(")").unindent.add("}").unindent.add("}").newline
           }
           
         case x: XCoproduct =>
@@ -210,22 +269,22 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
             code.add("private lazy val ${type}ExtractorFunction: PartialFunction[JField, ${type}] = List[PartialFunction[JField, ${type}]](").indent
             
             code.join(x.types, code.add(",").newline) { typ =>
-              code.add("{ case JField(\"${typeName}\", value) => ${typeName}Extractor.extract(value) }",
-                "typeName" -> typ.name
+              code.add("{ case JField(\"${productName}\", value) => ${productName}Extractor.extract(value) }",
+                "productName" -> typ.name
               )
             }
             
-            code.unindent.add(").reduceLeft { (a, b) => a.orElse(b) }").newline.newline
+            code.unindent.add(").reduceLeft { (a, b) => a.orElse(b) }").newline
             
-            code.add("implicit val ${type}Extractor: Extractor[${type}] = new Extractor[${type}] {").indent
-            code.add("def extract(jvalue: JValue): ${type} = {").indent
-            code.add("(jvalue --> classOf[JObject]).obj.filter(${type}ExtractorFunction.isDefinedAt _) match {").indent
-            code.add("case field :: fields => ${type}ExtractorFunction(field)").newline.newline
-            code.add("case Nil => error(\"Expected to find ${type} but found \" + jvalue)")
-            
-            code.unindent.add("}").unindent.add("}").unindent.add("}").newline
-            
-            
+            code.add("""
+              implicit val ${type}Extractor: Extractor[${type}] = new Extractor[${type}] {
+                def extract(jvalue: JValue): ${type} = {
+                  (jvalue --> classOf[JObject]).obj.filter(${type}ExtractorFunction.isDefinedAt _) match {
+                    case field :: fields => ${type}ExtractorFunction(field)
+                    case Nil => error("Expected to find ${type} but found " + jvalue)
+                  }
+                }
+              }""")
           }
           
         case x: XConstant =>
@@ -239,41 +298,38 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
   private def buildDecomposersFor(namespace: Namespace, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
     code.newline(2).add("trait Decomposers extends DefaultDecomposers with DecomposerHelpers {").indent
     
-    for (definition <- database.definitionsIn(namespace)) {
+    code.join(database.coproductsIn(namespace) ++ database.productsIn(namespace), code.newline.newline) { definition =>
       definition match {
         case x: XProduct => 
           code.using("type" -> x.name) {
-            code.add("implicit val ${type}Decomposer: Decomposer[${type}] = new Decomposer[${type}] {").indent
-          
-            code.add("def decompose(tvalue: ${type}): JValue = {").indent
-            code.add("JObject(").indent
-          
-            var isFirst = true
-          
-            x.fields foreach { field =>
-              code.add("JField(\"${fieldType}\", tvalue.${fieldType}.serialize) ::", "fieldType" -> field.name).newline
+            code.add("implicit val ${type}Decomposer: Decomposer[${type}] = new Decomposer[${type}] ").block {
+              code.add("def decompose(tvalue: ${type}): JValue = ").block {
+                code.add("JObject").paren {      
+                  var isFirst = true
+      
+                  x.fields foreach { field =>
+                    code.add("JField(\"${fieldType}\", tvalue.${fieldType}.serialize) ::", "fieldType" -> field.name).newline
+                  }
+      
+                  code.add("Nil")
+                }
+              }
             }
-          
-            code.add("Nil")
-          
-            code.unindent.add(")").unindent.add("}").unindent.add("}").newline
           }
         
         case x: XCoproduct =>
           code.using("type" -> x.name) {
-            code.add("implicit val ${type}Decomposer: Decomposer[${type}] = new Decomposer[${type}] {").indent
-            
-            code.add("def decompose(tvalue: ${type}): JValue = {").indent
-            
-            code.add("tvalue match {").indent
-            
-            x.types foreach { typ =>
-              code.addln("case x: ${productType} => JObject(JField(\"${productType}\", decompose(x)) :: Nil)",
-                "productType" -> typ.name
-              )
+            code.add("implicit val ${type}Decomposer: Decomposer[${type}] = new Decomposer[${type}] ").block {
+              code.add("def decompose(tvalue: ${type}): JValue = ").block {
+                code.add("tvalue match ").block {
+                  x.types foreach { typ =>
+                    code.addln("case x: ${productName} => JObject(JField(\"${productName}\", decompose(x)) :: Nil)",
+                      "productName" -> typ.name
+                    )
+                  }
+                }
+              }
             }
-            
-            code.unindent.add("}").unindent.add("}").unindent.add("}").newline
           }
           
         case x: XConstant =>
@@ -290,12 +346,10 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
   private def buildConstantsFor(namespace: Namespace, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
     code.newline(2).add("object Constants {").indent
     
-    code.addln("import Serialization._")
+    code.addln("import Serialization._").newline
     
-    for (definition <- database.definitionsIn(namespace) if (definition.isInstanceOf[XConstant])) {
-      var constant = definition.asInstanceOf[XConstant]
-      
-      code.newline.add("lazy val " + constant.name + " = parse(\"\"\"${json} \"\"\").deserialize[${type}]",
+    code.join(database.constantsIn(namespace), code.newline) { constant =>
+      code.add("lazy val " + constant.name + " = parse(\"\"\"${json} \"\"\").deserialize[${type}]",
         "json" -> compact(render(constant.defValue)),
         "type" -> constant.constantType.typename
       )
