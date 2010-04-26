@@ -96,7 +96,10 @@ object TestSchemas {
       XCoproduct(
         Namespace("data.social"),
         "Gender",
-        Map(),
+        Map(
+          "xschema.doc" -> "This is the coproduct that includes male and female. The normal way to translate this into OOP is as a superclass/superinterface.",
+          "scala.traits" -> "java.io.Serializable, java.lang.Cloneable"
+        ),
         List(
           XReference("data.social.Male"),
           XReference("data.social.Female")
@@ -105,7 +108,7 @@ object TestSchemas {
       XProduct(
         Namespace("data.social"),
         "Male",
-        Map(),
+        Map("scala.traits" -> "java.io.Serializable, java.lang.Cloneable"),
         List(
           XField(XString, "text", Map(), JString("male"), Descending)
         )
@@ -113,7 +116,7 @@ object TestSchemas {
       XProduct(
         Namespace("data.social"),
         "Female",
-        Map(),
+        Map("scala.traits" -> "java.io.Serializable, java.lang.Cloneable"),
         List(
           XField(XString, "text", Map(), JString("female"), Ascending)
         )

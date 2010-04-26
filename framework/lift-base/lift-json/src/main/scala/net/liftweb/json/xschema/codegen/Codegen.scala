@@ -6,6 +6,7 @@ import _root_.net.liftweb.json.Printer._
 import _root_.net.liftweb.json.xschema.XSchemaAST._
 import _root_.net.liftweb.json.xschema.XSchemaDatabase
 
+import java.lang.StringBuilder
 import java.io.{FileOutputStream, Writer}
 
 import scala.collection.mutable.{Map => MutableMap}
@@ -34,6 +35,9 @@ case class CodeBuilder(codeBuilder: StringBuilder, state: State) {
   private val Indented = """^( +)(.*)$""".r
   
   private val replacements = new ArrayStack[List[(String, String)]]
+  
+  private var row = 0
+  private var col = 0
   
   def += (str: String): CodeBuilder = { 
     var newStr = replacements.toList.foldRight(str) { (replacement, str) => replace(str, replacement) }
@@ -80,7 +84,7 @@ case class CodeBuilder(codeBuilder: StringBuilder, state: State) {
     
       if (isFirst) isFirst = false else newline
       
-      codeBuilder.append(strippedLine)
+      append(strippedLine)
     }
     
     state.indentLevel = startIndentLevel
@@ -89,7 +93,7 @@ case class CodeBuilder(codeBuilder: StringBuilder, state: State) {
   }
   
   def += (that: CodeBuilder): CodeBuilder = { 
-    this.codeBuilder.append(that.code)
+    this.append(that.code)
     this.state.replaceWith(that.state)
     
     this
@@ -129,11 +133,33 @@ case class CodeBuilder(codeBuilder: StringBuilder, state: State) {
     unindent.add(end)
   }
   
+  def wrap(str: String, linePrefix: String, limit: Int): CodeBuilder = {
+    val words = str.split(" +")
+    
+    var isFirst = true
+    
+    for (i <- 0 until words.length) {
+      if (isFirst) isFirst = false else add(" ")
+      
+      add(words(i))
+      
+      var peekLength = if (i < words.length - 1) words(i + 1).length + 1 else 0
+      
+      if (col + peekLength > limit) {
+        newline.add(linePrefix)
+        
+        isFirst = true
+      }
+    }
+    
+    this
+  }
+  
   def apply(f: => String): CodeBuilder = add(f)
   
   def indent   = { state.indent; newline }
   def unindent = { state.unindent; newline }
-  def newline  = { codeBuilder.append("\n").append(state.startIndentation); this }
+  def newline  = append("\n").append(state.startIndentation)
   
   def newline(n: Int): CodeBuilder = { (0 until n) foreach { x => newline }; this }
   
@@ -152,6 +178,22 @@ case class CodeBuilder(codeBuilder: StringBuilder, state: State) {
   def code = codeBuilder.toString
   
   private def replace(template: String, replacements: Iterable[(String, String)]) = replacements.foldLeft(template) { (t, r) => t.replace("${" + r._1 + "}", r._2) }
+  
+  private def append(str: String): CodeBuilder = {
+    for (i <- 0 until str.length) {
+      if (str.charAt(i) == '\n') {
+        row += 1
+        col = 0
+      }
+      else {
+        col += 1
+      }
+    }
+    
+    codeBuilder.append(str)
+    
+    this
+  }
 }
 
 object CodeBuilder {
@@ -240,7 +282,96 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
   }
   
   private def buildDataFor(definition: XDefinition, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
-    walk(definition, code, definitionWalker(database))
+    def coproductPrefix(x: XCoproduct): String = if (database.productChildrenOf(x).map(_.namespace).removeDuplicates.length <= 1) "sealed " else ""
+    def buildProductFields(x: XProduct): CodeBuilder = code.add(x.fields.map(typeSignatureOf(_)).mkString(", "))
+    def buildCoproductFields(x: XCoproduct): CodeBuilder = {
+      val commonFields = database.commonFieldsOf(x)
+      
+      code.join(commonFields, code.newline) { field =>
+        code += ("def " + field._1 + ": " + field._2.typename)
+      }
+      
+      code
+    }    
+    def buildOrderedDefinition(x: XProduct): CodeBuilder = {
+      def buildComparisonFor(field: XField, schema: XSchema): CodeBuilder = {
+        def comparisonSign = field.order match {
+          case Ascending  => 1
+          case Descending => -1
+          case Ignore     => 0
+        }
+        
+        def buildStandardComparison(): CodeBuilder = {
+          code.addln("c = this." + field.name + ".compare(that." + field.name + ")")
+          code.addln("if (c != 0) return c * " + comparisonSign.toString)
+        }
+                                 
+        schema match {
+          case x: XOptional   => buildComparisonFor(field, x.optionalType)
+          case x: XCollection => code
+          case x: XMap        => code
+          case x: XTuple      => buildStandardComparison()
+          
+          case x: XPrimitive  => buildStandardComparison()
+          case x: XReference  => buildStandardComparison()
+          
+          case x: XProduct    => error("Found definition in field")
+          case x: XCoproduct  => error("Found definition in field")
+          case x: XConstant   => error("Found definition in field")
+          case x: XRoot       => error("Found root in field")
+          case x: XField      => error("Found field in field")
+        }
+      }
+      
+      code.add("def compare(that: " + x.name + "): Int = {").indent.addln("if (this == that) return 0").newline.addln("var c: Int = 0").newline
+      
+      x.fields.foreach { field =>
+        buildComparisonFor(field, field.fieldType)
+        
+        code.newline
+      }
+      
+      code.add("return 0").unindent.add("}")
+    }
+    
+    buildDocumentationFor(definition, code)
+    
+    val mixins: List[String] = definition.properties.get("scala.traits") match {
+      case None => Nil
+      case Some(traits) => traits.split(",").toList.map(_.trim)
+    }
+    
+    code.using("type" -> definition.name) {
+      definition match {
+        case x: XProduct =>
+          code.add("case class ${type}(")
+          buildProductFields(x)
+          code.add(")")
+      
+          val withClauses = ("Ordered[${type}]" :: database.coproductContainersOf(x).map(_.qualifiedName) ++ mixins).mkString(" with ")
+      
+          code.add(" extends " + withClauses + " ").block {        
+            buildOrderedDefinition(x)
+          }
+      
+        case x: XCoproduct => 
+          val mixinsString = mixins match {
+            case Nil => ""
+            case _ => "extends " + mixins.mkString(" with ") + " "
+          }
+          
+          code.add(coproductPrefix(x) + "trait ${type} " + mixinsString).block {
+            buildCoproductFields(x)
+          }
+          
+        case x: XConstant => code
+      }
+    }
+  }
+  
+  private def buildDocumentationFor(definition: XDefinition, code: CodeBuilder): CodeBuilder = definition.properties.get("xschema.doc") match {
+    case None => code
+    case Some(doc) => code.add("/** ").wrap(doc.replaceAll("\\s+", " "), " * ", 80).newline.add(" */").newline
   }
   
   private def buildExtractorsFor(namespace: Namespace, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
@@ -351,6 +482,8 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     code.addln("import Serialization._").newline
     
     code.join(database.constantsIn(namespace), code.newline) { constant =>
+      buildDocumentationFor(constant, code)
+      
       code.add("lazy val " + constant.name + " = parse(\"\"\"${json} \"\"\").deserialize[${type}]",
         "json" -> compact(render(constant.defValue)),
         "type" -> constant.constantType.typename
@@ -361,94 +494,6 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
   }
   
   private def typeSignatureOf(x: XSchema): String = walk(x, CodeBuilder.empty, typeSignatureWalker).code
-  
-  private def definitionWalker(database: XSchemaDatabase) = new XSchemaDefinitionWalker[CodeBuilder] {
-    override def begin(code: CodeBuilder, defn: XDefinition) = {
-      def coproductPrefix(x: XCoproduct): String = if (database.productChildrenOf(x).map(_.namespace).removeDuplicates.length <= 1) "sealed " else ""
-      def buildProductFields(x: XProduct): CodeBuilder = code.add(x.fields.map(typeSignatureOf(_)).mkString(", "))
-      def buildCoproductFields(x: XCoproduct): CodeBuilder = {
-        val commonFields = database.commonFieldsOf(x)
-        
-        code.join(commonFields, code.newline) { field =>
-          code += ("def " + field._1 + ": " + field._2.typename)
-        }
-        
-        code
-      }
-      
-      defn match {
-        case x: XProduct =>
-          code.add("case class " + defn.name + "(")
-          buildProductFields(x)
-          code.add(")")
-          
-          val withClauses = ("Ordered[" + defn.name + "]" :: database.coproductContainersOf(x).map(_.qualifiedName)).mkString(" with ")
-          
-          code.add(" extends " + withClauses + " {").indent
-          
-        case x: XCoproduct => 
-          code.add(coproductPrefix(x) + "trait " + x.name + " {").indent
-          buildCoproductFields(x)
-          
-        case x: XConstant => code
-      }
-    }
-    
-    override def end(code: CodeBuilder, defn: XDefinition) = {
-      def buildOrderedDefinition(x: XProduct): CodeBuilder = {
-        def buildComparisonFor(field: XField, schema: XSchema): CodeBuilder = {
-          def comparisonSign = field.order match {
-            case Ascending  => 1
-            case Descending => -1
-            case Ignore     => 0
-          }
-          
-          def buildStandardComparison(): CodeBuilder = {
-            code.addln("c = this." + field.name + ".compare(that." + field.name + ")")
-            code.addln("if (c != 0) return c * " + comparisonSign.toString)
-          }
-                                   
-          schema match {
-            case x: XOptional   => buildComparisonFor(field, x.optionalType)
-            case x: XCollection => code
-            case x: XMap        => code
-            case x: XTuple      => buildStandardComparison()
-            
-            case x: XPrimitive  => buildStandardComparison()
-            case x: XReference  => buildStandardComparison()
-            
-            case x: XProduct    => error("Found definition in field")
-            case x: XCoproduct  => error("Found definition in field")
-            case x: XConstant   => error("Found definition in field")
-            case x: XRoot       => error("Found root in field")
-            case x: XField      => error("Found field in field")
-          }
-        }
-        
-        code.add("def compare(that: " + x.name + "): Int = {").indent.addln("if (this == that) return 0").newline.addln("var c: Int = 0").newline
-        
-        x.fields.foreach { field =>
-          buildComparisonFor(field, field.fieldType)
-          
-          code.newline
-        }
-        
-        code.add("return 0").unindent.add("}")
-      }
-      
-      defn match {
-        case x: XProduct =>
-          buildOrderedDefinition(x)
-          
-          code.unindent.add("}") // Close definition
-
-        case x: XCoproduct => 
-          code.unindent.add("}") // Close definition
-        
-        case x: XConstant => code
-      }
-    }
-  }
   
   private lazy val typeSignatureWalker = new XSchemaDefinitionWalker[CodeBuilder] {
     override def begin(data: CodeBuilder, field: XField) = {

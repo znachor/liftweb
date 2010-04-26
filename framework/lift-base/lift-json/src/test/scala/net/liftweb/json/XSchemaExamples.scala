@@ -99,11 +99,14 @@ package data.social {
   import net.liftweb.json.JsonAST._
   import net.liftweb.json.XSchema._
   
-  sealed trait Gender {
+  /** This is the coproduct that includes male and female. The normal way to
+   * translate this into OOP is as a superclass/superinterface.
+   */
+  sealed trait Gender extends java.io.Serializable with java.lang.Cloneable {
     def text: String
   }
   
-  case class Male(text: String) extends Ordered[Male] with data.social.Gender {
+  case class Male(text: String) extends Ordered[Male] with data.social.Gender with java.io.Serializable with java.lang.Cloneable {
     def compare(that: Male): Int = {
       if (this == that) return 0
       
@@ -116,7 +119,7 @@ package data.social {
     }
   }
   
-  case class Female(text: String) extends Ordered[Female] with data.social.Gender {
+  case class Female(text: String) extends Ordered[Female] with data.social.Gender with java.io.Serializable with java.lang.Cloneable {
     def compare(that: Female): Int = {
       if (this == that) return 0
       
@@ -201,6 +204,7 @@ package data.social {
     lazy val DefaultMale = parse("""{"Male":{"text":"male"}} """).deserialize[data.social.Gender]
   }
 }
+
 
 }
 }
