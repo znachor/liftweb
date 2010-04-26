@@ -76,6 +76,10 @@ object XSchemaAST {
   case object XFloat   extends XPrimitive("Float")
   case object XDouble  extends XPrimitive("Double")
   case object XBoolean extends XPrimitive("Boolean")
+  
+  case class XView(viewType: XReference) extends XReference(XView.typename) with Parameterized {
+    val typeParameters = viewType :: Nil
+  }
 
   case class XOptional(optionalType: XReference) extends XReference(XOptional.typename) with Parameterized {
     val typeParameters = optionalType :: Nil
@@ -103,6 +107,10 @@ object XSchemaAST {
   
   case class XProduct(namespace: Namespace, name: String, properties: Map[String, String], fields: List[XField]) extends XDefinition(XProduct.typename) {
     def elements = fields
+    
+    def viewFields: List[XField] = fields.filter(_.fieldType.isInstanceOf[XView])
+    
+    def realFields: List[XField] = fields.filter(!_.fieldType.isInstanceOf[XView])
   }
   
   case class XCoproduct(namespace: Namespace, name: String, properties: Map[String, String], types: List[XReference]) extends XDefinition(XCoproduct.typename) {
@@ -127,6 +135,7 @@ object XSchemaAST {
   }
   
   object XRoot        extends TypeNamed("Root")
+  object XView        extends TypeNamed("View")
   object XOptional    extends TypeNamed("Optional")
   object XCollection  extends TypeNamed("Collection")
   object XConstant    extends TypeNamed("Constant")
@@ -145,6 +154,7 @@ object XSchemaAST {
     def begin(data: T, col:   XCollection): T = data
     def begin(data: T, map:   XMap): T = data
     def begin(data: T, tuple: XTuple): T = data
+    def begin(data: T, view:  XView): T = data
     
     def walk(data: T, const:  XConstant): T = data
     def walk(data: T, prim:   XPrimitive): T = data
@@ -157,6 +167,7 @@ object XSchemaAST {
     def end(data: T, col:     XCollection): T = data
     def end(data: T, map:     XMap): T = data
     def end(data: T, tuple:   XTuple): T = data
+    def end(data: T, view:    XView): T = data
   }
   
   def walk[T](s: XSchema, initial: T, walker: XSchemaDefinitionWalker[T]): T = {
@@ -169,6 +180,7 @@ object XSchemaAST {
       case x: XCollection => walker.end(walkContainer(walker.begin(initial, x), x), x)
       case x: XMap        => walker.end(walkContainer(walker.begin(initial, x), x), x)
       case x: XTuple      => walker.end(walkContainer(walker.begin(initial, x), x), x)
+      case x: XView       => walker.end(walkContainer(walker.begin(initial, x), x), x)
       case x: XPrimitive  => walker.walk(initial, x)
       case x: XReference  => walker.walk(initial, x)
       

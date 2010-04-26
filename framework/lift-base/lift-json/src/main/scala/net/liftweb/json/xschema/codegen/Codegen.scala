@@ -283,7 +283,9 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
   
   private def buildDataFor(definition: XDefinition, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
     def coproductPrefix(x: XCoproduct): String = if (database.productChildrenOf(x).map(_.namespace).removeDuplicates.length <= 1) "sealed " else ""
-    def buildProductFields(x: XProduct): CodeBuilder = code.add(x.fields.map(typeSignatureOf(_)).mkString(", "))
+    def buildProductFields(x: XProduct): CodeBuilder = {
+      code.add(x.realFields.map(typeSignatureOf(_)).mkString(", "))
+    }
     def buildCoproductFields(x: XCoproduct): CodeBuilder = {
       val commonFields = database.commonFieldsOf(x)
       
@@ -302,7 +304,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         }
         
         def buildStandardComparison(): CodeBuilder = {
-          code.addln("c = this." + field.name + ".compare(that." + field.name + ")")
+          code.addln("c = this.${field}.compare(that.${field})", "field" -> field.name)
           code.addln("if (c != 0) return c * " + comparisonSign.toString)
         }
                                  
@@ -323,15 +325,33 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         }
       }
       
-      code.add("def compare(that: " + x.name + "): Int = {").indent.addln("if (this == that) return 0").newline.addln("var c: Int = 0").newline
+      code.add("def compare(that: " + x.name + "): Int = ").block {    
+        code.addln("if (this == that) return 0").newline.addln("var c: Int = 0").newline
       
-      x.fields.foreach { field =>
-        buildComparisonFor(field, field.fieldType)
-        
-        code.newline
+        code.join(x.realFields, code.newline) { field =>
+          buildComparisonFor(field, field.fieldType)
+        }
+      
+        code.newline.add("return this.hashCode - that.hashCode") // TODO: Not good practice, but do we have a choice???
       }
-      
-      code.add("return 0").unindent.add("}")
+    }
+    def buildViewFields(x: XProduct): CodeBuilder = {
+      // code.add(x.realFields.map(typeSignatureOf(_)).mkString(", "))
+      code.join(x.viewFields, code.newline) { viewField =>
+        database.resolve(viewField.fieldType) match {
+          case product: XProduct => 
+            code.add("def ${field}: ${type} = ${type}(",
+              "field" -> viewField.name,
+              "type"  -> product.qualifiedName
+            )
+
+            code.add(product.realFields.map(_.name).mkString(", "))
+
+            code.add(")")
+            
+          case _ => error("View type cannot be anything but product: " + viewField.fieldType)
+        }
+      }
     }
     
     buildDocumentationFor(definition, code)
@@ -352,6 +372,10 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       
           code.add(" extends " + withClauses + " ").block {        
             buildOrderedDefinition(x)
+            
+            code.newline
+            
+            buildViewFields(x)
           }
       
         case x: XCoproduct => 
@@ -382,7 +406,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
                   code.add("${type}").paren {          
                     var isFirst = true
           
-                    code.join(x.fields, code.add(",").newline) { field =>
+                    code.join(x.realFields, code.add(",").newline) { field =>
                       code.add("extractField[${fieldType}](jvalue, \"${fieldName}\", \"\"\"" + compact(render(field.defValue)) + " \"\"\")", 
                         "fieldType" -> field.fieldType.typename,
                         "fieldName" -> field.name
@@ -435,7 +459,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
                   code.add("JObject").paren {      
                     var isFirst = true
       
-                    x.fields foreach { field =>
+                    x.realFields foreach { field =>
                       code.add("JField(\"${fieldType}\", tvalue.${fieldType}.serialize) ::", "fieldType" -> field.name).newline
                     }
       

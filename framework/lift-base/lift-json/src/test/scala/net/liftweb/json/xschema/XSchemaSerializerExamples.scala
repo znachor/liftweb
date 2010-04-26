@@ -110,7 +110,8 @@ object TestSchemas {
         "Male",
         Map("scala.traits" -> "java.io.Serializable, java.lang.Cloneable"),
         List(
-          XField(XString, "text", Map(), JString("male"), Descending)
+          XField(XString, "text", Map(), JString("male"), Descending),
+          XField(XView(XReference("data.social.Female")), "asFemale", Map(), JNull, Ascending)
         )
       ),
       XProduct(
@@ -118,7 +119,8 @@ object TestSchemas {
         "Female",
         Map("scala.traits" -> "java.io.Serializable, java.lang.Cloneable"),
         List(
-          XField(XString, "text", Map(), JString("female"), Ascending)
+          XField(XString, "text", Map(), JString("female"), Ascending),
+          XField(XView(XReference("data.social.Male")), "asMale", Map(), JNull, Ascending)
         )
       ),
       XConstant(

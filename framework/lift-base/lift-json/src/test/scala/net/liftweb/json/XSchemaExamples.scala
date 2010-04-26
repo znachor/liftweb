@@ -92,7 +92,6 @@ object XSchemaExamples extends Specification {
   }
 }
 
-
 package data.social {
   
   import net.liftweb.json.{SerializationImplicits, DefaultExtractors, ExtractionHelpers, DefaultDecomposers, DecomposerHelpers, DefaultOrderings}
@@ -116,8 +115,9 @@ package data.social {
       c = this.text.compare(that.text)
       if (c != 0) return c * -1
       
-      return 0
+      return this.hashCode - that.hashCode
     }
+    def asFemale: data.social.Female = data.social.Female(text)
   }
   
   case class Female(text: String) extends Ordered[Female] with data.social.Gender with java.io.Serializable with java.lang.Cloneable {
@@ -129,8 +129,9 @@ package data.social {
       c = this.text.compare(that.text)
       if (c != 0) return c * 1
       
-      return 0
+      return this.hashCode - that.hashCode
     }
+    def asMale: data.social.Male = data.social.Male(text)
   }
   
   trait Extractors extends DefaultExtractors with ExtractionHelpers {
