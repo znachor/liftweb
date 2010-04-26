@@ -14,7 +14,7 @@ class State(var indentLevel: Int) {
   def indent   = { indentLevel = indentLevel + 1; this }
   def unindent = { indentLevel = indentLevel - 1; this }
   
-  def copy(that: State) = { this.indentLevel = that.indentLevel; this }
+  def replaceWith(that: State) = { this.indentLevel = that.indentLevel; this }
   
   def tab = "  "
   
@@ -27,21 +27,45 @@ object State {
   def apply(indentLevel: Int) = new State(indentLevel)
 }
 
-case class CodeBuilder(codeBuilder: StringBuilder, var state: State) {
-  def += (str: String) = { 
-    codeBuilder.append(str);
+case class CodeBuilder(codeBuilder: StringBuilder, state: State) {
+  import scala.collection.mutable.ArrayStack
+  
+  private val replacements = new ArrayStack[List[(String, String)]]
+  
+  def += (str: String): CodeBuilder = { 
+    var newStr = replacements.toList.foldRight(str) { (replacement, str) => replace(str, replacement) }
+    
+    var isFirst = true
+    
+    newStr.split("\n").foreach { s =>
+      if (isFirst) isFirst = false else newline
+      
+      codeBuilder.append(s)
+    }
+    
     this
   }
   
-  def += (that: CodeBuilder) = { 
-    codeBuilder.append(that.code); 
-    this.state.copy(that.state); 
+  def += (that: CodeBuilder): CodeBuilder = { 
+    this += that.code
+    
+    this.state.replaceWith(that.state)
     this
   }
   
-  def add(str: String) = { this += str }
+  def addln(template: String, replacements: (String, String)*) = add(template, replacements: _*).newline
   
-  def addln(str: String) = { this += str; newline }
+  def add(template: String, replacements: (String, String)*): CodeBuilder = { this += replace(template, replacements) }
+  
+  def using[T](replacements: (String, String)*)(f: => T): T = {
+    this.replacements.push(replacements.toList)
+    
+    val returnValue = f
+    
+    this.replacements.pop
+    
+    returnValue
+  }
   
   def indent   = { state.indent; newline }
   def unindent = { state.unindent; newline }
@@ -61,6 +85,8 @@ case class CodeBuilder(codeBuilder: StringBuilder, var state: State) {
   }
   
   def code = codeBuilder.toString
+  
+  private def replace(template: String, replacements: Iterable[(String, String)]) = replacements.foldLeft(template) { (t, r) => t.replace("${" + r._1 + "}", r._2) }
 }
 
 object CodeBuilder {
@@ -160,20 +186,46 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     for (definition <- database.definitionsIn(namespace)) {
       definition match {
         case x: XProduct => 
-          code.add("implicit val " + x.name + "Extractor: Extractor[" + x.name + "] = new Extractor[" + x.name + "] {").indent
+          code.using("type" -> x.name) {
+            code.add("implicit val ${type}Extractor: Extractor[${type}] = new Extractor[${type}] {").indent
           
-          code.add("def extract(jvalue: JValue): " + x.name + " = {").indent
-          code.add(x.name).add("(").indent
+            code.add("def extract(jvalue: JValue): ${type} = {").indent
+            code.add(x.name).add("(").indent
           
-          var isFirst = true
+            var isFirst = true
           
-          code.join(x.fields, code.add(",").newline) { field =>
-            code.add("extractField[" + field.fieldType.typename + "](jvalue, \"" + field.name + "\", \"\"\" " + compact(render(field.defValue)) + " \"\"\")")
+            code.join(x.fields, code.add(",").newline) { field =>
+              code.add("extractField[${fieldType}](jvalue, \"${fieldName}\", \"\"\"" + compact(render(field.defValue)) + " \"\"\")", 
+                "fieldType" -> field.fieldType.typename,
+                "fieldName" -> field.name
+              )
+            }
+          
+            code.unindent.add(")").unindent.add("}").unindent.add("}").newline
           }
           
-          code.unindent.add(")").unindent.add("}").unindent.add("}").newline
-          
         case x: XCoproduct =>
+          code.using("type" -> x.name) {
+            code.add("private lazy val ${type}ExtractorFunction: PartialFunction[JField, ${type}] = List[PartialFunction[JField, ${type}]](").indent
+            
+            code.join(x.types, code.add(",").newline) { typ =>
+              code.add("{ case JField(\"${typeName}\", value) => ${typeName}Extractor.extract(value) }",
+                "typeName" -> typ.name
+              )
+            }
+            
+            code.unindent.add(").reduceLeft { (a, b) => a.orElse(b) }").newline.newline
+            
+            code.add("implicit val ${type}Extractor: Extractor[${type}] = new Extractor[${type}] {").indent
+            code.add("def extract(jvalue: JValue): ${type} = {").indent
+            code.add("(jvalue --> classOf[JObject]).obj.filter(${type}ExtractorFunction.isDefinedAt _) match {").indent
+            code.add("case field :: fields => ${type}ExtractorFunction(field)").newline.newline
+            code.add("case Nil => error(\"Expected to find ${type} but found \" + jvalue)")
+            
+            code.unindent.add("}").unindent.add("}").unindent.add("}").newline
+            
+            
+          }
       }
     }
     
@@ -183,36 +235,42 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
   private def buildDecomposersFor(namespace: Namespace, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
     code.newline(2).add("trait Decomposers extends DefaultDecomposers with DecomposerHelpers {").indent
     
-    /*
-    implicit val DemoProductDecomposer: Decomposer[DemoProduct] = new Decomposer[DemoProduct] {
-      def decompose(tvalue: DemoProduct): JValue = {
-        JObject(
-          JField("foo", tvalue.foo.serialize) ::
-          JField("bar", tvalue.bar.serialize) ::
-          Nil
-        )
-      }
-    }
-    */
     for (definition <- database.definitionsIn(namespace)) {
       definition match {
         case x: XProduct => 
-          code.add("implicit val " + x.name + "Decomposer: Decomposer[" + x.name + "] = new Decomposer[" + x.name + "] {").indent
+          code.using("type" -> x.name) {
+            code.add("implicit val ${type}Decomposer: Decomposer[${type}] = new Decomposer[${type}] {").indent
           
-          code.add("def decompose(tvalue: " + x.name + "): JValue = {").indent
-          code.add("JObject(").indent
+            code.add("def decompose(tvalue: ${type}): JValue = {").indent
+            code.add("JObject(").indent
           
-          var isFirst = true
+            var isFirst = true
           
-          x.fields foreach { field =>
-            code.add("JField(\"" + field.name + "\", tvalue." + field.name + ".serialize) ::").newline
+            x.fields foreach { field =>
+              code.add("JField(\"${fieldType}\", tvalue.${fieldType}.serialize) ::", "fieldType" -> field.name).newline
+            }
+          
+            code.add("Nil")
+          
+            code.unindent.add(")").unindent.add("}").unindent.add("}").newline
           }
-          
-          code.add("Nil")
-          
-          code.unindent.add(")").unindent.add("}").unindent.add("}").newline
-          
+        
         case x: XCoproduct =>
+          code.using("type" -> x.name) {
+            code.add("implicit val ${type}Decomposer: Decomposer[${type}] = new Decomposer[${type}] {").indent
+            
+            code.add("def decompose(tvalue: ${type}): JValue = {").indent
+            
+            code.add("tvalue match {").indent
+            
+            x.types foreach { typ =>
+              code.addln("case x: ${productType} => JObject(JField(\"${productType}\", decompose(x)) :: Nil)",
+                "productType" -> typ.name
+              )
+            }
+            
+            code.unindent.add("}").unindent.add("}").unindent.add("}").newline
+          }
       }
     }
     

@@ -77,62 +77,115 @@ object XSchemaExamples extends Specification {
   }
   
   "Custom product serialization is symmetric" in {
-    import DemoData._
-    import DemoData.Serialization._
+    import data.social._
+    import data.social.Serialization._
     
-    testSymmetry(DemoProduct("baz", 123))
+    testSymmetry(Male("foobar"))
+    testSymmetry(Female("baz"))
   }
 }
 
-private[json] object DemoData {
-  import JsonAST._
-  import JsonParser._
-  import XSchema._
-  
-  case class DemoProduct(foo: String, bar: Int) extends Ordered[DemoProduct] {
-    def compare(that: DemoProduct): Int = {
-      if (this == that) return 0
+    package data.social {
+      import net.liftweb.json.{SerializationImplicits, DefaultExtractors, ExtractionHelpers, DefaultDecomposers, DecomposerHelpers, DefaultOrderings}
+      import net.liftweb.json.JsonParser._
+      import net.liftweb.json.JsonAST._
+      import net.liftweb.json.XSchema._
       
-      var c: Int = 0
-      
-      c = this.foo.compare(that.foo)      
-      if (c != 0) return c
-      
-      c = this.bar.compare(that.bar)      
-      if (c != 0) return c
-      
-      return 0
-    }
-  }
-
-  trait Extractors extends DefaultExtractors with ExtractionHelpers {
-    implicit val DemoProductExtractor: Extractor[DemoProduct] = new Extractor[DemoProduct] {
-      def extract(jvalue: JValue): DemoProduct = {
-        DemoProduct(
-          extractField[String](jvalue, "foo", ""),
-          extractField[Int](jvalue, "bar", "")
-        )
+      sealed trait Gender {
+        def text: String
       }
-    }
-  }
-
-  trait Decomposers extends DefaultDecomposers {
-    implicit val DemoProductDecomposer: Decomposer[DemoProduct] = new Decomposer[DemoProduct] {
-      def decompose(tvalue: DemoProduct): JValue = {
-        JObject(
-          JField("foo", tvalue.foo.serialize) ::
-          JField("bar", tvalue.bar.serialize) ::
-          Nil
-        )
+      
+      case class Male(text: String) extends Ordered[Male] with data.social.Gender {
+        def compare(that: Male): Int = {
+          if (this == that) return 0
+          
+          var c: Int = 0
+          
+          c = this.text.compare(that.text)
+          if (c != 0) return c * -1
+          
+          return 0
+        }
       }
+      
+      case class Female(text: String) extends Ordered[Female] with data.social.Gender {
+        def compare(that: Female): Int = {
+          if (this == that) return 0
+          
+          var c: Int = 0
+          
+          c = this.text.compare(that.text)
+          if (c != 0) return c * 1
+          
+          return 0
+        }
+      }
+      
+      
+      trait Extractors extends DefaultExtractors with ExtractionHelpers {
+        private lazy val GenderExtractorFunction: PartialFunction[JField, Gender] = List[PartialFunction[JField, Gender]](
+          { case JField("Male", value) => MaleExtractor.extract(value) },
+          { case JField("Female", value) => FemaleExtractor.extract(value) }
+        ).reduceLeft { (a, b) => a.orElse(b) }
+        
+        implicit val GenderExtractor: Extractor[Gender] = new Extractor[Gender] {
+          def extract(jvalue: JValue): Gender = {
+            (jvalue --> classOf[JObject]).obj.filter(GenderExtractorFunction.isDefinedAt _) match {
+              case field :: fields => GenderExtractorFunction(field)
+              
+              case Nil => error("Expected to find Gender but found " + jvalue)
+            }
+          }
+        }
+        implicit val MaleExtractor: Extractor[Male] = new Extractor[Male] {
+          def extract(jvalue: JValue): Male = {
+            Male(
+              extractField[String](jvalue, "text", """"male" """)
+            )
+          }
+        }
+        implicit val FemaleExtractor: Extractor[Female] = new Extractor[Female] {
+          def extract(jvalue: JValue): Female = {
+            Female(
+              extractField[String](jvalue, "text", """"female" """)
+            )
+          }
+        }
+        
+      }
+      
+      
+      trait Decomposers extends DefaultDecomposers with DecomposerHelpers {
+        implicit val GenderDecomposer: Decomposer[Gender] = new Decomposer[Gender] {
+          def decompose(tvalue: Gender): JValue = {
+            tvalue match {
+              case x: Male => JObject(JField("Male", decompose(x)) :: Nil)
+              case x: Female => JObject(JField("Female", decompose(x)) :: Nil)
+              
+            }
+          }
+        }
+        implicit val MaleDecomposer: Decomposer[Male] = new Decomposer[Male] {
+          def decompose(tvalue: Male): JValue = {
+            JObject(
+              JField("text", tvalue.text.serialize) ::
+              Nil
+            )
+          }
+        }
+        implicit val FemaleDecomposer: Decomposer[Female] = new Decomposer[Female] {
+          def decompose(tvalue: Female): JValue = {
+            JObject(
+              JField("text", tvalue.text.serialize) ::
+              Nil
+            )
+          }
+        }
+        
+      }
+      
+      object Serialization extends SerializationImplicits with Decomposers with Extractors { }
     }
-  }
-
-  object Serialization extends SerializationImplicits with Extractors with Decomposers {
-  
-  }
-
-}
 
 }
 }

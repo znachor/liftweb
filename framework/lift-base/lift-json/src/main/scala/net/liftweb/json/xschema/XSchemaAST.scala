@@ -44,6 +44,8 @@ object XSchemaAST {
   }
   
   sealed class XReference protected (val typename: String) extends XSchema {
+    def name = if (typename.indexOf('.') == -1) typename else typename.split("[.]").last
+    
     override def hashCode = typename.hashCode
     
     override def equals(a: Any) = a match {
