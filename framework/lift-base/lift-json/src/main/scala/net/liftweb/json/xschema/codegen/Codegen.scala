@@ -44,9 +44,11 @@ case class CodeBuilder(codeBuilder: StringBuilder, state: State) {
     
     var startIndentLevel = state.indentLevel
     
-    newStr.split("\n").foreach { line =>
+    var lines = newStr.split("\n")
+    
+    lines.foreach { line =>
       var strippedLine = line match {
-        case Indented(spaces, rest) =>
+        case Indented(spaces, rest) if (lines.length > 1) =>
           val count = spaces.length
           
           if (indents.size == 0) {

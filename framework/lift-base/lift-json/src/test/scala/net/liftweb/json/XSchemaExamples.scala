@@ -103,7 +103,7 @@ package data.social {
     def text: String
   }
   
-  case class Male(text: String)extends Ordered[Male] with data.social.Gender {
+  case class Male(text: String) extends Ordered[Male] with data.social.Gender {
     def compare(that: Male): Int = {
       if (this == that) return 0
       
@@ -116,7 +116,7 @@ package data.social {
     }
   }
   
-  case class Female(text: String)extends Ordered[Female] with data.social.Gender {
+  case class Female(text: String) extends Ordered[Female] with data.social.Gender {
     def compare(that: Female): Int = {
       if (this == that) return 0
       
