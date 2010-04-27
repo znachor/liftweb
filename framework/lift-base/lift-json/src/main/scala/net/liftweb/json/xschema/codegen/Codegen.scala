@@ -356,7 +356,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     
     buildDocumentationFor(definition, code)
     
-    val mixins: List[String] = definition.properties.get("scala.class.traits") match {
+    val classMixins: List[String] = definition.properties.get("scala.class.traits") match {
       case None => Nil
       case Some(traits) => traits.split(",").toList.map(_.trim)
     }
@@ -368,7 +368,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
           buildProductFields(x)
           code.add(")")
       
-          val withClauses = ("Ordered[${type}]" :: database.coproductContainersOf(x).map(_.qualifiedName) ++ mixins).mkString(" with ")
+          val withClauses = ("Ordered[${type}]" :: database.coproductContainersOf(x).map(_.qualifiedName) ++ classMixins).mkString(" with ")
       
           code.add(" extends " + withClauses + " ").block {        
             buildOrderedDefinition(x)
@@ -379,7 +379,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
           }
       
         case x: XCoproduct => 
-          val withClauses = ("Product" :: mixins).mkString(" with ")
+          val withClauses = ("Product" :: classMixins).mkString(" with ")
           
           code.add(coproductPrefix(x) + "trait ${type} extends " + withClauses + " ").block {
             buildCoproductFields(x)
@@ -388,7 +388,14 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         case x: XConstant => code
       }
       
-      code.newline.add("object ${type} extends XSchemaAST.XSchemaDerived ").block {
+      val objectMixins: List[String] = definition.properties.get("scala.object.traits") match {
+        case None => Nil
+        case Some(traits) => traits.split(",").toList.map(_.trim)
+      }
+      
+      val withClauses = ("XSchemaAST.XSchemaDerived" :: objectMixins).mkString(" with ")
+      
+      code.newline.add("object ${type} extends " + withClauses).block {
         code.addln("import XSchemaAST.{XDefinition, XSchema}").newline
         
         code.add("lazy val xschema: XDefinition = " + compact(renderScala(definition.asInstanceOf[XSchema].serialize)) + ".deserialize[XSchema].asInstanceOf[XDefinition]")
