@@ -103,7 +103,7 @@ package data.social {
   /** This is the coproduct that includes male and female. The normal way to
    * translate this into OOP is as a superclass/superinterface.
    */
-  sealed trait Gender extends ProductWithNames with java.io.Serializable with java.lang.Cloneable {
+  sealed trait Gender extends Product with java.io.Serializable with java.lang.Cloneable {
     def text: String
   }
   

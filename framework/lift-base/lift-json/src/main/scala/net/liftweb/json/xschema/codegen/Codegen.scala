@@ -376,18 +376,10 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
             code.newline
             
             buildViewFields(x)
-            
-            code.newline
-            
-            code.add("lazy val productElementNames: List[String] = List(")
-            
-            code.join(x.realFields, code.newline) { field => code.add("\"" + field.name + "\"") }
-            
-            code.add(")")
           }
       
         case x: XCoproduct => 
-          val withClauses = ("ProductWithNames" :: mixins).mkString(" with ")
+          val withClauses = ("Product" :: mixins).mkString(" with ")
           
           code.add(coproductPrefix(x) + "trait ${type} extends " + withClauses + " ").block {
             buildCoproductFields(x)

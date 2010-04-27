@@ -268,7 +268,3 @@ trait DefaultOrderings {
 
 object XSchema extends SerializationImplicits with DefaultExtractors with DefaultDecomposers with DefaultOrderings {
 }
-
-trait ProductWithNames extends Product {
-  def productElementNames: List[String]
-}

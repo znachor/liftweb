@@ -198,6 +198,10 @@ object XSchemaAST {
       case x: XRoot       => walker.end(walkContainer(walker.begin(initial, x), x), x)
     }
   }
+  
+  trait XSchemaDerived {
+    def xschema: XSchema
+  }
 }
 
 }

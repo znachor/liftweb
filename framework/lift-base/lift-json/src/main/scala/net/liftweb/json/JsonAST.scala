@@ -32,7 +32,7 @@ object JsonAST {
   /**
    * Data type for Json AST.
    */
-  sealed abstract class JValue extends Merge.Mergeable with Diff.Diffable {
+  sealed abstract class JValue extends Merge.Mergeable with Diff.Diffable with Product {
     type Values
 
     /** XPath-like expression to query JSON fields by name. Matches only fields on
@@ -351,6 +351,42 @@ object JsonAST {
     case JObject(obj)  =>
       val nested = break :: fields(trimObj(obj).map(f => text("\"" + f.name + "\":") :: render(f.value)))
       text("{") :: nest(2, nested) :: break :: text("}")
+  }
+  
+  /** Renders as Scala code, which can be copy/pasted into a lift-json scala 
+   * application.
+   */
+  def renderScala(value: JValue): Document = {  
+    val Quote = "\""
+    
+    def scalaQuote(s: String) = Quote + List("\\t" -> "\\t", "\\f" -> "\\f", "\\r" -> "\\r", "\\n" -> "\\n", "\\\\" -> "\\\\").foldLeft(s) { (str, pair) =>
+      str.replaceAll(pair._1, pair._2)
+    } + Quote
+    
+    def intersperse(l: List[Document], i: Document) = l.zip(List.make(l.length - 1, i) ::: List(text(""))).map(t => t._1 :: t._2)
+    
+    value match {
+      case null => text("null")
+      
+      case JNothing => text("JNothing")
+      case JNull => text("JNull")
+      
+      case _ => text(value.productPrefix + "(") :: (value match {
+        case JNull | JNothing => error("impossible")
+      
+        case JBool(value)  => text(value.toString)
+        case JDouble(n)    => text(n.toString)
+        case JInt(n)       => text(n.toString)
+        case JString(null) => text("null")
+        case JString(s)    => text(scalaQuote(s))
+        case JArray(arr)   => fold(intersperse(arr.map(renderScala) ::: List(text("Nil")), text("::")))
+        case JField(n, v)  => text(scalaQuote(n) + ",") :: renderScala(v)
+        case JObject(obj)  =>
+          val nested = break :: fold(intersperse(intersperse(obj.map(renderScala) ::: List(text("Nil")), text("::")), break))
+        
+          nest(2, nested)
+      }) :: text(")")
+    }
   }
 
   private def trimArr(xs: List[JValue]) = xs.filter(_ != JNothing)
