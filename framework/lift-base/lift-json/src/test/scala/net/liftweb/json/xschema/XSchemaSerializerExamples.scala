@@ -93,7 +93,8 @@ object TestSchemas {
         "Gender",
         Map(
           "xschema.doc" -> "This is the coproduct that includes male and female. The normal way to translate this into OOP is as a superclass/superinterface.",
-          "scala.class.traits" -> "java.io.Serializable, java.lang.Cloneable"
+          "scala.class.traits" -> "java.io.Serializable, java.lang.Cloneable",
+          "scala.object.traits" -> "java.io.Serializable, java.lang.Cloneable"
         ),
         List(
           XReference("data.social.Male"),

@@ -107,10 +107,10 @@ package data.social {
   sealed trait Gender extends Product with java.io.Serializable with java.lang.Cloneable {
     def text: String
   }
-  object Gender extends XSchemaAST.XSchemaDerived{
+  object Gender extends XSchemaAST.XSchemaDerived with java.io.Serializable with java.lang.Cloneable{
     import XSchemaAST.{XDefinition, XSchema}
-    
-    lazy val xschema: XDefinition = JObject(JField("type",JString("Coproduct"))::JField("name",JString("Gender"))::JField("properties",JObject(JField("xschema.doc",JString("This is the coproduct that includes male and female. The normal way to translate this into OOP is as a superclass/superinterface."))::JField("scala.class.traits",JString("java.io.Serializable, java.lang.Cloneable"))::Nil))::JField("namespace",JString("data.social"))::JField("types",JArray(JObject(JField("type",JString("data.social.Male"))::JField("name",JString("Male"))::JField("namespace",JString("data.social"))::Nil)::JObject(JField("type",JString("data.social.Female"))::JField("name",JString("Female"))::JField("namespace",JString("data.social"))::Nil)::Nil))::Nil).deserialize[XSchema].asInstanceOf[XDefinition]
+
+    lazy val xschema: XDefinition = JObject(JField("type",JString("Coproduct"))::JField("name",JString("Gender"))::JField("properties",JObject(JField("xschema.doc",JString("This is the coproduct that includes male and female. The normal way to translate this into OOP is as a superclass/superinterface."))::JField("scala.class.traits",JString("java.io.Serializable, java.lang.Cloneable"))::JField("scala.object.traits",JString("java.io.Serializable, java.lang.Cloneable"))::Nil))::JField("namespace",JString("data.social"))::JField("types",JArray(JObject(JField("type",JString("data.social.Male"))::JField("name",JString("Male"))::JField("namespace",JString("data.social"))::Nil)::JObject(JField("type",JString("data.social.Female"))::JField("name",JString("Female"))::JField("namespace",JString("data.social"))::Nil)::Nil))::Nil).deserialize[XSchema].asInstanceOf[XDefinition]
   }
   
   case class Male(text: String) extends Ordered[Male] with data.social.Gender with java.io.Serializable with java.lang.Cloneable {
