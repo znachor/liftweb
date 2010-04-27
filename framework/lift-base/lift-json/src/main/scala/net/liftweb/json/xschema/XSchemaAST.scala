@@ -76,10 +76,6 @@ object XSchemaAST {
   case object XFloat   extends XPrimitive("Float")
   case object XDouble  extends XPrimitive("Double")
   case object XBoolean extends XPrimitive("Boolean")
-  
-  case class XView(viewType: XReference) extends XReference(XView.typename) with Parameterized {
-    val typeParameters = viewType :: Nil
-  }
 
   case class XOptional(optionalType: XReference) extends XReference(XOptional.typename) with Parameterized {
     val typeParameters = optionalType :: Nil
@@ -121,6 +117,8 @@ object XSchemaAST {
     def viewFields: List[XViewField] = fields.filter(_.isInstanceOf[XViewField]).map(_.asInstanceOf[XViewField])
     
     def realFields: List[XRealField] = fields.filter(_.isInstanceOf[XRealField]).map(_.asInstanceOf[XRealField])
+    
+    def singleton = realFields.length == 0
   }
   
   case class XCoproduct(namespace: Namespace, name: String, properties: Map[String, String], types: List[XReference]) extends XDefinition(XCoproduct.typename) {
@@ -165,7 +163,6 @@ object XSchemaAST {
     def begin(data: T, col:   XCollection): T = data
     def begin(data: T, map:   XMap): T = data
     def begin(data: T, tuple: XTuple): T = data
-    def begin(data: T, view:  XView): T = data
     
     def walk(data: T, const:  XConstant): T = data
     def walk(data: T, prim:   XPrimitive): T = data
@@ -178,7 +175,6 @@ object XSchemaAST {
     def end(data: T, col:     XCollection): T = data
     def end(data: T, map:     XMap): T = data
     def end(data: T, tuple:   XTuple): T = data
-    def end(data: T, view:    XView): T = data
   }
   
   def walk[T](s: XSchema, initial: T, walker: XSchemaDefinitionWalker[T]): T = {
@@ -191,7 +187,6 @@ object XSchemaAST {
       case x: XCollection => walker.end(walkContainer(walker.begin(initial, x), x), x)
       case x: XMap        => walker.end(walkContainer(walker.begin(initial, x), x), x)
       case x: XTuple      => walker.end(walkContainer(walker.begin(initial, x), x), x)
-      case x: XView       => walker.end(walkContainer(walker.begin(initial, x), x), x)
       case x: XPrimitive  => walker.walk(initial, x)
       case x: XReference  => walker.walk(initial, x)
       
