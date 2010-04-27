@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-package net.liftweb {
-package json {
+package net.liftweb.json.xschema {
 
 import _root_.org.specs.Specification
 import _root_.org.specs.runner.{Runner, JUnit}
 
 class XSchemaExamplesTest extends Runner(XSchemaExamples) with JUnit
 object XSchemaExamples extends Specification {
-  import JsonAST._
-  import XSchema._
+  import _root_.net.liftweb.json.JsonAST._
+  
+  import Serialization._
   
   "Primitives can be extracted from strings" in {
     intExtractor(JString("12")) mustEqual 12
@@ -93,19 +93,23 @@ object XSchemaExamples extends Specification {
 }
 
 
-
 package data.social {
-  
-  import net.liftweb.json.{SerializationImplicits, DefaultExtractors, ExtractionHelpers, DefaultDecomposers, DecomposerHelpers, DefaultOrderings}
   import net.liftweb.json.JsonParser._
   import net.liftweb.json.JsonAST._
-  import net.liftweb.json.XSchema._
+  import net.liftweb.json.xschema.{SerializationImplicits, DefaultExtractors, ExtractionHelpers, DefaultDecomposers, DecomposerHelpers, DefaultOrderings}
+  import net.liftweb.json.xschema.Serialization._
+  import net.liftweb.json.xschema.XSchemaAST
   
   /** This is the coproduct that includes male and female. The normal way to
    * translate this into OOP is as a superclass/superinterface.
    */
   sealed trait Gender extends Product with java.io.Serializable with java.lang.Cloneable {
     def text: String
+  }
+  object Gender extends XSchemaAST.XSchemaDerived {
+    import XSchemaAST.{XDefinition, XSchema}
+    
+    lazy val xschema: XDefinition = JObject(JField("type",JString("Coproduct"))::JField("name",JString("Gender"))::JField("properties",JObject(JField("xschema.doc",JString("This is the coproduct that includes male and female. The normal way to translate this into OOP is as a superclass/superinterface."))::JField("scala.class.traits",JString("java.io.Serializable, java.lang.Cloneable"))::Nil))::JField("namespace",JString("data.social"))::JField("types",JArray(JObject(JField("type",JString("data.social.Male"))::JField("name",JString("Male"))::JField("namespace",JString("data.social"))::Nil)::JObject(JField("type",JString("data.social.Female"))::JField("name",JString("Female"))::JField("namespace",JString("data.social"))::Nil)::Nil))::Nil).deserialize[XSchema].asInstanceOf[XDefinition]
   }
   
   case class Male(text: String) extends Ordered[Male] with data.social.Gender with java.io.Serializable with java.lang.Cloneable {
@@ -121,6 +125,11 @@ package data.social {
     }
     def asFemale: data.social.Female = data.social.Female(text)
   }
+  object Male extends XSchemaAST.XSchemaDerived {
+    import XSchemaAST.{XDefinition, XSchema}
+    
+    lazy val xschema: XDefinition = JObject(JField("type",JString("Product"))::JField("name",JString("Male"))::JField("properties",JObject(JField("scala.class.traits",JString("java.io.Serializable, java.lang.Cloneable"))::Nil))::JField("namespace",JString("data.social"))::JField("fields",JArray(JObject(JField("type",JString("Field"))::JField("name",JString("text"))::JField("default",JString("male"))::JField("typeParameters",JArray(JObject(JField("type",JString("String"))::JField("name",JString("String"))::JField("namespace",JString(""))::Nil)::Nil))::JField("order",JString("descending"))::JField("properties",JObject(Nil))::Nil)::JObject(JField("type",JString("ViewField"))::JField("name",JString("asFemale"))::JField("typeParameters",JArray(JObject(JField("type",JString("data.social.Female"))::JField("name",JString("Female"))::JField("namespace",JString("data.social"))::Nil)::Nil))::JField("properties",JObject(Nil))::Nil)::Nil))::Nil).deserialize[XSchema].asInstanceOf[XDefinition]
+  }
   
   case class Female(text: String) extends Ordered[Female] with data.social.Gender with java.io.Serializable with java.lang.Cloneable {
     def compare(that: Female): Int = {
@@ -134,6 +143,11 @@ package data.social {
       return this.hashCode - that.hashCode
     }
     def asMale: data.social.Male = data.social.Male(text)
+  }
+  object Female extends XSchemaAST.XSchemaDerived {
+    import XSchemaAST.{XDefinition, XSchema}
+    
+    lazy val xschema: XDefinition = JObject(JField("type",JString("Product"))::JField("name",JString("Female"))::JField("properties",JObject(JField("scala.class.traits",JString("java.io.Serializable, java.lang.Cloneable"))::Nil))::JField("namespace",JString("data.social"))::JField("fields",JArray(JObject(JField("type",JString("Field"))::JField("name",JString("text"))::JField("default",JString("female"))::JField("typeParameters",JArray(JObject(JField("type",JString("String"))::JField("name",JString("String"))::JField("namespace",JString(""))::Nil)::Nil))::JField("order",JString("ascending"))::JField("properties",JObject(Nil))::Nil)::JObject(JField("type",JString("ViewField"))::JField("name",JString("asMale"))::JField("typeParameters",JArray(JObject(JField("type",JString("data.social.Male"))::JField("name",JString("Male"))::JField("namespace",JString("data.social"))::Nil)::Nil))::JField("properties",JObject(Nil))::Nil)::Nil))::Nil).deserialize[XSchema].asInstanceOf[XDefinition]
   }
   
   trait Extractors extends DefaultExtractors with ExtractionHelpers {
@@ -206,5 +220,4 @@ package data.social {
 }
 
 
-}
 }

@@ -1,4 +1,4 @@
-package net.liftweb.json
+package net.liftweb.json.xschema {
 
 import net.liftweb.json.JsonAST._
 
@@ -36,7 +36,7 @@ trait SerializationImplicits {
 /**
  * Extractors for all basic types.
  */
-trait DefaultExtractors {
+trait DefaultExtractors extends XSchemaExtractor {
   implicit val stringExtractor: Extractor[String] = new Extractor[String] {
     def extract(jvalue: JValue): String = jvalue match {
       case JString(str) => str
@@ -184,7 +184,7 @@ trait ExtractionHelpers extends SerializationImplicits {
 /**
  * Decomposers for all basic types.
  */
-trait DefaultDecomposers {
+trait DefaultDecomposers extends XSchemaDecomposer {
   implicit val stringDecomposer: Decomposer[String] = new Decomposer[String] {
     def decompose(tvalue: String): JValue = JString(tvalue)
   }
@@ -266,5 +266,7 @@ trait DefaultOrderings {
   implicit def optionToOrderedOption[T <% Ordered[T]](opt: Option[T]): OrderedOption[T] = OrderedOption[T](opt)
 }
 
-object XSchema extends SerializationImplicits with DefaultExtractors with DefaultDecomposers with DefaultOrderings {
+object Serialization extends SerializationImplicits with DefaultExtractors with DefaultDecomposers with DefaultOrderings {
+}
+
 }

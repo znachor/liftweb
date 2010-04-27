@@ -1,6 +1,6 @@
-package net.liftweb.json.xschema {
+package net.liftweb.json.xschema.codegen {
 
-import XSchemaAST._
+import net.liftweb.json.xschema.XSchemaAST._
 
 case class XSchemaValidation(warnings: List[String], errors: List[String])
 
@@ -142,6 +142,7 @@ trait XSchemaDatabase extends Iterable[XSchema] {
 object XSchemaDatabase {
   import net.liftweb.json.JsonAST._
   import net.liftweb.json.JsonParser._
+  import net.liftweb.json.xschema.Serialization._
   
   def apply(d: List[XDefinition]): XSchemaDatabase = new XSchemaDatabase {
     val definitions = d
@@ -149,7 +150,7 @@ object XSchemaDatabase {
   
   def apply(root: XRoot): XSchemaDatabase = apply(root.definitions)
   
-  def apply(json: JValue): XSchemaDatabase = apply(XSchemaSerialization.extract(json).asInstanceOf[XRoot])
+  def apply(json: JValue): XSchemaDatabase = apply(json.deserialize[XSchema].asInstanceOf[XRoot])
   
   def apply(str: String): XSchemaDatabase = apply(parse(str))
 }

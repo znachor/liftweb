@@ -4,7 +4,7 @@ import _root_.net.liftweb.json.JsonAST._
 import _root_.net.liftweb.json.Validation._
 import _root_.net.liftweb.json.Printer._
 import _root_.net.liftweb.json.xschema.XSchemaAST._
-import _root_.net.liftweb.json.xschema.XSchemaDatabase
+import _root_.net.liftweb.json.xschema.Serialization._
 
 import java.lang.StringBuilder
 import java.io.{FileOutputStream, Writer}
@@ -258,11 +258,11 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       val code = CodeBuilder.empty
       
       code.newline.add("package " + namespace.value + " ").block {
-        code.addln("""
-          import net.liftweb.json.{SerializationImplicits, DefaultExtractors, ExtractionHelpers, DefaultDecomposers, DecomposerHelpers, DefaultOrderings}
-          import net.liftweb.json.JsonParser._
-          import net.liftweb.json.JsonAST._
-          import net.liftweb.json.XSchema._""").newline
+        code.addln("import net.liftweb.json.JsonParser._").
+             addln("import net.liftweb.json.JsonAST._").
+             addln("import net.liftweb.json.xschema.{SerializationImplicits, DefaultExtractors, ExtractionHelpers, DefaultDecomposers, DecomposerHelpers, DefaultOrderings}").
+             addln("import net.liftweb.json.xschema.Serialization._").
+             addln("import net.liftweb.json.xschema.XSchemaAST").newline
       
         code.join(database.coproductsIn(namespace) ++ database.productsIn(namespace), code.newline.newline) { definition =>
           buildDataFor(definition, code, database)
@@ -356,7 +356,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     
     buildDocumentationFor(definition, code)
     
-    val mixins: List[String] = definition.properties.get("scala.traits") match {
+    val mixins: List[String] = definition.properties.get("scala.class.traits") match {
       case None => Nil
       case Some(traits) => traits.split(",").toList.map(_.trim)
     }
@@ -386,6 +386,12 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
           }
           
         case x: XConstant => code
+      }
+      
+      code.newline.add("object ${type} extends XSchemaAST.XSchemaDerived ").block {
+        code.addln("import XSchemaAST.{XDefinition, XSchema}").newline
+        
+        code.add("lazy val xschema: XDefinition = " + compact(renderScala(definition.asInstanceOf[XSchema].serialize)) + ".deserialize[XSchema].asInstanceOf[XDefinition]")
       }
     }
   }

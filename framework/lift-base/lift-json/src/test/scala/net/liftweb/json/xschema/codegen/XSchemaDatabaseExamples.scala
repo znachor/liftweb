@@ -1,4 +1,4 @@
-package net.liftweb.json.xschema {
+package net.liftweb.json.xschema.codegen {
 
 import _root_.org.specs.Specification
 import _root_.org.specs.runner.{Runner, JUnit}
@@ -8,15 +8,12 @@ import java.io.{Writer, PrintWriter}
 class XSchemaDatabaseExamplesTest extends Runner(XSchemaDatabaseExamples) with JUnit
 
 object XSchemaDatabaseExamples extends Specification {
-  import JsonAST._
-  import JsonParser._
-  import XSchemaAST._
-  import XSchemaSerialization._
-  import TestSchemas._
-  
-  
-  import codegen.ScalaCodeGenerator
-  
+  import _root_.net.liftweb.json.JsonAST._
+  import _root_.net.liftweb.json.JsonParser._
+  import _root_.net.liftweb.json.xschema.XSchemaAST._
+  import _root_.net.liftweb.json.xschema.Serialization._
+  import _root_.net.liftweb.json.xschema.TestSchemas._
+    
   class UnclosablePrintWriter extends java.io.FilterWriter(new PrintWriter(System.out)) {
     override def close() = { }
   }

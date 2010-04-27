@@ -3,28 +3,23 @@ package net.liftweb.json.xschema {
 import _root_.org.specs.Specification
 import _root_.org.specs.runner.{Runner, JUnit}
 
+import _root_.net.liftweb.json.JsonAST._
+import _root_.net.liftweb.json.JsonParser._
+
+import XSchemaAST._
+import Serialization._
+
 class XSchemaSerializerExamplesTest extends Runner(XSchemaSerializerExamples) with JUnit
 
 object XSchemaSerializerExamples extends Specification {
-  import JsonAST._
-  import JsonParser._
-  import XSchemaAST._
-  import XSchemaSerialization._
   import TestSchemas._
   
   "Extraction and decomposition are symmetric" in {
-    //println(Printer.pretty(render(decompose(AstNumericExprSchema))))
-    
-    extract(decompose(AstNumericExprSchema)) mustEqual AstNumericExprSchema
+    AstNumericExprSchema.asInstanceOf[XSchema].serialize.deserialize[XSchema] mustEqual AstNumericExprSchema
   }
 }
 
 object TestSchemas {
-  import JsonAST._
-  import JsonParser._
-  import XSchemaAST._
-  import XSchemaSerialization._
-  
   val numberExpr = parse("""{ "Number": { "value": 0.0 } }""")
   val number     = parse("""{ "value": 0.0 }""")
 
@@ -98,7 +93,7 @@ object TestSchemas {
         "Gender",
         Map(
           "xschema.doc" -> "This is the coproduct that includes male and female. The normal way to translate this into OOP is as a superclass/superinterface.",
-          "scala.traits" -> "java.io.Serializable, java.lang.Cloneable"
+          "scala.class.traits" -> "java.io.Serializable, java.lang.Cloneable"
         ),
         List(
           XReference("data.social.Male"),
@@ -108,7 +103,7 @@ object TestSchemas {
       XProduct(
         Namespace("data.social"),
         "Male",
-        Map("scala.traits" -> "java.io.Serializable, java.lang.Cloneable"),
+        Map("scala.class.traits" -> "java.io.Serializable, java.lang.Cloneable"),
         List(
           XRealField(XString, "text", Map(), JString("male"), Descending),
           XViewField(XReference("data.social.Female"), "asFemale", Map())
@@ -117,7 +112,7 @@ object TestSchemas {
       XProduct(
         Namespace("data.social"),
         "Female",
-        Map("scala.traits" -> "java.io.Serializable, java.lang.Cloneable"),
+        Map("scala.class.traits" -> "java.io.Serializable, java.lang.Cloneable"),
         List(
           XRealField(XString, "text", Map(), JString("female"), Ascending),
           XViewField(XReference("data.social.Male"), "asMale", Map())
