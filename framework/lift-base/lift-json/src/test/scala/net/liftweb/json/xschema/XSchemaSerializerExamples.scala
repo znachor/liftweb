@@ -56,8 +56,8 @@ object TestSchemas {
         "NumericSum",
         Map(),
         List(
-          XField(XReference("ast.numeric.Number"), "term1", Map(), numberExpr, Descending),
-          XField(XReference("ast.numeric.Number"), "term2", Map(), numberExpr, Descending)
+          XRealField(XReference("ast.numeric.Number"), "term1", Map(), numberExpr, Descending),
+          XRealField(XReference("ast.numeric.Number"), "term2", Map(), numberExpr, Descending)
         )
       ),
       XProduct(
@@ -65,8 +65,8 @@ object TestSchemas {
         "Sum",
         Map(),
         List(
-          XField(XReference("ast.numeric.Expr"), "term1", Map(), numberExpr, Descending),
-          XField(XReference("ast.numeric.Expr"), "term2", Map(), numberExpr, Descending)
+          XRealField(XReference("ast.numeric.Expr"), "term1", Map(), numberExpr, Descending),
+          XRealField(XReference("ast.numeric.Expr"), "term2", Map(), numberExpr, Descending)
         )
       ),
       XProduct(
@@ -74,8 +74,8 @@ object TestSchemas {
         "Product",
         Map(),
         List(
-          XField(XReference("ast.numeric.Expr"), "term1", Map(), numberExpr, Descending),
-          XField(XReference("ast.numeric.Expr"), "term2", Map(), numberExpr, Descending)
+          XRealField(XReference("ast.numeric.Expr"), "term1", Map(), numberExpr, Descending),
+          XRealField(XReference("ast.numeric.Expr"), "term2", Map(), numberExpr, Descending)
         )
       ),
       XProduct(
@@ -83,7 +83,7 @@ object TestSchemas {
         "Number",
         Map(),
         List(
-          XField(XDouble, "value", Map(), number, Descending)
+          XRealField(XDouble, "value", Map(), number, Descending)
         )
       )
     ),
@@ -110,8 +110,8 @@ object TestSchemas {
         "Male",
         Map("scala.traits" -> "java.io.Serializable, java.lang.Cloneable"),
         List(
-          XField(XString, "text", Map(), JString("male"), Descending),
-          XField(XView(XReference("data.social.Female")), "asFemale", Map(), JNull, Ascending)
+          XRealField(XString, "text", Map(), JString("male"), Descending),
+          XViewField(XReference("data.social.Female"), "asFemale", Map())
         )
       ),
       XProduct(
@@ -119,8 +119,8 @@ object TestSchemas {
         "Female",
         Map("scala.traits" -> "java.io.Serializable, java.lang.Cloneable"),
         List(
-          XField(XString, "text", Map(), JString("female"), Ascending),
-          XField(XView(XReference("data.social.Male")), "asMale", Map(), JNull, Ascending)
+          XRealField(XString, "text", Map(), JString("female"), Ascending),
+          XViewField(XReference("data.social.Male"), "asMale", Map())
         )
       ),
       XConstant(

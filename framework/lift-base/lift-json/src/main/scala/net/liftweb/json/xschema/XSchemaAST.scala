@@ -99,8 +99,18 @@ object XSchemaAST {
     val typeParameters = types
   }
 
-  case class XField(fieldType: XReference, name: String, properties: Map[String, String], defValue: JValue, order: Order) extends XSchema with Properties with Named with Default with Parameterized with Ordered {
-    val typename = XField.typename
+  sealed trait XField extends XSchema with Properties with Named with Parameterized {
+    def fieldType: XReference
+  }
+
+  case class XRealField(fieldType: XReference, name: String, properties: Map[String, String], defValue: JValue, order: Order) extends XField with Default with Ordered {
+    val typename = XRealField.typename
+    
+    val typeParameters = fieldType :: Nil
+  }
+  
+  case class XViewField(fieldType: XReference, name: String, properties: Map[String, String]) extends XField {
+    val typename = XViewField.typename
     
     val typeParameters = fieldType :: Nil
   }
@@ -108,9 +118,9 @@ object XSchemaAST {
   case class XProduct(namespace: Namespace, name: String, properties: Map[String, String], fields: List[XField]) extends XDefinition(XProduct.typename) {
     def elements = fields
     
-    def viewFields: List[XField] = fields.filter(_.fieldType.isInstanceOf[XView])
+    def viewFields: List[XViewField] = fields.filter(_.isInstanceOf[XViewField]).map(_.asInstanceOf[XViewField])
     
-    def realFields: List[XField] = fields.filter(!_.fieldType.isInstanceOf[XView])
+    def realFields: List[XRealField] = fields.filter(_.isInstanceOf[XRealField]).map(_.asInstanceOf[XRealField])
   }
   
   case class XCoproduct(namespace: Namespace, name: String, properties: Map[String, String], types: List[XReference]) extends XDefinition(XCoproduct.typename) {
@@ -141,7 +151,8 @@ object XSchemaAST {
   object XConstant    extends TypeNamed("Constant")
   object XMap         extends TypeNamed("Map")
   object XTuple       extends TypeNamed("Tuple")
-  object XField       extends TypeNamed("Field")
+  object XRealField   extends TypeNamed("Field")
+  object XViewField   extends TypeNamed("ViewField")
   object XProduct     extends TypeNamed("Product")
   object XCoproduct   extends TypeNamed("Coproduct")
   

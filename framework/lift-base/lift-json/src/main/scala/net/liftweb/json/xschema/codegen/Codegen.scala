@@ -296,7 +296,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       code
     }    
     def buildOrderedDefinition(x: XProduct): CodeBuilder = {
-      def buildComparisonFor(field: XField, schema: XSchema): CodeBuilder = {
+      def buildComparisonFor(field: XRealField, schema: XSchema): CodeBuilder = {
         def comparisonSign = field.order match {
           case Ascending  => 1
           case Descending => -1

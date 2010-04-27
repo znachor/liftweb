@@ -73,7 +73,6 @@ trait XSchemaDatabase extends Iterable[XSchema] {
     case x: XTuple      => x
     case x: XConstant   => x
     case x: XPrimitive  => x
-    case x: XView       => resolve(x.viewType)
     case x: XReference  => definitionFor(ref).get
   }
   

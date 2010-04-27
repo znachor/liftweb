@@ -92,6 +92,7 @@ object XSchemaExamples extends Specification {
   }
 }
 
+
 package data.social {
   
   import net.liftweb.json.{SerializationImplicits, DefaultExtractors, ExtractionHelpers, DefaultDecomposers, DecomposerHelpers, DefaultOrderings}
