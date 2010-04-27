@@ -376,10 +376,18 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
             code.newline
             
             buildViewFields(x)
+            
+            code.newline
+            
+            code.add("lazy val productElementNames: List[String] = List(")
+            
+            code.join(x.realFields, code.newline) { field => code.add("\"" + field.name + "\"") }
+            
+            code.add(")")
           }
       
         case x: XCoproduct => 
-          val withClauses = ("Product" :: mixins).mkString(" with ")
+          val withClauses = ("ProductWithNames" :: mixins).mkString(" with ")
           
           code.add(coproductPrefix(x) + "trait ${type} extends " + withClauses + " ").block {
             buildCoproductFields(x)
@@ -459,11 +467,11 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
                   code.add("JObject").paren {      
                     var isFirst = true
       
-                    x.realFields foreach { field =>
-                      code.add("JField(\"${fieldType}\", tvalue.${fieldType}.serialize) ::", "fieldType" -> field.name).newline
+                    code.join(x.realFields, code.newline) { field =>
+                      code.add("JField(\"${fieldType}\", tvalue.${fieldType}.serialize) ::", "fieldType" -> field.name)
                     }
       
-                    code.add("Nil")
+                    code.add(" Nil")
                   }
                 }
               }
@@ -474,8 +482,8 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
               code.add("implicit val ${type}Decomposer: Decomposer[${type}] = new Decomposer[${type}] ").block {
                 code.add("def decompose(tvalue: ${type}): JValue = ").block {
                   code.add("tvalue match ").block {
-                    x.types foreach { typ =>
-                      code.addln("case x: ${productType} => JObject(JField(\"${productName}\", ${productNamespace}.Serialization.${productName}Decomposer.decompose(x)) :: Nil)",
+                    code.join(x.types, code.newline) { typ =>
+                      code.add("case x: ${productType} => JObject(JField(\"${productName}\", ${productNamespace}.Serialization.${productName}Decomposer.decompose(x)) :: Nil)",
                         "productName"      -> typ.name,
                         "productType"      -> typ.typename,
                         "productNamespace" -> typ.namespace.value

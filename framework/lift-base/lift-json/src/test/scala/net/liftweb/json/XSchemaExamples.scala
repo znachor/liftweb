@@ -103,7 +103,7 @@ package data.social {
   /** This is the coproduct that includes male and female. The normal way to
    * translate this into OOP is as a superclass/superinterface.
    */
-  sealed trait Gender extends Product with java.io.Serializable with java.lang.Cloneable {
+  sealed trait Gender extends ProductWithNames with java.io.Serializable with java.lang.Cloneable {
     def text: String
   }
   
@@ -119,6 +119,7 @@ package data.social {
       return this.hashCode - that.hashCode
     }
     def asFemale: data.social.Female = data.social.Female(text)
+    lazy val productElementNames: List[String] = List("text")
   }
   
   case class Female(text: String) extends Ordered[Female] with data.social.Gender with java.io.Serializable with java.lang.Cloneable {
@@ -133,6 +134,7 @@ package data.social {
       return this.hashCode - that.hashCode
     }
     def asMale: data.social.Male = data.social.Male(text)
+    lazy val productElementNames: List[String] = List("text")
   }
   
   trait Extractors extends DefaultExtractors with ExtractionHelpers {
@@ -173,7 +175,6 @@ package data.social {
         tvalue match {
           case x: data.social.Male => JObject(JField("Male", data.social.Serialization.MaleDecomposer.decompose(x)) :: Nil)
           case x: data.social.Female => JObject(JField("Female", data.social.Serialization.FemaleDecomposer.decompose(x)) :: Nil)
-          
         }
       }
     }
@@ -181,8 +182,7 @@ package data.social {
     implicit val MaleDecomposer: Decomposer[Male] = new Decomposer[Male] {
       def decompose(tvalue: Male): JValue = {
         JObject(
-          JField("text", tvalue.text.serialize) ::
-          Nil
+          JField("text", tvalue.text.serialize) :: Nil
         )
       }
     }
@@ -190,8 +190,7 @@ package data.social {
     implicit val FemaleDecomposer: Decomposer[Female] = new Decomposer[Female] {
       def decompose(tvalue: Female): JValue = {
         JObject(
-          JField("text", tvalue.text.serialize) ::
-          Nil
+          JField("text", tvalue.text.serialize) :: Nil
         )
       }
     }
