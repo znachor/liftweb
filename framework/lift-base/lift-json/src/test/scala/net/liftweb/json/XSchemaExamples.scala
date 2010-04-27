@@ -93,6 +93,7 @@ object XSchemaExamples extends Specification {
 }
 
 
+
 package data.social {
   
   import net.liftweb.json.{SerializationImplicits, DefaultExtractors, ExtractionHelpers, DefaultDecomposers, DecomposerHelpers, DefaultOrderings}
@@ -119,7 +120,6 @@ package data.social {
       return this.hashCode - that.hashCode
     }
     def asFemale: data.social.Female = data.social.Female(text)
-    lazy val productElementNames: List[String] = List("text")
   }
   
   case class Female(text: String) extends Ordered[Female] with data.social.Gender with java.io.Serializable with java.lang.Cloneable {
@@ -134,7 +134,6 @@ package data.social {
       return this.hashCode - that.hashCode
     }
     def asMale: data.social.Male = data.social.Male(text)
-    lazy val productElementNames: List[String] = List("text")
   }
   
   trait Extractors extends DefaultExtractors with ExtractionHelpers {
@@ -155,7 +154,7 @@ package data.social {
     implicit val MaleExtractor: Extractor[Male] = new Extractor[Male] {
       def extract(jvalue: JValue): Male = {
         Male(
-          extractField[String](jvalue, "text", """"male" """)
+          extractField[String](jvalue, "text", JString("male"))
         )
       }
     }
@@ -163,7 +162,7 @@ package data.social {
     implicit val FemaleExtractor: Extractor[Female] = new Extractor[Female] {
       def extract(jvalue: JValue): Female = {
         Female(
-          extractField[String](jvalue, "text", """"female" """)
+          extractField[String](jvalue, "text", JString("female"))
         )
       }
     }
@@ -201,8 +200,8 @@ package data.social {
   object Constants {
     import Serialization._
     
-    lazy val DefaultFemale = parse("""{"Female":{"text":"female"}} """).deserialize[data.social.Gender]
-    lazy val DefaultMale = parse("""{"Male":{"text":"male"}} """).deserialize[data.social.Gender]
+    lazy val DefaultFemale = JObject(JField("Female",JObject(JField("text",JString("female"))::Nil))::Nil).deserialize[data.social.Gender]
+    lazy val DefaultMale = JObject(JField("Male",JObject(JField("text",JString("male"))::Nil))::Nil).deserialize[data.social.Gender]
   }
 }
 

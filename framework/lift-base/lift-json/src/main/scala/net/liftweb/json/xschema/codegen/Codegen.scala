@@ -407,7 +407,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
                     var isFirst = true
           
                     code.join(x.realFields, code.add(",").newline) { field =>
-                      code.add("extractField[${fieldType}](jvalue, \"${fieldName}\", \"\"\"" + compact(render(field.defValue)) + " \"\"\")", 
+                      code.add("extractField[${fieldType}](jvalue, \"${fieldName}\", " + compact(renderScala(field.defValue)) + ")", 
                         "fieldType" -> field.fieldType.typename,
                         "fieldName" -> field.name
                       )
@@ -503,8 +503,8 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       code.join(database.constantsIn(namespace), code.newline) { constant =>
         buildDocumentationFor(constant, code)
       
-        code.add("lazy val " + constant.name + " = parse(\"\"\"${json} \"\"\").deserialize[${type}]",
-          "json" -> compact(render(constant.defValue)),
+        code.add("lazy val " + constant.name + " = ${json}.deserialize[${type}]",
+          "json" -> compact(renderScala(constant.defValue)),
           "type" -> constant.constantType.typename
         )
       }

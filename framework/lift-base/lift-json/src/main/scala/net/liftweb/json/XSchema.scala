@@ -176,8 +176,8 @@ trait DefaultExtractors {
 trait ExtractionHelpers extends SerializationImplicits {
   import JsonParser._
   
-  protected def extractField[T](jvalue: JValue, name: String, default: String)(implicit e: Extractor[T]): T = {
-    (jvalue \ name -->? classOf[JField]).map(_.value).getOrElse(parse(default)).deserialize[T]
+  protected def extractField[T](jvalue: JValue, name: String, default: JValue)(implicit e: Extractor[T]): T = {
+    (jvalue \ name -->? classOf[JField]).map(_.value).getOrElse(default).deserialize[T]
   }
 }
 
