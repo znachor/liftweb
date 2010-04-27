@@ -43,7 +43,7 @@ private[xschema] trait XSchemaExtractor extends XSchemaSerializationConstants {
 
         def name = stringField(NAME, json)
 
-        def defValue = json \ DEFAULT --> classOf[JObject]
+        def defValue = (json \ DEFAULT --> classOf[JField]).value
 
         def typeParameters(n: Int): List[XReference] = {
           val array = extractArrayOf(TYPEPARAMS, classOf[XReference])
@@ -59,9 +59,9 @@ private[xschema] trait XSchemaExtractor extends XSchemaSerializationConstants {
 
         def properties = (json \? PROPERTIES).map { props => 
           Map(
-            (props --> classOf[JObject]).values.map {
-              case (k, JString(v)) => (k, v)
-              case (k, v) => throw ValidationError("Expected string value but found: " + v, json ^ PROPERTIES)
+            (props --> classOf[JObject]).obj.map {
+              case JField(k, JString(v)) => (k, v)
+              case JField(k, v: AnyRef) => throw ValidationError("Expected string value but found: " + v + " (type = " + (v.getClass.toString) + ")", json ^ PROPERTIES)
             }.toList: _*
           )
         }.getOrElse(Map())

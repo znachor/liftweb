@@ -90,6 +90,14 @@ object XSchemaExamples extends Specification {
     DefaultFemale mustEqual DefaultFemale
     DefaultMale mustEqual DefaultMale
   }
+  
+  "Custom schemas are valid" in {
+    import data.social._
+    
+    Gender.xschema mustEqual Gender.xschema
+    Male.xschema mustEqual Male.xschema
+    Female.xschema mustEqual Female.xschema
+  }
 }
 
 
