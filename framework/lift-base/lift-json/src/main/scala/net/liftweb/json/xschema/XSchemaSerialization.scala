@@ -92,7 +92,7 @@ private[xschema] trait XSchemaExtractor extends XSchemaSerializationConstants {
           case XProduct.typename    => XProduct(namespace, name, properties, fields)
           case XCoproduct.typename  => XCoproduct(namespace, name, properties, types)
           case XConstant.typename   => XConstant(namespace, name, properties, typeParameters(1)(0), defValue)
-          case XRoot.typename       => XRoot(version, definitions, properties)
+          case XRoot.typename       => XRoot(definitions, properties)
 
           case _ => XReference(typename)
         }

@@ -271,7 +271,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         buildExtractorsFor(namespace, code, database)
         buildDecomposersFor(namespace, code, database)
       
-        buildPackageObjectFor(namespace, code, database)
+        buildPackageObjectFor(namespace, code, database, root.properties)
         buildConstantsFor(namespace, code, database)
       }
       
@@ -358,7 +358,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       case Some(traits) => " with " + traits
     }
     
-    buildDocumentationFor(definition, code)
+    buildDocumentationFor(definition.properties, code)
     
     val classMixins = formMixinsClauseFromProperty("scala.class.traits")
     
@@ -401,7 +401,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     }
   }
   
-  private def buildDocumentationFor(definition: XDefinition, code: CodeBuilder): CodeBuilder = definition.properties.get(PredefinedProperties.XSchemaDoc) match {
+  private def buildDocumentationFor(properties: Map[String, String], code: CodeBuilder): CodeBuilder = properties.get(PredefinedProperties.XSchemaDoc) match {
     case None => code
     case Some(doc) => code.add("/** ").wrap(doc.replaceAll("\\s+", " "), " * ", 80).newline.add(" */").newline
   }
@@ -503,8 +503,16 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     }
   }
   
-  private def buildPackageObjectFor(namespace: Namespace, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
-    code.newline(2).add("object Serialization extends SerializationImplicits with Decomposers with Extractors { }")
+  private def buildPackageObjectFor(namespace: Namespace, code: CodeBuilder, database: XSchemaDatabase, properties: Map[String, String]): CodeBuilder = {
+    val subroot = XRoot(database.definitionsIn(namespace), properties)
+    
+    code.newline(2).add("object Serialization extends SerializationImplicits with Decomposers with Extractors with XSchemaAST.XSchemaDerived ").block {
+      code.addln("import XSchemaAST.{XRoot, XSchema}").newline
+      
+      // Storing the root as text is not efficient but ensures we do not run 
+      // into method size limitations of the JVM (root can be quite large):
+      code.add("lazy val xschema: XRoot = parse(\"\"\"" + pretty(render(subroot.asInstanceOf[XSchema].serialize)) + "\"\"\").deserialize[XSchema].asInstanceOf[XRoot]")
+    }
   }
   
   private def buildConstantsFor(namespace: Namespace, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
@@ -512,7 +520,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       code.addln("import Serialization._").newline
     
       code.join(database.constantsIn(namespace), code.newline) { constant =>
-        buildDocumentationFor(constant, code)
+        buildDocumentationFor(constant.properties, code)
       
         code.add("lazy val " + constant.name + " = ${json}.deserialize[${type}]",
           "json" -> compact(renderScala(constant.defValue)),

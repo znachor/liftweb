@@ -31,7 +31,6 @@ object TestSchemas {
   val number     = parse("""{ "value": 0.0 }""")
 
   val AstNumericExprSchema = XRoot(
-    1,
     List(
       XCoproduct(
         Namespace("ast.numeric"),
@@ -93,7 +92,6 @@ object TestSchemas {
   )
 
   val DataSocialGenderSchema = XRoot(
-    1,
     List(
       XCoproduct(
         Namespace("data.social"),

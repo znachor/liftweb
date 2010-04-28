@@ -43,7 +43,7 @@ object XSchemaAST {
   /** All schemas are one of: root, reference, type definition, or field definition */
   sealed trait XSchema extends Typed
 
-  sealed case class XRoot(version: Int, definitions: List[XDefinition], properties: Map[String, String]) extends TypeNamed(XRoot.typename) with XSchema with Properties with Versioned with Container {
+  sealed case class XRoot(definitions: List[XDefinition], properties: Map[String, String]) extends TypeNamed(XRoot.typename) with XSchema with Properties with Container {
     def elements = definitions
   }
   
