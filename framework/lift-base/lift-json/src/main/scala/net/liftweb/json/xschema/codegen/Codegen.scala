@@ -262,7 +262,14 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
              addln("import net.liftweb.json.JsonAST._").
              addln("import net.liftweb.json.xschema.{SerializationImplicits, DefaultExtractors, ExtractionHelpers, DefaultDecomposers, DecomposerHelpers, DefaultOrderings}").
              addln("import net.liftweb.json.xschema.Serialization._").
-             addln("import net.liftweb.json.xschema.XSchemaAST").newline
+             addln("import net.liftweb.json.xschema.XSchemaAST")
+        
+        root.properties.get("scala.imports") match {
+          case None => 
+          case Some(imports) => imports.split(",(?![^{]+[}])").map("import " + _.trim) foreach { x => code.addln(x) }
+        }
+        
+        code.newline
       
         code.join(database.coproductsIn(namespace) ++ database.productsIn(namespace), code.newline.newline) { definition =>
           buildDataFor(definition, code, database)
@@ -355,7 +362,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     }
     def formMixinsClauseFromProperty(prop: String): String = definition.properties.get(prop) match {
       case None => ""
-      case Some(traits) => " with " + traits
+      case Some(traits) => " with " + traits.split(",(?=[ \\w+]\\.)").map(_.trim).mkString(" with ")
     }
     
     buildDocumentationFor(definition.properties, code)
