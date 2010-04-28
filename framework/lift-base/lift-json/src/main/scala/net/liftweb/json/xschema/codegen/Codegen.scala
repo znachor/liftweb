@@ -353,13 +353,14 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         }
       }
     }
+    def formMixinsClauseFromProperty(prop: String): String = definition.properties.get(prop) match {
+      case None => ""
+      case Some(traits) => " with " + traits
+    }
     
     buildDocumentationFor(definition, code)
     
-    val classMixins: List[String] = definition.properties.get("scala.class.traits") match {
-      case None => Nil
-      case Some(traits) => traits.split(",").toList.map(_.trim)
-    }
+    val classMixins = formMixinsClauseFromProperty("scala.class.traits")
     
     code.using("type" -> definition.name) {
       definition match {
@@ -368,7 +369,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
           buildProductFields(x)
           code.add(")")
       
-          val withClauses = ("Ordered[${type}]" :: database.coproductContainersOf(x).map(_.qualifiedName) ++ classMixins).mkString(" with ")
+          val withClauses = ("Ordered[${type}]" :: database.coproductContainersOf(x).map(_.qualifiedName)).mkString(" with ") + classMixins
       
           code.add(" extends " + withClauses + " ").block {        
             buildOrderedDefinition(x)
@@ -379,7 +380,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
           }
       
         case x: XCoproduct => 
-          val withClauses = ("Product" :: classMixins).mkString(" with ")
+          val withClauses = "Product" + classMixins
           
           code.add(coproductPrefix(x) + "trait ${type} extends " + withClauses + " ").block {
             buildCoproductFields(x)
@@ -388,14 +389,11 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         case x: XConstant => code
       }
       
-      val objectMixins: List[String] = definition.properties.get("scala.object.traits") match {
-        case None => Nil
-        case Some(traits) => traits.split(",").toList.map(_.trim)
-      }
+      val objectMixins: String = formMixinsClauseFromProperty("scala.object.traits")
       
-      val withClauses = ("XSchemaAST.XSchemaDerived" :: objectMixins).mkString(" with ")
+      val withClauses = "XSchemaAST.XSchemaDerived" + objectMixins
       
-      code.newline.add("object ${type} extends " + withClauses).block {
+      code.newline.add("object ${type} extends " + withClauses + " ").block {
         code.addln("import XSchemaAST.{XDefinition, XSchema}").newline
         
         code.add("lazy val xschema: XDefinition = " + compact(renderScala(definition.asInstanceOf[XSchema].serialize)) + ".deserialize[XSchema].asInstanceOf[XDefinition]")
