@@ -164,6 +164,8 @@ object XSchemaAST {
     def begin(data: T, map:   XMap): T = data
     def begin(data: T, tuple: XTuple): T = data
     
+    def separator(data: T): T = data
+    
     def walk(data: T, const:  XConstant): T = data
     def walk(data: T, prim:   XPrimitive): T = data
     def walk(data: T, ref:    XReference): T = data
@@ -178,7 +180,18 @@ object XSchemaAST {
   }
   
   def walk[T](s: XSchema, initial: T, walker: XSchemaDefinitionWalker[T]): T = {
-    def walkContainer(initial: T, xs: Container): T = xs.elements.foldLeft[T](initial) { (cur, x) => walk(x, cur, walker) }
+    def walkContainer(initial: T, xs: Container): T = {
+      var isFirst = true
+      
+      xs.elements.foldLeft[T](initial) { (cur, x) => 
+        if (isFirst) {
+          isFirst = false; walk(x, cur, walker)
+        }
+        else {
+          walk(x, walker.separator(cur), walker)
+        }
+      }
+    }
   
     s match {
       case x: XDefinition => walker.end(walkContainer(walker.begin(initial, x), x), x)

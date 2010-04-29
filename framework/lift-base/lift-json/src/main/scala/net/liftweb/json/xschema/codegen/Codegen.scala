@@ -557,12 +557,14 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     }
     
     override def begin(data: CodeBuilder, map: XMap) = {
-      data += "Map[String, "
+      data += "Map["
     }
     
     override def begin(data: CodeBuilder, tuple: XTuple) = {
       data += "(" + tuple.types.map(typeSignatureOf(_)).mkString(", ") + ")"
     }
+    
+    override def separator(data: CodeBuilder) = data.add(", ")
     
     override def walk(data: CodeBuilder, prim: XPrimitive) = {
       data += (prim match {

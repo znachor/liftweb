@@ -149,6 +149,34 @@ object TestSchemas {
             )
           ) :: Nil
         )
+      ),
+      XProduct(
+        Namespace("data.social"),
+        "Morning",
+        Map(),
+        List()
+      ),
+      XProduct(
+        Namespace("data.social"),
+        "Noon",
+        Map(),
+        List()
+      ),
+      XProduct(
+        Namespace("data.social"),
+        "Night",
+        Map(),
+        List()
+      ),
+      XCoproduct(
+        Namespace("data.social"),
+        "Time",
+        Map(),
+        List(
+          XReference("data.social.Morning"),
+          XReference("data.social.Noon"),
+          XReference("data.social.Night")
+        )
       )
     ),
     Map(
