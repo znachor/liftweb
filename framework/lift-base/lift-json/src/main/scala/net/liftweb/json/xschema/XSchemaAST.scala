@@ -76,6 +76,7 @@ object XSchemaAST {
   case object XFloat   extends XPrimitive("Float")
   case object XDouble  extends XPrimitive("Double")
   case object XBoolean extends XPrimitive("Boolean")
+  case object XJValue  extends XPrimitive("JValue")
 
   case class XOptional(optionalType: XReference) extends XReference(XOptional.typename) with Parameterized {
     val typeParameters = optionalType :: Nil

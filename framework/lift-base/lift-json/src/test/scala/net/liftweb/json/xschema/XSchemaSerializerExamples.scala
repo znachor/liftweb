@@ -180,7 +180,159 @@ object TestSchemas {
       )
     ),
     Map(
-      "scala.imports" -> "net.liftweb.json.xschema.{XSerializationImplicits, XDefaultExtractors}, java.lang.reflect.*"
+      "scala.imports" -> "net.liftweb.json.xschema.{SerializationImplicits => XSerializationImplicits, DefaultExtractors => XDefaultExtractors}, java.lang.reflect.*"
+    )
+  )
+  
+  val XSchemaSchema = XRoot(
+    List(
+      XProduct(
+        Namespace("net.liftweb.json.xschema2"),
+        "QualifiedName",
+        Map(),
+        List(
+          XRealField(XString, "name", Map(), JNothing, Ascending),
+          XRealField(XString, "namespace", Map(), JNothing, Ascending)
+        )
+      ),
+      XCoproduct(
+        Namespace("net.liftweb.json.xschema2"),
+        "XSchema",
+        Map(),
+        List(
+          XReference("net.liftweb.json.xschema2.XDefinition"),
+          XReference("net.liftweb.json.xschema2.XReference")
+        )
+      ),
+      XProduct(
+        Namespace("net.liftweb.json.xschema2"),
+        "XReference",
+        Map(),
+        List(
+          XRealField(XString, "name", Map(), JNothing, Ascending),
+          XRealField(XString, "namespace", Map(), JString(""), Ascending),
+          XViewField(XReference("net.liftweb.json.xschema2.QualifiedName"), "qualifiedName", Map())
+        )
+      ),
+      XCoproduct(
+        Namespace("net.liftweb.json.xschema2"),
+        "XDefinition",
+        Map(),
+        List(
+          XReference("net.liftweb.json.xschema2.XField"),
+          XReference("net.liftweb.json.xschema2.XProduct"),
+          XReference("net.liftweb.json.xschema2.XCoproduct"),
+          XReference("net.liftweb.json.xschema2.XConstant")
+        )
+      ),
+      XCoproduct(
+        Namespace("net.liftweb.json.xschema2"),
+        "XField",
+        Map(),
+        List(
+          XReference("net.liftweb.json.xschema2.XRealField"),
+          XReference("net.liftweb.json.xschema2.XViewField"),
+          XReference("net.liftweb.json.xschema2.XConstantField")
+        )
+      ),
+      XProduct(
+        Namespace("net.liftweb.json.xschema2"),
+        "XProduct",
+        Map(),
+        List(
+          XRealField(XString, "name", Map(), JNothing, Ascending),
+          XRealField(XString, "namespace", Map(), JString(""), Ascending),
+          XViewField(XReference("net.liftweb.json.xschema2.QualifiedName"), "qualifiedName", Map()),
+          XRealField(XMap(XString, XString), "properties", Map(), JArray(Nil), Ascending),
+          XRealField(XCollection(XReference("net.liftweb.json.xschema2.XReference"), XList), "terms", Map(), JObject(Nil), Ascending)
+        )
+      ),
+      XProduct(
+        Namespace("net.liftweb.json.xschema2"),
+        "XCoproduct",
+        Map(),
+        List(
+          XRealField(XString, "name", Map(), JNothing, Ascending),
+          XRealField(XString, "namespace", Map(), JString(""), Ascending),
+          XViewField(XReference("net.liftweb.json.xschema2.QualifiedName"), "qualifiedName", Map()),
+          XRealField(XMap(XString, XString), "properties", Map(), JArray(Nil), Ascending),
+          XRealField(XCollection(XReference("net.liftweb.json.xschema2.XReference"), XList), "terms", Map(), JObject(Nil), Ascending)
+        )
+      ),
+      XProduct(
+        Namespace("net.liftweb.json.xschema2"),
+        "XConstant",
+        Map(),
+        List(
+          XRealField(XString, "name", Map(), JNothing, Ascending),
+          XRealField(XString, "namespace", Map(), JString(""), Ascending),
+          XViewField(XReference("net.liftweb.json.xschema2.QualifiedName"), "qualifiedName", Map()),
+          XRealField(XMap(XString, XString), "properties", Map(), JArray(Nil), Ascending),
+          XRealField(XString, "value", Map(), JObject(Nil), Ascending)
+        )
+      ),
+      XProduct(
+        Namespace("net.liftweb.json.xschema2"),
+        "XRealField",
+        Map(),
+        List(
+          XRealField(XString, "name", Map(), JNothing, Ascending),
+          XRealField(XMap(XString, XString), "properties", Map(), JArray(Nil), Ascending),
+          XRealField(XString, "default", Map(), JObject(Nil), Ascending),
+          XRealField(XReference("net.liftweb.json.xschema2.XOrder"), "order", Map(), JObject(JField("Ascending", JObject(Nil)) :: Nil), Ascending)
+        )
+      ),
+      XProduct(
+        Namespace("net.liftweb.json.xschema2"),
+        "XViewField",
+        Map(),
+        List(
+          XRealField(XString, "name", Map(), JNothing, Ascending),
+          XRealField(XMap(XString, XString), "properties", Map(), JArray(Nil), Ascending),
+          XRealField(XString, "default", Map(), JObject(Nil), Ascending),
+          XRealField(XReference("net.liftweb.json.xschema2.XOrder"), "order", Map(), JObject(JField("Ascending", JObject(Nil)) :: Nil), Ascending)
+        )
+      ),
+      XProduct(
+        Namespace("net.liftweb.json.xschema2"),
+        "XConstantField",
+        Map(),
+        List(
+          XRealField(XString, "name", Map(), JNothing, Ascending),
+          XRealField(XMap(XString, XString), "properties", Map(), JArray(Nil), Ascending),
+          XRealField(XString, "value", Map(), JObject(Nil), Ascending)
+        )
+      ),
+      XCoproduct(
+        Namespace("net.liftweb.json.xschema2"),
+        "XOrder",
+        Map(),
+        List(
+          XReference("net.liftweb.json.xschema2.XOrderAscending"),
+          XReference("net.liftweb.json.xschema2.XOrderDescending"),
+          XReference("net.liftweb.json.xschema2.XOrderIgnore")
+        )
+      ),
+      XProduct(
+        Namespace("net.liftweb.json.xschema2"),
+        "XOrderAscending",
+        Map(),
+        List()
+      ),
+      XProduct(
+        Namespace("net.liftweb.json.xschema2"),
+        "XOrderDescending",
+        Map(),
+        List()
+      ),
+      XProduct(
+        Namespace("net.liftweb.json.xschema2"),
+        "XOrderIgnore",
+        Map(),
+        List()
+      )
+    ),
+    Map(
     )
   )
 }

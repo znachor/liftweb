@@ -73,7 +73,10 @@ trait XSchemaDatabase extends Iterable[XSchema] {
     case x: XTuple      => x
     case x: XConstant   => x
     case x: XPrimitive  => x
-    case x: XReference  => definitionFor(ref).get
+    case x: XReference  => definitionFor(ref) match {
+      case None => x
+      case Some(y) => y
+    }
   }
   
   def resolve(refs: Iterable[XReference]): List[XSchema] = refs.map(resolve(_)).toList
@@ -91,7 +94,7 @@ trait XSchemaDatabase extends Iterable[XSchema] {
   /**
    * Returns all the coproducts that contain the specified definition.
    */
-  def coproductContainersOf(defn: XProduct): List[XCoproduct] = containersOf(defn).flatMap { x =>
+  def coproductContainersOf(defn: XDefinition): List[XCoproduct] = containersOf(defn).flatMap { x =>
     x match {
       case x: XCoproduct => List[XCoproduct](x)
       case _ => Nil
@@ -103,7 +106,16 @@ trait XSchemaDatabase extends Iterable[XSchema] {
   /**
    * Retrieves all the product children of the specified coproduct.
    */
-  def productChildrenOf(defn: XCoproduct): List[XProduct] = resolve(defn.types).map(_.asInstanceOf[XProduct])
+  def namespacesOf(defn: XCoproduct): List[Namespace] = resolve(defn.types).map { x =>
+    x match {
+      case x: XProduct => x.namespace
+      case x: XCoproduct => x.namespace
+      
+      case x: XReference => x.namespace
+      
+      case _ => error("cannot find namespace")
+    }
+  }
   
   /**
    * Finds all fields that are common to all elements of the specified 
@@ -111,14 +123,19 @@ trait XSchemaDatabase extends Iterable[XSchema] {
    * regardless of any other difference between them.
    */
   def commonFieldsOf(c: XCoproduct): List[(String, XReference)] = {
-    val allFields: List[List[(String, XReference)]] = productChildrenOf(c).map(_.fields).map { fields => 
-      // To simplify unification, map a product field to its coproduct containers (if there is one)
-      fields.flatMap { field =>
-        resolve(field.fieldType) match {
-          case p: XProduct if (isContainedInCoproduct(p)) => coproductContainersOf(p).map(c => (field.name, XReference(c.qualifiedName)))
+    val allFields: List[List[(String, XReference)]] = c.types.map(resolve(_)).map { resolved => 
+        resolved match {
+          case p: XProduct => p.fields.flatMap { field =>
+            resolve(field.fieldType) match {
+              case p: XProduct if (isContainedInCoproduct(p)) => coproductContainersOf(p).map(c => (field.name, XReference(c.qualifiedName)))
+
+              case _ => (field.name, field.fieldType) :: Nil
+            }
+          }
+        
+          case c: XCoproduct => commonFieldsOf(c)
           
-          case _ => (field.name, field.fieldType) :: Nil
-        }
+          case _ => Nil
       }
     }
     

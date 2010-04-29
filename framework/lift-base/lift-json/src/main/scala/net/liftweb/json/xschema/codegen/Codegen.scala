@@ -289,7 +289,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
   }
   
   private def buildDataFor(definition: XDefinition, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
-    def coproductPrefix(x: XCoproduct): String = if (database.productChildrenOf(x).map(_.namespace).removeDuplicates.length <= 1) "sealed " else ""
+    def coproductPrefix(x: XCoproduct): String = if (database.namespacesOf(x).removeDuplicates.length <= 1) "sealed " else ""
     def buildProductFields(x: XProduct): CodeBuilder = {
       code.add(x.realFields.map(typeSignatureOf(_)).mkString(", "))
     }
@@ -297,7 +297,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       val commonFields = database.commonFieldsOf(x)
       
       code.join(commonFields, code.newline) { field =>
-        code += ("def " + field._1 + ": " + field._2.typename)
+        code += ("def " + field._1 + ": " + typeSignatureOf(field._2))
       }
       
       code
@@ -387,7 +387,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
           }
       
         case x: XCoproduct => 
-          val withClauses = "Product" + classMixins
+          val withClauses = ("Product" :: database.coproductContainersOf(x).map(_.qualifiedName)).mkString(" with ") + classMixins
           
           code.add(coproductPrefix(x) + "trait ${type} extends " + withClauses + " ").block {
             buildCoproductFields(x)
@@ -518,7 +518,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       
       // Storing the root as text is not efficient but ensures we do not run 
       // into method size limitations of the JVM (root can be quite large):
-      code.add("lazy val xschema: XRoot = parse(\"\"\"" + pretty(render(subroot.asInstanceOf[XSchema].serialize)) + "\"\"\").deserialize[XSchema].asInstanceOf[XRoot]")
+      code.add("lazy val xschema: XRoot = parse(\"\"\"" + compact(render(subroot.asInstanceOf[XSchema].serialize)) + "\"\"\").deserialize[XSchema].asInstanceOf[XRoot]")
     }
   }
   
