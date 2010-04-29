@@ -20,6 +20,7 @@ package json {
 object JsonAST {
   import scala.text.{Document, DocText}
   import scala.text.Document._
+  import Extraction.Extractor
 
   /** Concatenates a sequence of <code>JValue</code>s.
    * <p>
@@ -244,8 +245,11 @@ object JsonAST {
      * JObject(JField("name", JString("joe")) :: Nil).extract[Foo] == Person("joe")
      * </pre>
      */
-    def extract[A](implicit formats: Formats, mf: scala.reflect.Manifest[A]): A = 
-      Extraction.extract(this)(formats, mf)
+    def extract[A](implicit 
+                   formats: Formats, 
+                   mf: scala.reflect.Manifest[A], 
+                   e: Extractor[A]): A = 
+      Extraction.extract(this)(formats, mf, e)
 
     /** Extract a case class from a JSON.
      * <p>
@@ -254,8 +258,11 @@ object JsonAST {
      * JObject(JField("name", JString("joe")) :: Nil).extractOpt[Foo] == Some(Person("joe"))
      * </pre>
      */
-    def extractOpt[A](implicit formats: Formats, mf: scala.reflect.Manifest[A]): Option[A] = 
-      Extraction.extractOpt(this)(formats, mf)
+    def extractOpt[A](implicit 
+                      formats: Formats, 
+                      mf: scala.reflect.Manifest[A],
+                      e: Extractor[A]): Option[A] = 
+      Extraction.extractOpt(this)(formats, mf, e)
   }
 
   case object JNothing extends JValue {

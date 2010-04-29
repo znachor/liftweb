@@ -31,23 +31,52 @@ object Extraction {
   import Meta._
   import Meta.Reflection._
 
+  object Extractor extends LowPriorityExtractors
+  object Decomposer extends LowPriorityDecomposers
+
+  trait Extractor[A] {
+    def extract(json: JValue): A
+  }
+
+  trait Decomposer[A] {
+    def decompose(a: A): JValue
+  }
+
+  trait LowPriorityExtractors {
+    implicit def any[A](implicit formats: Formats, mf: Manifest[A]): Extractor[A] = new Extractor[A] {
+      def extract(json: JValue): A = try {
+        extract0(json, formats, mf)
+      } catch {
+        case e: MappingException => throw e
+        case e: Exception => throw new MappingException("unknown error", e)
+      }
+    }
+  }
+
+  trait LowPriorityDecomposers {
+    implicit def any[A](implicit formats: Formats): Decomposer[A] = new Decomposer[A] {
+      def decompose(a: A): JValue = decompose0(a)
+    }
+  }
+
   /** Extract a case class from JSON.
    * @see net.liftweb.json.JsonAST.JValue#extract
    * @throws MappingException is thrown if extraction fails
    */
-  def extract[A](json: JValue)(implicit formats: Formats, mf: Manifest[A]): A = 
-    try {
-      extract0(json, formats, mf)
-    } catch {
-      case e: MappingException => throw e
-      case e: Exception => throw new MappingException("unknown error", e)
-    }
+  def extract[A](json: JValue)(implicit 
+                               formats: Formats, 
+                               mf: Manifest[A], 
+                               e: Extractor[A]): A = 
+    e.extract(json)
 
   /** Extract a case class from JSON.
    * @see net.liftweb.json.JsonAST.JValue#extract
    */
-  def extractOpt[A](json: JValue)(implicit formats: Formats, mf: Manifest[A]): Option[A] = 
-    try { Some(extract(json)(formats, mf)) } catch { case _: MappingException => None }
+  def extractOpt[A](json: JValue)(implicit 
+                                  formats: Formats, 
+                                  mf: Manifest[A], 
+                                  e: Extractor[A]): Option[A] = 
+    try { Some(extract(json)(formats, mf, e)) } catch { case _: MappingException => None }
 
   /** Decompose a case class into JSON.
    * <p>
@@ -57,7 +86,9 @@ object Extraction {
    * Extraction.decompose(Person("joe", 25)) == JObject(JField("age",JInt(25)) :: JField("name",JString("joe")) :: Nil)
    * </pre>
    */
-  def decompose(a: Any)(implicit formats: Formats): JValue = {
+  def decompose[A](a: A)(implicit formats: Formats, d: Decomposer[A]): JValue = d.decompose(a)
+
+  def decompose0(a: Any)(implicit formats: Formats): JValue = {
     def prependTypeHint(clazz: Class[_], o: JObject) = JField("jsonClass", JString(formats.typeHints.hintFor(clazz))) ++ o
 
     def mkObject(clazz: Class[_], fields: List[JField]) = formats.typeHints.containsHint_?(clazz) match {
@@ -71,14 +102,14 @@ object Extraction {
       any match {
         case null => JNull
         case x if primitive_?(x.getClass) => primitive2jvalue(x)(formats)
-        case x: Map[_, _] => JObject((x map { case (k: String, v) => JField(k, decompose(v)) }).toList)
-        case x: Collection[_] => JArray(x.toList map decompose)
-        case x if (x.getClass.isArray) => JArray(x.asInstanceOf[Array[_]].toList map decompose)
-        case x: Option[_] => x.flatMap[JValue] { y => Some(decompose(y)) }.getOrElse(JNothing)
+        case x: Map[_, _] => JObject((x map { case (k: String, v) => JField(k, decompose0(v)) }).toList)
+        case x: Collection[_] => JArray(x.toList map decompose0)
+        case x if (x.getClass.isArray) => JArray(x.asInstanceOf[Array[_]].toList map decompose0)
+        case x: Option[_] => x.flatMap[JValue] { y => Some(decompose0(y)) }.getOrElse(JNothing)
         case x => 
           orderedConstructorArgs(x.getClass).map { f =>
             f.setAccessible(true)
-            JField(unmangleName(f), decompose(f get x))
+            JField(unmangleName(f), decompose0(f get x))
           } match {
             case fields => mkObject(x.getClass, fields)
           }
