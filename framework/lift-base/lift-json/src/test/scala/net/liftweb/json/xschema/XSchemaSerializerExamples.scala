@@ -388,7 +388,6 @@ object TestSchemas {
 }
 
 
-
 package net.liftweb.json.xschema2 {
   import net.liftweb.json.JsonParser._
   import net.liftweb.json.JsonAST._
@@ -400,6 +399,9 @@ package net.liftweb.json.xschema2 {
   
   trait Orderings {
     implicit def XSchema2ToOrderedXSchema2(inner: XSchema2) = OrderedXSchema2(inner)
+    implicit def XReference2ToOrderedXReference2(inner: XReference2) = OrderedXReference2(inner)
+    implicit def XPrimitiveRef2ToOrderedXPrimitiveRef2(inner: XPrimitiveRef2) = OrderedXPrimitiveRef2(inner)
+    implicit def XCollection2ToOrderedXCollection2(inner: XCollection2) = OrderedXCollection2(inner)
     implicit def XDefinition2ToOrderedXDefinition2(inner: XDefinition2) = OrderedXDefinition2(inner)
     implicit def XField2ToOrderedXField2(inner: XField2) = OrderedXField2(inner)
     implicit def XOrder2ToOrderedXOrder2(inner: XOrder2) = OrderedXOrder2(inner)
@@ -415,6 +417,196 @@ package net.liftweb.json.xschema2 {
           case x: net.liftweb.json.xschema2.XReference2 => that match {
             case y: net.liftweb.json.xschema2.XDefinition2 => 1
             case y: net.liftweb.json.xschema2.XReference2 => x.compare(y)
+          }
+        }
+      }
+    }
+    
+    case class OrderedXReference2(inner: XReference2) extends Ordered[XReference2] {
+      def compare(that: XReference2): Int = {
+        if (inner == that) 0
+        else inner match {
+          case x: net.liftweb.json.xschema2.XPrimitiveRef2 => that match {
+            case y: net.liftweb.json.xschema2.XPrimitiveRef2 => x.compare(y)
+            case y: net.liftweb.json.xschema2.XDefinitionRef2 => -1
+          }
+          case x: net.liftweb.json.xschema2.XDefinitionRef2 => that match {
+            case y: net.liftweb.json.xschema2.XPrimitiveRef2 => 1
+            case y: net.liftweb.json.xschema2.XDefinitionRef2 => x.compare(y)
+          }
+        }
+      }
+    }
+    
+    case class OrderedXPrimitiveRef2(inner: XPrimitiveRef2) extends Ordered[XPrimitiveRef2] {
+      def compare(that: XPrimitiveRef2): Int = {
+        if (inner == that) 0
+        else inner match {
+          case x: net.liftweb.json.xschema2.XBoolean2 => that match {
+            case y: net.liftweb.json.xschema2.XBoolean2 => x.compare(y)
+            case y: net.liftweb.json.xschema2.XInt2 => -1
+            case y: net.liftweb.json.xschema2.XLong2 => -1
+            case y: net.liftweb.json.xschema2.XFloat2 => -1
+            case y: net.liftweb.json.xschema2.XDouble2 => -1
+            case y: net.liftweb.json.xschema2.XString2 => -1
+            case y: net.liftweb.json.xschema2.XJSON2 => -1
+            case y: net.liftweb.json.xschema2.XCollection2 => -1
+            case y: net.liftweb.json.xschema2.XMap2 => -1
+            case y: net.liftweb.json.xschema2.XOptional2 => -1
+            case y: net.liftweb.json.xschema2.XTuple2 => -1
+          }
+          case x: net.liftweb.json.xschema2.XInt2 => that match {
+            case y: net.liftweb.json.xschema2.XBoolean2 => 1
+            case y: net.liftweb.json.xschema2.XInt2 => x.compare(y)
+            case y: net.liftweb.json.xschema2.XLong2 => -1
+            case y: net.liftweb.json.xschema2.XFloat2 => -1
+            case y: net.liftweb.json.xschema2.XDouble2 => -1
+            case y: net.liftweb.json.xschema2.XString2 => -1
+            case y: net.liftweb.json.xschema2.XJSON2 => -1
+            case y: net.liftweb.json.xschema2.XCollection2 => -1
+            case y: net.liftweb.json.xschema2.XMap2 => -1
+            case y: net.liftweb.json.xschema2.XOptional2 => -1
+            case y: net.liftweb.json.xschema2.XTuple2 => -1
+          }
+          case x: net.liftweb.json.xschema2.XLong2 => that match {
+            case y: net.liftweb.json.xschema2.XBoolean2 => 1
+            case y: net.liftweb.json.xschema2.XInt2 => 1
+            case y: net.liftweb.json.xschema2.XLong2 => x.compare(y)
+            case y: net.liftweb.json.xschema2.XFloat2 => -1
+            case y: net.liftweb.json.xschema2.XDouble2 => -1
+            case y: net.liftweb.json.xschema2.XString2 => -1
+            case y: net.liftweb.json.xschema2.XJSON2 => -1
+            case y: net.liftweb.json.xschema2.XCollection2 => -1
+            case y: net.liftweb.json.xschema2.XMap2 => -1
+            case y: net.liftweb.json.xschema2.XOptional2 => -1
+            case y: net.liftweb.json.xschema2.XTuple2 => -1
+          }
+          case x: net.liftweb.json.xschema2.XFloat2 => that match {
+            case y: net.liftweb.json.xschema2.XBoolean2 => 1
+            case y: net.liftweb.json.xschema2.XInt2 => 1
+            case y: net.liftweb.json.xschema2.XLong2 => 1
+            case y: net.liftweb.json.xschema2.XFloat2 => x.compare(y)
+            case y: net.liftweb.json.xschema2.XDouble2 => -1
+            case y: net.liftweb.json.xschema2.XString2 => -1
+            case y: net.liftweb.json.xschema2.XJSON2 => -1
+            case y: net.liftweb.json.xschema2.XCollection2 => -1
+            case y: net.liftweb.json.xschema2.XMap2 => -1
+            case y: net.liftweb.json.xschema2.XOptional2 => -1
+            case y: net.liftweb.json.xschema2.XTuple2 => -1
+          }
+          case x: net.liftweb.json.xschema2.XDouble2 => that match {
+            case y: net.liftweb.json.xschema2.XBoolean2 => 1
+            case y: net.liftweb.json.xschema2.XInt2 => 1
+            case y: net.liftweb.json.xschema2.XLong2 => 1
+            case y: net.liftweb.json.xschema2.XFloat2 => 1
+            case y: net.liftweb.json.xschema2.XDouble2 => x.compare(y)
+            case y: net.liftweb.json.xschema2.XString2 => -1
+            case y: net.liftweb.json.xschema2.XJSON2 => -1
+            case y: net.liftweb.json.xschema2.XCollection2 => -1
+            case y: net.liftweb.json.xschema2.XMap2 => -1
+            case y: net.liftweb.json.xschema2.XOptional2 => -1
+            case y: net.liftweb.json.xschema2.XTuple2 => -1
+          }
+          case x: net.liftweb.json.xschema2.XString2 => that match {
+            case y: net.liftweb.json.xschema2.XBoolean2 => 1
+            case y: net.liftweb.json.xschema2.XInt2 => 1
+            case y: net.liftweb.json.xschema2.XLong2 => 1
+            case y: net.liftweb.json.xschema2.XFloat2 => 1
+            case y: net.liftweb.json.xschema2.XDouble2 => 1
+            case y: net.liftweb.json.xschema2.XString2 => x.compare(y)
+            case y: net.liftweb.json.xschema2.XJSON2 => -1
+            case y: net.liftweb.json.xschema2.XCollection2 => -1
+            case y: net.liftweb.json.xschema2.XMap2 => -1
+            case y: net.liftweb.json.xschema2.XOptional2 => -1
+            case y: net.liftweb.json.xschema2.XTuple2 => -1
+          }
+          case x: net.liftweb.json.xschema2.XJSON2 => that match {
+            case y: net.liftweb.json.xschema2.XBoolean2 => 1
+            case y: net.liftweb.json.xschema2.XInt2 => 1
+            case y: net.liftweb.json.xschema2.XLong2 => 1
+            case y: net.liftweb.json.xschema2.XFloat2 => 1
+            case y: net.liftweb.json.xschema2.XDouble2 => 1
+            case y: net.liftweb.json.xschema2.XString2 => 1
+            case y: net.liftweb.json.xschema2.XJSON2 => x.compare(y)
+            case y: net.liftweb.json.xschema2.XCollection2 => -1
+            case y: net.liftweb.json.xschema2.XMap2 => -1
+            case y: net.liftweb.json.xschema2.XOptional2 => -1
+            case y: net.liftweb.json.xschema2.XTuple2 => -1
+          }
+          case x: net.liftweb.json.xschema2.XCollection2 => that match {
+            case y: net.liftweb.json.xschema2.XBoolean2 => 1
+            case y: net.liftweb.json.xschema2.XInt2 => 1
+            case y: net.liftweb.json.xschema2.XLong2 => 1
+            case y: net.liftweb.json.xschema2.XFloat2 => 1
+            case y: net.liftweb.json.xschema2.XDouble2 => 1
+            case y: net.liftweb.json.xschema2.XString2 => 1
+            case y: net.liftweb.json.xschema2.XJSON2 => 1
+            case y: net.liftweb.json.xschema2.XCollection2 => x.compare(y)
+            case y: net.liftweb.json.xschema2.XMap2 => -1
+            case y: net.liftweb.json.xschema2.XOptional2 => -1
+            case y: net.liftweb.json.xschema2.XTuple2 => -1
+          }
+          case x: net.liftweb.json.xschema2.XMap2 => that match {
+            case y: net.liftweb.json.xschema2.XBoolean2 => 1
+            case y: net.liftweb.json.xschema2.XInt2 => 1
+            case y: net.liftweb.json.xschema2.XLong2 => 1
+            case y: net.liftweb.json.xschema2.XFloat2 => 1
+            case y: net.liftweb.json.xschema2.XDouble2 => 1
+            case y: net.liftweb.json.xschema2.XString2 => 1
+            case y: net.liftweb.json.xschema2.XJSON2 => 1
+            case y: net.liftweb.json.xschema2.XCollection2 => 1
+            case y: net.liftweb.json.xschema2.XMap2 => x.compare(y)
+            case y: net.liftweb.json.xschema2.XOptional2 => -1
+            case y: net.liftweb.json.xschema2.XTuple2 => -1
+          }
+          case x: net.liftweb.json.xschema2.XOptional2 => that match {
+            case y: net.liftweb.json.xschema2.XBoolean2 => 1
+            case y: net.liftweb.json.xschema2.XInt2 => 1
+            case y: net.liftweb.json.xschema2.XLong2 => 1
+            case y: net.liftweb.json.xschema2.XFloat2 => 1
+            case y: net.liftweb.json.xschema2.XDouble2 => 1
+            case y: net.liftweb.json.xschema2.XString2 => 1
+            case y: net.liftweb.json.xschema2.XJSON2 => 1
+            case y: net.liftweb.json.xschema2.XCollection2 => 1
+            case y: net.liftweb.json.xschema2.XMap2 => 1
+            case y: net.liftweb.json.xschema2.XOptional2 => x.compare(y)
+            case y: net.liftweb.json.xschema2.XTuple2 => -1
+          }
+          case x: net.liftweb.json.xschema2.XTuple2 => that match {
+            case y: net.liftweb.json.xschema2.XBoolean2 => 1
+            case y: net.liftweb.json.xschema2.XInt2 => 1
+            case y: net.liftweb.json.xschema2.XLong2 => 1
+            case y: net.liftweb.json.xschema2.XFloat2 => 1
+            case y: net.liftweb.json.xschema2.XDouble2 => 1
+            case y: net.liftweb.json.xschema2.XString2 => 1
+            case y: net.liftweb.json.xschema2.XJSON2 => 1
+            case y: net.liftweb.json.xschema2.XCollection2 => 1
+            case y: net.liftweb.json.xschema2.XMap2 => 1
+            case y: net.liftweb.json.xschema2.XOptional2 => 1
+            case y: net.liftweb.json.xschema2.XTuple2 => x.compare(y)
+          }
+        }
+      }
+    }
+    
+    case class OrderedXCollection2(inner: XCollection2) extends Ordered[XCollection2] {
+      def compare(that: XCollection2): Int = {
+        if (inner == that) 0
+        else inner match {
+          case x: net.liftweb.json.xschema2.XList2 => that match {
+            case y: net.liftweb.json.xschema2.XList2 => x.compare(y)
+            case y: net.liftweb.json.xschema2.XSet2 => -1
+            case y: net.liftweb.json.xschema2.XArray2 => -1
+          }
+          case x: net.liftweb.json.xschema2.XSet2 => that match {
+            case y: net.liftweb.json.xschema2.XList2 => 1
+            case y: net.liftweb.json.xschema2.XSet2 => x.compare(y)
+            case y: net.liftweb.json.xschema2.XArray2 => -1
+          }
+          case x: net.liftweb.json.xschema2.XArray2 => that match {
+            case y: net.liftweb.json.xschema2.XList2 => 1
+            case y: net.liftweb.json.xschema2.XSet2 => 1
+            case y: net.liftweb.json.xschema2.XArray2 => x.compare(y)
           }
         }
       }
@@ -501,7 +693,19 @@ package net.liftweb.json.xschema2 {
   object Orderings extends Orderings
   
   sealed trait XSchema2 extends Product {
-    def name: String
+    
+  }
+  
+  sealed trait XReference2 extends Product with net.liftweb.json.xschema2.XSchema2 {
+    
+  }
+  
+  sealed trait XPrimitiveRef2 extends Product with net.liftweb.json.xschema2.XReference2 {
+    
+  }
+  
+  sealed trait XCollection2 extends Product with net.liftweb.json.xschema2.XPrimitiveRef2 {
+    def elementType: net.liftweb.json.xschema2.XReference2
   }
   
   sealed trait XDefinition2 extends Product with net.liftweb.json.xschema2.XSchema2 {
@@ -537,8 +741,8 @@ package net.liftweb.json.xschema2 {
     
   }
   
-  case class XReference2(name: String, namespace: String) extends Ordered[XReference2] with net.liftweb.json.xschema2.XSchema2 {
-    def compare(that: XReference2): Int = {
+  case class XDefinitionRef2(name: String, namespace: String) extends Ordered[XDefinitionRef2] with net.liftweb.json.xschema2.XReference2 {
+    def compare(that: XDefinitionRef2): Int = {
       import Orderings._
       
       if (this == that) return 0
@@ -554,6 +758,201 @@ package net.liftweb.json.xschema2 {
       return this.hashCode - that.hashCode
     }
     def qualifiedName: net.liftweb.json.xschema2.QualifiedName2 = net.liftweb.json.xschema2.QualifiedName2(name, namespace)
+  }
+  
+  case class XBoolean2() extends Ordered[XBoolean2] with net.liftweb.json.xschema2.XPrimitiveRef2 {
+    def compare(that: XBoolean2): Int = {
+      import Orderings._
+      
+      if (this == that) return 0
+      
+      var c: Int = 0
+      
+      
+      return this.hashCode - that.hashCode
+    }
+    
+  }
+  
+  case class XInt2() extends Ordered[XInt2] with net.liftweb.json.xschema2.XPrimitiveRef2 {
+    def compare(that: XInt2): Int = {
+      import Orderings._
+      
+      if (this == that) return 0
+      
+      var c: Int = 0
+      
+      
+      return this.hashCode - that.hashCode
+    }
+    
+  }
+  
+  case class XLong2() extends Ordered[XLong2] with net.liftweb.json.xschema2.XPrimitiveRef2 {
+    def compare(that: XLong2): Int = {
+      import Orderings._
+      
+      if (this == that) return 0
+      
+      var c: Int = 0
+      
+      
+      return this.hashCode - that.hashCode
+    }
+    
+  }
+  
+  case class XFloat2() extends Ordered[XFloat2] with net.liftweb.json.xschema2.XPrimitiveRef2 {
+    def compare(that: XFloat2): Int = {
+      import Orderings._
+      
+      if (this == that) return 0
+      
+      var c: Int = 0
+      
+      
+      return this.hashCode - that.hashCode
+    }
+    
+  }
+  
+  case class XDouble2() extends Ordered[XDouble2] with net.liftweb.json.xschema2.XPrimitiveRef2 {
+    def compare(that: XDouble2): Int = {
+      import Orderings._
+      
+      if (this == that) return 0
+      
+      var c: Int = 0
+      
+      
+      return this.hashCode - that.hashCode
+    }
+    
+  }
+  
+  case class XString2() extends Ordered[XString2] with net.liftweb.json.xschema2.XPrimitiveRef2 {
+    def compare(that: XString2): Int = {
+      import Orderings._
+      
+      if (this == that) return 0
+      
+      var c: Int = 0
+      
+      
+      return this.hashCode - that.hashCode
+    }
+    
+  }
+  
+  case class XJSON2() extends Ordered[XJSON2] with net.liftweb.json.xschema2.XPrimitiveRef2 {
+    def compare(that: XJSON2): Int = {
+      import Orderings._
+      
+      if (this == that) return 0
+      
+      var c: Int = 0
+      
+      
+      return this.hashCode - that.hashCode
+    }
+    
+  }
+  
+  case class XList2(elementType: net.liftweb.json.xschema2.XReference2) extends Ordered[XList2] with net.liftweb.json.xschema2.XCollection2 {
+    def compare(that: XList2): Int = {
+      import Orderings._
+      
+      if (this == that) return 0
+      
+      var c: Int = 0
+      
+      c = this.elementType.compare(that.elementType)
+      if (c != 0) return c * 1
+      
+      return this.hashCode - that.hashCode
+    }
+    
+  }
+  
+  case class XSet2(elementType: net.liftweb.json.xschema2.XReference2) extends Ordered[XSet2] with net.liftweb.json.xschema2.XCollection2 {
+    def compare(that: XSet2): Int = {
+      import Orderings._
+      
+      if (this == that) return 0
+      
+      var c: Int = 0
+      
+      c = this.elementType.compare(that.elementType)
+      if (c != 0) return c * 1
+      
+      return this.hashCode - that.hashCode
+    }
+    
+  }
+  
+  case class XArray2(elementType: net.liftweb.json.xschema2.XReference2) extends Ordered[XArray2] with net.liftweb.json.xschema2.XCollection2 {
+    def compare(that: XArray2): Int = {
+      import Orderings._
+      
+      if (this == that) return 0
+      
+      var c: Int = 0
+      
+      c = this.elementType.compare(that.elementType)
+      if (c != 0) return c * 1
+      
+      return this.hashCode - that.hashCode
+    }
+    
+  }
+  
+  case class XMap2(keyType: net.liftweb.json.xschema2.XReference2, valueType: net.liftweb.json.xschema2.XReference2) extends Ordered[XMap2] with net.liftweb.json.xschema2.XPrimitiveRef2 {
+    def compare(that: XMap2): Int = {
+      import Orderings._
+      
+      if (this == that) return 0
+      
+      var c: Int = 0
+      
+      c = this.keyType.compare(that.keyType)
+      if (c != 0) return c * 1
+      
+      c = this.valueType.compare(that.valueType)
+      if (c != 0) return c * 1
+      
+      return this.hashCode - that.hashCode
+    }
+    
+  }
+  
+  case class XOptional2(optionalType: net.liftweb.json.xschema2.XReference2) extends Ordered[XOptional2] with net.liftweb.json.xschema2.XPrimitiveRef2 {
+    def compare(that: XOptional2): Int = {
+      import Orderings._
+      
+      if (this == that) return 0
+      
+      var c: Int = 0
+      
+      c = this.optionalType.compare(that.optionalType)
+      if (c != 0) return c * 1
+      
+      return this.hashCode - that.hashCode
+    }
+    
+  }
+  
+  case class XTuple2(types: List[net.liftweb.json.xschema2.XReference2]) extends Ordered[XTuple2] with net.liftweb.json.xschema2.XPrimitiveRef2 {
+    def compare(that: XTuple2): Int = {
+      import Orderings._
+      
+      if (this == that) return 0
+      
+      var c: Int = 0
+      
+      
+      return this.hashCode - that.hashCode
+    }
+    
   }
   
   case class XProduct2(name: String, namespace: String, properties: Map[String, String], terms: List[net.liftweb.json.xschema2.XReference2]) extends Ordered[XProduct2] with net.liftweb.json.xschema2.XDefinition2 {
@@ -738,6 +1137,58 @@ package net.liftweb.json.xschema2 {
       }
     }
     
+    private lazy val XReference2ExtractorFunction: PartialFunction[JField, XReference2] = List[PartialFunction[JField, XReference2]](
+      { case JField("XPrimitiveRef2", value) => net.liftweb.json.xschema2.Serialization.XPrimitiveRef2Extractor.extract(value) },
+      { case JField("XDefinitionRef2", value) => net.liftweb.json.xschema2.Serialization.XDefinitionRef2Extractor.extract(value) }
+    ).reduceLeft { (a, b) => a.orElse(b) }
+    
+    implicit val XReference2Extractor: Extractor[XReference2] = new Extractor[XReference2] {
+      def extract(jvalue: JValue): XReference2 = {
+        (jvalue --> classOf[JObject]).obj.filter(XReference2ExtractorFunction.isDefinedAt _) match {
+          case field :: fields => XReference2ExtractorFunction(field)
+          case Nil => error("Expected to find XReference2 but found " + jvalue)
+        }
+      }
+    }
+    
+    private lazy val XPrimitiveRef2ExtractorFunction: PartialFunction[JField, XPrimitiveRef2] = List[PartialFunction[JField, XPrimitiveRef2]](
+      { case JField("XBoolean2", value) => net.liftweb.json.xschema2.Serialization.XBoolean2Extractor.extract(value) },
+      { case JField("XInt2", value) => net.liftweb.json.xschema2.Serialization.XInt2Extractor.extract(value) },
+      { case JField("XLong2", value) => net.liftweb.json.xschema2.Serialization.XLong2Extractor.extract(value) },
+      { case JField("XFloat2", value) => net.liftweb.json.xschema2.Serialization.XFloat2Extractor.extract(value) },
+      { case JField("XDouble2", value) => net.liftweb.json.xschema2.Serialization.XDouble2Extractor.extract(value) },
+      { case JField("XString2", value) => net.liftweb.json.xschema2.Serialization.XString2Extractor.extract(value) },
+      { case JField("XJSON2", value) => net.liftweb.json.xschema2.Serialization.XJSON2Extractor.extract(value) },
+      { case JField("XCollection2", value) => net.liftweb.json.xschema2.Serialization.XCollection2Extractor.extract(value) },
+      { case JField("XMap2", value) => net.liftweb.json.xschema2.Serialization.XMap2Extractor.extract(value) },
+      { case JField("XOptional2", value) => net.liftweb.json.xschema2.Serialization.XOptional2Extractor.extract(value) },
+      { case JField("XTuple2", value) => net.liftweb.json.xschema2.Serialization.XTuple2Extractor.extract(value) }
+    ).reduceLeft { (a, b) => a.orElse(b) }
+    
+    implicit val XPrimitiveRef2Extractor: Extractor[XPrimitiveRef2] = new Extractor[XPrimitiveRef2] {
+      def extract(jvalue: JValue): XPrimitiveRef2 = {
+        (jvalue --> classOf[JObject]).obj.filter(XPrimitiveRef2ExtractorFunction.isDefinedAt _) match {
+          case field :: fields => XPrimitiveRef2ExtractorFunction(field)
+          case Nil => error("Expected to find XPrimitiveRef2 but found " + jvalue)
+        }
+      }
+    }
+    
+    private lazy val XCollection2ExtractorFunction: PartialFunction[JField, XCollection2] = List[PartialFunction[JField, XCollection2]](
+      { case JField("XList2", value) => net.liftweb.json.xschema2.Serialization.XList2Extractor.extract(value) },
+      { case JField("XSet2", value) => net.liftweb.json.xschema2.Serialization.XSet2Extractor.extract(value) },
+      { case JField("XArray2", value) => net.liftweb.json.xschema2.Serialization.XArray2Extractor.extract(value) }
+    ).reduceLeft { (a, b) => a.orElse(b) }
+    
+    implicit val XCollection2Extractor: Extractor[XCollection2] = new Extractor[XCollection2] {
+      def extract(jvalue: JValue): XCollection2 = {
+        (jvalue --> classOf[JObject]).obj.filter(XCollection2ExtractorFunction.isDefinedAt _) match {
+          case field :: fields => XCollection2ExtractorFunction(field)
+          case Nil => error("Expected to find XCollection2 but found " + jvalue)
+        }
+      }
+    }
+    
     private lazy val XDefinition2ExtractorFunction: PartialFunction[JField, XDefinition2] = List[PartialFunction[JField, XDefinition2]](
       { case JField("XField2", value) => net.liftweb.json.xschema2.Serialization.XField2Extractor.extract(value) },
       { case JField("XProduct2", value) => net.liftweb.json.xschema2.Serialization.XProduct2Extractor.extract(value) },
@@ -793,11 +1244,116 @@ package net.liftweb.json.xschema2 {
       }
     }
     
-    implicit val XReference2Extractor: Extractor[XReference2] = new Extractor[XReference2] {
-      def extract(jvalue: JValue): XReference2 = {
-        XReference2(
+    implicit val XDefinitionRef2Extractor: Extractor[XDefinitionRef2] = new Extractor[XDefinitionRef2] {
+      def extract(jvalue: JValue): XDefinitionRef2 = {
+        XDefinitionRef2(
           extractField[String](jvalue, "name", JNothing),
           extractField[String](jvalue, "namespace", JString(""))
+        )
+      }
+    }
+    
+    implicit val XBoolean2Extractor: Extractor[XBoolean2] = new Extractor[XBoolean2] {
+      def extract(jvalue: JValue): XBoolean2 = {
+        XBoolean2(
+          
+        )
+      }
+    }
+    
+    implicit val XInt2Extractor: Extractor[XInt2] = new Extractor[XInt2] {
+      def extract(jvalue: JValue): XInt2 = {
+        XInt2(
+          
+        )
+      }
+    }
+    
+    implicit val XLong2Extractor: Extractor[XLong2] = new Extractor[XLong2] {
+      def extract(jvalue: JValue): XLong2 = {
+        XLong2(
+          
+        )
+      }
+    }
+    
+    implicit val XFloat2Extractor: Extractor[XFloat2] = new Extractor[XFloat2] {
+      def extract(jvalue: JValue): XFloat2 = {
+        XFloat2(
+          
+        )
+      }
+    }
+    
+    implicit val XDouble2Extractor: Extractor[XDouble2] = new Extractor[XDouble2] {
+      def extract(jvalue: JValue): XDouble2 = {
+        XDouble2(
+          
+        )
+      }
+    }
+    
+    implicit val XString2Extractor: Extractor[XString2] = new Extractor[XString2] {
+      def extract(jvalue: JValue): XString2 = {
+        XString2(
+          
+        )
+      }
+    }
+    
+    implicit val XJSON2Extractor: Extractor[XJSON2] = new Extractor[XJSON2] {
+      def extract(jvalue: JValue): XJSON2 = {
+        XJSON2(
+          
+        )
+      }
+    }
+    
+    implicit val XList2Extractor: Extractor[XList2] = new Extractor[XList2] {
+      def extract(jvalue: JValue): XList2 = {
+        XList2(
+          extractField[net.liftweb.json.xschema2.XReference2](jvalue, "elementType", JNothing)
+        )
+      }
+    }
+    
+    implicit val XSet2Extractor: Extractor[XSet2] = new Extractor[XSet2] {
+      def extract(jvalue: JValue): XSet2 = {
+        XSet2(
+          extractField[net.liftweb.json.xschema2.XReference2](jvalue, "elementType", JNothing)
+        )
+      }
+    }
+    
+    implicit val XArray2Extractor: Extractor[XArray2] = new Extractor[XArray2] {
+      def extract(jvalue: JValue): XArray2 = {
+        XArray2(
+          extractField[net.liftweb.json.xschema2.XReference2](jvalue, "elementType", JNothing)
+        )
+      }
+    }
+    
+    implicit val XMap2Extractor: Extractor[XMap2] = new Extractor[XMap2] {
+      def extract(jvalue: JValue): XMap2 = {
+        XMap2(
+          extractField[net.liftweb.json.xschema2.XReference2](jvalue, "keyType", JNothing),
+          extractField[net.liftweb.json.xschema2.XReference2](jvalue, "valueType", JNothing)
+        )
+      }
+    }
+    
+    implicit val XOptional2Extractor: Extractor[XOptional2] = new Extractor[XOptional2] {
+      def extract(jvalue: JValue): XOptional2 = {
+        XOptional2(
+          extractField[net.liftweb.json.xschema2.XReference2](jvalue, "optionalType", JNothing)
+        )
+      }
+    }
+    
+    implicit val XTuple2Extractor: Extractor[XTuple2] = new Extractor[XTuple2] {
+      def extract(jvalue: JValue): XTuple2 = {
+        XTuple2(
+          extractField[List[net.liftweb.json.xschema2.XReference2]](jvalue, "types", JNothing)
         )
       }
     }
@@ -901,6 +1457,43 @@ package net.liftweb.json.xschema2 {
       }
     }
     
+    implicit val XReference2Decomposer: Decomposer[XReference2] = new Decomposer[XReference2] {
+      def decompose(tvalue: XReference2): JValue = {
+        tvalue match {
+          case x: net.liftweb.json.xschema2.XPrimitiveRef2 => JObject(JField("XPrimitiveRef2", net.liftweb.json.xschema2.Serialization.XPrimitiveRef2Decomposer.decompose(x)) :: Nil)
+          case x: net.liftweb.json.xschema2.XDefinitionRef2 => JObject(JField("XDefinitionRef2", net.liftweb.json.xschema2.Serialization.XDefinitionRef2Decomposer.decompose(x)) :: Nil)
+        }
+      }
+    }
+    
+    implicit val XPrimitiveRef2Decomposer: Decomposer[XPrimitiveRef2] = new Decomposer[XPrimitiveRef2] {
+      def decompose(tvalue: XPrimitiveRef2): JValue = {
+        tvalue match {
+          case x: net.liftweb.json.xschema2.XBoolean2 => JObject(JField("XBoolean2", net.liftweb.json.xschema2.Serialization.XBoolean2Decomposer.decompose(x)) :: Nil)
+          case x: net.liftweb.json.xschema2.XInt2 => JObject(JField("XInt2", net.liftweb.json.xschema2.Serialization.XInt2Decomposer.decompose(x)) :: Nil)
+          case x: net.liftweb.json.xschema2.XLong2 => JObject(JField("XLong2", net.liftweb.json.xschema2.Serialization.XLong2Decomposer.decompose(x)) :: Nil)
+          case x: net.liftweb.json.xschema2.XFloat2 => JObject(JField("XFloat2", net.liftweb.json.xschema2.Serialization.XFloat2Decomposer.decompose(x)) :: Nil)
+          case x: net.liftweb.json.xschema2.XDouble2 => JObject(JField("XDouble2", net.liftweb.json.xschema2.Serialization.XDouble2Decomposer.decompose(x)) :: Nil)
+          case x: net.liftweb.json.xschema2.XString2 => JObject(JField("XString2", net.liftweb.json.xschema2.Serialization.XString2Decomposer.decompose(x)) :: Nil)
+          case x: net.liftweb.json.xschema2.XJSON2 => JObject(JField("XJSON2", net.liftweb.json.xschema2.Serialization.XJSON2Decomposer.decompose(x)) :: Nil)
+          case x: net.liftweb.json.xschema2.XCollection2 => JObject(JField("XCollection2", net.liftweb.json.xschema2.Serialization.XCollection2Decomposer.decompose(x)) :: Nil)
+          case x: net.liftweb.json.xschema2.XMap2 => JObject(JField("XMap2", net.liftweb.json.xschema2.Serialization.XMap2Decomposer.decompose(x)) :: Nil)
+          case x: net.liftweb.json.xschema2.XOptional2 => JObject(JField("XOptional2", net.liftweb.json.xschema2.Serialization.XOptional2Decomposer.decompose(x)) :: Nil)
+          case x: net.liftweb.json.xschema2.XTuple2 => JObject(JField("XTuple2", net.liftweb.json.xschema2.Serialization.XTuple2Decomposer.decompose(x)) :: Nil)
+        }
+      }
+    }
+    
+    implicit val XCollection2Decomposer: Decomposer[XCollection2] = new Decomposer[XCollection2] {
+      def decompose(tvalue: XCollection2): JValue = {
+        tvalue match {
+          case x: net.liftweb.json.xschema2.XList2 => JObject(JField("XList2", net.liftweb.json.xschema2.Serialization.XList2Decomposer.decompose(x)) :: Nil)
+          case x: net.liftweb.json.xschema2.XSet2 => JObject(JField("XSet2", net.liftweb.json.xschema2.Serialization.XSet2Decomposer.decompose(x)) :: Nil)
+          case x: net.liftweb.json.xschema2.XArray2 => JObject(JField("XArray2", net.liftweb.json.xschema2.Serialization.XArray2Decomposer.decompose(x)) :: Nil)
+        }
+      }
+    }
+    
     implicit val XDefinition2Decomposer: Decomposer[XDefinition2] = new Decomposer[XDefinition2] {
       def decompose(tvalue: XDefinition2): JValue = {
         tvalue match {
@@ -941,11 +1534,116 @@ package net.liftweb.json.xschema2 {
       }
     }
     
-    implicit val XReference2Decomposer: Decomposer[XReference2] = new Decomposer[XReference2] {
-      def decompose(tvalue: XReference2): JValue = {
+    implicit val XDefinitionRef2Decomposer: Decomposer[XDefinitionRef2] = new Decomposer[XDefinitionRef2] {
+      def decompose(tvalue: XDefinitionRef2): JValue = {
         JObject(
           JField("name", tvalue.name.serialize) ::
           JField("namespace", tvalue.namespace.serialize) :: Nil
+        )
+      }
+    }
+    
+    implicit val XBoolean2Decomposer: Decomposer[XBoolean2] = new Decomposer[XBoolean2] {
+      def decompose(tvalue: XBoolean2): JValue = {
+        JObject(
+           Nil
+        )
+      }
+    }
+    
+    implicit val XInt2Decomposer: Decomposer[XInt2] = new Decomposer[XInt2] {
+      def decompose(tvalue: XInt2): JValue = {
+        JObject(
+           Nil
+        )
+      }
+    }
+    
+    implicit val XLong2Decomposer: Decomposer[XLong2] = new Decomposer[XLong2] {
+      def decompose(tvalue: XLong2): JValue = {
+        JObject(
+           Nil
+        )
+      }
+    }
+    
+    implicit val XFloat2Decomposer: Decomposer[XFloat2] = new Decomposer[XFloat2] {
+      def decompose(tvalue: XFloat2): JValue = {
+        JObject(
+           Nil
+        )
+      }
+    }
+    
+    implicit val XDouble2Decomposer: Decomposer[XDouble2] = new Decomposer[XDouble2] {
+      def decompose(tvalue: XDouble2): JValue = {
+        JObject(
+           Nil
+        )
+      }
+    }
+    
+    implicit val XString2Decomposer: Decomposer[XString2] = new Decomposer[XString2] {
+      def decompose(tvalue: XString2): JValue = {
+        JObject(
+           Nil
+        )
+      }
+    }
+    
+    implicit val XJSON2Decomposer: Decomposer[XJSON2] = new Decomposer[XJSON2] {
+      def decompose(tvalue: XJSON2): JValue = {
+        JObject(
+           Nil
+        )
+      }
+    }
+    
+    implicit val XList2Decomposer: Decomposer[XList2] = new Decomposer[XList2] {
+      def decompose(tvalue: XList2): JValue = {
+        JObject(
+          JField("elementType", tvalue.elementType.serialize) :: Nil
+        )
+      }
+    }
+    
+    implicit val XSet2Decomposer: Decomposer[XSet2] = new Decomposer[XSet2] {
+      def decompose(tvalue: XSet2): JValue = {
+        JObject(
+          JField("elementType", tvalue.elementType.serialize) :: Nil
+        )
+      }
+    }
+    
+    implicit val XArray2Decomposer: Decomposer[XArray2] = new Decomposer[XArray2] {
+      def decompose(tvalue: XArray2): JValue = {
+        JObject(
+          JField("elementType", tvalue.elementType.serialize) :: Nil
+        )
+      }
+    }
+    
+    implicit val XMap2Decomposer: Decomposer[XMap2] = new Decomposer[XMap2] {
+      def decompose(tvalue: XMap2): JValue = {
+        JObject(
+          JField("keyType", tvalue.keyType.serialize) ::
+          JField("valueType", tvalue.valueType.serialize) :: Nil
+        )
+      }
+    }
+    
+    implicit val XOptional2Decomposer: Decomposer[XOptional2] = new Decomposer[XOptional2] {
+      def decompose(tvalue: XOptional2): JValue = {
+        JObject(
+          JField("optionalType", tvalue.optionalType.serialize) :: Nil
+        )
+      }
+    }
+    
+    implicit val XTuple2Decomposer: Decomposer[XTuple2] = new Decomposer[XTuple2] {
+      def decompose(tvalue: XTuple2): JValue = {
+        JObject(
+          JField("types", tvalue.types.serialize) :: Nil
         )
       }
     }
@@ -1049,3 +1747,4 @@ package net.liftweb.json.xschema2 {
     
   }
 }
+
