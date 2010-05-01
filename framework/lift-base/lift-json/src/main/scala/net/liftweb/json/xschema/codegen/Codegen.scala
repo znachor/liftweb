@@ -295,13 +295,13 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
   private def buildDataFor(definition: XDefinition, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
     def coproductPrefix(x: XCoproduct): String = if (database.namespacesOf(x).removeDuplicates.length <= 1) "sealed " else ""
     def buildProductFields(x: XProduct): CodeBuilder = {
-      code.add(x.realFields.map(typeSignatureOf(_)).mkString(", "))
+      code.add(x.realFields.map(typeSignatureOf(_, database)).mkString(", "))
     }
     def buildCoproductFields(x: XCoproduct): CodeBuilder = {
       val commonFields = database.commonFieldsOf(x)
       
       code.join(commonFields, code.newline) { field =>
-        code += ("def " + field._1 + ": " + typeSignatureOf(field._2))
+        code += ("def " + field._1 + ": " + typeSignatureOf(field._2, database))
       }
       
       code
@@ -336,7 +336,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         }
       }
       
-      code.add("def compare(that: " + x.name + "): Int = ").block {    
+      code.add("def compare(that: " + typeSignatureOf(XReference(x.qualifiedName), database) + "): Int = ").block {    
         code.add("import Orderings._").newline(2)
         
         code.addln("if (this == that) return 0").newline.addln("var c: Int = 0").newline
@@ -349,13 +349,13 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       }
     }
     def buildViewFields(x: XProduct): CodeBuilder = {
-      // code.add(x.realFields.map(typeSignatureOf(_)).mkString(", "))
+      // code.add(x.realFields.map(typeSignatureOf(_, database)).mkString(", "))
       code.join(x.viewFields, code.newline) { viewField =>
         database.resolve(viewField.fieldType) match {
           case product: XProduct => 
             code.add("def ${field}: ${type} = ${type}(",
               "field" -> viewField.name,
-              "type"  -> product.qualifiedName
+              "type"  -> typeSignatureOf(XReference(product.qualifiedName), database)
             )
 
             code.add(product.realFields.map(_.name).mkString(", "))
@@ -375,14 +375,23 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     
     val classMixins = formMixinsClauseFromProperty("scala.class.traits")
     
-    code.using("type" -> definition.name) {
+    code.using("type" -> typeSignatureOf(XReference(definition.qualifiedName), database), "name" -> definition.name) {
       definition match {
         case x: XProduct =>
-          code.add("case class ${type}(")
-          buildProductFields(x)
-          code.add(")")
+          var initialExtends: List[String] = Nil
+          
+          if (x.realFields.length == 0) {
+            code.add("case object ${name}")
+          }
+          else {
+            code.add("case class ${name}(")
+            buildProductFields(x)
+            code.add(")")
+            
+            initialExtends = List("Ordered[${type}]")
+          }
       
-          val withClauses = ("Ordered[${type}]" :: database.coproductContainersOf(x).map(_.qualifiedName)).mkString(" with ") + classMixins
+          val withClauses = (initialExtends ::: database.coproductContainersOf(x).map(_.qualifiedName)).mkString(" with ") + classMixins
       
           code.add(" extends " + withClauses + " ").block {        
             buildOrderedDefinition(x)
@@ -395,7 +404,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         case x: XCoproduct => 
           val withClauses = ("Product" :: database.coproductContainersOf(x).map(_.qualifiedName)).mkString(" with ") + classMixins
           
-          code.add(coproductPrefix(x) + "trait ${type} extends " + withClauses + " ").block {
+          code.add(coproductPrefix(x) + "trait ${name} extends " + withClauses + " ").block {
             buildCoproductFields(x)
           }
           
@@ -425,17 +434,22 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       code.join(database.coproductsIn(namespace) ++ database.productsIn(namespace), code.newline.newline) { definition =>
         definition match {
           case x: XProduct => 
-            code.using("type" -> x.name) {
-              code.add("implicit val ${type}Extractor: Extractor[${type}] = new Extractor[${type}] ").block {
+            code.using("name" -> x.name, "type" -> typeSignatureOf(XReference(x.qualifiedName), database)) {
+              code.add("implicit val ${name}Extractor: Extractor[${type}] = new Extractor[${type}] ").block {
                 code.add("def extract(jvalue: JValue): ${type} = ").block {
-                  code.add("${type}").paren {          
-                    var isFirst = true
+                  if (x.realFields.length == 0) {
+                    code.add("${name}")
+                  }
+                  else {
+                    code.add("${name}").paren {          
+                      var isFirst = true
           
-                    code.join(x.realFields, code.add(",").newline) { field =>
-                      code.add("extractField[${fieldType}](jvalue, \"${fieldName}\", " + compact(renderScala(field.defValue)) + ")", 
-                        "fieldType" -> typeSignatureOf(field.fieldType),
-                        "fieldName" -> field.name
-                      )
+                      code.join(x.realFields, code.add(",").newline) { field =>
+                        code.add("extractField[${fieldType}](jvalue, \"${fieldName}\", " + compact(renderScala(field.defValue)) + ")", 
+                          "fieldType" -> typeSignatureOf(field.fieldType, database),
+                          "fieldName" -> field.name
+                        )
+                      }
                     }
                   }
                 }
@@ -443,12 +457,12 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
             }
           
           case x: XCoproduct =>
-            code.using("type" -> x.name) {
-              code.add("private lazy val ${type}ExtractorFunction: PartialFunction[JField, ${type}] = List[PartialFunction[JField, ${type}]]").paren {            
+            code.using("name" -> x.name, "type" -> typeSignatureOf(XReference(x.qualifiedName), database)) {
+              code.add("private lazy val ${name}ExtractorFunction: PartialFunction[JField, ${type}] = List[PartialFunction[JField, ${type}]]").paren {            
                 code.join(x.types, code.add(",").newline) { typ =>
-                  code.add("""{ case JField("${productName}", value) => ${productNamespace}.Serialization.${productName}Extractor.extract(value) }""",
-                    "productName"      -> typ.name,
-                    "productNamespace" -> typ.namespace.value
+                  code.add("""{ case JField("${subtypeName}", value) => ${subtypeNamespace}.Serialization.${subtypeName}Extractor.extract(value) }""",
+                    "subtypeName"      -> typ.name,
+                    "subtypeNamespace" -> typ.namespace.value
                   )
                 }
               }
@@ -456,10 +470,10 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
               code.add(".reduceLeft { (a, b) => a.orElse(b) }").newline
             
               code.add("""
-                implicit val ${type}Extractor: Extractor[${type}] = new Extractor[${type}] {
+                implicit val ${name}Extractor: Extractor[${type}] = new Extractor[${type}] {
                   def extract(jvalue: JValue): ${type} = {
-                    (jvalue --> classOf[JObject]).obj.filter(${type}ExtractorFunction.isDefinedAt _) match {
-                      case field :: fields => ${type}ExtractorFunction(field)
+                    (jvalue --> classOf[JObject]).obj.filter(${name}ExtractorFunction.isDefinedAt _) match {
+                      case field :: fields => ${name}ExtractorFunction(field)
                       case Nil => error("Expected to find ${type} but found " + jvalue)
                     }
                   }
@@ -479,8 +493,8 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       code.join(database.coproductsIn(namespace) ++ database.productsIn(namespace), code.newline.newline) { definition =>
         definition match {
           case x: XProduct => 
-            code.using("type" -> x.name) {
-              code.add("implicit val ${type}Decomposer: Decomposer[${type}] = new Decomposer[${type}] ").block {
+            code.using("name" -> x.name, "type" -> typeSignatureOf(XReference(x.qualifiedName), database)) {
+              code.add("implicit val ${name}Decomposer: Decomposer[${type}] = new Decomposer[${type}] ").block {
                 code.add("def decompose(tvalue: ${type}): JValue = ").block {
                   code.add("JObject").paren {      
                     var isFirst = true
@@ -496,14 +510,14 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
             }
         
           case x: XCoproduct =>
-            code.using("type" -> x.name) {
-              code.add("implicit val ${type}Decomposer: Decomposer[${type}] = new Decomposer[${type}] ").block {
+            code.using("name" -> x.name, "type" -> typeSignatureOf(XReference(x.qualifiedName), database)) {
+              code.add("implicit val ${name}Decomposer: Decomposer[${type}] = new Decomposer[${type}] ").block {
                 code.add("def decompose(tvalue: ${type}): JValue = ").block {
                   code.add("tvalue match ").block {
                     code.join(x.types, code.newline) { typ =>
                       code.add("case x: ${productType} => JObject(JField(\"${productName}\", ${productNamespace}.Serialization.${productName}Decomposer.decompose(x)) :: Nil)",
                         "productName"      -> typ.name,
-                        "productType"      -> typ.typename,
+                        "productType"      -> typeSignatureOf(XReference(typ.typename), database),
                         "productNamespace" -> typ.namespace.value
                       )
                     }
@@ -545,13 +559,13 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       code.newline(2)
       
       code.join(database.coproductsIn(namespace), code.newline(2)) { coproduct => 
-        code.using("type" -> coproduct.name) {
-          code.add("case class Ordered${type}(inner: ${type}) extends Ordered[${type}] ").block {
+        code.using("type" -> typeSignatureOf(XReference(coproduct.qualifiedName), database), "name" -> coproduct.name) {
+          code.add("case class Ordered${name}(inner: ${type}) extends Ordered[${type}] ").block {
             code.add("def compare(that: ${type}): Int = ").block {
               code.addln("if (inner == that) 0")
               code.add("else inner match ").block {
                 code.join(coproduct.types, code.newline) { subtype1 => 
-                  code.add("case x: ${subtype1} => that match ", "subtype1" -> typeSignatureOf(subtype1)).block {
+                  code.add("case x: ${subtype1} => that match ", "subtype1" -> typeSignatureOf(subtype1, database)).block {
                     code.join(coproduct.types, code.newline) { subtype2 => 
                       val index1 = coproduct.types.indexOf(subtype1)
                       val index2 = coproduct.types.indexOf(subtype2)
@@ -561,7 +575,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
                                 else "x.compare(y)"
                       
                       code.add("case y: ${subtype2} => " + cmp,
-                        "subtype2" -> typeSignatureOf(subtype2)
+                        "subtype2" -> typeSignatureOf(subtype2, database)
                       )
                     }
                   }
@@ -589,9 +603,9 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     }
   }
   
-  private def typeSignatureOf(x: XSchema): String = walk(x, CodeBuilder.empty, typeSignatureWalker).code
+  private def typeSignatureOf(x: XSchema, database: XSchemaDatabase): String = walk(x, CodeBuilder.empty, typeSignatureWalker(database)).code
   
-  private lazy val typeSignatureWalker = new XSchemaDefinitionWalker[CodeBuilder] {
+  private def typeSignatureWalker(database: XSchemaDatabase) = new XSchemaDefinitionWalker[CodeBuilder] {
     override def begin(data: CodeBuilder, field: XField) = {
       data += field.name + ": "
     }
@@ -613,7 +627,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     }
     
     override def begin(data: CodeBuilder, tuple: XTuple) = {
-      data += "(" + tuple.types.map(typeSignatureOf(_)).mkString(", ") + ")"
+      data += "(" + tuple.types.map(typeSignatureOf(_, database)).mkString(", ") + ")"
     }
     
     override def separator(data: CodeBuilder) = data.add(", ")
@@ -631,7 +645,17 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     }
     
     override def walk(data: CodeBuilder, ref: XReference) = {
-      data += ref.typename
+      database.resolve(ref) match {
+        case x: XProduct =>
+          if (x.realFields.length == 0) {
+            data += (ref.typename + ".type")
+          }
+          else {
+            data += ref.typename
+          }
+        
+        case _ => data += ref.typename
+      }
     }
     
     override def end(data: CodeBuilder, opt: XOptional) = {
