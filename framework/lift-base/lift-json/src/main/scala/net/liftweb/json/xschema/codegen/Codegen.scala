@@ -320,7 +320,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         }
                                  
         schema match {
-          case x: XOptional   => buildComparisonFor(field, x.optionalType)
+          case x: XOptional   => buildComparisonFor(field, x.optionalType) // Won't work for case objects
           case x: XCollection => code
           case x: XMap        => code
           case x: XTuple      => buildStandardComparison()
