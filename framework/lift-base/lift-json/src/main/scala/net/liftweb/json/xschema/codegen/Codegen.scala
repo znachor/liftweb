@@ -578,7 +578,9 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     val subroot = XRoot(database.definitionsIn(namespace), properties)
     
     code.newline(2).add("object Serialization extends SerializationImplicits with Decomposers with Extractors with Orderings with XSchemaAST.XSchemaDerived ").block {
-      code.addln("import XSchemaAST.{XRoot, XSchema}").newline
+      code.add("import XSchemaAST.{XRoot, XSchema}")
+      
+      //code.newline(2)
       
       // Storing the root as text is not efficient but ensures we do not run 
       // into method size limitations of the JVM (root can be quite large):
