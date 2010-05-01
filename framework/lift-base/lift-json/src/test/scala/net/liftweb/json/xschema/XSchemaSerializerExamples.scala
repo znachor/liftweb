@@ -393,8 +393,6 @@ object TestSchemas {
 
 
 
-
-
 package net.liftweb.json.xschema2 {
   import net.liftweb.json.JsonParser._
   import net.liftweb.json.JsonAST._
@@ -767,103 +765,19 @@ package net.liftweb.json.xschema2 {
     def qualifiedName: net.liftweb.json.xschema2.QualifiedName2 = net.liftweb.json.xschema2.QualifiedName2(name, namespace)
   }
   
-  case object XBoolean2 extends net.liftweb.json.xschema2.XPrimitiveRef2 {
-    def compare(that: net.liftweb.json.xschema2.XBoolean2.type): Int = {
-      import Orderings._
-      
-      if (this == that) return 0
-      
-      var c: Int = 0
-      
-      
-      return this.hashCode - that.hashCode
-    }
-    
-  }
+  case object XBoolean2 extends net.liftweb.json.xschema2.XPrimitiveRef2 
   
-  case object XInt2 extends net.liftweb.json.xschema2.XPrimitiveRef2 {
-    def compare(that: net.liftweb.json.xschema2.XInt2.type): Int = {
-      import Orderings._
-      
-      if (this == that) return 0
-      
-      var c: Int = 0
-      
-      
-      return this.hashCode - that.hashCode
-    }
-    
-  }
+  case object XInt2 extends net.liftweb.json.xschema2.XPrimitiveRef2 
   
-  case object XLong2 extends net.liftweb.json.xschema2.XPrimitiveRef2 {
-    def compare(that: net.liftweb.json.xschema2.XLong2.type): Int = {
-      import Orderings._
-      
-      if (this == that) return 0
-      
-      var c: Int = 0
-      
-      
-      return this.hashCode - that.hashCode
-    }
-    
-  }
+  case object XLong2 extends net.liftweb.json.xschema2.XPrimitiveRef2 
   
-  case object XFloat2 extends net.liftweb.json.xschema2.XPrimitiveRef2 {
-    def compare(that: net.liftweb.json.xschema2.XFloat2.type): Int = {
-      import Orderings._
-      
-      if (this == that) return 0
-      
-      var c: Int = 0
-      
-      
-      return this.hashCode - that.hashCode
-    }
-    
-  }
+  case object XFloat2 extends net.liftweb.json.xschema2.XPrimitiveRef2 
   
-  case object XDouble2 extends net.liftweb.json.xschema2.XPrimitiveRef2 {
-    def compare(that: net.liftweb.json.xschema2.XDouble2.type): Int = {
-      import Orderings._
-      
-      if (this == that) return 0
-      
-      var c: Int = 0
-      
-      
-      return this.hashCode - that.hashCode
-    }
-    
-  }
+  case object XDouble2 extends net.liftweb.json.xschema2.XPrimitiveRef2 
   
-  case object XString2 extends net.liftweb.json.xschema2.XPrimitiveRef2 {
-    def compare(that: net.liftweb.json.xschema2.XString2.type): Int = {
-      import Orderings._
-      
-      if (this == that) return 0
-      
-      var c: Int = 0
-      
-      
-      return this.hashCode - that.hashCode
-    }
-    
-  }
+  case object XString2 extends net.liftweb.json.xschema2.XPrimitiveRef2 
   
-  case object XJSON2 extends net.liftweb.json.xschema2.XPrimitiveRef2 {
-    def compare(that: net.liftweb.json.xschema2.XJSON2.type): Int = {
-      import Orderings._
-      
-      if (this == that) return 0
-      
-      var c: Int = 0
-      
-      
-      return this.hashCode - that.hashCode
-    }
-    
-  }
+  case object XJSON2 extends net.liftweb.json.xschema2.XPrimitiveRef2 
   
   case class XList2(elementType: net.liftweb.json.xschema2.XReference2) extends Ordered[net.liftweb.json.xschema2.XList2] with net.liftweb.json.xschema2.XCollection2 {
     def compare(that: net.liftweb.json.xschema2.XList2): Int = {
@@ -1087,47 +1001,11 @@ package net.liftweb.json.xschema2 {
     
   }
   
-  case object XOrderAscending2 extends net.liftweb.json.xschema2.XOrder2 {
-    def compare(that: net.liftweb.json.xschema2.XOrderAscending2.type): Int = {
-      import Orderings._
-      
-      if (this == that) return 0
-      
-      var c: Int = 0
-      
-      
-      return this.hashCode - that.hashCode
-    }
-    
-  }
+  case object XOrderAscending2 extends net.liftweb.json.xschema2.XOrder2 
   
-  case object XOrderDescending2 extends net.liftweb.json.xschema2.XOrder2 {
-    def compare(that: net.liftweb.json.xschema2.XOrderDescending2.type): Int = {
-      import Orderings._
-      
-      if (this == that) return 0
-      
-      var c: Int = 0
-      
-      
-      return this.hashCode - that.hashCode
-    }
-    
-  }
+  case object XOrderDescending2 extends net.liftweb.json.xschema2.XOrder2 
   
-  case object XOrderIgnore2 extends net.liftweb.json.xschema2.XOrder2 {
-    def compare(that: net.liftweb.json.xschema2.XOrderIgnore2.type): Int = {
-      import Orderings._
-      
-      if (this == that) return 0
-      
-      var c: Int = 0
-      
-      
-      return this.hashCode - that.hashCode
-    }
-    
-  }
+  case object XOrderIgnore2 extends net.liftweb.json.xschema2.XOrder2 
   
   trait Extractors extends DefaultExtractors with ExtractionHelpers {
     private lazy val XSchema2ExtractorFunction: PartialFunction[JField, net.liftweb.json.xschema2.XSchema2] = List[PartialFunction[JField, net.liftweb.json.xschema2.XSchema2]](

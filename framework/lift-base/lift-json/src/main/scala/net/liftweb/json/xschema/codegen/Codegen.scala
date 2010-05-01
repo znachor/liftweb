@@ -320,7 +320,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         }
                                  
         schema match {
-          case x: XOptional   => buildComparisonFor(field, x.optionalType) // Won't work for case objects
+          case x: XOptional   => buildComparisonFor(field, x.optionalType) // TODO: Won't work for case objects
           case x: XCollection => code
           case x: XMap        => code
           case x: XTuple      => buildStandardComparison()
@@ -328,7 +328,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
           case x: XPrimitive  => buildStandardComparison()
           case x: XReference  => database.resolve(x) match {
             case x: XProduct =>
-              if (x.realFields.length == 0) {
+              if (x.realFields.length == 0) { // TODO: Should not solve this here, should solve it in "Orderings"
                 code.addln("if (this.${field} == that.${field}) return 0")
               }
               else buildStandardComparison()
@@ -401,13 +401,20 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       
           val withClauses = (initialExtends ::: database.coproductContainersOf(x).map(_.qualifiedName)).mkString(" with ") + classMixins
       
-          code.add(" extends " + withClauses + " ").block {        
-            buildOrderedDefinition(x)
-            
-            code.newline
-            
-            buildViewFields(x)
+          if (withClauses.length > 0) {
+            code.add(" extends " + withClauses + " ")
           }
+          
+          if (x.realFields.length > 0) {
+            code.block {
+              buildOrderedDefinition(x)
+            
+              code.newline
+            
+              buildViewFields(x)
+            }
+          }
+          else code
       
         case x: XCoproduct => 
           val withClauses = ("Product" :: database.coproductContainersOf(x).map(_.qualifiedName)).mkString(" with ") + classMixins
