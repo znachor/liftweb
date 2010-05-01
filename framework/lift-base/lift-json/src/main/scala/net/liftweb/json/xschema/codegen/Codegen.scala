@@ -273,7 +273,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         
         buildOrderingsFor(namespace, code, database)
         
-        code.newline
+        code.newline(2)
       
         code.join(database.coproductsIn(namespace) ++ database.productsIn(namespace), code.newline.newline) { definition =>
           buildDataFor(definition, code, database)
@@ -337,7 +337,8 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       }
       
       code.add("def compare(that: " + x.name + "): Int = ").block {    
-        code.addln("import Orderings._")
+        code.add("import Orderings._").newline(2)
+        
         code.addln("if (this == that) return 0").newline.addln("var c: Int = 0").newline
       
         code.join(x.realFields, code.newline) { field =>
