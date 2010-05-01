@@ -326,7 +326,15 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
           case x: XTuple      => buildStandardComparison()
           
           case x: XPrimitive  => buildStandardComparison()
-          case x: XReference  => buildStandardComparison()
+          case x: XReference  => database.resolve(x) match {
+            case x: XProduct =>
+              if (x.realFields.length == 0) {
+                code.addln("if (this.${field} == that.${field}) return 0")
+              }
+              else buildStandardComparison()
+              
+            case _ => buildStandardComparison()
+          }
           
           case x: XProduct    => error("Found definition in field")
           case x: XCoproduct  => error("Found definition in field")
