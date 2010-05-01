@@ -32,7 +32,7 @@ object JsonAST {
   /**
    * Data type for Json AST.
    */
-  sealed abstract class JValue extends Merge.Mergeable with Diff.Diffable with Product {
+  sealed abstract class JValue extends Merge.Mergeable with Diff.Diffable with Product with Ordered[JValue] {
     type Values
 
     /** XPath-like expression to query JSON fields by name. Matches only fields on
@@ -286,31 +286,92 @@ object JsonAST {
   case object JNothing extends JValue {
     type Values = None.type
     def values = None
+    
+    def compare(that: JValue) = that match {
+      case JNothing => 0
+      case _ => -1
+    }
   }
   case object JNull extends JValue {
     type Values = Null
     def values = null
-  }
-  case class JString(s: String) extends JValue {
-    type Values = String
-    def values = s
-  }
-  case class JDouble(num: Double) extends JValue {
-    type Values = Double
-    def values = num
-  }
-  case class JInt(num: BigInt) extends JValue {
-    type Values = BigInt
-    def values = num
+    
+    def compare(that: JValue) = that match {
+      case JNothing => 1
+      case JNull => 0
+      case _ => -1
+    }
   }
   case class JBool(value: Boolean) extends JValue {
     type Values = Boolean
     def values = value
+    
+    def compare(that: JValue) = that match {
+      case JNothing => 1
+      case JNull => 1
+      case x: JBool => value.compare(x.value)
+      case _ => -1
+    }
+  }
+  case class JInt(num: BigInt) extends JValue {
+    type Values = BigInt
+    def values = num
+    
+    def compare(that: JValue) = that match {
+      case JNothing => 1
+      case JNull => 1
+      case x: JBool => 1
+      case x: JInt => num.compare(x.num)
+      case _ => -1
+    }
+  }
+  case class JDouble(num: Double) extends JValue {
+    type Values = Double
+    def values = num
+    
+    def compare(that: JValue) = that match {
+      case JNothing => 1
+      case JNull => 1
+      case x: JBool => 1
+      case x: JInt => 1
+      case x: JDouble => num.compare(x.num)
+      case _ => -1
+    }
+  }
+  case class JString(s: String) extends JValue {
+    type Values = String
+    def values = s
+    
+    def compare(that: JValue) = that match {
+      case JNothing => 1
+      case JNull => 1
+      case x: JBool => 1
+      case x: JInt => 1
+      case x: JDouble => 1
+      case x: JString => s.compare(x.s)
+      case _ => -1
+    }
   }
   case class JField(name: String, value: JValue) extends JValue {
     type Values = (String, value.Values)
     def values = (name, value.values)
     override def apply(i: Int): JValue = value(i)
+    
+    def compare(that: JValue) = that match {
+      case JNothing => 1
+      case JNull => 1
+      case x: JBool => 1
+      case x: JInt => 1
+      case x: JDouble => 1
+      case x: JString => 1
+      case x: JField => 
+        var c: Int = name.compare(x.name)
+        
+        if (c != 0) c
+        else value.compare(x.value)
+      case _ => -1
+    
+    }
   }
   case class JObject(obj: List[JField]) extends JValue {
     type Values = Map[String, Any]
@@ -320,6 +381,8 @@ object JsonAST {
       case o: JObject => Set(obj.toArray: _*) == Set(o.obj.toArray: _*)
       case _ => false
     }
+    
+    def compare(that: JValue) = 0
   }
   case class JArray(arr: List[JValue]) extends JValue {
     type Values = List[Any]
@@ -329,6 +392,19 @@ object JsonAST {
     override def equals(that: Any): Boolean = that match {
       case a: JArray => Set(arr.toArray: _*) == Set(a.arr.toArray: _*)
       case _ => false
+    }
+    
+    def compare(that: JValue) = that match {
+      case JNothing => 1
+      case JNull => 1
+      case x: JBool => 1
+      case x: JInt => 1
+      case x: JDouble => 1
+      case x: JString => 1
+      case x: JField => 1
+      case x: JArray => 0
+      case _ => -1
+    
     }
   }
 

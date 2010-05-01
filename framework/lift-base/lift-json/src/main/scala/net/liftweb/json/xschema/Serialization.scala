@@ -37,6 +37,10 @@ trait SerializationImplicits {
  * Extractors for all basic types.
  */
 trait DefaultExtractors extends XSchemaExtractor {
+  implicit val jvalueExtractor: Extractor[JValue] = new Extractor[JValue] {
+    def extract(jvalue: JValue): JValue = jvalue
+  }
+  
   implicit val stringExtractor: Extractor[String] = new Extractor[String] {
     def extract(jvalue: JValue): String = jvalue match {
       case JString(str) => str
@@ -185,6 +189,10 @@ trait ExtractionHelpers extends SerializationImplicits {
  * Decomposers for all basic types.
  */
 trait DefaultDecomposers extends XSchemaDecomposer {
+  implicit val jvalueDecomposer: Decomposer[JValue] = new Decomposer[JValue] {
+    def decompose(tvalue: JValue): JValue = tvalue
+  }
+  
   implicit val stringDecomposer: Decomposer[String] = new Decomposer[String] {
     def decompose(tvalue: String): JValue = JString(tvalue)
   }
@@ -262,8 +270,34 @@ trait DefaultOrderings {
       return opt.get.compareTo(that.get)
     }
   }
-  
   implicit def optionToOrderedOption[T <% Ordered[T]](opt: Option[T]): OrderedOption[T] = OrderedOption[T](opt)
+  
+  case class OrderedArray[T <% Ordered[T]](col: Array[T]) extends Ordered[Array[T]] {
+    def compare(that: Array[T]): Int = {
+      col.zip(that).toList.map(t => t._1.compare(t._2)).dropWhile(_ == 0).firstOption match {
+        case None => col.length.compare(that.length)
+        
+        case Some(c: Int) => c
+      }
+    }
+  }
+  implicit def arrayToOrderedArray[T <% Ordered[T]](c: Array[T]): OrderedArray[T] = OrderedArray[T](c)
+  
+  case class OrderedList[T <% Ordered[T]](col: List[T]) extends Ordered[List[T]] {
+    def compare(that: List[T]): Int = {
+      col.zip(that).map(t => t._1.compare(t._2)).dropWhile(_ == 0).firstOption match {
+        case None => col.length.compare(that.length)
+        
+        case Some(c: Int) => c
+      }
+    }
+  }
+  implicit def listToOrderedList[T <% Ordered[T]](c: List[T]): OrderedList[T] = OrderedList[T](c)
+  
+  case class OrderedSet[T <% Ordered[T]](col: Set[T]) extends Ordered[Set[T]] {
+    def compare(that: Set[T]): Int = col.toList.sort(_.compare(_) < 0).compareTo(that.toList.sort(_.compare(_) < 0))
+  }
+  implicit def setToOrderedSet[T <% Ordered[T]](c: Set[T]): OrderedSet[T] = OrderedSet[T](c)
 }
 
 object Serialization extends SerializationImplicits with DefaultExtractors with DefaultDecomposers with DefaultOrderings {

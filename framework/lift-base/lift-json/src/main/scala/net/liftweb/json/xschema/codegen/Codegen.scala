@@ -260,7 +260,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       code.newline.add("package " + namespace.value + " ").block {
         code.addln("import net.liftweb.json.JsonParser._").
              addln("import net.liftweb.json.JsonAST._").
-             addln("import net.liftweb.json.xschema.{SerializationImplicits, DefaultExtractors, ExtractionHelpers, DefaultDecomposers, DecomposerHelpers, DefaultOrderings}").
+             addln("import net.liftweb.json.xschema.{Extractor, Decomposer, SerializationImplicits, DefaultExtractors, ExtractionHelpers, DefaultDecomposers, DecomposerHelpers, DefaultOrderings}").
              addln("import net.liftweb.json.xschema.Serialization._").
              addln("import net.liftweb.json.xschema.XSchemaAST")
         
@@ -270,6 +270,10 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         }
         
         code.newline
+        
+        buildOrderingsFor(namespace, code, database)
+        
+        code.newline
       
         code.join(database.coproductsIn(namespace) ++ database.productsIn(namespace), code.newline.newline) { definition =>
           buildDataFor(definition, code, database)
@@ -277,8 +281,8 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       
         buildExtractorsFor(namespace, code, database)
         buildDecomposersFor(namespace, code, database)
-      
         buildPackageObjectFor(namespace, code, database, root.properties)
+        
         buildConstantsFor(namespace, code, database)
       }
       
@@ -333,6 +337,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       }
       
       code.add("def compare(that: " + x.name + "): Int = ").block {    
+        code.addln("import Orderings._")
         code.addln("if (this == that) return 0").newline.addln("var c: Int = 0").newline
       
         code.join(x.realFields, code.newline) { field =>
@@ -396,6 +401,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         case x: XConstant => code
       }
       
+      /*
       val objectMixins: String = formMixinsClauseFromProperty("scala.object.traits")
       
       val withClauses = "XSchemaAST.XSchemaDerived" + objectMixins
@@ -404,7 +410,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         code.addln("import XSchemaAST.{XDefinition, XSchema}").newline
         
         code.add("lazy val xschema: XDefinition = " + compact(renderScala(definition.asInstanceOf[XSchema].serialize)) + ".deserialize[XSchema].asInstanceOf[XDefinition]")
-      }
+      } */
     }
   }
   
@@ -426,7 +432,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
           
                     code.join(x.realFields, code.add(",").newline) { field =>
                       code.add("extractField[${fieldType}](jvalue, \"${fieldName}\", " + compact(renderScala(field.defValue)) + ")", 
-                        "fieldType" -> field.fieldType.typename,
+                        "fieldType" -> typeSignatureOf(field.fieldType),
                         "fieldName" -> field.name
                       )
                     }
@@ -464,6 +470,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         }
       }
     }
+    code.newline.add("object Extractors extends Extractors")
   }
   
   private def buildDecomposersFor(namespace: Namespace, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
@@ -508,18 +515,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         }
       }
     }
-  }
-  
-  private def buildPackageObjectFor(namespace: Namespace, code: CodeBuilder, database: XSchemaDatabase, properties: Map[String, String]): CodeBuilder = {
-    val subroot = XRoot(database.definitionsIn(namespace), properties)
-    
-    code.newline(2).add("object Serialization extends SerializationImplicits with Decomposers with Extractors with XSchemaAST.XSchemaDerived ").block {
-      code.addln("import XSchemaAST.{XRoot, XSchema}").newline
-      
-      // Storing the root as text is not efficient but ensures we do not run 
-      // into method size limitations of the JVM (root can be quite large):
-      code.add("lazy val xschema: XRoot = parse(\"\"\"" + compact(render(subroot.asInstanceOf[XSchema].serialize)) + "\"\"\").deserialize[XSchema].asInstanceOf[XRoot]")
-    }
+    code.newline.add("object Decomposers extends Decomposers")
   }
   
   private def buildConstantsFor(namespace: Namespace, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
@@ -534,6 +530,59 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
           "type" -> constant.constantType.typename
         )
       }
+    }
+  }
+  
+  private def buildOrderingsFor(namespace: Namespace, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
+    code.newline(2).add("trait Orderings ").block {
+      code.join(database.coproductsIn(namespace), code.newline) { coproduct => 
+        code.using("type" -> coproduct.name) {
+          code.add("implicit def ${type}ToOrdered${type}(inner: ${type}) = Ordered${type}(inner)")
+        }
+      }
+      
+      code.newline(2)
+      
+      code.join(database.coproductsIn(namespace), code.newline(2)) { coproduct => 
+        code.using("type" -> coproduct.name) {
+          code.add("case class Ordered${type}(inner: ${type}) extends Ordered[${type}] ").block {
+            code.add("def compare(that: ${type}): Int = ").block {
+              code.addln("if (inner == that) 0")
+              code.add("else inner match ").block {
+                code.join(coproduct.types, code.newline) { subtype1 => 
+                  code.add("case x: ${subtype1} => that match ", "subtype1" -> typeSignatureOf(subtype1)).block {
+                    code.join(coproduct.types, code.newline) { subtype2 => 
+                      val index1 = coproduct.types.indexOf(subtype1)
+                      val index2 = coproduct.types.indexOf(subtype2)
+                      
+                      val cmp = if (index1 < index2) "-1"
+                                else if (index2 < index1) "1"
+                                else "x.compare(y)"
+                      
+                      code.add("case y: ${subtype2} => " + cmp,
+                        "subtype2" -> typeSignatureOf(subtype2)
+                      )
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    code.newline.add("object Orderings extends Orderings")
+  }
+  
+  private def buildPackageObjectFor(namespace: Namespace, code: CodeBuilder, database: XSchemaDatabase, properties: Map[String, String]): CodeBuilder = {
+    val subroot = XRoot(database.definitionsIn(namespace), properties)
+    
+    code.newline(2).add("object Serialization extends SerializationImplicits with Decomposers with Extractors with Orderings with XSchemaAST.XSchemaDerived ").block {
+      code.addln("import XSchemaAST.{XRoot, XSchema}").newline
+      
+      // Storing the root as text is not efficient but ensures we do not run 
+      // into method size limitations of the JVM (root can be quite large):
+      //code.add("lazy val xschema: XRoot = parse(\"\"\"" + compact(render(subroot.asInstanceOf[XSchema].serialize)) + "\"\"\").deserialize[XSchema].asInstanceOf[XRoot]")
     }
   }
   
@@ -574,6 +623,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         case XFloat   => "Float"
         case XDouble  => "Double"
         case XBoolean => "Boolean"
+        case XJValue  => "net.liftweb.json.JsonAST.JValue"
       })
     }
     

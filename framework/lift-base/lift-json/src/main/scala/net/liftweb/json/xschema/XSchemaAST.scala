@@ -8,7 +8,7 @@ object XSchemaAST {
   }
   
   case class Namespace(value: String) {
-    def path = value.split("[.]").filter(_.length > 0)
+    def path = value.split("[.]").toList.filter(_.length > 0)
   }
   
   sealed trait Named      { val name: String }  
