@@ -73,18 +73,6 @@
   <!--
     ~ Profile Settings
   -->
-  <profiles>
-    <profile>
-      <id>lift-debug</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.rat</groupId>
-            <artifactId>apache-rat-plugin</artifactId>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
+  <!-- <profiles/> -->
 
 </project>
