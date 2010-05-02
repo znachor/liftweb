@@ -31,7 +31,7 @@ trait OwnedField[OwnerType <: Record[OwnerType]] extends FieldIdentifier {
   private[record] var fieldName: String = _
 
   type MyType
-  type ValidationFunction = Box[MyType] => Box[Node]
+  type ValidationFunction = Box[MyType] => List[FieldError]
 
   /**
    * Return the owner of this field
@@ -167,7 +167,7 @@ trait OwnedField[OwnerType <: Record[OwnerType]] extends FieldIdentifier {
 
   /** Helper function that does validation of a value by using the validators specified for the field */
   protected def runValidation(in: Box[MyType]): List[FieldError] =
-    validators.flatMap(_(in).map(FieldError(this, _))).removeDuplicates
+    validators.flatMap(_(in)).removeDuplicates
 
 
   private[record] var data: Box[MyType] = Empty

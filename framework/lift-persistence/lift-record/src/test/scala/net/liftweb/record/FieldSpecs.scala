@@ -34,18 +34,15 @@ package fieldspecs {
     def meta = PasswordTestRecord
 
     object password extends PasswordField(this) {
-      override def validators = PasswordTestRecord.validateNonEmptyPassword _ :: super.validators
+      override def validators = ((_: Box[String]) match {
+        case Full("testvalue") => fieldError("no way!") :: Nil
+        case _ => Nil
+      }) :: super.validators
     }
   }
   
   object PasswordTestRecord extends PasswordTestRecord with MetaRecord[PasswordTestRecord] {
     def createRecord = new PasswordTestRecord
-
-    private[fieldspecs] def validateNonEmptyPassword(b: Box[String]): Box[Node] = 
-      b flatMap {
-        case s if s == "testvalue" => Full(Text("no way!"))
-        case _ => Empty
-      }
   }
 }
 

@@ -32,15 +32,16 @@ import JE._
 /**
  * A Field containing String content.
  */
-class StringField[OwnerType <: Record[OwnerType]](rec: OwnerType, maxLength: Int) extends Field[String, OwnerType] {
+class StringField[OwnerType <: Record[OwnerType]](rec: OwnerType, val maxLen: Int)
+  extends Field[String, OwnerType] with HasMaxLen with StringFieldHelpers {
 
-  def this(rec: OwnerType, maxLength: Int, value: String) = {
-    this(rec, maxLength)
+  def this(rec: OwnerType, maxLen: Int, value: String) = {
+    this(rec, maxLen)
     set(value)
   }
 
-  def this(rec: OwnerType, maxLength: Int, value: Box[String]) = {
-    this(rec, maxLength)
+  def this(rec: OwnerType, maxLen: Int, value: Box[String]) = {
+    this(rec, maxLen)
     setBox(value)
   }
 
@@ -68,7 +69,7 @@ class StringField[OwnerType <: Record[OwnerType]](rec: OwnerType, maxLength: Int
 
   private def elem = S.fmapFunc(SFuncHolder(this.setFromAny(_))) {
     funcName =>
-    <input type="text" maxlength={maxLength.toString}
+    <input type="text" maxlength={maxLen.toString}
       name={funcName}
       value={valueBox openOr ""}
       tabindex={tabIndex toString}/>
@@ -95,23 +96,6 @@ class StringField[OwnerType <: Record[OwnerType]](rec: OwnerType, maxLength: Int
 
   def defaultValue = ""
 
-  /**
-   * Make sure the field matches a regular expression
-   */
-  def valRegex(pat: Pattern, msg: => String)(valueBox: Box[String]): Box[Node] =
-    valueBox flatMap {
-      s => pat.matcher(s).matches match {
-        case true => Empty
-        case false => Full(Text(msg))
-      }
-    }
-
-  final def toUpper(in: Box[String]): Box[String] = in.map(_.toUpperCase)
-
-  final def trim(in: Box[String]): Box[String] = in.map(_.trim)
-
-  final def notNull(in: Box[String]): Box[String] = in or Full("")
-
   def asJs = valueBox.map(Str) openOr JsNull
 
   def asJValue: JValue = valueBox.map(v => JString(v)) openOr (JNothing: JValue)
@@ -130,11 +114,11 @@ import _root_.net.liftweb.mapper.{DriverType}
 /**
  * A string field holding DB related logic
  */
-class DBStringField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType, maxLength: Int) extends
-   StringField[OwnerType](rec, maxLength) with JDBCFieldFlavor[String]{
+class DBStringField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType, maxLen: Int) extends
+   StringField[OwnerType](rec, maxLen) with JDBCFieldFlavor[String]{
 
-  def this(rec: OwnerType, maxLength: Int, value: String) = {
-    this(rec, maxLength)
+  def this(rec: OwnerType, maxLen: Int, value: String) = {
+    this(rec, maxLen)
     set(value)
   }
 
@@ -148,7 +132,7 @@ class DBStringField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType, maxLength:
   /**
    * Given the driver type, return the string required to create the column in the database
    */
-  def fieldCreatorString(dbType: DriverType, colName: String): String = colName+" VARCHAR("+maxLength+")"
+  def fieldCreatorString(dbType: DriverType, colName: String): String = colName+" VARCHAR("+maxLen+")"
 
   def jdbcFriendly(field : String) : String = value
  }

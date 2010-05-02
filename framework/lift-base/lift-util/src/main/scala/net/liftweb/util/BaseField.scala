@@ -25,6 +25,9 @@ import xml.NodeSeq
  */
 trait FieldIdentifier {
   def uniqueFieldId: Box[String] = Empty
+
+  protected def fieldError(msg: NodeSeq): FieldError = FieldError(this, msg)
+  protected def fieldError(msg: String): FieldError = FieldError(this, msg)
 }
 
 /**
@@ -32,6 +35,13 @@ trait FieldIdentifier {
  */
 case class FieldError(field: FieldIdentifier, msg: NodeSeq) {
   override def toString = field.uniqueFieldId + " : " + msg
+
+  override def hashCode(): Int = msg.hashCode + field.uniqueFieldId.hashCode
+  override def equals(other: Any): Boolean = other match {
+    case FieldError(otherField, otherMsg) =>
+      otherMsg == msg && otherField.uniqueFieldId == field.uniqueFieldId
+    case _ => super.equals(other)
+  }
 }
 
 object FieldError {
