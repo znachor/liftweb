@@ -186,6 +186,13 @@ trait TypedField[ThisType] extends BaseField with Product1[ThisType] {
    */
   def validators: List[ValidationFunction] = Nil
 
+  /** Validate this field's setting, returning any errors found */
+  def validateField: List[FieldError] = runValidation(valueBox)
+
+  /** Helper function that does validation of a value by using the validators specified for the field */
+  protected def runValidation(in: Box[MyType]): List[FieldError] =
+    validators.flatMap(_(in).map(FieldError(this, _))).removeDuplicates
+
   /**
    * The default value of the field when a field has no value set and is optional, or a method that must return a value (e.g. value) is used
    */
