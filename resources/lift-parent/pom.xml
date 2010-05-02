@@ -422,7 +422,7 @@
       <dependency>
         <groupId>org.hibernate</groupId>
         <artifactId>hibernate-entitymanager</artifactId>
-        <version>3.2.1.ga</version>
+        <version>3.4.0.GA</version>
         <exclusions>
           <exclusion>
             <groupId>javax.transaction</groupId>
@@ -488,7 +488,7 @@
       <dependency>
         <groupId>com.h2database</groupId>
         <artifactId>h2</artifactId>
-        <version>1.2.127</version>
+        <version>1.2.132</version>
         <scope>runtime</scope>
         <optional>true</optional>
       </dependency>
