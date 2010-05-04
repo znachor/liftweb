@@ -33,16 +33,20 @@ import JsonParser.parse
  */
 object Serialization {
   import java.io.{Reader, StringWriter, Writer}
-  import Extraction.Extractor
+  import Extraction.{Extractor, Decomposer}
 
   /** Serialize to String.
    */
-  def write[A <: AnyRef](a: A)(implicit formats: Formats): String =
-    (write(a, new StringWriter)(formats)).toString
+  def write[A <: AnyRef](a: A)(implicit 
+                               formats: Formats,
+                               d: Decomposer[A]): String =
+    (write(a, new StringWriter)(formats, d)).toString
 
   /** Serialize to Writer.
    */
-  def write[A <: AnyRef, W <: Writer](a: A, out: W)(implicit formats: Formats): W =
+  def write[A <: AnyRef, W <: Writer](a: A, out: W)(implicit 
+                                                    formats: Formats,
+                                                    d: Decomposer[A]): W =
     Printer.compact(render(Extraction.decompose(a)), out)
 
   /** Deserialize from a String.

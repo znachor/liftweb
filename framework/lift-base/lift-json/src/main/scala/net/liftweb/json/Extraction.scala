@@ -102,14 +102,14 @@ object Extraction {
       any match {
         case null => JNull
         case x if primitive_?(x.getClass) => primitive2jvalue(x)(formats)
-        case x: Map[_, _] => JObject((x map { case (k: String, v) => JField(k, decompose0(v)) }).toList)
-        case x: Collection[_] => JArray(x.toList map decompose0)
-        case x if (x.getClass.isArray) => JArray(x.asInstanceOf[Array[_]].toList map decompose0)
-        case x: Option[_] => x.flatMap[JValue] { y => Some(decompose0(y)) }.getOrElse(JNothing)
+        case x: Map[_, _] => JObject((x map { case (k: String, v) => JField(k, decompose(v)) }).toList)
+        case x: Collection[_] => JArray(x.toList map { x => decompose(x) })
+        case x if (x.getClass.isArray) => JArray(x.asInstanceOf[Array[_]].toList map { x => decompose(x) })
+        case x: Option[_] => x.flatMap[JValue] { y => Some(decompose(y)) }.getOrElse(JNothing)
         case x => 
           orderedConstructorArgs(x.getClass).map { f =>
             f.setAccessible(true)
-            JField(unmangleName(f), decompose0(f get x))
+            JField(unmangleName(f), decompose(f get x))
           } match {
             case fields => mkObject(x.getClass, fields)
           }
