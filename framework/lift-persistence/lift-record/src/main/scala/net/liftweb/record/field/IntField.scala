@@ -45,7 +45,7 @@ trait IntTypedField extends NumericTypedField[Int] {
 }
 
 class IntField[OwnerType <: Record[OwnerType]](rec: OwnerType)
-  extends Field[Int, OwnerType] with IntTypedField {
+  extends Field[Int, OwnerType] with MandatoryTypedField[Int] with IntTypedField {
 
   def owner = rec
 
@@ -53,33 +53,17 @@ class IntField[OwnerType <: Record[OwnerType]](rec: OwnerType)
     this(rec)
     set(value)
   }
+}
+
+class OptionalIntField[OwnerType <: Record[OwnerType]](rec: OwnerType)
+  extends Field[Int, OwnerType] with OptionalTypedField[Int] with IntTypedField {
+
+  def owner = rec
 
   def this(rec: OwnerType, value: Box[Int]) = {
     this(rec)
     setBox(value)
   }
-
-  protected[record] def this(value: Int) = this(new DummyRecord().asInstanceOf[OwnerType], value)
-}
-
-import _root_.java.sql.{ResultSet, Types}
-import _root_.net.liftweb.mapper.{DriverType}
-
-/**
- * An int field holding DB related logic
- */
-abstract class DBIntField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType) extends IntField[OwnerType](rec)
-  with JDBCFieldFlavor[Int]{
-
-  def targetSQLType = Types.INTEGER
-
-  /**
-   * Given the driver type, return the string required to create the column in the database
-   */
-  def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.enumColumnType
-
-  def jdbcFriendly(field : String) : Int = value
-
 }
 
 }

@@ -32,7 +32,8 @@ trait BooleanTypedField extends TypedField[Boolean] {
   def setFromAny(in: Any): Box[Boolean] = genericSetFromAny(in)
   def setFromString(s: String): Box[Boolean] = setBox(tryo(toBoolean(s)))
 
-  private def elem = SHtml.checkbox(value, this.set _, "tabIndex" -> tabIndex.toString)
+  private def elem(attrs: (String, String)*) =
+      SHtml.checkbox(valueBox openOr false, (b: Boolean) => this.setBox(Full(b)), ("tabIndex" -> tabIndex.toString) :: attrs.toList: _*)
 
   def toForm = {
     // FIXME? no support for optional_?
@@ -40,8 +41,8 @@ trait BooleanTypedField extends TypedField[Boolean] {
     uniqueFieldId match {
       case Full(id) =>
         <div id={id+"_holder"}><div><label
-              for={id+"_field"}>{displayName}</label></div>{SHtml.checkbox(value, this.set _, "tabIndex" -> tabIndex.toString, "id" -> (id+"_field"))}<lift:msg id={id}/></div>
-      case _ => <div>{elem}</div>
+              for={id+"_field"}>{displayName}</label></div>{elem("id" -> (id+"_field"))}<lift:msg id={id}/></div>
+      case _ => <div>{elem()}</div>
     }
 
   }
@@ -49,15 +50,10 @@ trait BooleanTypedField extends TypedField[Boolean] {
   def asXHtml: NodeSeq = {
 
     uniqueFieldId match {
-      case Full(id) => SHtml.checkbox(value, this.set _,
-                                      "tabIndex" -> tabIndex.toString,
-                                      "id" -> (id+"_field"))
-      case _ => elem
+      case Full(id) => elem("id" -> (id+"_field"))
+      case _ => elem()
     }
   }
-
-
-  def defaultValue = false
 
   def asJs: JsExp = valueBox.map(boolToJsExp) openOr JsNull
 
@@ -69,7 +65,9 @@ trait BooleanTypedField extends TypedField[Boolean] {
   }
 }
 
-class BooleanField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[Boolean, OwnerType] with BooleanTypedField {
+class BooleanField[OwnerType <: Record[OwnerType]](rec: OwnerType)
+  extends Field[Boolean, OwnerType] with MandatoryTypedField[Boolean] with BooleanTypedField {
+
   def owner = rec
 
   def this(rec: OwnerType, value: Boolean) = {
@@ -77,32 +75,18 @@ class BooleanField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field
     set(value)
   }
 
+  def defaultValue = false
+}
+
+class OptionalBooleanField[OwnerType <: Record[OwnerType]](rec: OwnerType)
+  extends Field[Boolean, OwnerType] with OptionalTypedField[Boolean] with BooleanTypedField {
+
+  def owner = rec
+
   def this(rec: OwnerType, value: Box[Boolean]) = {
     this(rec)
     setBox(value)
   }
-
-  protected[record] def this(value: Boolean) = this(new DummyRecord().asInstanceOf[OwnerType], value)
-
-}
-
-import _root_.java.sql.{ResultSet, Types}
-import _root_.net.liftweb.mapper.{DriverType}
-
-/**
- * An int field holding DB related logic
- */
-class DBBooleanField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType) extends BooleanField[OwnerType](rec) with JDBCFieldFlavor[Boolean] {
-
-  def targetSQLType = _root_.java.sql.Types.BOOLEAN
-
-  /**
-   * Given the driver type, return the string required to create the column in the database
-   */
-  def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.enumColumnType
-
-  def jdbcFriendly(field : String) : Boolean = value
-
 }
 
 }

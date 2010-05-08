@@ -42,41 +42,25 @@ trait DoubleTypedField extends NumericTypedField[Double] {
 }
 
 class DoubleField[OwnerType <: Record[OwnerType]](rec: OwnerType)
-  extends Field[Double, OwnerType] with DoubleTypedField {
+  extends Field[Double, OwnerType] with MandatoryTypedField[Double] with DoubleTypedField {
 
   def this(rec: OwnerType, value: Double) = {
     this(rec)
     set(value)
   }
 
+  def owner = rec
+}
+
+class OptionalDoubleField[OwnerType <: Record[OwnerType]](rec: OwnerType)
+  extends Field[Double, OwnerType] with OptionalTypedField[Double] with DoubleTypedField {
+
   def this(rec: OwnerType, value: Box[Double]) = {
     this(rec)
     setBox(value)
   }
 
-  protected[record] def this(value: Double) = this(new DummyRecord().asInstanceOf[OwnerType], value)
-
   def owner = rec
-}
-
-import _root_.java.sql.{ResultSet, Types}
-import _root_.net.liftweb.mapper.{DriverType}
-
-/**
- * An int field holding DB related logic
- */
-abstract class DBDoubleField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType) extends DoubleField[OwnerType](rec)
-  with JDBCFieldFlavor[Double]{
-
-  def targetSQLType = Types.DOUBLE
-
-  /**
-   * Given the driver type, return the string required to create the column in the database
-   */
-  def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.enumColumnType
-
-  def jdbcFriendly(field : String) : Double = value
-
 }
 
 }

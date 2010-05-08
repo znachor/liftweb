@@ -111,13 +111,20 @@ trait EnumTypedField[EnumType <: Enumeration] extends TypedField[EnumType#Value]
 }
 
 class EnumField[OwnerType <: Record[OwnerType], EnumType <: Enumeration](rec: OwnerType, protected val enum: EnumType)(implicit m: Manifest[EnumType#Value])
-  extends Field[EnumType#Value, OwnerType] with EnumTypedField[EnumType]
+  extends Field[EnumType#Value, OwnerType] with MandatoryTypedField[EnumType#Value] with EnumTypedField[EnumType]
 {
   def this(rec: OwnerType, enum: EnumType, value: EnumType#Value)(implicit m: Manifest[EnumType#Value]) = {
     this(rec, enum)
     set(value)
   }
 
+  def owner = rec
+  protected val valueManifest = m
+}
+
+class OptionalEnumField[OwnerType <: Record[OwnerType], EnumType <: Enumeration](rec: OwnerType, protected val enum: EnumType)(implicit m: Manifest[EnumType#Value])
+  extends Field[EnumType#Value, OwnerType] with OptionalTypedField[EnumType#Value] with EnumTypedField[EnumType]
+{
   def this(rec: OwnerType, enum: EnumType, value: Box[EnumType#Value])(implicit m: Manifest[EnumType#Value]) = {
     this(rec, enum)
     setBox(value)
@@ -125,26 +132,6 @@ class EnumField[OwnerType <: Record[OwnerType], EnumType <: Enumeration](rec: Ow
 
   def owner = rec
   protected val valueManifest = m
-}
-
-import _root_.java.sql.{ResultSet, Types}
-import _root_.net.liftweb.mapper.{DriverType}
-
-/**
- * An enum field holding DB related logic
- */
-abstract class DBEnumField[OwnerType <: DBRecord[OwnerType], EnumType <: Enumeration](rec: OwnerType, enum: EnumType)(implicit m: Manifest[EnumType#Value])
-  extends EnumField[OwnerType, EnumType](rec, enum) with JDBCFieldFlavor[Integer]
-{
-  def targetSQLType = Types.VARCHAR
-
-  /**
-   * Given the driver type, return the string required to create the column in the database
-   */
-  def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.enumColumnType
-
-  def jdbcFriendly(field: String) = new _root_.java.lang.Integer(this.toInt openOr defaultValue.id)
-
 }
 
 }

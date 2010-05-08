@@ -143,18 +143,13 @@ trait OwnedField[OwnerType <: Record[OwnerType]] extends BaseField {
 }
 
 /** Refined trait for fields holding a particular value type */
-trait TypedField[ThisType] extends BaseField with Product1[ThisType] {
+trait TypedField[ThisType] extends BaseField {
   type MyType = ThisType // For backwards compatability
 
   type ValidationFunction = Box[MyType] => Box[Node]
 
   private[record] var data: Box[MyType] = Empty
   private[record] var needsDefault = true
-
-  //TODO: fullfil the contract of Product1[ThisType]
-  def canEqual(a:Any) = false
-  
-  def _1 = value
   
   /**
    * Helper for implementing asJValue for a conversion to an encoded JString
@@ -193,13 +188,8 @@ trait TypedField[ThisType] extends BaseField with Product1[ThisType] {
   protected def runValidation(in: Box[MyType]): List[FieldError] =
     validators.flatMap(_(in).map(FieldError(this, _))).removeDuplicates
 
-  /**
-   * The default value of the field when a field has no value set and is optional, or a method that must return a value (e.g. value) is used
-   */
-  def defaultValue: MyType
-
   /** The default value of the field when no value is set. Must return a Full Box unless optional_? is true */
-  def defaultValueBox: Box[MyType] = if (optional_?) Empty else Full(defaultValue)
+  def defaultValueBox: Box[MyType]
 
   /**
    * Convert the field to a String... usually of the form "displayName=value"
@@ -207,13 +197,6 @@ trait TypedField[ThisType] extends BaseField with Product1[ThisType] {
   def asString = displayName + "=" + data
 
   def obscure(in: MyType): Box[MyType] = Failure("value obscured")
-
-  /**
-   * Set the value of the field to the given value.
-   * Note: Because setting a field can fail (return non-Full), this method will
-   * return defaultValue if the field could not be set.
-   */
-  def set(in: MyType): MyType = setBox(Full(in)) openOr defaultValue
 
   def setBox(in: Box[MyType]): Box[MyType] = synchronized {
     needsDefault = false
@@ -288,8 +271,6 @@ trait TypedField[ThisType] extends BaseField with Product1[ThisType] {
    */
   def setFromString(s: String): Box[MyType]
 
-  def value: MyType = valueBox openOr defaultValue
-
   def valueBox: Box[MyType] = synchronized {
     if (needsDefault) {
       data = defaultValueBox
@@ -300,7 +281,7 @@ trait TypedField[ThisType] extends BaseField with Product1[ThisType] {
     else data.flatMap(obscure)
   }
 
-  override def toString = value match {
+  override def toString = valueBox match {
     case null => "null"
     case s => s.toString
   }
@@ -310,6 +291,51 @@ trait TypedField[ThisType] extends BaseField with Product1[ThisType] {
     case true  => setBox(Empty)
     case false => needsDefault = true
   }
+}
+
+trait MandatoryTypedField[ThisType] extends TypedField[ThisType] with Product1[ThisType] {
+  //TODO: fullfil the contract of Product1[ThisType]
+  def canEqual(a:Any) = false
+  
+  def _1 = value
+
+  override def optional_? = false
+
+  /**
+   * Set the value of the field to the given value.
+   * Note: Because setting a field can fail (return non-Full), this method will
+   * return defaultValue if the field could not be set.
+   */
+  def set(in: MyType): MyType = setBox(Full(in)) openOr defaultValue
+
+  def value: MyType = valueBox openOr defaultValue
+
+  /**
+   * The default value of the field when a field has no value set and is optional, or a method that must return a value (e.g. value) is used
+   */
+  def defaultValue: MyType
+
+  def defaultValueBox: Box[MyType] = if (optional_?) Empty else Full(defaultValue)
+}
+  
+trait OptionalTypedField[ThisType] extends TypedField[ThisType] with Product1[Box[ThisType]] {
+  //TODO: fullfil the contract of Product1[ThisType]
+  def canEqual(a:Any) = false
+  
+  def _1 = value
+
+  final override def optional_? = true
+
+  /**
+   * Set the value of the field to the given value.
+   * Note: Because setting a field can fail (return non-Full), this method will
+   * return defaultValueBox if the field could not be set.
+   */
+  def set(in: Option[MyType]): Option[MyType] = setBox(in) or defaultValueBox
+
+  def value: Box[MyType] = valueBox
+
+  def defaultValueBox: Box[MyType] = Empty
 }
 
 /**

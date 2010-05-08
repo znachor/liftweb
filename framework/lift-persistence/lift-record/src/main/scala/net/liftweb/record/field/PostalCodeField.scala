@@ -28,7 +28,9 @@ import _root_.java.util.regex.{Pattern => RegexPattern}
 import Helpers._
 import S._
 
-class PostalCodeField[OwnerType <: Record[OwnerType]](rec: OwnerType, country: CountryField[OwnerType]) extends StringField(rec, 32) {
+
+trait PostalCodeTypedField extends StringTypedField {
+  protected val country: CountryField[_]
 
   override def setFilter = notNull _ :: toUpper _ :: trim _ :: super.setFilter
 
@@ -49,25 +51,13 @@ class PostalCodeField[OwnerType <: Record[OwnerType]](rec: OwnerType, country: C
   }
 
   override def validators = validate _ :: Nil
-
 }
 
-import _root_.java.sql.{ResultSet, Types}
-import _root_.net.liftweb.mapper.{DriverType}
+class PostalCodeField[OwnerType <: Record[OwnerType]](rec: OwnerType, val country: CountryField[OwnerType])
+  extends StringField(rec, 32) with PostalCodeTypedField
 
-class DBPostalCodeField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType, country: CountryField[OwnerType]) extends
-  PostalCodeField[OwnerType](rec, country) with JDBCFieldFlavor[String]{
-
-  def targetSQLType = Types.VARCHAR
-
-  /**
-   * Given the driver type, return the string required to create the column in the database
-   */
-  def fieldCreatorString(dbType: DriverType, colName: String): String = colName+" VARCHAR("+32+")"
-
-  def jdbcFriendly(field : String) : String = value
-
-}
+class OptionalPostalCodeField[OwnerType <: Record[OwnerType]](rec: OwnerType, val country: CountryField[OwnerType])
+  extends OptionalStringField(rec, 32) with PostalCodeTypedField
 
 }
 }

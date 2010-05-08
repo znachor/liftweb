@@ -34,25 +34,9 @@ object PasswordField {
   val blankPw = "*******"
 }
 
-
-class PasswordField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[String, OwnerType] {
-
-  def this(rec: OwnerType, value: String) = {
-    this(rec)
-    set(value)
-  }
-
-  def this(rec: OwnerType, value: Box[String]) = {
-    this(rec)
-    setBox(value)
-  }
-
-  protected[record] def this(value: String) = this(new DummyRecord().asInstanceOf[OwnerType], value)
-
+trait PasswordTypedField extends TypedField[String] {
   private val salt_i = FatLazy(Safe.randomString(16))
   private var invalidMsg : String = ""
-
-  def owner = rec
 
   def salt = this.salt_i
 
@@ -120,35 +104,28 @@ class PasswordField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Fiel
     case JString(s)                   => setFromString(s)
     case other                        => setBox(FieldHelpers.expectedA("JString", other))
   }
-
 }
 
-import _root_.java.sql.{ResultSet, Types}
-import _root_.net.liftweb.mapper.{DriverType}
+class PasswordField[OwnerType <: Record[OwnerType]](rec: OwnerType)
+  extends Field[String, OwnerType] with MandatoryTypedField[String] with PasswordTypedField {
 
-/**
- * A password field holding DB related logic
- */
-abstract class DBPasswordField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType, maxLength: Int) extends
-  PasswordField[OwnerType](rec) with JDBCFieldFlavor[String]{
-
-  def targetSQLType = Types.VARCHAR
-
-  /**
-   * Given the driver type, return the string required to create the column in the database
-   */
-  def fieldCreatorString(dbType: DriverType, colName: String): String = if (colName.endsWith("_pw")) colName+" VARCHAR(48)" else colName+" VARCHAR(20)"
-
-  def jdbcFriendly(columnName : String) = {
-    if (columnName.endsWith("_slt")) {
-      salt.get
-    } else if (columnName.endsWith("_pw")) {
-      value
-    } else {
-      null
-    }
+  def this(rec: OwnerType, value: String) = {
+    this(rec)
+    set(value)
   }
 
+  def owner = rec
+}
+
+class OptionalPasswordField[OwnerType <: Record[OwnerType]](rec: OwnerType)
+  extends Field[String, OwnerType] with OptionalTypedField[String] with PasswordTypedField {
+
+  def this(rec: OwnerType, value: Box[String]) = {
+    this(rec)
+    setBox(value)
+  }
+
+  def owner = rec
 }
 
 }

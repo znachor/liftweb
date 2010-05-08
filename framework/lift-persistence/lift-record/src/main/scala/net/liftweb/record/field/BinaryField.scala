@@ -41,15 +41,15 @@ trait BinaryTypedField extends TypedField[Array[Byte]] {
 
   def asXHtml: NodeSeq = NodeSeq.Empty
 
-  def defaultValue = Array(0)
-
   def asJs = valueBox.map(v => Str(hexEncode(v))) openOr JsNull
 
   def asJValue = asJString(base64Encode _)
   def setFromJValue(jvalue: JValue) = setFromJString(jvalue)(s => tryo(base64Decode(s)))
 }
   
-class BinaryField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[Array[Byte], OwnerType] with BinaryTypedField {
+class BinaryField[OwnerType <: Record[OwnerType]](rec: OwnerType)
+  extends Field[Array[Byte], OwnerType] with MandatoryTypedField[Array[Byte]] with BinaryTypedField {
+
   def owner = rec
 
   def this(rec: OwnerType, value: Array[Byte]) = {
@@ -57,33 +57,18 @@ class BinaryField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[
     set(value)
   }
 
+  def defaultValue = Array(0)
+}
+
+class OptionalBinaryField[OwnerType <: Record[OwnerType]](rec: OwnerType)
+  extends Field[Array[Byte], OwnerType] with OptionalTypedField[Array[Byte]] with BinaryTypedField {
+
+  def owner = rec
+
   def this(rec: OwnerType, value: Box[Array[Byte]]) = {
     this(rec)
     setBox(value)
   }
-
-  protected[record] def this(value: Array[Byte]) = this(new DummyRecord().asInstanceOf[OwnerType], value)
-
-}
-
-import _root_.java.sql.{ResultSet, Types}
-import _root_.net.liftweb.mapper.{DriverType}
-
-/**
- * An int field holding DB related logic
- */
-abstract class DBBinaryField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType) extends BinaryField[OwnerType](rec)
-  with JDBCFieldFlavor[Array[Byte]] {
-
-  def targetSQLType = Types.BINARY
-
-  /**
-   * Given the driver type, return the string required to create the column in the database
-   */
-  def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.enumColumnType
-
-  def jdbcFriendly(field : String) : Array[Byte] = value
-
 }
 
 }

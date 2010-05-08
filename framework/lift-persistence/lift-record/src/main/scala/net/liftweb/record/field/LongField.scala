@@ -42,12 +42,18 @@ trait LongTypedField extends NumericTypedField[Long] {
 }
 
 class LongField[OwnerType <: Record[OwnerType]](rec: OwnerType)
-  extends Field[Long, OwnerType] with LongTypedField {
+  extends Field[Long, OwnerType] with MandatoryTypedField[Long] with LongTypedField {
 
   def this(rec: OwnerType, value: Long) = {
     this(rec)
     set(value)
   }
+
+  def owner = rec
+}
+
+class OptionalLongField[OwnerType <: Record[OwnerType]](rec: OwnerType)
+  extends Field[Long, OwnerType] with OptionalTypedField[Long] with LongTypedField {
 
   def this(rec: OwnerType, value: Box[Long]) = {
     this(rec)
@@ -55,28 +61,6 @@ class LongField[OwnerType <: Record[OwnerType]](rec: OwnerType)
   }
 
   def owner = rec
-
-  protected[record] def this(value: Long) = this(new DummyRecord().asInstanceOf[OwnerType], value)
-}
-
-import _root_.java.sql.{ResultSet, Types}
-import _root_.net.liftweb.mapper.{DriverType}
-
-/**
- * An int field holding DB related logic
- */
-abstract class DBLongField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType) extends LongField[OwnerType](rec)
-  with JDBCFieldFlavor[Long]{
-
-  def targetSQLType = Types.BIGINT
-
-  /**
-   * Given the driver type, return the string required to create the column in the database
-   */
-  def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.enumColumnType
-
-  def jdbcFriendly(field : String) : Long = value
-
 }
 
 }

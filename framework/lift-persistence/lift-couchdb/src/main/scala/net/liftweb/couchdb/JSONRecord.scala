@@ -24,7 +24,7 @@ import Box.{box2Iterable, option2Box}
 import _root_.net.liftweb.http.js.{JsExp, JsObj}
 import _root_.net.liftweb.json.JsonParser
 import _root_.net.liftweb.json.JsonAST.{JArray, JBool, JInt, JDouble, JField, JNothing, JNull, JObject, JString, JValue}
-import _root_.net.liftweb.record.{Field, MetaRecord, Record}
+import _root_.net.liftweb.record.{Field, MandatoryTypedField, MetaRecord, Record}
 import _root_.net.liftweb.record.FieldHelpers.expectedA
 import _root_.net.liftweb.record.field._
 import _root_.net.liftweb.util.ThreadGlobal
@@ -189,7 +189,7 @@ trait JSONField {
 /** Field that contains an entire record represented as an inline object value in the final JSON */
 class JSONSubRecordField[OwnerType <: JSONRecord[OwnerType], SubRecordType <: JSONRecord[SubRecordType]]
                         (rec: OwnerType, valueMeta: JSONMetaRecord[SubRecordType])(implicit subRecordType: Manifest[SubRecordType])
-  extends Field[SubRecordType, OwnerType]
+  extends Field[SubRecordType, OwnerType] with MandatoryTypedField[SubRecordType]
 {
   def this(rec: OwnerType, value: SubRecordType)(implicit subRecordType: Manifest[SubRecordType]) = {
       this(rec, value.meta)
@@ -221,7 +221,7 @@ class JSONSubRecordField[OwnerType <: JSONRecord[OwnerType], SubRecordType <: JS
 
 /** Field that contains an array of some basic JSON type */
 class JSONBasicArrayField[OwnerType <: JSONRecord[OwnerType], ValueType <: JValue](rec: OwnerType)(implicit valueType: Manifest[ValueType])
-  extends Field[List[ValueType], OwnerType]
+  extends Field[List[ValueType], OwnerType] with MandatoryTypedField[List[ValueType]]
 {
   def this(rec: OwnerType, value: List[ValueType])(implicit valueType: Manifest[ValueType]) = { this(rec); set(value) }
   def this(rec: OwnerType, value: Box[List[ValueType]])(implicit valueType: Manifest[ValueType]) = { this(rec); setBox(value) }
@@ -260,7 +260,7 @@ class JSONBasicArrayField[OwnerType <: JSONRecord[OwnerType], ValueType <: JValu
 /** Field that contains a homogeneous array of subrecords */
 class JSONSubRecordArrayField[OwnerType <: JSONRecord[OwnerType], SubRecordType <: JSONRecord[SubRecordType]]
                              (rec: OwnerType, valueMeta: JSONMetaRecord[SubRecordType])(implicit valueType: Manifest[SubRecordType])
-  extends Field[List[SubRecordType], OwnerType]
+  extends Field[List[SubRecordType], OwnerType] with MandatoryTypedField[List[SubRecordType]]
 {
   def this(rec: OwnerType, value: List[SubRecordType])(implicit subRecordType: Manifest[SubRecordType]) = {
       this(rec, value.first.meta)

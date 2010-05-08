@@ -99,21 +99,27 @@ trait StringTypedField extends TypedField[String] {
 }
 
 class StringField[OwnerType <: Record[OwnerType]](rec: OwnerType, protected val maxLength: Int)
-  extends Field[String, OwnerType] with StringTypedField {
+  extends Field[String, OwnerType] with MandatoryTypedField[String] with StringTypedField {
 
   def this(rec: OwnerType, maxLength: Int, value: String) = {
     this(rec, maxLength)
     set(value)
   }
 
-  def this(rec: OwnerType, maxLength: Int, value: Box[String]) = {
-    this(rec, maxLength)
-    setBox(value)
-  }
-
   def this(rec: OwnerType, value: String) = {
     this(rec, 100)
     set(value)
+  }
+
+  def owner = rec
+}
+
+class OptionalStringField[OwnerType <: Record[OwnerType]](rec: OwnerType, protected val maxLength: Int)
+  extends Field[String, OwnerType] with OptionalTypedField[String] with StringTypedField {
+
+  def this(rec: OwnerType, maxLength: Int, value: Box[String]) = {
+    this(rec, maxLength)
+    setBox(value)
   }
 
   def this(rec: OwnerType, value: Box[String]) = {
@@ -121,40 +127,8 @@ class StringField[OwnerType <: Record[OwnerType]](rec: OwnerType, protected val 
     setBox(value)
   }
 
-  protected[record] def this(value: String) = this(new DummyRecord().asInstanceOf[OwnerType], value)
-
   def owner = rec
 }
-
-
-import _root_.java.sql.{ResultSet, Types}
-import _root_.net.liftweb.mapper.{DriverType}
-
-/**
- * A string field holding DB related logic
- */
-class DBStringField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType, maxLength: Int) extends
-   StringField[OwnerType](rec, maxLength) with JDBCFieldFlavor[String]{
-
-  def this(rec: OwnerType, maxLength: Int, value: String) = {
-    this(rec, maxLength)
-    set(value)
-  }
-
-  def this(rec: OwnerType, value: String) = {
-    this(rec, 100)
-    set(value)
-  }
-
-  def targetSQLType = Types.VARCHAR
-
-  /**
-   * Given the driver type, return the string required to create the column in the database
-   */
-  def fieldCreatorString(dbType: DriverType, colName: String): String = colName+" VARCHAR("+maxLength+")"
-
-  def jdbcFriendly(field : String) : String = value
- }
 
 }
 }
