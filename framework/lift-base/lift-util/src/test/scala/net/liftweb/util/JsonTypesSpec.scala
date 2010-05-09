@@ -21,7 +21,7 @@ import _root_.org.specs._
 import _root_.org.specs.runner._
 import common._
 import json.JsonParser.parse
-import json.Serialization.{write => swrite}
+import json.Serialization.{read, write => swrite}
 
 class JsonTypesSpecTest extends JUnit4(JsonTypesSpec)
 object JsonTypesSpec extends Specification {
@@ -43,7 +43,16 @@ object JsonTypesSpec extends Specification {
   }
 
   "Render with age" in {
-    swrite(Person("joe", Full(12), Empty)) mustEqual """{"name":"joe","age":12}"""
+    swrite(Person("joe", Full(12), Empty)) mustEqual """{"name":"joe","age":12,"mother":null}"""
+  }
+
+  "Serialize failure" in {
+    val exn1 = new Exception
+    val exn2 = new Exception
+    val p = Person("joe", Full(12), Failure("f", Full(exn1), Failure("f2", Full(exn2), Empty)))
+    val ser = swrite(p)
+    println("!!!!!!!!!!!!!!!!!!!!!!!!!!\n" + ser)
+    println(read[Person](ser))
   }
 }
 
