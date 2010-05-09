@@ -37,7 +37,9 @@ object JsonTypesSpec extends Specification {
 
   "Extract boxed mother" in {
     val json = """{"name":"joe", "age":12, "mother": {"name":"ann", "age":53}}"""
-    parse(json).extract[Person] mustEqual Person("joe", Full(12), Full(Person("ann", Full(53), Empty)))
+    val p = parse(json).extract[Person]
+    p mustEqual Person("joe", Full(12), Full(Person("ann", Full(53), Empty)))
+    (for { a1 <- p.age; m <-p.mother; a2 <- m.age } yield a1+a2) mustEqual Full(65)
   }
 
   "Render with age" in {
