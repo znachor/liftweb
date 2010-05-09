@@ -28,19 +28,24 @@ object JsonTypesSpec extends Specification {
   implicit val formats = net.liftweb.json.DefaultFormats + new JsonBoxSerializer
 
   "Extract empty age" in {
-    parse("""{"name":"joe"}""").extract[Person] mustEqual Person("joe", Empty)
+    parse("""{"name":"joe"}""").extract[Person] mustEqual Person("joe", Empty, Empty)
   }
 
   "Extract boxed age" in {
-    parse("""{"name":"joe", "age":12}""").extract[Person] mustEqual Person("joe", Full(12))
+    parse("""{"name":"joe", "age":12}""").extract[Person] mustEqual Person("joe", Full(12), Empty)
+  }
+
+  "Extract boxed mother" in {
+    val json = """{"name":"joe", "age":12, "mother": {"name":"ann", "age":53}}"""
+    parse(json).extract[Person] mustEqual Person("joe", Full(12), Full(Person("ann", Full(53), Empty)))
   }
 
   "Render with age" in {
-    swrite(Person("joe", Full(12))) mustEqual """{"name":"joe","age":12}"""
+    swrite(Person("joe", Full(12), Empty)) mustEqual """{"name":"joe","age":12}"""
   }
 }
 
-case class Person(name: String, age: Box[Int])
+case class Person(name: String, age: Box[Int], mother: Box[Person])
 
 }
 }
