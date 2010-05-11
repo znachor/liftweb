@@ -74,7 +74,9 @@ trait XSchemaDatabase extends Iterable[XSchema] {
   
   /** Returns all the resolved containers of the specified definition.
    */
-  def containersOf(defn: XDefinition) = resolve(references.filter(_ == defn.referenceTo))
+  def containersOf(defn: XDefinition) = definitions.filter { x =>
+    elementsOf(x).contains(defn.referenceTo)
+  }
   
   /** Returns all the coproducts that contain the specified definition.
    */
