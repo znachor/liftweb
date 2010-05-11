@@ -22,7 +22,7 @@ trait XSchemaDatabase extends Iterable[XSchema] {
   /** Attempts to find the definition for the specified reference.
    */
   def definitionFor(ref: XReference): Option[XDefinition] = ref match {
-    case x: XDefinitionRef => definitions.find { y => y.name == x.name && y.namespace == x.name }
+    case x: XDefinitionRef => definitions.find { y => y.name == x.name && y.namespace == x.namespace }
     
     case _ => None
   }
