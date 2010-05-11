@@ -370,7 +370,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
 
             code.add(")")
             
-          case _ => error("View type cannot be anything but product: " + viewField.fieldType)
+          case x => error("View type cannot be anything but product: " + x)
         }
       }
     }
