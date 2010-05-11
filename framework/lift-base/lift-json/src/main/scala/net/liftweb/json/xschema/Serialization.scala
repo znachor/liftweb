@@ -36,7 +36,7 @@ trait SerializationImplicits {
 /**
  * Extractors for all basic types.
  */
-trait DefaultExtractors extends XSchemaExtractor {
+trait DefaultExtractors {
   implicit val jvalueExtractor: Extractor[JValue] = new Extractor[JValue] {
     def extract(jvalue: JValue): JValue = jvalue
   }
@@ -181,14 +181,19 @@ trait ExtractionHelpers extends SerializationImplicits {
   import JsonParser._
   
   protected def extractField[T](jvalue: JValue, name: String, default: JValue)(implicit e: Extractor[T]): T = {
-    (jvalue \ name -->? classOf[JField]).map(_.value).getOrElse(default).deserialize[T]
+    try {
+      (jvalue \ name -->? classOf[JField]).map(_.value).getOrElse(default).deserialize[T]
+    }
+    catch {
+      case _ => default.deserialize[T]
+    }
   }
 }
 
 /**
  * Decomposers for all basic types.
  */
-trait DefaultDecomposers extends XSchemaDecomposer {
+trait DefaultDecomposers {
   implicit val jvalueDecomposer: Decomposer[JValue] = new Decomposer[JValue] {
     def decompose(tvalue: JValue): JValue = tvalue
   }
@@ -300,7 +305,7 @@ trait DefaultOrderings {
   implicit def setToOrderedSet[T <% Ordered[T]](c: Set[T]): OrderedSet[T] = OrderedSet[T](c)
 }
 
-object Serialization extends SerializationImplicits with DefaultExtractors with DefaultDecomposers with DefaultOrderings {
+object DefaultSerialization extends SerializationImplicits with DefaultExtractors with DefaultDecomposers with DefaultOrderings {
 }
 
 }

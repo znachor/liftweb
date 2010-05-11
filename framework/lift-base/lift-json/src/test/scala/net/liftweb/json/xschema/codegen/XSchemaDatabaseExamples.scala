@@ -10,8 +10,8 @@ class XSchemaDatabaseExamplesTest extends Runner(XSchemaDatabaseExamples) with J
 object XSchemaDatabaseExamples extends Specification {
   import _root_.net.liftweb.json.JsonAST._
   import _root_.net.liftweb.json.JsonParser._
-  import _root_.net.liftweb.json.xschema.XSchemaAST._
-  import _root_.net.liftweb.json.xschema.Serialization._
+  import _root_.net.liftweb.json.xschema._
+  import _root_.net.liftweb.json.xschema.DefaultSerialization._
   import _root_.net.liftweb.json.xschema.TestSchemas._
     
   class UnclosablePrintWriter extends java.io.FilterWriter(new PrintWriter(System.out)) {
@@ -43,16 +43,16 @@ object XSchemaDatabaseExamples extends Specification {
   "Common fields in products of a coproduct with compatible types are unified" in {
     val db = XSchemaDatabase(AstNumericExprSchema)
     
-    val coproduct = db.definitionFor(XReference("ast.numeric.MixedSum")).get.asInstanceOf[XCoproduct]
+    val coproduct = db.definitionFor(XDefinitionRef("MixedSum", "ast.numeric")).get.asInstanceOf[XCoproduct]
     
     val commonFields = db.commonFieldsOf(coproduct)
     
     commonFields.length mustEqual 2
     commonFields(0)._1 mustEqual "term1"
-    commonFields(0)._2 mustEqual XReference("ast.numeric.Expr")
+    commonFields(0)._2 mustEqual XDefinitionRef("Expr", "ast.numeric")
     
     commonFields(1)._1 mustEqual "term2"
-    commonFields(1)._2 mustEqual XReference("ast.numeric.Expr")
+    commonFields(1)._2 mustEqual XDefinitionRef("Expr", "ast.numeric")
   }
 }
 
