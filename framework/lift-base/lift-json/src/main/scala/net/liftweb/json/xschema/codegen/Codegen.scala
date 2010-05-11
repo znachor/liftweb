@@ -296,7 +296,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
   private def buildDataFor(definition: XDefinition, code: CodeBuilder, database: XSchemaDatabase): CodeBuilder = {
     def coproductPrefix(x: XCoproduct): String = if (database.namespacesOf(x).removeDuplicates.length <= 1) "sealed " else ""
     def buildProductFields(x: XProduct): CodeBuilder = {
-      code.add(x.realFields.map(x => typeSignatureOf(x.fieldType, database)).mkString(", "))
+      code.add(x.realFields.map(x => x.name + ": " + typeSignatureOf(x.fieldType, database)).mkString(", "))
     }
     def buildCoproductFields(x: XCoproduct): CodeBuilder = {
       val commonFields = database.commonFieldsOf(x)
