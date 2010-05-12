@@ -333,7 +333,7 @@ trait OptionalTypedField[ThisType] extends TypedField[ThisType] with Product1[Bo
    */
   def set(in: Option[MyType]): Option[MyType] = setBox(in) or defaultValueBox
 
-  def value: Box[MyType] = valueBox
+  def value: Option[MyType] = valueBox
 
   def defaultValueBox: Box[MyType] = Empty
 }

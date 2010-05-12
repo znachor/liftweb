@@ -435,6 +435,17 @@
         <version>1.4</version>
       </dependency>
 
+      <dependency>
+        <groupId>org.squeryl</groupId>
+        <artifactId>squeryl_${scala.version}</artifactId>
+        <version>0.9.3_lift</version>
+      </dependency>
+      <dependency>
+        <groupId>cglib</groupId>
+        <artifactId>cglib-nodep</artifactId>
+        <version>2.2</version>
+      </dependency>
+
       <!--
       Provided scope: provided by container, available only in compile and test classpath, non-transitive
       -->
