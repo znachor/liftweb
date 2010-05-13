@@ -160,7 +160,7 @@ object XSchemaDatabase {
   
   //def apply(json: JValue): XSchemaDatabase = apply(json.deserialize[XSchemaRoot].asInstanceOf)
   
-  def apply(str: String): XSchemaDatabase = apply(parse(str))
+  //def apply(str: String): XSchemaDatabase = apply(parse(str))
 }
 
 }

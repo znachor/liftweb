@@ -324,10 +324,12 @@ object TestSchemas {
         List(
           XRealField("name", Map(), XString, JNothing, XOrderAscending),
           XRealField("namespace", Map(), XString, JString(""), XOrderAscending),
-          XViewField("qualifiedName", Map(), XDefinitionRef("QualifiedName", "net.liftweb.json.xschema")),
-          XViewField("referenceTo", Map(), XDefinitionRef("XDefinitionRef", "net.liftweb.json.xschema")),
           XRealField("properties", Map(), XMap(XString, XString), JArray(Nil), XOrderAscending),
-          XRealField("default", Map(), XJSON, JNothing, XOrderAscending)
+          XRealField("constantType", Map(), XDefinitionRef("XReference", "net.liftweb.json.xschema"), JNothing, XOrderAscending),
+          XRealField("default", Map(), XJSON, JNothing, XOrderAscending),
+          
+          XViewField("qualifiedName", Map(), XDefinitionRef("QualifiedName", "net.liftweb.json.xschema")),
+          XViewField("referenceTo", Map(), XDefinitionRef("XDefinitionRef", "net.liftweb.json.xschema"))
         )
       ),
       XProduct(

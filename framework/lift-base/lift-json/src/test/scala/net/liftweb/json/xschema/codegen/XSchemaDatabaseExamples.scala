@@ -26,7 +26,7 @@ object XSchemaDatabaseExamples extends Specification {
     }
   }
   
-  ScalaCodeGenerator.generate(DataSocialGenderSchema, ".")
+  ScalaCodeGenerator.generate(XSchemaSchema, ".")
   
   "Common primitive fields in products of a coproduct are identified" in {
     val db = XSchemaDatabase(DataSocialGenderSchema)

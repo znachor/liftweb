@@ -250,7 +250,7 @@ trait CodeGenerator {
 
 object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
   def generate(root: XRoot, destPath: String)(implicit writerF: String => Writer) = {
-    val includeSchemas = root.properties.get(PredefinedProperties.XSchemaIncludeSchemas).map { 
+    val includeSchemas = root.properties.get(PredefinedProperties.XSchemaIncludeSchemas).map(_.toLowerCase).map { 
       case "true" => true
       case _ => false
     }.getOrElse(false);
@@ -265,10 +265,18 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       
       code.newline.add("package " + namespace + " ").block {
         code.addln("import net.liftweb.json.JsonParser._").
-             addln("import net.liftweb.json.JsonAST._").
-             addln("import net.liftweb.json.xschema.{XRoot, XProduct, XCoproduct, XSchemaDerived, SerializationImplicits, Extractor, ExtractionHelpers, Decomposer, DecomposerHelpers, DefaultExtractors, DefaultDecomposers, DefaultOrderings}").
-             addln("import net.liftweb.json.xschema.DefaultSerialization._")
+             addln("import net.liftweb.json.JsonAST._")
              
+             
+        if (namespace != "net.liftweb.json.xschema") {
+          code.addln("import net.liftweb.json.xschema.{SerializationImplicits, Extractor, ExtractionHelpers, Decomposer, DecomposerHelpers, DefaultExtractors, DefaultDecomposers, DefaultOrderings}")
+        }
+             
+        code.addln("import net.liftweb.json.xschema.DefaultSerialization._")
+             
+        if (includeSchemas) {
+          code.addln("import net.liftweb.json.xschema.{XRoot, XProduct, XCoproduct, XSchemaDerived}")
+        }
         
         root.properties.get("scala.imports") match {
           case None => 
@@ -628,10 +636,6 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
   private def typeSignatureOf(x: XReference, database: XSchemaDatabase): String = walk(x, CodeBuilder.empty, typeSignatureWalker(database)).code
   
   private def typeSignatureWalker(database: XSchemaDatabase) = new XSchemaWalker[CodeBuilder] {
-    override def begin(data: CodeBuilder, field: XField) = {
-      data += field.name + ": "
-    }
-    
     override def begin(data: CodeBuilder, opt: XOptional) = {
       data += "Option["
     }
