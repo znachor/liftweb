@@ -28,6 +28,7 @@ import net.liftweb.record.field._
 
 import com.mongodb._
 import com.mongodb.util.JSON
+import org.bson.types.ObjectId
 
 trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
   extends MetaRecord[BaseRecord] with MongoMeta[BaseRecord] {
