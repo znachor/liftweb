@@ -37,7 +37,6 @@ class JsonBoxSerializer extends Serializer {
                    JField("msg", JString(msg)) :: 
                    JField("exception", exn) ::
                    JField("chain", chain) :: Nil) => 
-                     println(TypeInfo(BoxClass, Some(typeHoldingFailure)) + ">>>>> " + chain)
                      Failure(msg, deserializeException(exn), 
                              extract(chain, TypeInfo(BoxClass, Some(typeHoldingFailure))).asInstanceOf[Box[Failure]])
       case JObject(JField("$box_failure", JString("ParamFailure")) :: 
@@ -62,9 +61,16 @@ class JsonBoxSerializer extends Serializer {
               JField("msg", JString(msg)) :: 
               JField("exception", serializeException(exn)) ::
               JField("chain", decompose(chain)) :: Nil)
+    case ParamFailure(msg, exn, chain, param) => 
+      JObject(JField("$box_failure", JString("ParamFailure")) :: 
+              JField("msg", JString(msg)) :: 
+              JField("exception", serializeException(exn)) ::
+              JField("chain", decompose(chain)) :: 
+              JField("paramType", JString(param.asInstanceOf[AnyRef].getClass.getName)) ::
+              JField("param", decompose(param)) :: Nil)
   }
 
-  def typeHoldingFailure = new ParameterizedType {
+  private val typeHoldingFailure = new ParameterizedType {
     def getActualTypeArguments = Array(classOf[Failure])
     def getOwnerType = classOf[Box[Failure]]
     def getRawType = classOf[Box[Failure]]
