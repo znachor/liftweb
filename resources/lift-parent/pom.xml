@@ -438,7 +438,7 @@
       <dependency>
         <groupId>org.squeryl</groupId>
         <artifactId>squeryl_${scala.version}</artifactId>
-        <version>0.9.3_lift</version>
+        <version>0.9.4beta2</version>
       </dependency>
       <dependency>
         <groupId>cglib</groupId>
