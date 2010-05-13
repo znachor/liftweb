@@ -5,7 +5,8 @@ import _root_.net.liftweb.json.Validation._
 import _root_.net.liftweb.json.Printer._
 import _root_.net.liftweb.json.xschema._
 import _root_.net.liftweb.json.xschema.XSchemaTree._
-import _root_.net.liftweb.json.xschema.DefaultSerialization._
+//import _root_.net.liftweb.json.xschema.DefaultSerialization._
+import _root_.net.liftweb.json.xschema.Serialization._
 
 import java.lang.StringBuilder
 import java.io.{FileOutputStream, Writer}
@@ -253,7 +254,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     val includeSchemas = root.properties.get(PredefinedProperties.XSchemaIncludeSchemas).map(_.toLowerCase).map { 
       case "true" => true
       case _ => false
-    }.getOrElse(false);
+    }.getOrElse(true);
     
     val bundle   = CodeBundle.empty
     val database = XSchemaDatabase(root.definitions)
@@ -267,17 +268,16 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         code.addln("import net.liftweb.json.JsonParser._").
              addln("import net.liftweb.json.JsonAST._")
              
-             
         if (namespace != "net.liftweb.json.xschema") {
           code.addln("import net.liftweb.json.xschema.{SerializationImplicits, Extractor, ExtractionHelpers, Decomposer, DecomposerHelpers, DefaultExtractors, DefaultDecomposers, DefaultOrderings}")
+          
+          if (includeSchemas) {
+            code.addln("import net.liftweb.json.xschema.{XRoot, XProduct, XCoproduct, XSchemaDerived}")
+          }
         }
              
         code.addln("import net.liftweb.json.xschema.DefaultSerialization._")
              
-        if (includeSchemas) {
-          code.addln("import net.liftweb.json.xschema.{XRoot, XProduct, XCoproduct, XSchemaDerived}")
-        }
-        
         root.properties.get("scala.imports") match {
           case None => 
           case Some(imports) => imports.split(",(?![^{]+[}])").map("import " + _.trim) foreach { x => code.addln(x) }
@@ -387,17 +387,29 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         }
       }
     }
-    def formMixinsClauseFromProperty(prop: String): String = definition.properties.get(prop) match {
-      case None => ""
-      case Some(traits) => traits.split(",(?=[ \\w]+\\.)").map(_.trim).mkString(" with ")
+    def formMixinsClauseFromProperty(prop: String): List[String] = definition.properties.get(prop) match {
+      case None => Nil
+      case Some(traits) => 
+        traits.split(",(?=[ \\w]+\\.)").toList.map(_.trim).flatMap { x =>
+          x match {
+            case ""  => Nil
+            case str => str :: Nil
+          }
+        }
+    }
+    def buildXSchema() = {
+      code.add("lazy val xschema: ${definitionType} = net.liftweb.json.xschema.Extractors.${definitionType}Extractor.extract(" + compact(renderScala(definition.serialize)) + ")",
+        "definitionType" -> (definition match { case _ : XProduct => "XProduct"; case _ => "XCoproduct" })
+      )
     }
     
     buildDocumentationFor(definition.properties, code)
     
-    val classMixins = formMixinsClauseFromProperty("scala.class.traits") match {
-      case "" => ""
-      
-      case string => " with " + string
+    val classMixins = formMixinsClauseFromProperty("scala.class.traits")
+    
+    var isSingleton = definition match {
+      case x: XProduct => x.realFields.length == 0
+      case _           => false
     }
     
     code.using("type" -> typeSignatureOf(definition.referenceTo, database), "name" -> definition.name) {
@@ -405,8 +417,12 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         case x: XProduct =>
           var initialExtends: List[String] = Nil
           
-          if (x.realFields.length == 0) {
+          if (isSingleton) {
             code.add("case object ${name}")
+            
+            if (includeSchemas) {
+              initialExtends = List("XSchemaDerived")
+            }
           }
           else {
             code.add("case class ${name}(")
@@ -416,13 +432,13 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
             initialExtends = List("Ordered[${type}]")
           }
       
-          val withClauses = (initialExtends ::: database.coproductContainersOf(x).map { x => typeSignatureOf(x.referenceTo, database) }).mkString(" with ") + classMixins
-      
+          val withClauses = initialExtends ::: database.coproductContainersOf(x).map { x => typeSignatureOf(x.referenceTo, database) } ::: classMixins
+
           if (withClauses.length > 0) {
-            code.add(" extends " + withClauses + " ")
+            code.add(" extends " + withClauses.mkString(" with ") + " ")
           }
           
-          if (x.realFields.length > 0) {
+          if (!isSingleton) {
             code.block {
               buildOrderedDefinition(x)
             
@@ -431,12 +447,16 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
               buildViewFields(x)
             }
           }
-          else code
+          else if (includeSchemas) {
+            code.block {
+              buildXSchema()
+            }
+          }
       
         case x: XCoproduct => 
-          val withClauses = ("Product" :: database.coproductContainersOf(x).map { x => typeSignatureOf(x.referenceTo, database) }).mkString(" with ") + classMixins
+          val withClauses = "Product" :: database.coproductContainersOf(x).map { x => typeSignatureOf(x.referenceTo, database) } ::: classMixins
           
-          code.add(coproductPrefix(x) + "trait ${name} extends " + withClauses + " ").block {
+          code.add(coproductPrefix(x) + "trait ${name} extends " + withClauses.mkString(" with ") + " ").block {
             buildCoproductFields(x)
           }
           
@@ -444,15 +464,13 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       }
       
       // **********
-      val objectMixins: String = formMixinsClauseFromProperty("scala.object.traits")
+      val objectMixins = formMixinsClauseFromProperty("scala.object.traits")
       
-      if (includeSchemas || objectMixins.length > 0) {
-        val withClauses = if (includeSchemas) "XSchemaDerived with " + objectMixins else objectMixins
+      if (!isSingleton && (includeSchemas || objectMixins.length > 0)) {
+        val withClauses: List[String] = if (includeSchemas) "XSchemaDerived" :: objectMixins else objectMixins
       
-        code.newline.add("object ${name} extends " + withClauses + " ").block {
-          /*code.add("lazy val xschema: ${definitionType} = " + compact(renderScala(definition.serialize)) + ".deserialize[${definitionType}]",
-            "definitionType" -> (if (x.isInstanceOf[XProduct]) "XProduct" else "XCoproduct")
-          )*/
+        code.newline.add("object ${name} extends " + withClauses.mkString(" with ") + " ").block {
+          buildXSchema()
         }
       }
       else code
@@ -493,16 +511,14 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
           
           case x: XCoproduct =>
             code.using("name" -> x.name, "type" -> typeSignatureOf(x.referenceTo, database)) {
-              code.add("private lazy val ${name}ExtractorFunction: PartialFunction[JField, ${type}] = List[PartialFunction[JField, ${type}]]").paren {            
-                code.join(x.terms, code.add(",").newline) { typ =>
-                  code.add("""{ case JField("${subtypeName}", value) => ${subtypeString}.Serialization.${subtypeName}Extractor.extract(value) }""",
-                    "subtypeName"      -> typ.name,
+              code.add("private lazy val ${name}ExtractorFunction: PartialFunction[JField, ${type}] = ").block {
+                code.join(x.terms, code.newline) { typ =>
+                  code.add("""case JField("${subtypeName}", value) => ${subtypeString}.Serialization.${subtypeName}Extractor.extract(value)""",
+                    "subtypeName"   -> typ.name,
                     "subtypeString" -> typ.namespace
                   )
                 }
               }
-            
-              code.add(".reduceLeft { (a, b) => a.orElse(b) }").newline
             
               code.add("""
                 implicit val ${name}Extractor: Extractor[${type}] = new Extractor[${type}] {
@@ -622,14 +638,12 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
   private def buildPackageObjectFor(namespace: String, code: CodeBuilder, database: XSchemaDatabase, properties: Map[String, String], includeSchemas: Boolean): CodeBuilder = {
     val subroot = XRoot(database.definitionsIn(namespace), properties)
     
-    val withClauses = if (includeSchemas) " with XSchemaDerived" else ""
-    
-    code.newline(2).add("object Serialization extends SerializationImplicits with Decomposers with Extractors with Orderings" + withClauses + " ").block {
+    code.newline(2).add("object Serialization extends SerializationImplicits with Decomposers with Extractors with Orderings ").block {
       // Storing the root as text is not efficient but ensures we do not run 
       // into method size limitations of the JVM (root can be quite large):
-      //if (includeSchemas) {
-      //  code.add("lazy val xschema: XRoot = parse(\"\"\"" + compact(render(subroot.serialize)) + "\"\"\").deserialize[XRoot]")
-      //}
+      if (includeSchemas) {
+        code.add("lazy val xschema: XRoot = net.liftweb.json.xschema.Extractors.XRootExtractor.extract(parse(\"\"\"" + compact(render(subroot.serialize)) + "\"\"\"))")
+      }
     }
   }
   
