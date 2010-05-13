@@ -47,14 +47,15 @@ object JsonTypesSpec extends Specification {
   }
 
   "Serialize failure" in {
-    val exn1 = new Exception
-    val exn2 = new Exception
+    val exn1 = SomeException("e1")
+    val exn2 = SomeException("e2")
     val p = Person("joe", Full(12), Failure("f", Full(exn1), Failure("f2", Full(exn2), Empty)))
     val ser = swrite(p)
-    println("!!!!!!!!!!!!!!!!!!!!!!!!!!\n" + ser)
-    println(read[Person](ser))
+    read[Person](ser) mustEqual p
   }
 }
+
+case class SomeException(msg: String) extends Exception
 
 case class Person(name: String, age: Box[Int], mother: Box[Person])
 

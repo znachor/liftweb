@@ -200,6 +200,7 @@ object Extraction {
       val custom = formats.customDeserializer(formats)
       if (custom.isDefinedAt(targetType, json)) custom(targetType, json)
       else json match {
+        case JNull => null
         case JObject(JField("jsonClass", JString(t)) :: xs) => mkWithTypeHint(t, xs)
         case JField(_, JObject(JField("jsonClass", JString(t)) :: xs)) => mkWithTypeHint(t, xs)
         case _ => instantiate(primaryConstructorOf(targetType.clazz), args.map(a => build(json \ a.path, a)))
@@ -220,10 +221,7 @@ object Extraction {
 
     def build(root: JValue, mapping: Mapping): Any = mapping match {
       case Value(targetType) => convert(root, targetType, formats)
-      case Constructor(targetType, args) => root match {
-        case JNull => null
-        case _ => newInstance(targetType, args, root)
-      }
+      case Constructor(targetType, args) => newInstance(targetType, args, root)
       case Cycle(targetType) => build(root, mappingOf(targetType))
       case Arg(path, m) => mkValue(fieldValue(root), m, path)
       case Col(c, m) => {

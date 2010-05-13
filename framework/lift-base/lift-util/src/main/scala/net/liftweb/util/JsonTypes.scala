@@ -22,7 +22,7 @@ import java.lang.reflect.ParameterizedType
 import scala.reflect.Manifest
 import common._
 import json.Extraction.{decompose, extract}
-import json.{Formats, TypeInfo, Serializer}
+import json.{Formats, MappingException, TypeInfo, Serializer}
 import json.JsonAST._
 import _root_.org.apache.commons.codec.binary.Base64
 
@@ -31,14 +31,15 @@ class JsonBoxSerializer extends Serializer {
   import scala.collection.jcl.Conversions._
 
   def deserialize(implicit format: Formats): PartialFunction[(TypeInfo, JValue), Any] = {
-    case (t @ TypeInfo(BoxClass, Some(ptype)), json) => json match {
+    case (TypeInfo(BoxClass, ptype), json) => json match {
       case JNull | JNothing => Empty
       case JObject(JField("$box_failure", JString("Failure")) :: 
                    JField("msg", JString(msg)) :: 
                    JField("exception", exn) ::
                    JField("chain", chain) :: Nil) => 
+                     println(TypeInfo(BoxClass, Some(typeHoldingFailure)) + ">>>>> " + chain)
                      Failure(msg, deserializeException(exn), 
-                             Empty /*extract(chain, TypeInfo(classOf[Box[_]], Some(typeHoldingFailure))).asInstanceOf[Box[Failure]]*/)
+                             extract(chain, TypeInfo(BoxClass, Some(typeHoldingFailure))).asInstanceOf[Box[Failure]])
       case JObject(JField("$box_failure", JString("ParamFailure")) :: 
                    JField("msg", JString(msg)) :: 
                    JField("exception", exception) ::
@@ -47,7 +48,9 @@ class JsonBoxSerializer extends Serializer {
                    JField("param", param) :: Nil) => 
                      val clazz = Thread.currentThread.getContextClassLoader.loadClass(paramType)
                      ParamFailure(msg, extract(param, TypeInfo(clazz, None)))
-      case x => Full(extract(x, TypeInfo(ptype.getActualTypeArguments()(0).asInstanceOf[Class[_]], None)))
+      case x => 
+        val t = ptype.getOrElse(throw new MappingException("parameterized type not known for Box"))
+        Full(extract(x, TypeInfo(t.getActualTypeArguments()(0).asInstanceOf[Class[_]], None)))
     }
   }
 
