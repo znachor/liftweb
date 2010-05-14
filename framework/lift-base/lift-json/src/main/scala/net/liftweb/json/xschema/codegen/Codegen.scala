@@ -5,7 +5,6 @@ import _root_.net.liftweb.json.Validation._
 import _root_.net.liftweb.json.Printer._
 import _root_.net.liftweb.json.xschema._
 import _root_.net.liftweb.json.xschema.XSchemaTree._
-//import _root_.net.liftweb.json.xschema.DefaultSerialization._
 import _root_.net.liftweb.json.xschema.Serialization._
 
 import java.lang.StringBuilder
@@ -245,16 +244,16 @@ trait CodeGeneratorHelpers {
 }
 
 trait CodeGenerator {
-  def generate(root: XRoot, destPath: String)(implicit writerF: String => Writer)
+  def generate(root: XRoot, destPathCode: String, destPathTests: String)(implicit writerF: String => Writer)
 }
 
 
 object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
-  def generate(root: XRoot, destPath: String)(implicit writerF: String => Writer) = {
+  def generate(root: XRoot, destPathCode: String, destPathTests: String)(implicit writerF: String => Writer) = {
     val includeSchemas = root.properties.get(PredefinedProperties.XSchemaIncludeSchemas).map(_.toLowerCase).map { 
       case "true" => true
       case _ => false
-    }.getOrElse(true);
+    }.getOrElse(true)
     
     val bundle   = CodeBundle.empty
     val database = XSchemaDatabase(root.definitions)
@@ -287,6 +286,14 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         
         code.newline
         
+        val otherReferencedNamespaces = database.definitionsReferencedIn(namespace).map(_.namespace).filter(_ != namespace)
+        
+        code.join(otherReferencedNamespaces, code.newline) { externalNamespace =>
+          code.add("import " + externalNamespace + ".Serialization._")
+        }
+        
+        code.newline
+        
         buildOrderingsFor(namespace, code, database)
         
         code.newline(2)
@@ -305,7 +312,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       bundle += dataFile -> code
     }
     
-    bundle.create(destPath)
+    bundle.create(destPathCode)
   }
   
   private def buildDataFor(definition: XDefinition, code: CodeBuilder, database: XSchemaDatabase, includeSchemas: Boolean): Unit = {

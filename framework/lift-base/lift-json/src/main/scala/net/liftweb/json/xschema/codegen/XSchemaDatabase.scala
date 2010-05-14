@@ -27,6 +27,12 @@ trait XSchemaDatabase extends Iterable[XSchema] {
     case _ => None
   }
   
+  def definitionsReferencedBy(defn: XDefinition): List[XDefinitionRef] = walk(defn, Nil, new XSchemaWalker[List[XDefinitionRef]] {
+    override def walk(data: List[XDefinitionRef], prim: XDefinitionRef): List[XDefinitionRef] = prim :: data
+  }).removeDuplicates
+  
+  def definitionsReferencedIn(namespace: String): List[XDefinitionRef] = definitionsIn(namespace).flatMap(definitionsReferencedBy(_))
+  
   lazy val constants = definitions.filter(constantsP).map(_.asInstanceOf[XConstant])
   
   lazy val products = definitions.filter(productsP).map(_.asInstanceOf[XProduct])
