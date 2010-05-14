@@ -172,14 +172,6 @@ object TestSchemas {
   val XSchemaSchema = XRoot(
     List(
       XProduct(
-        "QualifiedName", "net.liftweb.json.xschema",
-        Map(),
-        List(
-          XRealField("name", Map(), XString, JNothing, XOrderAscending),
-          XRealField("namespace", Map(), XString, JNothing, XOrderAscending)
-        )
-      ),
-      XProduct(
         "XRoot", "net.liftweb.json.xschema",
         Map(),
         List(
@@ -233,8 +225,7 @@ object TestSchemas {
         Map(),
         List(
           XRealField("name", Map(), XString, JNothing, XOrderAscending),
-          XRealField("namespace", Map(), XString, JString(""), XOrderAscending),
-          XViewField("qualifiedName", Map(), XDefinitionRef("QualifiedName", "net.liftweb.json.xschema"))
+          XRealField("namespace", Map(), XString, JString(""), XOrderAscending)
         )
       ),
       XProduct("XBoolean", "net.liftweb.json.xschema", Map(), List()),
@@ -300,10 +291,10 @@ object TestSchemas {
         List(
           XRealField("name", Map(), XString, JNothing, XOrderAscending),
           XRealField("namespace", Map(), XString, JString(""), XOrderAscending),
-          XViewField("qualifiedName", Map(), XDefinitionRef("QualifiedName", "net.liftweb.json.xschema")),
-          XViewField("referenceTo", Map(), XDefinitionRef("XDefinitionRef", "net.liftweb.json.xschema")),
           XRealField("properties", Map(), XMap(XString, XString), JArray(Nil), XOrderAscending),
-          XRealField("terms", Map(), XList(XDefinitionRef("XField", "net.liftweb.json.xschema")), JObject(Nil), XOrderAscending)
+          XRealField("terms", Map(), XList(XDefinitionRef("XField", "net.liftweb.json.xschema")), JObject(Nil), XOrderAscending),
+          
+          XViewField("referenceTo", Map(), XDefinitionRef("XDefinitionRef", "net.liftweb.json.xschema"))
         )
       ),
       XProduct(
@@ -312,10 +303,10 @@ object TestSchemas {
         List(
           XRealField("name", Map(), XString, JNothing, XOrderAscending),
           XRealField("namespace", Map(), XString, JString(""), XOrderAscending),
-          XViewField("qualifiedName", Map(), XDefinitionRef("QualifiedName", "net.liftweb.json.xschema")),
-          XViewField("referenceTo", Map(), XDefinitionRef("XDefinitionRef", "net.liftweb.json.xschema")),
           XRealField("properties", Map(), XMap(XString, XString), JArray(Nil), XOrderAscending),
-          XRealField("terms", Map(), XList(XDefinitionRef("XDefinitionRef", "net.liftweb.json.xschema")), JObject(Nil), XOrderAscending)
+          XRealField("terms", Map(), XList(XDefinitionRef("XDefinitionRef", "net.liftweb.json.xschema")), JObject(Nil), XOrderAscending),
+          
+          XViewField("referenceTo", Map(), XDefinitionRef("XDefinitionRef", "net.liftweb.json.xschema"))
         )
       ),
       XProduct(
@@ -328,7 +319,6 @@ object TestSchemas {
           XRealField("constantType", Map(), XDefinitionRef("XReference", "net.liftweb.json.xschema"), JNothing, XOrderAscending),
           XRealField("default", Map(), XJSON, JNothing, XOrderAscending),
           
-          XViewField("qualifiedName", Map(), XDefinitionRef("QualifiedName", "net.liftweb.json.xschema")),
           XViewField("referenceTo", Map(), XDefinitionRef("XDefinitionRef", "net.liftweb.json.xschema"))
         )
       ),

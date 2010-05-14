@@ -266,6 +266,13 @@ trait DecomposerHelpers extends SerializationImplicits {
 }
 
 trait DefaultOrderings {
+  implicit def OptionToOrderedOption[T <% Ordered[T]](opt: Option[T]): OrderedOption[T] = OrderedOption[T](opt)
+  implicit def ArrayToOrderedArray[T <% Ordered[T]](c: Array[T]): OrderedArray[T] = OrderedArray[T](c)
+  implicit def ListToOrderedList[T <% Ordered[T]](c: List[T]): OrderedList[T] = OrderedList[T](c)
+  implicit def SetToOrderedSet[T <% Ordered[T]](c: Set[T]): OrderedSet[T] = OrderedSet[T](c)
+  implicit def JValueToOrderedJValue(jvalue: JValue): OrderedJValue = OrderedJValue(jvalue)
+  implicit def JFieldToOrderedJField(jfield: JField): OrderedJField = OrderedJField(jfield)
+  
   case class OrderedOption[T <% Ordered[T]](opt: Option[T]) extends Ordered[Option[T]] {
     def compare(that: Option[T]): Int = {
       if (opt.isEmpty && that.isEmpty) return 0
@@ -275,7 +282,6 @@ trait DefaultOrderings {
       return opt.get.compareTo(that.get)
     }
   }
-  implicit def optionToOrderedOption[T <% Ordered[T]](opt: Option[T]): OrderedOption[T] = OrderedOption[T](opt)
   
   case class OrderedArray[T <% Ordered[T]](col: Array[T]) extends Ordered[Array[T]] {
     def compare(that: Array[T]): Int = {
@@ -286,7 +292,6 @@ trait DefaultOrderings {
       }
     }
   }
-  implicit def arrayToOrderedArray[T <% Ordered[T]](c: Array[T]): OrderedArray[T] = OrderedArray[T](c)
   
   case class OrderedList[T <% Ordered[T]](col: List[T]) extends Ordered[List[T]] {
     def compare(that: List[T]): Int = {
@@ -297,12 +302,66 @@ trait DefaultOrderings {
       }
     }
   }
-  implicit def listToOrderedList[T <% Ordered[T]](c: List[T]): OrderedList[T] = OrderedList[T](c)
   
   case class OrderedSet[T <% Ordered[T]](col: Set[T]) extends Ordered[Set[T]] {
     def compare(that: Set[T]): Int = col.toList.sort(_.compare(_) < 0).compareTo(that.toList.sort(_.compare(_) < 0))
   }
-  implicit def setToOrderedSet[T <% Ordered[T]](c: Set[T]): OrderedSet[T] = OrderedSet[T](c)
+  
+  case class OrderedJField(jfield: JField) extends Ordered[JField] {
+    def compare(that: JField): Int = {
+      var c = jfield.name.compare(that.name)
+      if (c != 0) return c
+      
+      c = jfield.value.compare(that.value)
+      
+      return c
+    }
+  }
+  
+  case class OrderedJValue(jvalue: JValue) extends Ordered[JValue] {
+    def compare(that: JValue): Int = jvalue match {
+      case JNothing => that match {
+        case JNothing => 0
+        case _ => -1
+      }
+      case JNull => that match {
+        case JNothing => 1
+        case JNull => 0
+        case _ => -1
+      }
+      case JBool(v1) => that match {
+        case JNothing | JNull => 1
+        case JBool(v2) => v1.compare(v2)
+        case _ => -1
+      }
+      case JInt(v1) => that match {
+        case JNothing | JNull | JBool(_) => 1
+        case JInt(v2) => v1.compare(v2)
+        case _ => -1
+      }
+      case JDouble(v1) => that match {
+        case JNothing | JNull | JBool(_) | JInt(_) => 1
+        case JDouble(v2) => v1.compare(v2)
+        case _ => -1
+      }
+      case JString(v1) => that match {
+        case JNothing | JNull | JBool(_) | JInt(_) | JDouble(_) => 1
+        case JString(v2) => v1.compare(v2)
+        case _ => -1
+      }
+      case JField(_, _) => jvalue.compare(that)
+      case JObject(v1) => that match {
+        case JNothing | JNull | JBool(_) | JInt(_) | JDouble(_) | JString(_) | JField(_, _) => 1
+        case JObject(v2) => v1.compare(v2)
+        case _ => -1
+      }
+      case JArray(v1) => that match {
+        case JNothing | JNull | JBool(_) | JInt(_) | JDouble(_) | JString(_) | JField(_, _) | JObject(_) => 1
+        case JArray(v2) => v1.compare(v2)
+        case _ => -1
+      }
+    }
+  }
 }
 
 object DefaultSerialization extends SerializationImplicits with DefaultExtractors with DefaultDecomposers with DefaultOrderings {
