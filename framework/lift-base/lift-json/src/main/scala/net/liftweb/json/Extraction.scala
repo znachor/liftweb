@@ -182,7 +182,7 @@ object Extraction {
           
           constructor.newInstance(args.map(_.asInstanceOf[AnyRef]).toArray: _*)
         } catch {
-          case e @ (_:IllegalArgumentException | _:InstantiationException) =>             
+          case e @ (_:IllegalArgumentException | _:InstantiationException) =>
             fail("Parsed JSON values do not match with class constructor\nargs=" + 
                  args.mkString(",") + "\narg types=" + args.map(a => if (a != null) 
                    a.asInstanceOf[AnyRef].getClass.getName else "null").mkString(",") + 
@@ -225,12 +225,11 @@ object Extraction {
       case Constructor(targetType, args) => newInstance(targetType, args, root)
       case Cycle(targetType) => build(root, mappingOf(targetType))
       case Arg(path, m) => mkValue(fieldValue(root), m, path)
-      case Col(c, m) => {
+      case Col(c, m) =>
         if (c == classOf[List[_]]) newCollection(root, m, a => List(a: _*))
         else if (c == classOf[Set[_]]) newCollection(root, m, a => Set(a: _*))
         else if (c.isArray) newCollection(root, m, mkTypedArray(c))
         else fail("Expected collection but got " + m + " for class " + c)
-      }
       case Dict(m) => root match {
         case JObject(xs) => Map(xs.map(x => (x.name, build(x.value, m))): _*)
         case x => fail("Expected object but got " + x)

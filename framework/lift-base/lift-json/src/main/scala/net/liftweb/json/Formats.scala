@@ -29,7 +29,7 @@ import JsonAST.{JObject, JValue}
 trait Formats { self: Formats =>
   val dateFormat: DateFormat
   val typeHints: TypeHints = NoTypeHints
-  val customSerializers: List[Serializer] = Nil
+  val customSerializers: List[Serializer[_]] = Nil
   
   /**
    * Adds the specified type hints to this formats.
@@ -43,7 +43,7 @@ trait Formats { self: Formats =>
   /**
    * Adds the specified custom serializer to this formats.
    */
-  def + (newSerializer: Serializer): Formats = new Formats {
+  def + (newSerializer: Serializer[_]): Formats = new Formats {
     val dateFormat = Formats.this.dateFormat
     override val typeHints = self.typeHints
     override val customSerializers = newSerializer :: self.customSerializers
@@ -67,8 +67,8 @@ trait DateFormat {
   def format(d: Date): String
 }
 
-trait Serializer {
-  def deserialize(implicit format: Formats): PartialFunction[(TypeInfo, JValue), Any]
+trait Serializer[A] {
+  def deserialize(implicit format: Formats): PartialFunction[(TypeInfo, JValue), A]
   def serialize(implicit format: Formats): PartialFunction[Any, JValue]
 }
 

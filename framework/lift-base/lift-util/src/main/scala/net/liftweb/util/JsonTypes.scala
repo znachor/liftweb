@@ -26,11 +26,11 @@ import json.{Formats, MappingException, TypeInfo, Serializer}
 import json.JsonAST._
 import _root_.org.apache.commons.codec.binary.Base64
 
-class JsonBoxSerializer extends Serializer {
+class JsonBoxSerializer extends Serializer[Box[_]] {
   private val BoxClass = classOf[Box[_]]
   import scala.collection.jcl.Conversions._
 
-  def deserialize(implicit format: Formats): PartialFunction[(TypeInfo, JValue), Any] = {
+  def deserialize(implicit format: Formats): PartialFunction[(TypeInfo, JValue), Box[_]] = {
     case (TypeInfo(BoxClass, ptype), json) => json match {
       case JNull | JNothing => Empty
       case JObject(JField("$box_failure", JString("Failure")) :: 
