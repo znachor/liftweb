@@ -173,7 +173,7 @@ trait DefaultExtractors {
   }
   
   implicit def MapExtractor[K, V](implicit keyExtractor: Extractor[K], valueExtractor: Extractor[V]): Extractor[Map[K, V]] = new Extractor[Map[K, V]] {
-    def extract(jvalue: JValue): Map[K, V] = Map(listExtractor(tuple2Extractor(keyExtractor, valueExtractor)).extract(jvalue): _*)
+    def extract(jvalue: JValue): Map[K, V] = Map(ListExtractor(Tuple2Extractor(keyExtractor, valueExtractor)).extract(jvalue): _*)
   }
 }
 

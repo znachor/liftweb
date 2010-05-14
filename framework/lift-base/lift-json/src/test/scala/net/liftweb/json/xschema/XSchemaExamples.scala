@@ -26,29 +26,29 @@ object XSchemaExamples extends Specification {
   import Serialization._
   
   "Primitives can be extracted from strings" in {
-    intExtractor(JString("12")) mustEqual 12
-    longExtractor(JString("12")) mustEqual 12    
-    floatExtractor(JString("12.5")) mustEqual 12.5F
-    doubleExtractor(JString("12.5")) mustEqual 12.5
-    booleanExtractor(JString("true")) mustEqual true
-    booleanExtractor(JString("false")) mustEqual false
-    booleanExtractor(JString("0")) mustEqual false
-    booleanExtractor(JString("1")) mustEqual true
+    IntExtractor(JString("12")) mustEqual 12
+    LongExtractor(JString("12")) mustEqual 12    
+    FloatExtractor(JString("12.5")) mustEqual 12.5F
+    DoubleExtractor(JString("12.5")) mustEqual 12.5
+    BooleanExtractor(JString("true")) mustEqual true
+    BooleanExtractor(JString("false")) mustEqual false
+    BooleanExtractor(JString("0")) mustEqual false
+    BooleanExtractor(JString("1")) mustEqual true
   }
   
   "Reals can be extracted from integers" in {
-    floatExtractor(JInt(12)) mustEqual 12.0F
-    doubleExtractor(JInt(12)) mustEqual 12.0
+    FloatExtractor(JInt(12)) mustEqual 12.0F
+    DoubleExtractor(JInt(12)) mustEqual 12.0
   }
   
   "Booleans can be extracted from integers" in {
-    booleanExtractor(JInt(0)) mustEqual false
-    booleanExtractor(JInt(1)) mustEqual true
+    BooleanExtractor(JInt(0)) mustEqual false
+    BooleanExtractor(JInt(1)) mustEqual true
   }
   
   "Integers can be extracted from reals" in {
-    intExtractor(JDouble(12.0)) mustEqual 12
-    longExtractor(JDouble(12.0)) mustEqual 12L
+    IntExtractor(JDouble(12.0)) mustEqual 12
+    LongExtractor(JDouble(12.0)) mustEqual 12L
   }
   
   /*
