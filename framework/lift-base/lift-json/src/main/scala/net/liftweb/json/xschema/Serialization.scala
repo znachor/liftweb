@@ -309,6 +309,8 @@ trait DefaultOrderings {
   
   case class OrderedJField(jfield: JField) extends Ordered[JField] {
     def compare(that: JField): Int = {
+      if (this == that) return 0
+      
       var c = jfield.name.compare(that.name)
       if (c != 0) return c
       
