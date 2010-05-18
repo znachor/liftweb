@@ -495,7 +495,7 @@ object MongoDocumentExamples extends Specification {
       lst.size must_== 2
 
       // use regex and another clause
-      val lst2 = SessCollection.findAll(new BasicDBObject("name", Pattern.compile("^Mongo")).append("count", 1))
+      val lst2 = SessCollection.findAll(new BasicDBObject("name", Pattern.compile("^Mongo")).append("count", 1).asInstanceOf[BasicDBObject])
       lst2.size must_== 1
 
       if (!debug) {
