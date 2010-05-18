@@ -192,6 +192,17 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
     db.getCollection(collectionName).save(inst.asDBObject)
   }
 
+  /**
+   * Insert multiple records
+   */
+  def insertAll(insts: List[BaseRecord]): Unit = {
+    insts.foreach(inst => foreachCallback(inst, _.beforeSave))
+    MongoDB.useCollection(mongoIdentifier, collectionName) ( coll =>
+      coll.insert(insts.map(_.asDBObject).toArray)
+    )
+    insts.foreach(inst => foreachCallback(inst, _.afterSave))
+  }
+
   /*
   * Update document with a JObject query using the given Mongo instance
   */
