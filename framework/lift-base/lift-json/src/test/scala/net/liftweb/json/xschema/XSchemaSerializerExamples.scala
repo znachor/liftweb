@@ -86,37 +86,35 @@ object TestSchemas {
         j(""" { "Morning": {} } """)
       )
     ),
+    List(
+      XConstant(
+        "DefaultFemale", "data.social",
+        Map(),
+        XDefinitionRef("Gender", "data.social"),
+        JObject(
+          JField("Female",
+            JObject(
+              JField("text", JString("female")) :: Nil
+            )
+          ) :: Nil
+        )
+      ),
+      XConstant(
+        "DefaultMale", "data.social",
+        Map(),
+        XDefinitionRef("Gender", "data.social"),
+        JObject(
+          JField("Male",
+            JObject(
+              JField("text", JString("male")) :: Nil
+            )
+          ) :: Nil
+        )
+      )
+    ),
     Map(
       "scala.imports" -> "net.liftweb.json.xschema.{SerializationImplicits => XSerializationImplicits, DefaultExtractors => XDefaultExtractors}, java.lang.reflect._"
     )
-    
-    /*
-    ,
-    XConstant(
-      "DefaultFemale", "data.social",
-      Map(),
-      XDefinitionRef("Gender", "data.social"),
-      JObject(
-        JField("Female",
-          JObject(
-            JField("text", JString("female")) :: Nil
-          )
-        ) :: Nil
-      )
-    ),
-    XConstant(
-      "DefaultMale", "data.social",
-      Map(),
-      XDefinitionRef("Gender", "data.social"),
-      JObject(
-        JField("Male",
-          JObject(
-            JField("text", JString("male")) :: Nil
-          )
-        ) :: Nil
-      )
-    ),
-    */
   )
   
   val XSchemaSchema = XRoot(
@@ -126,7 +124,8 @@ object TestSchemas {
         Map(),
         List(
           XRealField("definitions", Map(), XList(XDefinitionRef("XDefinition", "net.liftweb.json.xschema")), j("""[]"""), XOrderAscending),
-          XRealField("properties", Map(), XMap(XString, XString), j("""[]"""), XOrderAscending)
+          XRealField("constants",   Map(), XList(XDefinitionRef("XConstant", "net.liftweb.json.xschema")), j("""[]"""), XOrderAscending),
+          XRealField("properties",  Map(), XMap(XString, XString), j("""[]"""), XOrderAscending)
         )
       ),
       XCoproduct(
@@ -324,6 +323,7 @@ object TestSchemas {
       XProduct("XOrderDescending", "net.liftweb.json.xschema", Map(), List()),
       XProduct("XOrderIgnore",     "net.liftweb.json.xschema", Map(), List())
     ),
+    Nil,
     Map(
     )
   )

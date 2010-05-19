@@ -10,6 +10,8 @@ case class XSchemaValidation(warnings: List[String], errors: List[String])
 trait XSchemaDatabase extends Iterable[XSchema] {
   def definitions: List[XDefinition]
   
+  def constants: List[XConstant]
+  
   /** Validates the definitions in the database, returning errors and warnings.
    */
   def validate: XSchemaValidation = {
@@ -38,8 +40,6 @@ trait XSchemaDatabase extends Iterable[XSchema] {
   }).removeDuplicates
   
   def definitionsReferencedIn(namespace: String): List[XDefinitionRef] = definitionsIn(namespace).flatMap(definitionsReferencedBy(_))
-  
-  lazy val constants = definitions.filter(constantsP).map(_.asInstanceOf[XConstant])
   
   lazy val products = definitions.filter(productsP).map(_.asInstanceOf[XProduct])
   
@@ -164,11 +164,13 @@ object XSchemaDatabase {
   import net.liftweb.json.JsonParser._
   import net.liftweb.json.xschema.Serialization._
   
-  def apply(d: List[XDefinition]): XSchemaDatabase = new XSchemaDatabase {
+  def apply(d: List[XDefinition], c: List[XConstant]): XSchemaDatabase = new XSchemaDatabase {
     val definitions = d
+    
+    val constants = c
   }
   
-  def apply(root: XRoot): XSchemaDatabase = apply(root.definitions)
+  def apply(root: XRoot): XSchemaDatabase = apply(root.definitions, root.constants)
   
   //def apply(json: JValue): XSchemaDatabase = apply(json.deserialize[XSchemaRoot].asInstanceOf)
   

@@ -259,7 +259,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     }.getOrElse(true)
     
     val bundle   = CodeBundle.empty
-    val database = XSchemaDatabase(root.definitions)
+    val database = XSchemaDatabase(root.definitions, root.constants)
     
     for (namespace <- database.namespaces) {
       val code = CodeBuilder.empty
@@ -807,7 +807,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
   }
   
   private def buildPackageObjectFor(namespace: String, code: CodeBuilder, database: XSchemaDatabase, properties: Map[String, String], includeSchemas: Boolean): Unit = {
-    val subroot = XRoot(database.definitionsIn(namespace), properties)
+    val subroot = XRoot(database.definitionsIn(namespace), database.constantsIn(namespace), properties)
     
     code.newline(2).add("object Serialization extends SerializationImplicits with Decomposers with Extractors with Orderings ").block {
       // Storing the root as text is not efficient but ensures we do not run 
