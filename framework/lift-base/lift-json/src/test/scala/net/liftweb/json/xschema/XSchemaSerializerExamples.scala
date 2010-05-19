@@ -29,64 +29,6 @@ object XSchemaSerializerExamples extends Specification {
 object TestSchemas {
   private def j(s: String) = parse(s)
   
-  val numberExpr = parse("""{ "Number": { "value": 0.0 } }""")
-  val number     = parse("""{ "value": 0.0 }""")
-
-  val AstNumericExprSchema = XRoot(
-    List(
-      XCoproduct(
-        "Expr", "ast.numeric",
-        Map(),
-        List(
-          XDefinitionRef("NumericSum", "ast.numeric"),
-          XDefinitionRef("Sum", "ast.numeric"),
-          XDefinitionRef("Product", "ast.numeric"),
-          XDefinitionRef("Number", "ast.numeric")
-        )
-      ),
-      XCoproduct(
-        "MixedSum", "ast.numeric",
-        Map(),
-        List(
-          XDefinitionRef("NumericSum", "ast.numeric"),
-          XDefinitionRef("Sum", "ast.numeric")
-        )
-      ),
-      XProduct(
-        "NumericSum", "ast.numeric",
-        Map(),
-        List(
-          XRealField("term1", Map(), XDefinitionRef("Number", "ast.numeric"), numberExpr, XOrderDescending),
-          XRealField("term2", Map(), XDefinitionRef("Number", "ast.numeric"), numberExpr, XOrderDescending)
-        )
-      ),
-      XProduct(
-        "Sum", "ast.numeric",
-        Map(),
-        List(
-          XRealField("term1", Map(), XDefinitionRef("Expr", "ast.numeric"), numberExpr, XOrderDescending),
-          XRealField("term2", Map(), XDefinitionRef("Expr", "ast.numeric"), numberExpr, XOrderDescending)
-        )
-      ),
-      XProduct(
-        "Product", "ast.numeric",
-        Map(),
-        List(
-          XRealField("term1", Map(), XDefinitionRef("Expr", "ast.numeric"), numberExpr, XOrderDescending),
-          XRealField("term2", Map(), XDefinitionRef("Expr", "ast.numeric"), numberExpr, XOrderDescending)
-        )
-      ),
-      XProduct(
-        "Number", "ast.numeric",
-        Map(),
-        List(
-          XRealField("value", Map(), XDouble, number, XOrderDescending)
-        )
-      )
-    ),
-    Map()
-  )
-
   val DataSocialGenderSchema = XRoot(
     List(
       XCoproduct(
@@ -99,7 +41,8 @@ object TestSchemas {
         List(
           XDefinitionRef("Male", "data.social"),
           XDefinitionRef("Female", "data.social")
-        )
+        ),
+        j(""" { "Male": { "text": "foo" } } """)
       ),
       XProduct(
         "Male", "data.social",
@@ -163,7 +106,8 @@ object TestSchemas {
           XDefinitionRef("Morning", "data.social"),
           XDefinitionRef("Noon", "data.social"),
           XDefinitionRef("Night", "data.social")
-        )
+        ),
+        j(""" { "Morning": {} } """)
       )
     ),
     Map(
@@ -188,7 +132,8 @@ object TestSchemas {
           XDefinitionRef("XDefinition", "net.liftweb.json.xschema"),
           XDefinitionRef("XReference",  "net.liftweb.json.xschema"),
           XDefinitionRef("XField",      "net.liftweb.json.xschema")
-        )
+        ),
+        j("""{ "XString": {} } """)
       ),
       XCoproduct(
         "XReference", "net.liftweb.json.xschema",
@@ -197,7 +142,8 @@ object TestSchemas {
           XDefinitionRef("XPrimitiveRef",  "net.liftweb.json.xschema"),
           XDefinitionRef("XContainerRef",  "net.liftweb.json.xschema"),
           XDefinitionRef("XDefinitionRef", "net.liftweb.json.xschema")
-        )
+        ),
+        j("""{ "XString": {} } """)
       ),
       XCoproduct(
         "XPrimitiveRef", "net.liftweb.json.xschema",
@@ -210,7 +156,8 @@ object TestSchemas {
           XDefinitionRef("XDouble",  "net.liftweb.json.xschema"),
           XDefinitionRef("XString",  "net.liftweb.json.xschema"),
           XDefinitionRef("XJSON",    "net.liftweb.json.xschema")
-        )
+        ),
+        j("""{ "XString": {} } """)
       ),
       XCoproduct(
         "XContainerRef", "net.liftweb.json.xschema",
@@ -220,7 +167,8 @@ object TestSchemas {
           XDefinitionRef("XMap",        "net.liftweb.json.xschema"),
           XDefinitionRef("XOptional",   "net.liftweb.json.xschema"),
           XDefinitionRef("XTuple",      "net.liftweb.json.xschema")
-        )
+        ),
+        j(""" { "XList": { "elementType": { "XString": {} } } } """)
       ),
       XProduct(
         "XDefinitionRef", "net.liftweb.json.xschema",
@@ -244,7 +192,8 @@ object TestSchemas {
           XDefinitionRef("XList", "net.liftweb.json.xschema"),
           XDefinitionRef("XSet", "net.liftweb.json.xschema"),
           XDefinitionRef("XArray", "net.liftweb.json.xschema")
-        )
+        ),
+        j(""" { "XList": { "elementType": { "XString": {} } } } """)
       ),
       XProduct("XList", "net.liftweb.json.xschema", Map(), 
         List(XRealField("elementType", Map(), XDefinitionRef("XReference", "net.liftweb.json.xschema"), j(""" { "XDefinitionRef": { "name": "", "namespace": "" } }  """), XOrderAscending))
@@ -274,7 +223,8 @@ object TestSchemas {
           XDefinitionRef("XProduct", "net.liftweb.json.xschema"),
           XDefinitionRef("XCoproduct", "net.liftweb.json.xschema"),
           XDefinitionRef("XConstant", "net.liftweb.json.xschema")
-        )
+        ),
+        j(""" { "XProduct": {} } """)
       ),
       XCoproduct(
         "XField", "net.liftweb.json.xschema",
@@ -283,7 +233,8 @@ object TestSchemas {
           XDefinitionRef("XRealField", "net.liftweb.json.xschema"),
           XDefinitionRef("XViewField", "net.liftweb.json.xschema"),
           XDefinitionRef("XConstantField", "net.liftweb.json.xschema")
-        )
+        ),
+        j(""" { "XRealField": {} } """)
       ),
       XProduct(
         "XProduct", "net.liftweb.json.xschema",
@@ -307,6 +258,7 @@ object TestSchemas {
           XRealField("namespace",   Map(), XString, JString(""), XOrderAscending),
           XRealField("properties",  Map(), XMap(XString, XString), j("""[]"""), XOrderAscending),
           XRealField("terms",       Map(), XList(XDefinitionRef("XDefinitionRef", "net.liftweb.json.xschema")), j("""[]"""), XOrderAscending),
+          XRealField("default",     Map(), XJSON, JNothing, XOrderAscending),
           
           XViewField("referenceTo", Map(), XDefinitionRef("XDefinitionRef", "net.liftweb.json.xschema"))
         )
@@ -361,7 +313,8 @@ object TestSchemas {
           XDefinitionRef("XOrderAscending",  "net.liftweb.json.xschema"),
           XDefinitionRef("XOrderDescending", "net.liftweb.json.xschema"),
           XDefinitionRef("XOrderIgnore",     "net.liftweb.json.xschema")
-        )
+        ),
+        j(""" { "XOrderAscending": {} } """)
       ),
       XProduct("XOrderAscending",  "net.liftweb.json.xschema", Map(), List()),
       XProduct("XOrderDescending", "net.liftweb.json.xschema", Map(), List()),

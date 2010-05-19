@@ -39,21 +39,6 @@ object XSchemaDatabaseExamples extends Specification {
     commonFields.first._1 mustEqual "text"
     commonFields.first._2 mustEqual XString
   }
-  
-  "Common fields in products of a coproduct with compatible types are unified" in {
-    val db = XSchemaDatabase(AstNumericExprSchema)
-    
-    val coproduct = db.definitionFor(XDefinitionRef("MixedSum", "ast.numeric")).get.asInstanceOf[XCoproduct]
-    
-    val commonFields = db.commonFieldsOf(coproduct)
-    
-    commonFields.length mustEqual 2
-    commonFields(0)._1 mustEqual "term1"
-    commonFields(0)._2 mustEqual XDefinitionRef("Expr", "ast.numeric")
-    
-    commonFields(1)._1 mustEqual "term2"
-    commonFields(1)._2 mustEqual XDefinitionRef("Expr", "ast.numeric")
-  }
 }
 
 } 

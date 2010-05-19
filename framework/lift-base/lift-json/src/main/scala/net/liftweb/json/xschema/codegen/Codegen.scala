@@ -379,15 +379,13 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
           code.add("""
             "Deserialization of ${name} does not fail even when information is missing" in {
               TestProductData.Test${name}.isInstanceOf[${type}] must be (true)
-            }
-          """)
+            }""").newline
           
           if (defn.isSingleton) {
             code.add("""
               "Serialization of ${name} has non-zero information content" in {
                 Decomposers.${name}Decomposer.decompose(TestProductData.Test${name}) mustNot be (JObject(Nil))
-              }
-            """)
+              }""")
           }
           else {
             code.add("""
@@ -432,6 +430,24 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
             "productName" -> product.name
           )
         }
+      }
+    }
+    
+    code.newline.addln("class DataConstantsSerializationTest extends Runner(DataConstantsSerializationExamples) with JUnit")
+    
+    code.add("object DataConstantsSerializationExamples extends Specification ").block {
+      code.join(database.constantsIn(namespace), code.newline.newline) { constant => 
+        code.add("""
+          "Deserialization of constant ${name} succeeds" in {
+            Constants.${name}.serialize.deserialize[${type}] must be (Constants.${name})
+          }
+          "Serialization of constant ${name} has non-zero information content" in {
+            Constants.${name}.serialize mustNot be (JObject(Nil))
+          }
+        """,
+        "name" -> constant.name,
+        "type" -> typeSignatureOf(constant.constantType, database)
+        )
       }
     }
   }
