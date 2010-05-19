@@ -614,8 +614,6 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
           code.add(coproductPrefix(x) + "trait ${name} extends " + withClauses.mkString(" with ") + " ").block {
             buildCoproductFields(x)
           }
-          
-        case x: XConstant => 
       }
       
       // **********

@@ -60,30 +60,6 @@ object TestSchemas {
           XViewField("asMale", Map(), XDefinitionRef("Male", "data.social"))
         )
       ),
-      XConstant(
-        "DefaultFemale", "data.social",
-        Map(),
-        XDefinitionRef("Gender", "data.social"),
-        JObject(
-          JField("Female",
-            JObject(
-              JField("text", JString("female")) :: Nil
-            )
-          ) :: Nil
-        )
-      ),
-      XConstant(
-        "DefaultMale", "data.social",
-        Map(),
-        XDefinitionRef("Gender", "data.social"),
-        JObject(
-          JField("Male",
-            JObject(
-              JField("text", JString("male")) :: Nil
-            )
-          ) :: Nil
-        )
-      ),
       XProduct(
         "Morning", "data.social",
         Map(),
@@ -113,6 +89,34 @@ object TestSchemas {
     Map(
       "scala.imports" -> "net.liftweb.json.xschema.{SerializationImplicits => XSerializationImplicits, DefaultExtractors => XDefaultExtractors}, java.lang.reflect._"
     )
+    
+    /*
+    ,
+    XConstant(
+      "DefaultFemale", "data.social",
+      Map(),
+      XDefinitionRef("Gender", "data.social"),
+      JObject(
+        JField("Female",
+          JObject(
+            JField("text", JString("female")) :: Nil
+          )
+        ) :: Nil
+      )
+    ),
+    XConstant(
+      "DefaultMale", "data.social",
+      Map(),
+      XDefinitionRef("Gender", "data.social"),
+      JObject(
+        JField("Male",
+          JObject(
+            JField("text", JString("male")) :: Nil
+          )
+        ) :: Nil
+      )
+    ),
+    */
   )
   
   val XSchemaSchema = XRoot(
@@ -131,7 +135,8 @@ object TestSchemas {
         List(
           XDefinitionRef("XDefinition", "net.liftweb.json.xschema"),
           XDefinitionRef("XReference",  "net.liftweb.json.xschema"),
-          XDefinitionRef("XField",      "net.liftweb.json.xschema")
+          XDefinitionRef("XField",      "net.liftweb.json.xschema"),
+          XDefinitionRef("XConstant",   "net.liftweb.json.xschema")
         ),
         j("""{ "XString": {} } """)
       ),
@@ -221,8 +226,7 @@ object TestSchemas {
         Map(),
         List(
           XDefinitionRef("XProduct", "net.liftweb.json.xschema"),
-          XDefinitionRef("XCoproduct", "net.liftweb.json.xschema"),
-          XDefinitionRef("XConstant", "net.liftweb.json.xschema")
+          XDefinitionRef("XCoproduct", "net.liftweb.json.xschema")
         ),
         j(""" { "XProduct": {} } """)
       ),
