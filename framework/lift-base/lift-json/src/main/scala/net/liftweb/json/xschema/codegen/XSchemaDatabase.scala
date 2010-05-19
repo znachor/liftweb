@@ -19,6 +19,12 @@ trait XSchemaDatabase extends Iterable[XSchema] {
     XSchemaValidation(warnings, errors)
   }
   
+  def findProductTerms(x: XCoproduct): List[XProduct] = resolve(x.terms).flatMap {
+    case x: XProduct   => x :: Nil
+    case x: XCoproduct => findProductTerms(x)
+    case _ => Nil
+  }
+  
   /** Attempts to find the definition for the specified reference.
    */
   def definitionFor(ref: XReference): Option[XDefinition] = ref match {

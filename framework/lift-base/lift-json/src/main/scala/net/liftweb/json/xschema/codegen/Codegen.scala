@@ -345,7 +345,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
           code.add(name)
         }
         
-        code.addln("}").newline
+        code.addln("}")
         
         buildSerializationTestFor(namespace, code, root, database, includeSchemas)
       }
@@ -353,39 +353,86 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
   }
   
   private def buildSerializationTestFor(namespace: String, code: CodeBuilder, root: XRoot, database: XSchemaDatabase, includeSchemas: Boolean): Unit = {
-    code.addln("class DataSerializationTest extends Runner(DataSerializationExamples) with JUnit")
-    
-    code.add("object DataSerializationExamples extends Specification ").block {
+    // For every product we generate some test data constructed by 
+    // deserializing the product from nothing:
+    code.newline.add("object TestProductData ").block {
       code.join(database.productsIn(namespace), code.newline.newline) { defn =>
-        defn match { 
-          case x: XProduct if (x.isSingleton) => 
-            // Due to apparent bug in Scala compiler (implicits for singleton types), we must treat this case specially:
-            code.add("""
-              "Deserialization of ${name} will not fail even when information is missing" in {
-                Extractors.${name}Extractor.extract(JObject(Nil)).isInstanceOf[${type}] must be (true)
-              }
-
-              "Serialization of ${name} has non-zero information content" in {
-                Decomposers.${name}Decomposer.decompose(Extractors.${name}Extractor.extract(JObject(Nil))).isInstanceOf[${type}] mustNot be (JObject(Nil))
-              }
-            """, "name" -> defn.name, "type" -> typeSignatureOf(defn.referenceTo, database))
+        code.using("name" -> defn.name, "type" -> typeSignatureOf(defn.referenceTo, database)) {
+          defn match { 
+            case x: XProduct if (x.isSingleton) => 
+              // Due to apparent bug in Scala compiler (implicits for singleton types), we must treat this case specially:
+              code.add("lazy val Test${name}: ${type} = Extractors.${name}Extractor.extract(JObject(Nil))")
           
-          case x: XProduct => 
-            code.add("""
-              "Deserialization of ${name} will not fail even when information is missing" in {
-                JObject(Nil).deserialize[${type}].isInstanceOf[${type}] must be (true)
-              }
-
-              "Serialization of ${name} has non-zero information content" in {
-                JObject(Nil).deserialize[${type}].serialize mustNot be (JObject(Nil))
-              }
-            """, "name" -> defn.name, "type" -> typeSignatureOf(defn.referenceTo, database))
+            case x: XProduct => 
+              code.add("lazy val Test${name}: ${type} = JObject(Nil).deserialize[${type}]")
+          }
         }
       }
-      /*
-      
-      */
-      
+    }
+    
+    // For every product, we test both serialization & deserialization (in basic ways):
+    code.newline.addln("class DataProductSerializationTest extends Runner(DataProductSerializationExamples) with JUnit")
+    
+    code.add("object DataProductSerializationExamples extends Specification ").block {
+      code.join(database.productsIn(namespace), code.newline.newline) { defn =>
+        code.using("name" -> defn.name, "type" -> typeSignatureOf(defn.referenceTo, database)) {
+          code.add("""
+            "Deserialization of ${name} does not fail even when information is missing" in {
+              TestProductData.Test${name}.isInstanceOf[${type}] must be (true)
+            }
+          """)
+          
+          if (defn.isSingleton) {
+            code.add("""
+              "Serialization of ${name} has non-zero information content" in {
+                Decomposers.${name}Decomposer.decompose(TestProductData.Test${name}) mustNot be (JObject(Nil))
+              }
+            """)
+          }
+          else {
+            code.add("""
+              "Serialization of ${name} has non-zero information content" in {
+                TestProductData.Test${name}.serialize mustNot be (JObject(Nil))
+              }
+            """)
+          }
+        }
+      }
+    }
+    
+    // For every coproduct we generate some test data constructed by 
+    // deserializing every product which is type-compatible with the coproduct:
+    code.newline.add("object TestCoproductData ").block {
+      code.join(database.coproductsIn(namespace), code.newline.newline) { defn =>
+        code.join(database.findProductTerms(defn), code.newline) { product =>   
+          code.add("""lazy val Test${name}From${productName}: ${type} = JObject(JField("${productName}", ${productNamespace}.Decomposers.${productName}Decomposer.decompose(${productNamespace}.TestProductData.Test${productName})) :: Nil).deserialize[${type}]""",
+            "name" -> defn.name,
+            "type" -> typeSignatureOf(defn.referenceTo, database),
+            "productName"      -> product.name,
+            "productNamespace" -> product.namespace
+          )
+        }
+      }
+    }
+    
+    code.newline.addln("class DataCoproductSerializationTest extends Runner(DataCoproductSerializationExamples) with JUnit")
+    
+    code.add("object DataCoproductSerializationExamples extends Specification ").block {
+      code.join(database.coproductsIn(namespace), code.newline.newline) { defn =>
+        code.join(database.findProductTerms(defn), code.newline) { product =>   
+          code.add("""
+            "Deserialization of ${name} (from ${productName}) succeeds" in {
+              TestCoproductData.Test${name}From${productName}.isInstanceOf[${type}] must be (true)
+            }            
+            "Serialization of ${name} (from ${productName}) has non-zero information content" in {
+              TestCoproductData.Test${name}From${productName}.serialize mustNot be (JObject(Nil))
+            }""",
+            "name"        -> defn.name,
+            "type"        -> typeSignatureOf(defn.referenceTo, database),
+            "productName" -> product.name
+          )
+        }
+      }
     }
   }
   
