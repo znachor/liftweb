@@ -377,7 +377,7 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       code.join(database.productsIn(namespace), code.newline.newline) { defn =>
         code.using("name" -> defn.name, "type" -> typeSignatureOf(defn.referenceTo, database)) {
           code.add("""
-            "Deserialization of ${name} does not fail even when information is missing" in {
+            "Deserialization of ${name} succeeds even when information is missing" in {
               TestProductData.Test${name}.isInstanceOf[${type}] must be (true)
             }""").newline
           
@@ -402,13 +402,15 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     // deserializing every product which is type-compatible with the coproduct:
     code.newline.add("object TestCoproductData ").block {
       code.join(database.coproductsIn(namespace), code.newline.newline) { defn =>
-        code.join(database.findProductTerms(defn), code.newline) { product =>   
-          code.add("""lazy val Test${name}From${productName}: ${type} = JObject(JField("${productName}", ${productNamespace}.Decomposers.${productName}Decomposer.decompose(${productNamespace}.TestProductData.Test${productName})) :: Nil).deserialize[${type}]""",
-            "name" -> defn.name,
-            "type" -> typeSignatureOf(defn.referenceTo, database),
-            "productName"      -> product.name,
-            "productNamespace" -> product.namespace
-          )
+        code.using("name" -> defn.name, "type" -> typeSignatureOf(defn.referenceTo, database)) {
+          code.addln("""lazy val Test${name}: ${type} = JObject(Nil).deserialize[${type}]""")
+          
+          code.join(database.findProductTerms(defn), code.newline) { product =>   
+            code.add("""lazy val Test${name}From${productName}: ${type} = JObject(JField("${productName}", ${productNamespace}.Decomposers.${productName}Decomposer.decompose(${productNamespace}.TestProductData.Test${productName})) :: Nil).deserialize[${type}]""",
+              "productName"      -> product.name,
+              "productNamespace" -> product.namespace
+            )
+          }
         }
       }
     }
@@ -417,18 +419,27 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
     
     code.add("object DataCoproductSerializationExamples extends Specification ").block {
       code.join(database.coproductsIn(namespace), code.newline.newline) { defn =>
-        code.join(database.findProductTerms(defn), code.newline) { product =>   
+        code.using("name" -> defn.name, "type" -> typeSignatureOf(defn.referenceTo, database)) {
           code.add("""
-            "Deserialization of ${name} (from ${productName}) succeeds" in {
-              TestCoproductData.Test${name}From${productName}.isInstanceOf[${type}] must be (true)
+            "Deserialization of ${name} succeeds even when information is missing" in {
+              TestCoproductData.Test${name}.isInstanceOf[${type}] must be (true)
             }            
-            "Serialization of ${name} (from ${productName}) has non-zero information content" in {
-              TestCoproductData.Test${name}From${productName}.serialize mustNot be (JObject(Nil))
-            }""",
-            "name"        -> defn.name,
-            "type"        -> typeSignatureOf(defn.referenceTo, database),
-            "productName" -> product.name
-          )
+            "Serialization of ${name} has non-zero information content" in {
+              TestCoproductData.Test${name}.serialize mustNot be (JObject(Nil))
+            }
+          """).newline
+          
+          code.join(database.findProductTerms(defn), code.newline) { product =>   
+            code.add("""
+              "Deserialization of ${name} (from ${productName}) succeeds" in {
+                TestCoproductData.Test${name}From${productName}.isInstanceOf[${type}] must be (true)
+              }            
+              "Serialization of ${name} (from ${productName}) has non-zero information content" in {
+                TestCoproductData.Test${name}From${productName}.serialize mustNot be (JObject(Nil))
+              }""",
+              "productName" -> product.name
+            )
+          }
         }
       }
     }
@@ -449,14 +460,6 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
         "type" -> typeSignatureOf(constant.constantType, database)
         )
       }
-    }
-  }
-  
-  private def buildOrderingTestFor(namespace: String, code: CodeBuilder, root: XRoot, database: XSchemaDatabase, includeSchemas: Boolean): Unit = {
-    code.addln("class DataOrderingTest extends Runner(DataOrderingExamples) with JUnit")
-    
-    code.add("object DataOrderingExamples extends Specification ").block {
-      
     }
   }
   
@@ -683,12 +686,22 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
               code.newline.add("""
                 implicit val ${name}Extractor: Extractor[${type}] = new Extractor[${type}] {
                   def extract(jvalue: JValue): ${type} = {
-                    (jvalue --> classOf[JObject]).obj.filter(${name}ExtractorFunction.isDefinedAt _) match {
-                      case field :: fields => ${name}ExtractorFunction(field)
-                      case Nil => error("Expected to find ${type} but found " + jvalue)
+                    def extract0(jvalue: JValue): Option[${type}] = {
+                      (jvalue --> classOf[JObject]).obj.filter(${name}ExtractorFunction.isDefinedAt _) match {
+                        case field :: fields => Some(${name}ExtractorFunction(field))
+                        case Nil => None
+                      }
+                    }
+                    
+                    extract0(jvalue) match {
+                      case Some(v) => v
+                      case None => extract0(${defaultJValue}) match {
+                        case Some(v) => v
+                        case None => error("Expected to find ${type}, but found " + jvalue + ", and default value was invalid")
+                      }
                     }
                   }
-                }""")
+                }""", "defaultJValue" -> compact(renderScala(x.default)))
             }
         }
       }
