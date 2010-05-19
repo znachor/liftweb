@@ -265,7 +265,7 @@ object TestSchemas {
         List(XRealField("optionalType", Map(), XDefinitionRef("XReference", "net.liftweb.json.xschema"), j(""" { "XDefinitionRef": { "name": "", "namespace": "" } }  """), XOrderAscending))
       ),
       XProduct("XTuple", "net.liftweb.json.xschema", Map(), 
-        List(XRealField("types", Map(), XList(XDefinitionRef("XReference", "net.liftweb.json.xschema")), j(""" { "XDefinitionRef": { "name": "", "namespace": "" } }  """), XOrderAscending))
+        List(XRealField("types", Map(), XList(XDefinitionRef("XReference", "net.liftweb.json.xschema")), j("""[]"""), XOrderAscending))
       ),
       XCoproduct(
         "XDefinition", "net.liftweb.json.xschema",
@@ -328,10 +328,10 @@ object TestSchemas {
         "XRealField", "net.liftweb.json.xschema",
         Map(),
         List(
-          XRealField("name",       Map(), XString, JNothing, XOrderAscending),
+          XRealField("name",       Map(), XString, JString(""), XOrderAscending),
           XRealField("properties", Map(), XMap(XString, XString), JArray(Nil), XOrderAscending),
-          XRealField("fieldType",  Map(), XDefinitionRef("XReference", "net.liftweb.json.xschema"), j(""" { "XDefinitionRef": { "name": "", "namespace": "" } }  """), XOrderAscending),
-          XRealField("default",    Map(), XJSON, JNothing, XOrderAscending),
+          XRealField("fieldType",  Map(), XDefinitionRef("XReference", "net.liftweb.json.xschema"), j(""" { "XString": {} }  """), XOrderAscending),
+          XRealField("default",    Map(), XJSON, JString(""), XOrderAscending),
           XRealField("order",      Map(), XDefinitionRef("XOrder", "net.liftweb.json.xschema"), j(""" { "XOrderAscending": {} } """), XOrderAscending)
         )
       ),
