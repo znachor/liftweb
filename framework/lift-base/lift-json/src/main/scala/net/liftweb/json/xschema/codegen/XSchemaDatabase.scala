@@ -172,9 +172,9 @@ object XSchemaDatabase {
   
   def apply(root: XRoot): XSchemaDatabase = apply(root.definitions, root.constants)
   
-  //def apply(json: JValue): XSchemaDatabase = apply(json.deserialize[XSchemaRoot].asInstanceOf)
+  def apply(json: JValue): XSchemaDatabase = apply(json.deserialize[XRoot])
   
-  //def apply(str: String): XSchemaDatabase = apply(parse(str))
+  def apply(str: String): XSchemaDatabase = apply(parse(str))
 }
 
 }

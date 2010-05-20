@@ -1,7 +1,7 @@
 package net.liftweb.json.xschema.codegen
 
+import _root_.net.liftweb.json.JsonParser
 import _root_.net.liftweb.json.JsonAST._
-import _root_.net.liftweb.json.Validation._
 import _root_.net.liftweb.json.Printer._
 import _root_.net.liftweb.json.xschema._
 import _root_.net.liftweb.json.xschema.XSchemaTree._
@@ -248,6 +248,37 @@ trait CodeGeneratorHelpers {
 
 trait CodeGenerator {
   def generate(root: XRoot, destPathCode: String, destPathTests: String)(implicit writerF: String => Writer)
+  
+  def main(args: Array[String]) {
+    import java.io._
+    
+    try {
+      if (args.length != 3) {
+        println("Usage: [xschema file] [dest code path] [dest tests path]")
+      }
+      else {
+        def using[T <: Closeable, S](c: => T)(f: T => S): S = { val resource = c; try { f(resource) } finally { resource.close } }
+      
+        using(new DataInputStream(new FileInputStream(args(0)))) { stream =>
+          val json = stream.readUTF
+          
+          implicit def writerF(file: String): Writer = new FileWriter(file)
+        
+          generate(JsonParser.parse(json).deserialize[XRoot], args(1), args(2))
+        
+          println("Successfully generated code at " + args(1) + " and tests at " + args(0))
+        
+          System.exit(0)
+        }
+      }
+    }
+    catch {
+      case t: Throwable => 
+        println("Encountered error during code generation: " + t.getMessage)
+        
+        System.exit(1)
+    }
+  }
 }
 
 
