@@ -1,30 +1,7 @@
 package net.liftweb.json.xschema {
 
-import _root_.org.specs.Specification
-import _root_.org.specs.runner.{Runner, JUnit}
-
 import _root_.net.liftweb.json.JsonAST._
 import _root_.net.liftweb.json.JsonParser._
-
-import DefaultSerialization._
-
-/*
-class XSchemaSerializerExamplesTest extends Runner(XSchemaSerializerExamples) with JUnit
-
-object XSchemaSerializerExamples extends Specification {
-  import TestSchemas._
-  
-  "Extraction and decomposition are symmetric" in {
-    //println(AstNumericExprSchema.asInstanceOf[XSchema].serialize.deserialize[XSchema])
-    //println(AstNumericExprSchema)
-    
-    AstNumericExprSchema.asInstanceOf[XSchema].serialize.deserialize[XSchema] mustEqual AstNumericExprSchema
-  }
-  
-  "Extraction and decomposition are symmetric 2" in {
-    DataSocialGenderSchema.asInstanceOf[XSchema].serialize.deserialize[XSchema] mustEqual DataSocialGenderSchema
-  }
-}*/
 
 object TestSchemas {
   private def j(s: String) = parse(s)

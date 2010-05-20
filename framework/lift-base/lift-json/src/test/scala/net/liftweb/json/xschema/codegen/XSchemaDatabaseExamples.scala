@@ -13,20 +13,6 @@ object XSchemaDatabaseExamples extends Specification {
   import _root_.net.liftweb.json.xschema._
   import _root_.net.liftweb.json.xschema.DefaultSerialization._
   import _root_.net.liftweb.json.xschema.TestSchemas._
-    
-  class UnclosablePrintWriter extends java.io.FilterWriter(new PrintWriter(System.out)) {
-    override def close() = { }
-  }
-  
-  implicit val writerF: String => Writer = {
-    s => {
-      println(s + ":")
-      
-      new UnclosablePrintWriter
-    }
-  }
-  
-  ScalaCodeGenerator.generate(XSchemaSchema, "src/main/scala", "src/test/scala")
   
   "Common primitive fields in products of a coproduct are identified" in {
     val db = XSchemaDatabase(DataSocialGenderSchema)

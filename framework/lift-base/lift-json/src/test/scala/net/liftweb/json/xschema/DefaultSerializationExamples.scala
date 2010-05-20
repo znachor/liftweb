@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.liftweb.json.xschema {
 
 import _root_.org.specs.Specification
 import _root_.org.specs.runner.{Runner, JUnit}
 
-class XSchemaExamplesTest extends Runner(XSchemaExamples) with JUnit
-object XSchemaExamples extends Specification {
+class DefaultSerializationExamplesTest extends Runner(DefaultSerializationExamples) with JUnit
+object DefaultSerializationExamples extends Specification {
   import _root_.net.liftweb.json.JsonAST._
   
   import Serialization._
@@ -50,56 +49,6 @@ object XSchemaExamples extends Specification {
     IntExtractor(JDouble(12.0)) mustEqual 12
     LongExtractor(JDouble(12.0)) mustEqual 12L
   }
-  
-  /*
-  
-  def testSymmetry[T](t: T)(implicit d: Decomposer[T], e: Extractor[T]) = {
-    t.serialize.deserialize[T] mustEqual t
-  }
-  
-  "Primitive serialization is symmetric" in {
-    testSymmetry(true)
-    testSymmetry("foo")
-    testSymmetry(1)
-    testSymmetry(1L)
-    testSymmetry(1.5F)
-    testSymmetry(1.5)
-    testSymmetry(List("foo"))
-    testSymmetry(Set("foo"))
-    testSymmetry[Option[String]](None)
-    testSymmetry[Option[String]](Some("foo"))
-    testSymmetry(("foo", 12))
-    testSymmetry(("foo", 12, 3.2F))
-    testSymmetry(("foo", 12, 3.2F, "blah"))
-    testSymmetry(("foo", 12, 3.2F, "blah", "last-one"))
-    testSymmetry(Map("foo" -> 123, "bar" -> 329))
-    
-    var array = Array("foo")
-    array.serialize.deserialize[Array[String]].toList mustEqual array.toList
-  }
-  
-  "Custom product serialization is symmetric" in {
-    import data.social._
-    import data.social.Serialization._
-    
-    testSymmetry(Male("foobar"))
-    testSymmetry(Female("baz"))
-  }
-  
-  "Custom defaults are valid" in {
-    import data.social.Constants._
-    
-    DefaultFemale mustEqual DefaultFemale
-    DefaultMale mustEqual DefaultMale
-  }
-  
-  "Custom schemas are valid" in {
-    import data.social._
-    
-    Gender.xschema mustEqual Gender.xschema
-    Male.xschema mustEqual Male.xschema
-    Female.xschema mustEqual Female.xschema
-  }*/
 }
 
 
