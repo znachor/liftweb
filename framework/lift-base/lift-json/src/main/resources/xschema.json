@@ -1,0 +1,1327 @@
+{
+    "definitions": [{
+        "XProduct": {
+            "name": "XRoot",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": [{
+                "XRealField": {
+                    "name": "definitions",
+                    "properties": [],
+                    "fieldType": {
+                        "XContainerRef": {
+                            "XCollection": {
+                                "XList": {
+                                    "elementType": {
+                                        "XDefinitionRef": {
+                                            "name": "XDefinition",
+                                            "namespace": "net.liftweb.json.xschema"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": [],
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XRealField": {
+                    "name": "constants",
+                    "properties": [],
+                    "fieldType": {
+                        "XContainerRef": {
+                            "XCollection": {
+                                "XList": {
+                                    "elementType": {
+                                        "XDefinitionRef": {
+                                            "name": "XConstant",
+                                            "namespace": "net.liftweb.json.xschema"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": [],
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XRealField": {
+                    "name": "properties",
+                    "properties": [],
+                    "fieldType": {
+                        "XContainerRef": {
+                            "XMap": {
+                                "keyType": {
+                                    "XPrimitiveRef": {
+                                        "XString": {
+
+                                        }
+                                    }
+                                },
+                                "valueType": {
+                                    "XPrimitiveRef": {
+                                        "XString": {
+
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": [],
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            }]
+        }
+    },
+    {
+        "XCoproduct": {
+            "name": "XSchema",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": [{
+                "name": "XDefinition",
+                "namespace": "net.liftweb.json.xschema"
+            },
+            {
+                "name": "XReference",
+                "namespace": "net.liftweb.json.xschema"
+            },
+            {
+                "name": "XField",
+                "namespace": "net.liftweb.json.xschema"
+            },
+            {
+                "name": "XConstant",
+                "namespace": "net.liftweb.json.xschema"
+            }],
+            "default": {
+                "XString": {
+
+                }
+            }
+        }
+    },
+    {
+        "XCoproduct": {
+            "name": "XReference",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": [{
+                "name": "XPrimitiveRef",
+                "namespace": "net.liftweb.json.xschema"
+            },
+            {
+                "name": "XContainerRef",
+                "namespace": "net.liftweb.json.xschema"
+            },
+            {
+                "name": "XDefinitionRef",
+                "namespace": "net.liftweb.json.xschema"
+            }],
+            "default": {
+                "XString": {
+
+                }
+            }
+        }
+    },
+    {
+        "XCoproduct": {
+            "name": "XPrimitiveRef",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": [{
+                "name": "XBoolean",
+                "namespace": "net.liftweb.json.xschema"
+            },
+            {
+                "name": "XInt",
+                "namespace": "net.liftweb.json.xschema"
+            },
+            {
+                "name": "XLong",
+                "namespace": "net.liftweb.json.xschema"
+            },
+            {
+                "name": "XFloat",
+                "namespace": "net.liftweb.json.xschema"
+            },
+            {
+                "name": "XDouble",
+                "namespace": "net.liftweb.json.xschema"
+            },
+            {
+                "name": "XString",
+                "namespace": "net.liftweb.json.xschema"
+            },
+            {
+                "name": "XJSON",
+                "namespace": "net.liftweb.json.xschema"
+            }],
+            "default": {
+                "XString": {
+
+                }
+            }
+        }
+    },
+    {
+        "XCoproduct": {
+            "name": "XContainerRef",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": [{
+                "name": "XCollection",
+                "namespace": "net.liftweb.json.xschema"
+            },
+            {
+                "name": "XMap",
+                "namespace": "net.liftweb.json.xschema"
+            },
+            {
+                "name": "XOptional",
+                "namespace": "net.liftweb.json.xschema"
+            },
+            {
+                "name": "XTuple",
+                "namespace": "net.liftweb.json.xschema"
+            }],
+            "default": {
+                "XList": {
+                    "elementType": {
+                        "XString": {
+
+                        }
+                    }
+                }
+            }
+        }
+    },
+    {
+        "XProduct": {
+            "name": "XDefinitionRef",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": [{
+                "XRealField": {
+                    "name": "name",
+                    "properties": [],
+                    "fieldType": {
+                        "XPrimitiveRef": {
+                            "XString": {
+
+                            }
+                        }
+                    },
+                    "default": "",
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XRealField": {
+                    "name": "namespace",
+                    "properties": [],
+                    "fieldType": {
+                        "XPrimitiveRef": {
+                            "XString": {
+
+                            }
+                        }
+                    },
+                    "default": "",
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            }]
+        }
+    },
+    {
+        "XProduct": {
+            "name": "XBoolean",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": []
+        }
+    },
+    {
+        "XProduct": {
+            "name": "XInt",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": []
+        }
+    },
+    {
+        "XProduct": {
+            "name": "XLong",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": []
+        }
+    },
+    {
+        "XProduct": {
+            "name": "XFloat",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": []
+        }
+    },
+    {
+        "XProduct": {
+            "name": "XDouble",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": []
+        }
+    },
+    {
+        "XProduct": {
+            "name": "XString",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": []
+        }
+    },
+    {
+        "XProduct": {
+            "name": "XJSON",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": []
+        }
+    },
+    {
+        "XCoproduct": {
+            "name": "XCollection",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": [{
+                "name": "XList",
+                "namespace": "net.liftweb.json.xschema"
+            },
+            {
+                "name": "XSet",
+                "namespace": "net.liftweb.json.xschema"
+            },
+            {
+                "name": "XArray",
+                "namespace": "net.liftweb.json.xschema"
+            }],
+            "default": {
+                "XList": {
+                    "elementType": {
+                        "XString": {
+
+                        }
+                    }
+                }
+            }
+        }
+    },
+    {
+        "XProduct": {
+            "name": "XList",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": [{
+                "XRealField": {
+                    "name": "elementType",
+                    "properties": [],
+                    "fieldType": {
+                        "XDefinitionRef": {
+                            "name": "XReference",
+                            "namespace": "net.liftweb.json.xschema"
+                        }
+                    },
+                    "default": {
+                        "XDefinitionRef": {
+                            "name": "",
+                            "namespace": ""
+                        }
+                    },
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            }]
+        }
+    },
+    {
+        "XProduct": {
+            "name": "XSet",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": [{
+                "XRealField": {
+                    "name": "elementType",
+                    "properties": [],
+                    "fieldType": {
+                        "XDefinitionRef": {
+                            "name": "XReference",
+                            "namespace": "net.liftweb.json.xschema"
+                        }
+                    },
+                    "default": {
+                        "XDefinitionRef": {
+                            "name": "",
+                            "namespace": ""
+                        }
+                    },
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            }]
+        }
+    },
+    {
+        "XProduct": {
+            "name": "XArray",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": [{
+                "XRealField": {
+                    "name": "elementType",
+                    "properties": [],
+                    "fieldType": {
+                        "XDefinitionRef": {
+                            "name": "XReference",
+                            "namespace": "net.liftweb.json.xschema"
+                        }
+                    },
+                    "default": {
+                        "XDefinitionRef": {
+                            "name": "",
+                            "namespace": ""
+                        }
+                    },
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            }]
+        }
+    },
+    {
+        "XProduct": {
+            "name": "XMap",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": [{
+                "XRealField": {
+                    "name": "keyType",
+                    "properties": [],
+                    "fieldType": {
+                        "XDefinitionRef": {
+                            "name": "XReference",
+                            "namespace": "net.liftweb.json.xschema"
+                        }
+                    },
+                    "default": {
+                        "XDefinitionRef": {
+                            "name": "",
+                            "namespace": ""
+                        }
+                    },
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XRealField": {
+                    "name": "valueType",
+                    "properties": [],
+                    "fieldType": {
+                        "XDefinitionRef": {
+                            "name": "XReference",
+                            "namespace": "net.liftweb.json.xschema"
+                        }
+                    },
+                    "default": {
+                        "XDefinitionRef": {
+                            "name": "",
+                            "namespace": ""
+                        }
+                    },
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            }]
+        }
+    },
+    {
+        "XProduct": {
+            "name": "XOptional",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": [{
+                "XRealField": {
+                    "name": "optionalType",
+                    "properties": [],
+                    "fieldType": {
+                        "XDefinitionRef": {
+                            "name": "XReference",
+                            "namespace": "net.liftweb.json.xschema"
+                        }
+                    },
+                    "default": {
+                        "XDefinitionRef": {
+                            "name": "",
+                            "namespace": ""
+                        }
+                    },
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            }]
+        }
+    },
+    {
+        "XProduct": {
+            "name": "XTuple",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": [{
+                "XRealField": {
+                    "name": "types",
+                    "properties": [],
+                    "fieldType": {
+                        "XContainerRef": {
+                            "XCollection": {
+                                "XList": {
+                                    "elementType": {
+                                        "XDefinitionRef": {
+                                            "name": "XReference",
+                                            "namespace": "net.liftweb.json.xschema"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": [],
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            }]
+        }
+    },
+    {
+        "XCoproduct": {
+            "name": "XDefinition",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": [{
+                "name": "XProduct",
+                "namespace": "net.liftweb.json.xschema"
+            },
+            {
+                "name": "XCoproduct",
+                "namespace": "net.liftweb.json.xschema"
+            }],
+            "default": {
+                "XProduct": {
+
+                }
+            }
+        }
+    },
+    {
+        "XCoproduct": {
+            "name": "XField",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": [{
+                "name": "XRealField",
+                "namespace": "net.liftweb.json.xschema"
+            },
+            {
+                "name": "XViewField",
+                "namespace": "net.liftweb.json.xschema"
+            },
+            {
+                "name": "XConstantField",
+                "namespace": "net.liftweb.json.xschema"
+            }],
+            "default": {
+                "XRealField": {
+
+                }
+            }
+        }
+    },
+    {
+        "XProduct": {
+            "name": "XProduct",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [
+                ["scala.class.traits", "net.liftweb.json.xschema.XProductBehavior"]
+            ],
+            "terms": [{
+                "XRealField": {
+                    "name": "name",
+                    "properties": [],
+                    "fieldType": {
+                        "XPrimitiveRef": {
+                            "XString": {
+
+                            }
+                        }
+                    },
+                    "default": "",
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XRealField": {
+                    "name": "namespace",
+                    "properties": [],
+                    "fieldType": {
+                        "XPrimitiveRef": {
+                            "XString": {
+
+                            }
+                        }
+                    },
+                    "default": "",
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XRealField": {
+                    "name": "properties",
+                    "properties": [],
+                    "fieldType": {
+                        "XContainerRef": {
+                            "XMap": {
+                                "keyType": {
+                                    "XPrimitiveRef": {
+                                        "XString": {
+
+                                        }
+                                    }
+                                },
+                                "valueType": {
+                                    "XPrimitiveRef": {
+                                        "XString": {
+
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": [],
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XRealField": {
+                    "name": "terms",
+                    "properties": [],
+                    "fieldType": {
+                        "XContainerRef": {
+                            "XCollection": {
+                                "XList": {
+                                    "elementType": {
+                                        "XDefinitionRef": {
+                                            "name": "XField",
+                                            "namespace": "net.liftweb.json.xschema"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": [],
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XViewField": {
+                    "name": "referenceTo",
+                    "properties": [],
+                    "fieldType": {
+                        "XDefinitionRef": {
+                            "name": "XDefinitionRef",
+                            "namespace": "net.liftweb.json.xschema"
+                        }
+                    }
+                }
+            }]
+        }
+    },
+    {
+        "XProduct": {
+            "name": "XCoproduct",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": [{
+                "XRealField": {
+                    "name": "name",
+                    "properties": [],
+                    "fieldType": {
+                        "XPrimitiveRef": {
+                            "XString": {
+
+                            }
+                        }
+                    },
+                    "default": "",
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XRealField": {
+                    "name": "namespace",
+                    "properties": [],
+                    "fieldType": {
+                        "XPrimitiveRef": {
+                            "XString": {
+
+                            }
+                        }
+                    },
+                    "default": "",
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XRealField": {
+                    "name": "properties",
+                    "properties": [],
+                    "fieldType": {
+                        "XContainerRef": {
+                            "XMap": {
+                                "keyType": {
+                                    "XPrimitiveRef": {
+                                        "XString": {
+
+                                        }
+                                    }
+                                },
+                                "valueType": {
+                                    "XPrimitiveRef": {
+                                        "XString": {
+
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": [],
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XRealField": {
+                    "name": "terms",
+                    "properties": [],
+                    "fieldType": {
+                        "XContainerRef": {
+                            "XCollection": {
+                                "XList": {
+                                    "elementType": {
+                                        "XDefinitionRef": {
+                                            "name": "XDefinitionRef",
+                                            "namespace": "net.liftweb.json.xschema"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": [],
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XRealField": {
+                    "name": "default",
+                    "properties": [],
+                    "fieldType": {
+                        "XPrimitiveRef": {
+                            "XJSON": {
+
+                            }
+                        }
+                    },
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XViewField": {
+                    "name": "referenceTo",
+                    "properties": [],
+                    "fieldType": {
+                        "XDefinitionRef": {
+                            "name": "XDefinitionRef",
+                            "namespace": "net.liftweb.json.xschema"
+                        }
+                    }
+                }
+            }]
+        }
+    },
+    {
+        "XProduct": {
+            "name": "XConstant",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": [{
+                "XRealField": {
+                    "name": "name",
+                    "properties": [],
+                    "fieldType": {
+                        "XPrimitiveRef": {
+                            "XString": {
+
+                            }
+                        }
+                    },
+                    "default": "",
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XRealField": {
+                    "name": "namespace",
+                    "properties": [],
+                    "fieldType": {
+                        "XPrimitiveRef": {
+                            "XString": {
+
+                            }
+                        }
+                    },
+                    "default": "",
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XRealField": {
+                    "name": "properties",
+                    "properties": [],
+                    "fieldType": {
+                        "XContainerRef": {
+                            "XMap": {
+                                "keyType": {
+                                    "XPrimitiveRef": {
+                                        "XString": {
+
+                                        }
+                                    }
+                                },
+                                "valueType": {
+                                    "XPrimitiveRef": {
+                                        "XString": {
+
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": [],
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XRealField": {
+                    "name": "constantType",
+                    "properties": [],
+                    "fieldType": {
+                        "XDefinitionRef": {
+                            "name": "XReference",
+                            "namespace": "net.liftweb.json.xschema"
+                        }
+                    },
+                    "default": {
+                        "XString": {
+
+                        }
+                    },
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XRealField": {
+                    "name": "default",
+                    "properties": [],
+                    "fieldType": {
+                        "XPrimitiveRef": {
+                            "XJSON": {
+
+                            }
+                        }
+                    },
+                    "default": "",
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XViewField": {
+                    "name": "referenceTo",
+                    "properties": [],
+                    "fieldType": {
+                        "XDefinitionRef": {
+                            "name": "XDefinitionRef",
+                            "namespace": "net.liftweb.json.xschema"
+                        }
+                    }
+                }
+            }]
+        }
+    },
+    {
+        "XProduct": {
+            "name": "XRealField",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": [{
+                "XRealField": {
+                    "name": "name",
+                    "properties": [],
+                    "fieldType": {
+                        "XPrimitiveRef": {
+                            "XString": {
+
+                            }
+                        }
+                    },
+                    "default": "",
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XRealField": {
+                    "name": "properties",
+                    "properties": [],
+                    "fieldType": {
+                        "XContainerRef": {
+                            "XMap": {
+                                "keyType": {
+                                    "XPrimitiveRef": {
+                                        "XString": {
+
+                                        }
+                                    }
+                                },
+                                "valueType": {
+                                    "XPrimitiveRef": {
+                                        "XString": {
+
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": [],
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XRealField": {
+                    "name": "fieldType",
+                    "properties": [],
+                    "fieldType": {
+                        "XDefinitionRef": {
+                            "name": "XReference",
+                            "namespace": "net.liftweb.json.xschema"
+                        }
+                    },
+                    "default": {
+                        "XString": {
+
+                        }
+                    },
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XRealField": {
+                    "name": "default",
+                    "properties": [],
+                    "fieldType": {
+                        "XPrimitiveRef": {
+                            "XJSON": {
+
+                            }
+                        }
+                    },
+                    "default": "",
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XRealField": {
+                    "name": "order",
+                    "properties": [],
+                    "fieldType": {
+                        "XDefinitionRef": {
+                            "name": "XOrder",
+                            "namespace": "net.liftweb.json.xschema"
+                        }
+                    },
+                    "default": {
+                        "XOrderAscending": {
+
+                        }
+                    },
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            }]
+        }
+    },
+    {
+        "XProduct": {
+            "name": "XViewField",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": [{
+                "XRealField": {
+                    "name": "name",
+                    "properties": [],
+                    "fieldType": {
+                        "XPrimitiveRef": {
+                            "XString": {
+
+                            }
+                        }
+                    },
+                    "default": "",
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XRealField": {
+                    "name": "properties",
+                    "properties": [],
+                    "fieldType": {
+                        "XContainerRef": {
+                            "XMap": {
+                                "keyType": {
+                                    "XPrimitiveRef": {
+                                        "XString": {
+
+                                        }
+                                    }
+                                },
+                                "valueType": {
+                                    "XPrimitiveRef": {
+                                        "XString": {
+
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": [],
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XRealField": {
+                    "name": "fieldType",
+                    "properties": [],
+                    "fieldType": {
+                        "XDefinitionRef": {
+                            "name": "XReference",
+                            "namespace": "net.liftweb.json.xschema"
+                        }
+                    },
+                    "default": {
+                        "XDefinitionRef": {
+                            "name": "",
+                            "namespace": ""
+                        }
+                    },
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            }]
+        }
+    },
+    {
+        "XProduct": {
+            "name": "XConstantField",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": [{
+                "XRealField": {
+                    "name": "name",
+                    "properties": [],
+                    "fieldType": {
+                        "XPrimitiveRef": {
+                            "XString": {
+
+                            }
+                        }
+                    },
+                    "default": "",
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XRealField": {
+                    "name": "properties",
+                    "properties": [],
+                    "fieldType": {
+                        "XContainerRef": {
+                            "XMap": {
+                                "keyType": {
+                                    "XPrimitiveRef": {
+                                        "XString": {
+
+                                        }
+                                    }
+                                },
+                                "valueType": {
+                                    "XPrimitiveRef": {
+                                        "XString": {
+
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": [],
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XRealField": {
+                    "name": "fieldType",
+                    "properties": [],
+                    "fieldType": {
+                        "XDefinitionRef": {
+                            "name": "XReference",
+                            "namespace": "net.liftweb.json.xschema"
+                        }
+                    },
+                    "default": {
+                        "XString": {
+
+                        }
+                    },
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            },
+            {
+                "XRealField": {
+                    "name": "default",
+                    "properties": [],
+                    "fieldType": {
+                        "XPrimitiveRef": {
+                            "XJSON": {
+
+                            }
+                        }
+                    },
+                    "default": "",
+                    "order": {
+                        "XOrderAscending": {
+
+                        }
+                    }
+                }
+            }]
+        }
+    },
+    {
+        "XCoproduct": {
+            "name": "XOrder",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": [{
+                "name": "XOrderAscending",
+                "namespace": "net.liftweb.json.xschema"
+            },
+            {
+                "name": "XOrderDescending",
+                "namespace": "net.liftweb.json.xschema"
+            },
+            {
+                "name": "XOrderIgnore",
+                "namespace": "net.liftweb.json.xschema"
+            }],
+            "default": {
+                "XOrderAscending": {
+
+                }
+            }
+        }
+    },
+    {
+        "XProduct": {
+            "name": "XOrderAscending",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": []
+        }
+    },
+    {
+        "XProduct": {
+            "name": "XOrderDescending",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": []
+        }
+    },
+    {
+        "XProduct": {
+            "name": "XOrderIgnore",
+            "namespace": "net.liftweb.json.xschema",
+            "properties": [],
+            "terms": []
+        }
+    }],
+    "constants": [],
+    "properties": []
+}
