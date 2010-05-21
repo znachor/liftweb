@@ -114,11 +114,13 @@ object Props extends Logger {
       case Full("pilot") => Pilot
       case Full("profile") => Profile
       case Full("development") => Development
-      case _ =>
+      case _ => {
         val exp = new Exception
         exp.fillInStackTrace
         if (exp.getStackTrace.find(st => st.getClassName.indexOf("SurefireBooter") >= 0).isDefined) Test
+        else if (exp.getStackTrace.find(st => st.getClassName.indexOf("sbt.TestRunner") >= 0).isDefined) Test
         else Development
+      }
     }
   }
 
@@ -227,7 +229,7 @@ object Props extends Logger {
         } :_*)
 
     case _ =>
-      error("Failed to find a properties file (but properties were accessed).  Searched: "+tried.reverse.mkString(", "))
+      error("Failed to find a properties file (but properties were accessed).  Searched: "+tried.map(_ + "props").reverse.mkString(", "))
       Map()
   }
 }
