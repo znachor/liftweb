@@ -279,7 +279,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>${project.build.sourceEncoding}</project.reporting.outputEncoding>
 
-    <scala.version>2.8.0.Beta1</scala.version>
+    <scala.version>2.8.0.RC2</scala.version>
     <!-- Cannot specify 1.6) as range since this pulls in the 1.6.0-RC0 version -->
     <slf4j.version>[1.5.6,1.5.99)</slf4j.version>
     <!-- Note: logback.version must be compatible with slf4j.version -->
@@ -354,7 +354,7 @@
       <dependency>
         <groupId>net.databinder</groupId>
         <artifactId>dispatch-http_${scala.version}</artifactId>
-        <version>0.7.1</version>
+        <version>0.7.3</version>
       </dependency>
       <dependency>
         <groupId>net.jcip</groupId>
@@ -551,13 +551,13 @@
       <dependency>
         <groupId>org.scala-tools.testing</groupId>
         <artifactId>specs_${scala.version}</artifactId>
-        <version>1.6.3</version>
+        <version>1.6.5-SNAPSHOT</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.scala-tools.testing</groupId>
         <artifactId>scalacheck_${scala.version}</artifactId>
-        <version>1.7-SNAPSHOT</version>
+        <version>1.7</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -851,9 +851,9 @@
             <jvmArgs>
               <jvmArg>-Xmx1024m</jvmArg>
             </jvmArgs>
-            <args>
-              <arg>-Xno-varargs-conversion</arg>
-            </args>
+            <!-- <args> -->
+            <!--   <arg>-Xno-varargs-conversion</arg> -->
+            <!-- </args> -->
           </configuration>
           <executions>
             <execution>
