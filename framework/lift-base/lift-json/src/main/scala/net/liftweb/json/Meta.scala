@@ -44,13 +44,12 @@ private[json] object Meta {
    *    Arg("children", Col(classOf[List[_]], Constructor("xx.Child", List(Value("name"), Value("age")))))))
    */
   sealed abstract class Mapping
-  case class Arg(path: String, mapping: Mapping) extends Mapping
+  case class Arg(path: String, mapping: Mapping, optional: Boolean) extends Mapping
   case class Value(targetType: Class[_]) extends Mapping
   case class Constructor(targetType: TypeInfo, args: List[Arg]) extends Mapping
   case class Cycle(targetType: Class[_]) extends Mapping
   case class Dict(mapping: Mapping) extends Mapping
   case class Col(targetType: Class[_], mapping: Mapping) extends Mapping
-  case class Optional(mapping: Mapping) extends Mapping
 
   private val mappings = new Memo[Class[_], Mapping]
   private val unmangledNames = new Memo[String, String]
@@ -68,34 +67,35 @@ private[json] object Meta {
       def mkContainer(t: Type, k: Kind, valueTypeIndex: Int, factory: Mapping => Mapping) = 
         if (typeConstructor_?(t)) {
           val types = typeConstructors(t, k)(valueTypeIndex)
-          factory(fieldMapping(types._1, types._2))
-        } else factory(fieldMapping(typeParameters(t, k)(valueTypeIndex), null))
+          factory(fieldMapping(types._1, types._2)._1)
+        } else factory(fieldMapping(typeParameters(t, k)(valueTypeIndex), null)._1)
 
       def parameterizedTypeOpt(t: Type) = t match {
         case x: ParameterizedType => Some(x)
         case _ => None
       }
         
-      def fieldMapping(fType: Class[_], genType: Type): Mapping = {
-        if (primitive_?(fType)) Value(fType)
+      def fieldMapping(fType: Class[_], genType: Type): (Mapping, Boolean) = {
+        if (primitive_?(fType)) (Value(fType), false)
         else if (classOf[List[_]].isAssignableFrom(fType)) 
-          mkContainer(genType, `* -> *`, 0, Col.apply(classOf[List[_]], _))
+          (mkContainer(genType, `* -> *`, 0, Col.apply(classOf[List[_]], _)), false)
         else if (classOf[Set[_]].isAssignableFrom(fType)) 
-          mkContainer(genType, `* -> *`, 0, Col.apply(classOf[Set[_]], _))
+          (mkContainer(genType, `* -> *`, 0, Col.apply(classOf[Set[_]], _)), false)
         else if (fType.isArray)
-          mkContainer(genType, `* -> *`, 0, Col.apply(fType, _))
+          (mkContainer(genType, `* -> *`, 0, Col.apply(fType, _)), false)
         else if (classOf[Option[_]].isAssignableFrom(fType)) 
-          mkContainer(genType, `* -> *`, 0, Optional.apply _)
+          (mkContainer(genType, `* -> *`, 0, identity _), true)
         else if (classOf[Map[_, _]].isAssignableFrom(fType)) 
-          mkContainer(genType, `(*,*) -> *`, 1, Dict.apply _)
+          (mkContainer(genType, `(*,*) -> *`, 1, Dict.apply _), false)
         else {
-          if (visited.contains(fType)) Cycle(fType)
-          else Constructor(TypeInfo(fType, parameterizedTypeOpt(genType)), 
-                           constructorArgs(fType, visited + fType))
+          if (visited.contains(fType)) (Cycle(fType), false)
+          else (Constructor(TypeInfo(fType, parameterizedTypeOpt(genType)), 
+                            constructorArgs(fType, visited + fType)), false)
         }
       }
-     
-      Arg(name, fieldMapping(fieldType, genericType))
+
+      val (mapping, optional) = fieldMapping(fieldType, genericType)
+      Arg(name, mapping, optional)
     }
 
     if (primitive_?(clazz)) Value(clazz)    

@@ -224,7 +224,7 @@ object Extraction {
       case Value(targetType) => convert(root, targetType, formats)
       case Constructor(targetType, args) => newInstance(targetType, args, root)
       case Cycle(targetType) => build(root, mappingOf(targetType))
-      case Arg(path, m) => mkValue(fieldValue(root), m, path)
+      case Arg(path, m, optional) => mkValue(fieldValue(root), m, path, optional)
       case Col(c, m) =>
         if (c == classOf[List[_]]) newCollection(root, m, a => List(a: _*))
         else if (c == classOf[Set[_]]) newCollection(root, m, a => Set(a: _*))
@@ -234,16 +234,6 @@ object Extraction {
         case JObject(xs) => Map(xs.map(x => (x.name, build(x.value, m))): _*)
         case x => fail("Expected object but got " + x)
       }
-      case Optional(m) =>
-        // FIXME Remove this try-catch.
-        try { 
-          build(root, m) match {
-            case null => None
-            case x => Some(x)
-          }
-        } catch {
-          case e: MappingException => None
-        }
     }
     
     def mkTypedArray(c: Class[_])(a: Array[_]) = {
@@ -260,10 +250,14 @@ object Extraction {
       case x => fail("Expected array but got " + x)
     }
 
-    def mkValue(root: JValue, mapping: Mapping, path: String) = try {
-      build(root, mapping)
+    def mkValue(root: JValue, mapping: Mapping, path: String, optional: Boolean) = try {
+      val x = build(root, mapping)
+      if (optional) {
+        if (x == null) None else Some(x) 
+      } else x
     } catch { 
-      case MappingException(msg, _) => fail("No usable value for " + path + "\n" + msg) 
+      case MappingException(msg, _) => 
+        if (optional) None else fail("No usable value for " + path + "\n" + msg) 
     }
 
     def fieldValue(json: JValue): JValue = json match {
