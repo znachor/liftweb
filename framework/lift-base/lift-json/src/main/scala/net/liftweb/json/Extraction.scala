@@ -176,14 +176,20 @@ object Extraction {
     val mapping = mappingOf(target.clazz)
 
     def newInstance(constructor: Constructor, json: JValue) = {
-      def instantiate = {
-        // FIXME cleanup, optimize common case
-        val argNames = json match {
-          case JObject(fs) => fs.map(_.name)
-          case JField(name, _) => List(name)
-          case x => Nil
+      def findDeclaredConstructor = {
+        if (constructor.choices.size == 1) constructor.choices.head // optimize common case
+        else {
+          val argNames = json match {
+            case JObject(fs) => fs.map(_.name)
+            case JField(name, _) => List(name)
+            case x => Nil
+          }
+          constructor.bestMatching(argNames)
         }
-        val c = constructor.bestMatching(argNames)
+      }
+
+      def instantiate = {
+        val c = findDeclaredConstructor
         val jconstructor = c.constructor
         val args = c.args.map(a => build(json \ a.path, a))
         try {
