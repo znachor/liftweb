@@ -175,19 +175,20 @@ object Extraction {
   def extract(json: JValue, target: TypeInfo)(implicit formats: Formats): Any = {
     val mapping = mappingOf(target.clazz)
 
-    def newInstance(targetType: TypeInfo, args: List[Arg], json: JValue) = {
-      def instantiate(constructor: JConstructor[_], args: List[Any]) = 
+    def newInstance(constructor: Constructor, json: JValue) = {
+      def instantiate(args: List[Any]) = {
+        val jconstructor = primaryConstructorOf(constructor.targetType.clazz)
         try {
-          if (constructor.getDeclaringClass == classOf[java.lang.Object]) fail("No information known about type")
-          
-          constructor.newInstance(args.map(_.asInstanceOf[AnyRef]).toArray: _*)
+          if (jconstructor.getDeclaringClass == classOf[java.lang.Object]) fail("No information known about type")
+          jconstructor.newInstance(args.map(_.asInstanceOf[AnyRef]).toArray: _*)
         } catch {
           case e @ (_:IllegalArgumentException | _:InstantiationException) =>
             fail("Parsed JSON values do not match with class constructor\nargs=" + 
                  args.mkString(",") + "\narg types=" + args.map(a => if (a != null) 
                    a.asInstanceOf[AnyRef].getClass.getName else "null").mkString(",") + 
-                 "\nconstructor=" + constructor)
+                 "\nconstructor=" + jconstructor)
         }
+      }
 
       def mkWithTypeHint(typeHint: String, fields: List[JField]) = {
         val obj = JObject(fields)
@@ -199,12 +200,12 @@ object Extraction {
       }
 
       val custom = formats.customDeserializer(formats)
-      if (custom.isDefinedAt(targetType, json)) custom(targetType, json)
+      if (custom.isDefinedAt(constructor.targetType, json)) custom(constructor.targetType, json)
       else json match {
         case JNull => null
         case JObject(JField("jsonClass", JString(t)) :: xs) => mkWithTypeHint(t, xs)
         case JField(_, JObject(JField("jsonClass", JString(t)) :: xs)) => mkWithTypeHint(t, xs)
-        case _ => instantiate(primaryConstructorOf(targetType.clazz), args.map(a => build(json \ a.path, a)))
+        case _ => instantiate(constructor.args.map(a => build(json \ a.path, a)))
       }
     }
 
@@ -222,7 +223,7 @@ object Extraction {
 
     def build(root: JValue, mapping: Mapping): Any = mapping match {
       case Value(targetType) => convert(root, targetType, formats)
-      case Constructor(targetType, args) => newInstance(targetType, args, root)
+      case c: Constructor => newInstance(c, root)
       case Cycle(targetType) => build(root, mappingOf(targetType))
       case Arg(path, m, optional) => mkValue(fieldValue(root), m, path, optional)
       case Col(c, m) =>
