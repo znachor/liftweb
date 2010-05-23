@@ -46,10 +46,21 @@ private[json] object Meta {
   sealed abstract class Mapping
   case class Arg(path: String, mapping: Mapping, optional: Boolean) extends Mapping
   case class Value(targetType: Class[_]) extends Mapping
-  case class Constructor(targetType: TypeInfo, args: List[Arg]) extends Mapping
   case class Cycle(targetType: Class[_]) extends Mapping
   case class Dict(mapping: Mapping) extends Mapping
   case class Col(targetType: Class[_], mapping: Mapping) extends Mapping
+  case class Constructor(targetType: TypeInfo, choices: List[DeclaredConstructor]) extends Mapping {
+    def bestMatching(argNames: List[String]): DeclaredConstructor = {
+      val names = Set(argNames: _*)
+      val scores = choices.map { c =>
+        val score = c.args.foldLeft(0)((acc, a) => if (names.contains(a.path)) acc+1 else -1)
+        (c, score)
+      }
+      scores.sort(_._2 > _._2).map(_._1).head
+    }
+  }
+
+  case class DeclaredConstructor(constructor: JConstructor[_], args: List[Arg])
 
   private val mappings = new Memo[Class[_], Mapping]
   private val unmangledNames = new Memo[String, String]
@@ -58,9 +69,10 @@ private[json] object Meta {
   private[json] def mappingOf(clazz: Class[_]) = {
     import Reflection._
 
-    def constructorArgs(clazz: Class[_], visited: Set[Class[_]]) = 
-      Reflection.constructorArgs(clazz).map { case (name, atype, genericType) =>
-        toArg(unmangleName(name), atype, genericType, visited)
+    def constructors(clazz: Class[_], visited: Set[Class[_]]) = 
+      Reflection.constructors(clazz).map { case (c, args) =>
+        DeclaredConstructor(c, args.map { case (name, atype, genericType) =>
+          toArg(unmangleName(name), atype, genericType, visited) })
       }
 
     def toArg(name: String, fieldType: Class[_], genericType: Type, visited: Set[Class[_]]): Arg = {
@@ -90,7 +102,7 @@ private[json] object Meta {
         else {
           if (visited.contains(fType)) (Cycle(fType), false)
           else (Constructor(TypeInfo(fType, parameterizedTypeOpt(genType)), 
-                            constructorArgs(fType, visited + fType)), false)
+                            constructors(fType, visited + fType)), false)
         }
       }
 
@@ -99,7 +111,7 @@ private[json] object Meta {
     }
 
     if (primitive_?(clazz)) Value(clazz)    
-    else mappings.memoize(clazz, c => Constructor(TypeInfo(c, None), constructorArgs(c, Set())))
+    else mappings.memoize(clazz, c => Constructor(TypeInfo(c, None), constructors(c, Set())))
   }
 
   private[json] def unmangleName(name: String) = 
@@ -127,8 +139,9 @@ private[json] object Meta {
 
   object Reflection {
     import java.lang.reflect._
+    import scala.collection.jcl.Conversions._
 
-    private val primaryConstructorArgs = new Memo[Class[_], List[(String, Class[_], Type)]]
+    private val cachedConstructorArgs = new Memo[JConstructor[_], List[(String, Class[_], Type)]]
 
     sealed abstract class Kind
     case object `* -> *` extends Kind
@@ -142,30 +155,28 @@ private[json] object Meta {
       classOf[java.lang.Byte], classOf[java.lang.Boolean], classOf[Number],
       classOf[java.lang.Short], classOf[Date], classOf[Symbol]).map((_, ())))
 
-    def constructorArgs(clazz: Class[_]): List[(String, Class[_], Type)] = {
-      def queryArgs(clazz: Class[_]) = {
-        def argsInfo(x: JConstructor[_]) = {
-          import scala.collection.jcl.Conversions._
+    // FIXME cache these
+    def constructors(clazz: Class[_]): List[(JConstructor[_], List[(String, Class[_], Type)])] =
+      clazz.getDeclaredConstructors.map(c => (c, constructorArgs(c))).toList
 
-          val Name = """^((?:[^$]|[$][^0-9]+)+)([$][0-9]+)?$"""r
-          def clean(name: String) = name match {
-            case Name(text, junk) => text
-          }
-          val names = paranamer.lookupParameterNames(x).map(clean)
-          val types = x.getParameterTypes
-          val ptypes = x.getGenericParameterTypes
-          zip3(names.toList, types.toList, ptypes.toList)
+    def constructorArgs(constructor: JConstructor[_]): List[(String, Class[_], Type)] = {
+      def argsInfo(c: JConstructor[_]) = {
+        val Name = """^((?:[^$]|[$][^0-9]+)+)([$][0-9]+)?$"""r
+        def clean(name: String) = name match {
+          case Name(text, junk) => text
         }
-        
-        safePrimaryConstructorOf(clazz) match {
-          case Some(x) => argsInfo(x)
-          case None    => Nil
-        }
+        val names = paranamer.lookupParameterNames(c).map(clean)
+        val types = c.getParameterTypes
+        val ptypes = c.getGenericParameterTypes
+        zip3(names.toList, types.toList, ptypes.toList)
       }
-      primaryConstructorArgs.memoize(clazz, queryArgs(_))
+
+      cachedConstructorArgs.memoize(constructor, argsInfo(_))
     }
 
-    // Replace this with Tuple3.zipped when moving to 2.8
+    def primaryConstructorArgs(c: Class[_]) = constructorArgs(c.getDeclaredConstructors()(0))
+
+    // FIXME Replace this with Tuple3.zipped when moving to 2.8
     private def zip3[A, B, C](l1: List[A], l2: List[B], l3: List[C]): List[(A, B, C)] = {
       def zip(x1: List[A], x2: List[B], x3: List[C], acc: List[(A, B, C)]): List[(A, B, C)] = 
         x1 match {
@@ -175,15 +186,6 @@ private[json] object Meta {
 
       zip(l1, l2, l3, Nil)
     }
-
-    def safePrimaryConstructorOf[A](cl: Class[A]): Option[JConstructor[A]] = 
-      cl.getDeclaredConstructors.toList.asInstanceOf[List[JConstructor[A]]] match {
-        case Nil => None
-        case x :: xs => Some[JConstructor[A]](x)
-      }
-
-    def primaryConstructorOf[A](cl: Class[A]): JConstructor[A] = 
-      safePrimaryConstructorOf(cl).getOrElse(fail("Can't find primary constructor for class " + cl))
 
     def typeParameters(t: Type, k: Kind): List[Class[_]] = {
       def term(i: Int) = t match {

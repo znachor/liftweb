@@ -78,7 +78,7 @@ object Extraction {
         case x if (x.getClass.isArray) => JArray(x.asInstanceOf[Array[_]].toList map decompose)
         case x: Option[_] => x.flatMap[JValue] { y => Some(decompose(y)) }.getOrElse(JNothing)
         case x => 
-          constructorArgs(x.getClass).map { case (name, _, _) =>
+          primaryConstructorArgs(x.getClass).map { case (name, _, _) =>
             val f = x.getClass.getDeclaredField(name)
             f.setAccessible(true)
             JField(unmangleName(name), decompose(f get x))
@@ -176,8 +176,16 @@ object Extraction {
     val mapping = mappingOf(target.clazz)
 
     def newInstance(constructor: Constructor, json: JValue) = {
-      def instantiate(args: List[Any]) = {
-        val jconstructor = primaryConstructorOf(constructor.targetType.clazz)
+      def instantiate = {
+        // FIXME cleanup, optimize common case
+        val argNames = json match {
+          case JObject(fs) => fs.map(_.name)
+          case JField(name, _) => List(name)
+          case x => Nil
+        }
+        val c = constructor.bestMatching(argNames)
+        val jconstructor = c.constructor
+        val args = c.args.map(a => build(json \ a.path, a))
         try {
           if (jconstructor.getDeclaringClass == classOf[java.lang.Object]) fail("No information known about type")
           jconstructor.newInstance(args.map(_.asInstanceOf[AnyRef]).toArray: _*)
@@ -205,7 +213,7 @@ object Extraction {
         case JNull => null
         case JObject(JField("jsonClass", JString(t)) :: xs) => mkWithTypeHint(t, xs)
         case JField(_, JObject(JField("jsonClass", JString(t)) :: xs)) => mkWithTypeHint(t, xs)
-        case _ => instantiate(constructor.args.map(a => build(json \ a.path, a)))
+        case _ => instantiate
       }
     }
 
