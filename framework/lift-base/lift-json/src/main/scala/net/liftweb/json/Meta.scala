@@ -52,11 +52,19 @@ private[json] object Meta {
   case class Constructor(targetType: TypeInfo, choices: List[DeclaredConstructor]) extends Mapping {
     def bestMatching(argNames: List[String]): DeclaredConstructor = {
       val names = Set(argNames: _*)
-      val scores = choices.map { c =>
-        val score = c.args.foldLeft(0)((acc, a) => if (names.contains(a.path)) acc+1 else -1)
-        (c, score)
+      def countOptionals(args: List[Arg]) = 
+        args.foldLeft(0)((n, x) => if (x.optional) n+1 else n)
+      def score(args: List[Arg]) = 
+        args.foldLeft(0)((s, arg) => if (names.contains(arg.path)) s+1 else -100)
+
+      val best = choices.tail.foldLeft((choices.head, score(choices.head.args))) { (best, c) =>
+        val newScore = score(c.args)
+        if (newScore == best._2) {
+          if (countOptionals(c.args) < countOptionals(best._1.args))
+            (c, newScore) else best
+        } else if (newScore > best._2) (c, newScore) else best
       }
-      scores.sort(_._2 > _._2).map(_._1).head
+      best._1
     }
   }
 
@@ -155,7 +163,6 @@ private[json] object Meta {
       classOf[java.lang.Byte], classOf[java.lang.Boolean], classOf[Number],
       classOf[java.lang.Short], classOf[Date], classOf[Symbol]).map((_, ())))
 
-    // FIXME cache these
     def constructors(clazz: Class[_]): List[(JConstructor[_], List[(String, Class[_], Type)])] =
       clazz.getDeclaredConstructors.map(c => (c, constructorArgs(c))).toList
 
