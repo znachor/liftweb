@@ -857,7 +857,7 @@
           <configuration>
             <charset>${project.build.sourceEncoding}</charset>
             <jvmArgs>
-              <jvmArg>-Xmx1024m</jvmArg>
+              <jvmArg>-Xmx2g</jvmArg>
             </jvmArgs>
             <!-- <args> -->
             <!--   <arg>-Xno-varargs-conversion</arg> -->
@@ -899,6 +899,7 @@
                 <arg>-unchecked</arg>
                 <arg>-deprecation</arg>
                 <arg>-Xcheckinit</arg>
+                <arg>-Xmigration</arg>
               </args>
             </configuration>
           </plugin>
