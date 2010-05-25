@@ -131,6 +131,7 @@ trait TimeHelpers { self: ControlHelpers =>
     def +[B](in: B)(implicit f: B => TimeSpan): TimeSpan =
       (this.dt, f(in).dt) match {
         case (Left(date), Right(duration)) => date.plus(duration)
+        case (Right(d1), Right(d2)) => d1.plus(d2)
         case (Right(duration), Left(date)) => date.plus(duration)
         case _ => TimeSpan(this.millis + f(in).millis)
       }
@@ -143,6 +144,7 @@ trait TimeHelpers { self: ControlHelpers =>
       (this.dt, f(in).dt) match {
         case (Left(date), Right(duration)) => date.minus(duration)
         case (Right(duration), Left(date)) => date.minus(duration)
+        case (Right(d1), Right(d2)) => d1.minus(d2)
         case _ => TimeSpan(this.millis - f(in).millis)
       }
 
