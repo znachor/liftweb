@@ -266,7 +266,7 @@ trait CodeGenerator {
         
           generate(JsonParser.parse(json).deserialize[XRoot], args(1), args(2))
         
-          println("Successfully generated code at " + args(1) + " and tests at " + args(0))
+          println("Successfully generated code at " + args(1) + " and tests at " + args(2))
         
           System.exit(0)
         }
@@ -288,22 +288,24 @@ object ScalaCodeGenerator extends CodeGenerator with CodeGeneratorHelpers {
       case "true" => true
       case _ => false
     }.getOrElse(true)
-    
-    val bundle   = CodeBundle.empty
-    val database = XSchemaDatabase(root.definitions, root.constants)
+
+    val bundle      = CodeBundle.empty
+    val testBundle  = CodeBundle.empty
+    val database    = XSchemaDatabase(root.definitions, root.constants)
     
     for (namespace <- database.namespaces) {
       val code = CodeBuilder.empty
       val test = CodeBuilder.empty
-      
+
       buildCodeFor(namespace, code, root, database, includeSchemas)
-      buildTestFor(namespace, code, root, database, includeSchemas)
-      
-      bundle += toFile(namespace, "Data", "scala")     -> code
-      bundle += toFile(namespace, "DataTest", "scala") -> test
+      buildTestFor(namespace, test, root, database, includeSchemas)
+
+      bundle += toFile(namespace, "Data", "scala")         -> code
+      testBundle += toFile(namespace, "DataTest", "scala") -> test
     }
-    
+
     bundle.create(destPathCode)
+    testBundle.create(destPathTests)
   }
   
   private def buildCodeFor(namespace: String, code: CodeBuilder, root: XRoot, database: XSchemaDatabase, includeSchemas: Boolean): Unit = {
