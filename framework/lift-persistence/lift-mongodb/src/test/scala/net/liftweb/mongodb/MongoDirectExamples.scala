@@ -122,7 +122,7 @@ object MongoDirectExamples extends Specification {
     MongoDB.useCollection("iDoc") ( coll => {
       // insert multiple documents
       for (i <- List.range(1, 101)) {
-        coll.insert(new BasicDBObject().append("i", i).asInstanceOf[DBObject])
+        coll.insert(new BasicDBObject().append("i", i))
       }
 
       // create an index
