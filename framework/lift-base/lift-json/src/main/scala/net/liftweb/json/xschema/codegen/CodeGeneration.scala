@@ -250,23 +250,28 @@ trait CodeGenerator {
     import java.io._
     
     try {
-      if (args.length != 3) {
-        println("Usage: [xschema file] [dest code path] [dest tests path]")
+      if (args.length < 3) {
+        println("Usage: [dest code path] [dest tests path] [xschema file(s)]")
       }
       else {
+        val destCodePath  = args(0)
+        val destTestsPath = args(1)
+        val xschemaFiles  = args.toList.drop(2)
+        
         def using[T <: Closeable, S](c: => T)(f: T => S): S = { val resource = c; try { f(resource) } finally { resource.close } }
-      
-        using(new DataInputStream(new FileInputStream(args(0)))) { stream =>
-          val json = stream.readUTF
-          
-          implicit def writerF(file: String): Writer = new FileWriter(file)
+        def load(file: String): String = using(new DataInputStream(new FileInputStream(file))) { _.readUTF }
         
-          generate(JsonParser.parse(json).deserialize[XRoot], args(1), args(2))
-        
-          println("Successfully generated code at " + args(1) + " and tests at " + args(2))
-        
-          System.exit(0)
+        val root = xschemaFiles.map { f => JsonParser.parse(load(f)).deserialize[XRoot] }.foldLeft(XRoot(Nil, Nil, Map())) { (accum, part) => 
+          XRoot(accum.definitions ++ part.definitions, accum.constants ++ part.constants, accum.properties ++ part.properties)
         }
+        
+        implicit def writerF(file: String): Writer = new FileWriter(file)
+        
+        generate(root, destCodePath, destTestsPath)
+        
+        println("Successfully generated code at " + destCodePath + " and tests at " + destTestsPath)
+        
+        System.exit(0)
       }
     }
     catch {

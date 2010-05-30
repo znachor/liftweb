@@ -97,20 +97,24 @@ trait XSchemaDatabase extends Iterable[XSchema] {
     case _ => Nil
   }
   
+  /** A "singleton" coproduct term is defined to be a product that appears as
+   * a term in a single coproduct, and is not referenced as a type anywhere in
+   * the type hierarchy. Singleton coproduct terms have special properties that
+   * allow them to have natural representations in functional languages.
+   */
+  def isSingletonCoproductTerm(defn: XDefinition): Boolean = defn match {
+    case x: XCoproduct => false
+    case x: XProduct => coproductContainersOf(defn) == 1 &&
+      definitionRefs.filter(_ == x.referenceTo).length == 0
+  }
+  
+  /** Determines if the specified product is a term in any coproduct.
+   */
   def isContainedInCoproduct(defn: XProduct) = coproductContainersOf(defn).length > 0
   
-  /** Retrieves all the product children of the specified coproduct.
+  /** Retrieves all the namespaces of the terms of the specified coproduct.
    */
-  def namespacesOf(defn: XCoproduct): List[String] = resolve(defn.terms).map { x =>
-    x match {
-      case x: XProduct => x.namespace
-      case x: XCoproduct => x.namespace
-      
-      case x: XDefinitionRef => x.namespace
-      
-      case _ => error("cannot find namespace")
-    }
-  }
+  def namespacesOf(defn: XCoproduct): List[String] = defn.terms.map(_.namespace)
   
   /** Finds all fields that are common to all elements of the specified 
    * coproduct. Fields are common when they have the same name and type,
