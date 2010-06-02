@@ -122,7 +122,8 @@ object TestSchemas {
         List(
           XDefinitionRef("XPrimitiveRef",  "net.liftweb.json.xschema"),
           XDefinitionRef("XContainerRef",  "net.liftweb.json.xschema"),
-          XDefinitionRef("XDefinitionRef", "net.liftweb.json.xschema")
+          XDefinitionRef("XDefinitionRef", "net.liftweb.json.xschema"),
+          XDefinitionRef("XUnionRef",      "net.liftweb.json.xschema")
         ),
         j("""{ "XString": {} } """)
       ),
@@ -157,6 +158,13 @@ object TestSchemas {
         List(
           XRealField("name", Map(), XString, JString(""), XOrderAscending),
           XRealField("namespace", Map(), XString, JString(""), XOrderAscending)
+        )
+      ),
+      XProduct(
+        "XUnionRef", "net.liftweb.json.xschema",
+        Map(),
+        List(
+          XRealField("terms", Map(), XList(XDefinitionRef("XReference", "net.liftweb.json.xschema")), j("""[]"""), XOrderAscending)
         )
       ),
       XProduct("XBoolean", "net.liftweb.json.xschema", Map(), List()),

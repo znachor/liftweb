@@ -44,6 +44,7 @@ trait DefaultExtractors {
   implicit val StringExtractor: Extractor[String] = new Extractor[String] {
     def extract(jvalue: JValue): String = jvalue match {
       case JString(str) => str
+      
       case _ => error("Expected string but found: " + jvalue)
     }
   }
