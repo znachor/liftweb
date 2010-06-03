@@ -164,6 +164,7 @@ object S extends HasParams with Loggable {
   private val _lifeTime = new ThreadGlobal[Boolean]
   private val autoCleanUp = new ThreadGlobal[Boolean]
   private val _oneShot = new ThreadGlobal[Boolean]
+  private val _disableTestFuncNames = new ThreadGlobal[Boolean]
 
   private object postFuncs extends TransientRequestVar(new ListBuffer[() => Unit])
   private object p_queryLog extends TransientRequestVar(new ListBuffer[(String, Long)])
@@ -1821,7 +1822,8 @@ for {
         })
      }
        
-     case _ => _functionMap.value += (name -> value)
+     case _ =>
+       _functionMap.value += (name -> value)
    }
   }
 
@@ -1845,7 +1847,14 @@ for {
     case _ => true
   }
 
-  def formFuncName: String = if (Props.testMode) {
+  def disableTestFuncNames_? : Boolean = _disableTestFuncNames.box openOr false
+
+  def disableTestFuncNames[T](f: => T): T =
+    _disableTestFuncNames.doWith(true) {
+      f
+    }
+
+  def formFuncName: String = if (Props.testMode && !disableTestFuncNames_?) {
     val bump: Long = ((_formGroup.is openOr 0) + 1000L) * 10000L
     val num: Int = formItemNumber.is
     formItemNumber.set(num + 1)
@@ -2407,6 +2416,16 @@ for {
       f
     }
   }
+
+  /**
+   * All functions created inside the oneShot scope
+   * will only be called once and their results will be
+   * cached and served again if the same function is invoked
+   */
+  def oneShot[T](f: => T): T =
+    _oneShot.doWith(true) {
+      f
+    }
 
 }
 
