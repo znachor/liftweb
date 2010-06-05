@@ -287,14 +287,14 @@ object BrowserLogger extends Loggable {
 object SessionInfoDumper extends LiftActor with Loggable {
   private var lastTime = millis
 
-  val tenMinutes: Long = 2 minutes
+  private def cyclePeriod = 1 minute
 
   import net.liftweb.example.lib.SessionChecker
 
   protected def messageHandler =
     {
       case SessionWatcherInfo(sessions) =>
-        if ((millis - tenMinutes) > lastTime) {
+        if ((millis - cyclePeriod) > lastTime) {
           lastTime = millis
           val rt = Runtime.getRuntime
           rt.gc
@@ -306,7 +306,9 @@ object SessionInfoDumper extends LiftActor with Loggable {
 
           val percent = (RuntimeStats.freeMem * 100L) / RuntimeStats.totalMem
 
-          if (percent < 25L) {
+          // get more aggressive about purging if we're
+          // at less than 35% free memory
+          if (percent < 35L) {
             SessionChecker.killWhen /= 2L
             SessionChecker.killCnt *= 2
           } else if (SessionChecker.killWhen < 
